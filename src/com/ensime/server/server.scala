@@ -13,10 +13,103 @@ object Project extends Actor{
     println("Project is alive.")
     loop {  
       receive {
-	case InMessage(sexp) => println("Project got message: " + sexp)
+	case InMessage(replyTo:Actor, sexp) => {
+	  sexp match{
+	    case SExpList(list) => {
+	      if(list.size > 0){
+		handleMessageForm(replyTo, list)
+	      }
+	    }
+	  }
+	}
       }
     }
   }
+
+  def getConnectionInfoSExp = {
+    SExpList(List())
+  }
+
+  def handleMessageForm(replyTo:Actor, list:List[SExp]){
+    val head:SExp = list.head
+    head match {
+      case KeywordAtom(key) => {
+	key match {
+	  case ":emacs-rex" => {
+	    if(list.size != 5){
+	      sendReaderError(replyTo, SExpList(list), "Expected five elements in :emacs-rex.")
+	    }
+	    else{
+	      val form:SExp = list(1)
+	      val pack:SExp = list(2)
+	      val thread:SExp = list(3)
+	      val callId:SExp = list(4)
+	      handleEmacsRex(replyTo, form, callId)
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+  def handleEmacsRex(replyTo:Actor, form:SExp, callId:SExp){
+    form match{
+      case SExpList(list) => {
+	list.head match {
+	  case KeywordAtom(key) => {
+	    key match{
+	      case "swank:connection-info" => {
+		sendEmacsRexReturn(
+		  replyTo, 
+		  SExpList(List(	
+		      KeywordAtom(":ok"),
+		      getConnectionInfoSExp
+		    )),
+		  callId)
+	      }
+	    }
+	  }
+	  case other => {
+	    sendEmacsRexError(
+	      replyTo, 
+	      "Unknown :emacs-rex call: " + other, 
+	      callId)
+	  }
+	}	
+      }
+    }
+  }
+
+  def sendEmacsRexReturn(replyTo:Actor, value:SExp, callId:SExp){
+    replyTo ! OutMessage(
+      SExpList(
+	List(
+	  KeywordAtom(":return"),
+	  value,
+	  callId
+	)))
+  }
+
+  def sendEmacsRexError(replyTo:Actor, msg:String, callId:SExp){
+    replyTo ! OutMessage(
+      SExpList(
+	List(
+	  KeywordAtom(":invalid-rpc"),
+	  callId,
+	  StringAtom(msg)
+	)))
+  }
+
+  def sendReaderError(replyTo:Actor, packet:SExp, condition:String){
+    replyTo ! OutMessage(
+      SExpList(
+	List(
+	  KeywordAtom(":reader-error"),
+	  packet,
+	  StringAtom(condition)
+	)))
+  }
+
 }
 
 
@@ -51,7 +144,7 @@ import scala.util.parsing.input.StreamReader
 import scala.util.parsing.input.CharArrayReader
 
 case class NewSocket(socket:Socket)
-case class InMessage(sexp:SExp)
+case class InMessage(handler:Actor, sexp:SExp)
 case class OutMessage(sexp:SExp)
 
 class SocketHandler(socket:Socket, project:Actor) extends Actor { 
@@ -73,14 +166,12 @@ class SocketHandler(socket:Socket, project:Actor) extends Actor {
       try{
 	while(running){
 	  fillArray(headerBuf)
-	  println(new String(headerBuf))
 	  val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
 	  if(msglen > 0){
 	    val buf:Array[Char] = new Array[Char](msglen);
 	    fillArray(buf)
-	    println(new String(buf))
 	    val sexp:SExp = SExp.read(new CharArrayReader(buf))
-	    handler ! InMessage(sexp)
+	    handler ! InMessage(this, sexp)
 	  }
 	}
       }
@@ -97,6 +188,9 @@ class SocketHandler(socket:Socket, project:Actor) extends Actor {
   val out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
   def write(sexp:SExp) {
+
+    gotta write the length here.. !!!!
+
     out.write(sexp.toString())
     out.flush()
   }
@@ -108,9 +202,9 @@ class SocketHandler(socket:Socket, project:Actor) extends Actor {
 
     loop {  
       receive {
-	case InMessage(sexp) => {
+	case InMessage(from, sexp) => {
 	  println("Relaying message to project...")
-	  project ! InMessage(sexp)
+	  project ! InMessage(this, sexp)
 	}
 	case OutMessage(sexp) => {
 	  println("Writing message to socket...")
