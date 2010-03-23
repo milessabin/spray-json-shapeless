@@ -40,7 +40,7 @@ task :run => [] do
 end
 
 task :run_server => [] do
-  system "java -classpath #{SCALA_ROOT}/lib/scala-library.jar:#{CLASS_PATH} com.ensime.server.Server"
+  system "java -classpath #{SCALA_ROOT}/lib/scala-library.jar:#{SCALA_ROOT}/lib/scala-compiler.jar:#{CLASS_PATH} com.ensime.server.Server"
 end
 
 task :profile => [] do

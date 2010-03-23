@@ -31,7 +31,9 @@ case class KeywordAtom(value:String) extends SExp{
 
 object SExp extends RegexParsers{
 
-  lazy val string = regex("""\"([^\"\\]|\\.)*\"""".r) ^^ StringAtom
+  import scala.util.matching.Regex
+
+  lazy val string = regexGroups("""\"((?:[^\"\\]|\\.)*)\"""".r) ^^ {m => StringAtom(m.group(1))}
   lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ SymbolAtom
   lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
   lazy val number = regex("[0-9]+".r) ^^ {cs => IntAtom(cs.toInt)}
@@ -54,6 +56,23 @@ object SExp extends RegexParsers{
       }
     }
   }
+
+  /** A parser that matches a regex string and returns the match groups */
+  def regexGroups(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
+    def apply(in: Input) = {
+      val source = in.source
+      val offset = in.offset
+      val start = handleWhiteSpace(source, offset)
+      (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
+        case Some(matched) =>
+        Success(matched,
+          in.drop(start + matched.end - offset))
+        case None =>
+        Failure("string matching regex `"+r+"' expected but `"+in.first+"' found", in.drop(start - offset))
+      }
+    }
+  }
+
   
   def main(args: Array[String]) {
     println(read(new CharArrayReader(args(0).toCharArray())))
