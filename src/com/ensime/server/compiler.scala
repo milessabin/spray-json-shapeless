@@ -19,7 +19,8 @@ class Compiler(project:Project) extends Actor{
   val settings:Settings = new Settings(Console.println)
   settings.processArguments(
     List(
-      "-cp", "."
+      "-cp", ".",
+      "-verbose"
     ),
     false
   )
@@ -37,7 +38,7 @@ class Compiler(project:Project) extends Actor{
 	case ReloadFile(path:String) => 
 	{
 	  println("Compiler: Got reload request...")
-	  reporter.reset
+	  reporter.clearNotes
 	  val f:SourceFile = nsc.getSourceFile(path)
 	  val x = new nsc.Response[Unit]()
 	  nsc.askReload(List(f), x)
@@ -53,10 +54,21 @@ class Compiler(project:Project) extends Actor{
 
 
 class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){
+
+  private val str = "" + file + msg + severity + beg + end + line + col;
+  override val hashCode = str.hashCode
+
+  override def equals(other:Any):Boolean = {
+    other match{
+      case n:Note => n.hashCode == this.hashCode
+      case _ => false
+    }
+  }
+
   def friendlySeverity = severity match {
     case 2 => "error"
     case 1 => "warn"
-    case 0 => "ignore"
+    case 0 => "info"
   }
 
   def toEmacsSExp = {
@@ -70,17 +82,17 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
 	KeywordAtom(":file"), StringAtom(file)
       ))
   }
+
 }
 
-import scala.collection.mutable.{ HashMap, HashEntry }
+import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap }
 
 
 class PresentationReporter extends Reporter {
 
-  
-  private val notes = new HashMap[SourceFile, ArrayBuffer[Note]] with SynchronizedMap[SourceFile, ArrayBuffer[Note]] {
-    override def default(k : SourceFile) = { val v = new ArrayBuffer[Note] ; put(k, v); v }
+  private val notes = new HashMap[SourceFile, HashSet[Note]] with SynchronizedMap[SourceFile, HashSet[Note]] {
+    override def default(k : SourceFile) = { val v = new HashSet[Note] ; put(k, v); v }
   }
 
   def notesFor(file:SourceFile):List[Note] = {
@@ -88,7 +100,16 @@ class PresentationReporter extends Reporter {
   }
 
   def allNotes():List[Note] = {
+    println(notes.toString)
     notes.flatMap{ e => e._2 }.toList
+  }
+  
+  def clearNotes{
+    notes.clear
+  }
+
+  override def info(pos: Position, msg: String, force: Boolean){
+    println("INFO: " + msg)
   }
   
   override def info0(pos: Position, msg: String, severity: Severity, force: Boolean): Unit = {
@@ -111,11 +132,6 @@ class PresentationReporter extends Reporter {
     } catch {
       case ex : UnsupportedOperationException => 
     }
-  }
-
-  override def reset {
-    super.reset
-    notes.clear
   }
 
 
