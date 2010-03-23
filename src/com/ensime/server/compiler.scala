@@ -26,8 +26,7 @@ class Compiler(project:Project) extends Actor{
   )
   val reporter:PresentationReporter = new PresentationReporter()
 
-  class PresentationCompiler(settings:Settings, reporter:Reporter) extends Global(settings,reporter){
-  }
+  class PresentationCompiler(settings:Settings, reporter:Reporter) extends Global(settings,reporter){}
   val nsc = new PresentationCompiler(settings, reporter)
 
   def act() {
@@ -44,7 +43,6 @@ class Compiler(project:Project) extends Actor{
 	  nsc.askReload(List(f), x)
 	  x.get
 	  println("Compiler: Finished reload.")
-	  println("Notes: " + reporter.allNotes)
 	  project ! CompilationResult(reporter.allNotes)
 	}
       }
@@ -55,8 +53,8 @@ class Compiler(project:Project) extends Actor{
 
 class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){
 
-  private val str = "" + file + msg + severity + beg + end + line + col;
-  override val hashCode = str.hashCode
+  private val tmp = "" + file + msg + severity + beg + end + line + col;
+  override val hashCode = tmp.hashCode
 
   override def equals(other:Any):Boolean = {
     other match{
@@ -100,7 +98,6 @@ class PresentationReporter extends Reporter {
   }
 
   def allNotes():List[Note] = {
-    println(notes.toString)
     notes.flatMap{ e => e._2 }.toList
   }
   
