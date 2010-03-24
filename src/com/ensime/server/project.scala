@@ -6,33 +6,58 @@ import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.actors._  
 import scala.actors.Actor._  
+import java.io.File
 
 class Project extends Actor with SwankHandler{
 
   private val compiler:Compiler = new Compiler(this)
+  private val fileChanges:FileChangeNotifier = new FileChangeNotifier(this, new File("."))
 
   def act() {
     println("Project starting..")
     compiler.start
+    fileChanges.start
     loop {
       receive {
-	case msg:SwankInMessage =>
+	case msg:SwankInMessageEvent =>
 	{
 	  handleIncomingSwankMessage(msg)
 	}
-	case result:CompilationResult =>
+	case result:CompilationResultEvent =>
 	{
 	  sendCompilationResultEvent(result)
+	}
+	case result:TypeCompletionResultEvent =>
+	{
+	  sendTypeCompletionReturn(result)
+	}
+	case FileModifiedEvent(file:File) =>
+	{
+	  compiler ! ReloadFileEvent(file)
+	}
+	case FileCreatedEvent(file:File) =>
+	{
+	  compiler ! ReloadFileEvent(file)
+	}
+	case FileRenamedEvent(old:File, file:File) =>
+	{
+	  compiler ! RemoveFileEvent(file)
+	  compiler ! ReloadFileEvent(file)
+	}
+	case FileDeletedEvent(file:File) =>
+	{
+	  compiler ! RemoveFileEvent(file)
 	}
       }
     }
   }
 
-  def compileFile(file:String){
-    compiler ! ReloadFile(file)
-  }
 
-  protected def sendCompilationResultEvent(result:CompilationResult){
+
+  /*
+  * Report compilation results to IDE.
+  */
+  protected def sendCompilationResultEvent(result:CompilationResultEvent){
     send(SExpList(
 	List(
 	  KeywordAtom(":compilation-result"),
@@ -44,7 +69,20 @@ class Project extends Actor with SwankHandler{
 	)))
   }
 
+  /*
+  * Return type completion results to IDE
+  */
+  protected def sendTypeCompletionReturn(result:TypeCompletionResultEvent){
+    sendEmacsRexReturn(SExpList(List(
+	  KeywordAtom(":members"),
+	  SExpList(result.members.map{ _.toEmacsSExp })
+	)),
+      result.callId)
+  }
 
+  /*
+  * A sexp describing the server configuration, per the Swank standard.
+  */
   protected def getConnectionInfo = {
     SExpList(List(
 	KeywordAtom(":pid"), NilAtom(),
@@ -68,12 +106,26 @@ class Project extends Actor with SwankHandler{
 	  callId)
       }
       case "swank:compile-file" => {
-	println("project got compile file request: " + form)
 	form match{
 	  case SExpList(head::StringAtom(file)::body) => {
-	    compileFile(file)
-	    println("sent to compiler: " + file)
+	    compiler ! ReloadFileEvent(new File(file))
 	    sendEmacsRexOkReturn(callId)
+	  }
+	  case _ => {}
+	}
+      }
+      case "swank:scope-completion" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    compiler ! ScopeCompletionEvent(new File(file), point)
+	  }
+	  case _ => {}
+	}
+      }
+      case "swank:type-completion" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    compiler ! TypeCompletionEvent(new File(file), point, callId)
 	  }
 	  case _ => {}
 	}

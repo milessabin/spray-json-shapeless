@@ -2,8 +2,8 @@ package com.ensime.server
 
 import scala.actors._
 
-case class SwankInMessage(sexp:SExp)
-case class SwankOutMessage(sexp:SExp)
+case class SwankInMessageEvent(sexp:SExp)
+case class SwankOutMessageEvent(sexp:SExp)
 
 trait SwankHandler { self: Project =>
 
@@ -16,12 +16,12 @@ trait SwankHandler { self: Project =>
   }
 
   protected def send(sexp:SExp){
-    peer ! SwankOutMessage(sexp)
+    peer ! SwankOutMessageEvent(sexp)
   }
 
-  protected def handleIncomingSwankMessage(msg:SwankInMessage){
+  protected def handleIncomingSwankMessage(msg:SwankInMessageEvent){
     msg match{
-      case SwankInMessage(sexp:SExp) => {
+      case SwankInMessageEvent(sexp:SExp) => {
 	handleMessageForm(sexp)
       }
     }

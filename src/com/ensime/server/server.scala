@@ -67,7 +67,7 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
 	    val buf:Array[Char] = new Array[Char](msglen);
 	    fillArray(buf)
 	    val sexp:SExp = SExp.read(new CharArrayReader(buf))
-	    handler ! SwankInMessage(sexp)
+	    handler ! SwankInMessageEvent(sexp)
 	  }
 	}
       }
@@ -99,11 +99,11 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
 
     loop {  
       receive {
-	case SwankInMessage(sexp) => {
+	case SwankInMessageEvent(sexp) => {
 	  println("Relaying message to project...")
-	  project ! SwankInMessage(sexp)
+	  project ! SwankInMessageEvent(sexp)
 	}
-	case SwankOutMessage(sexp) => {
+	case SwankOutMessageEvent(sexp) => {
 	  println("Writing message to socket...")
 	  write(sexp)	  
 	}
