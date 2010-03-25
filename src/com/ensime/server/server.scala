@@ -11,8 +11,9 @@ import scala.actors.Actor._
 object Server {
   def main(args: Array[String]): Unit = {
     try {
-      val portfile = args(0)
 
+      // TODO use a real cmdline parser here
+      val portfile = args(0)
       val projectRootDir = args(1)
       val projectSrcDir = args(2)
       val projectClasspath = args(3)
