@@ -7,7 +7,12 @@ SCALAC = "#{SCALA_ROOT}/bin/scalac"
 
 SOURCES = ["src/com/ensime/server/*.scala"]
 
-JVM_CLASSPATH = "classes:lib/jnotify/jnotify-0.93.jar:#{SCALA_ROOT}/lib/scala-library.jar:#{SCALA_ROOT}/lib/scala-compiler.jar"
+JVM_CLASSPATH = ["lib/jnotify/jnotify-0.93.jar",
+                 "lib/configgy/configgy-1.5.jar",
+                 "#{SCALA_ROOT}/lib/scala-library.jar",
+                 "#{SCALA_ROOT}/lib/scala-compiler.jar",
+                ].join(":")
+
 
 task :clean => [] do
   FileUtils.rm_f Dir.glob('classes/*.class')
@@ -37,11 +42,11 @@ end
 
 
 task :run => [] do
-  system "java -classpath #{JVM_CLASSPATH} com.ensime.server.SExp \"(1 (hello out 1 there) one :dude hello)\""
+  system "java -classpath classes:#{JVM_CLASSPATH} com.ensime.server.SExp \"(1 (hello out 1 there) one :dude hello)\""
 end
 
 task :run_server => [] do
-  system "java -classpath #{JVM_CLASSPATH} -Djava.library.path=lib/jnotify com.ensime.server.Server"
+  system "java -classpath classes:#{JVM_CLASSPATH} -Djava.library.path=lib/jnotify com.ensime.server.Server"
 end
 
 task :profile => [] do

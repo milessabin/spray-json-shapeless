@@ -7,13 +7,23 @@ import scala.actors._
 import scala.actors.Actor._ 
 
 
+
 object Server {
   def main(args: Array[String]): Unit = {
     try {
-      val project:Project = new Project()
+      val portfile = args(0)
+
+      val projectRootDir = args(1)
+      val projectSrcDir = args(2)
+      val projectClasspath = args(3)
+      val project:Project = new Project(
+	ProjectConfig(projectRootDir, projectSrcDir, projectClasspath))
+
       project.start
-      val listener = new ServerSocket(9999);
-      println("Server listening on 9999...")
+      val port = 9999
+      val listener = new ServerSocket(port);
+      println("Server listening on " + port + "..")
+      writePort(portfile, port)
       while (true){
 	val socket = listener.accept()
 	println("Got connection, creating handler...")
@@ -26,6 +36,23 @@ object Server {
       case e: IOException => 
       {
 	System.err.println("Could not listen on port: 9999.")
+	System.exit(-1)
+      }
+    }
+  }
+
+
+  private def writePort(filename:String, port:Int){
+    try{
+      val out = new OutputStreamWriter(new FileOutputStream(filename))
+      out.write(port.toString)
+      out.flush()
+      System.out.println("Wrote port " + port + " to " + filename + ".")
+    }
+    catch {
+      case e: IOException => 
+      {
+	System.err.println("Could not write port to " + filename + ". " + e)
 	System.exit(-1)
       }
     }

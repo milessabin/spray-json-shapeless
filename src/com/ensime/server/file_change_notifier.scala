@@ -12,7 +12,7 @@ case class FileCreatedEvent(file:File) extends FileChangedEvent
 
 case class ShutdownEvent()
 
-class FileChangeNotifier(project:Actor, root:File) extends Actor{
+class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 
   private var watchID:Int = -1;
 
@@ -36,8 +36,11 @@ class FileChangeNotifier(project:Actor, root:File) extends Actor{
   }
 
   private def init(){
-    if(!root.isDirectory()){
-      System.err.println("Project root is not a directory!")
+    val root = new File(config.rootDir)
+    val src = new File(config.rootDir, config.srcDir)
+
+    if(!src.isDirectory() || !src.exists()){
+      System.err.println("" + src + "is not a valid source directory!")
       return
     }
 
@@ -49,7 +52,7 @@ class FileChangeNotifier(project:Actor, root:File) extends Actor{
 
     val watchSubtree:Boolean = true;
 
-    watchID = JNotify.addWatch(root.getAbsolutePath(), mask, watchSubtree, 
+    watchID = JNotify.addWatch(src.getAbsolutePath(), mask, watchSubtree, 
       new JNotifyListener(){
 	def fileRenamed(wd:Int, rootPath:String, oldName:String, newName:String){
 	  val dir = new File(rootPath);

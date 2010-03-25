@@ -1,0 +1,13 @@
+(
+:server-root "/home/aemon/src/misc/ensime/"
+:server-cmd  "bin/server.sh"
+:server-host "localhost"
+;;:server-port "9999"
+:server-env ()
+
+:source-dir "src"
+:classpath ("lib/jnotify/jnotify-0.93.jar"
+	     "lib/configgy/configgy-1.5.jar"
+	     "lib/scala-library.jar"
+	     "lib/scala-compiler.jar")
+)

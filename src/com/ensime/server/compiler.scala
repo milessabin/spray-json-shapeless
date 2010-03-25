@@ -22,12 +22,12 @@ case class TypeCompletionEvent(file:File, point:Int, callId:SExp)
 
 case class BackgroundCompileCompleteEvent()
 
-class Compiler(project:Project) extends Actor{
+class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   val settings:Settings = new Settings(Console.println)
   settings.processArguments(
     List(
-      "-cp", ".",
+      "-cp", config.classpath,
       "-verbose"
     ),
     false

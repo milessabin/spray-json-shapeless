@@ -7,13 +7,15 @@ import scala.actors._
 import scala.actors.Actor._  
 import java.io.File
 
-class Project extends Actor with SwankHandler{
+case class ProjectConfig(rootDir:String, srcDir:String, classpath:String)
 
-  private val compiler:Compiler = new Compiler(this)
-  private val fileChanges:FileChangeNotifier = new FileChangeNotifier(this, new File("."))
+class Project(config:ProjectConfig) extends Actor with SwankHandler{
+
+  private val compiler:Compiler = new Compiler(this, config)
+  private val fileChanges:FileChangeNotifier = new FileChangeNotifier(this, config)
 
   def act() {
-    println("Project starting..")
+    println("Project starting with config: " + config)
     compiler.start
     fileChanges.start
     loop {
@@ -50,7 +52,6 @@ class Project extends Actor with SwankHandler{
       }
     }
   }
-
 
 
   /*
