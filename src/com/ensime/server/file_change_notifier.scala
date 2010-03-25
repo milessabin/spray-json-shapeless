@@ -32,7 +32,7 @@ class FileChangeNotifier(project:Actor, root:File) extends Actor{
   }
 
   private def interesting(file:File):Boolean = {
-    file.exists() && !(file.isHidden())
+    file.exists() && !(file.isHidden()) && file.getAbsolutePath().matches(".+scala")
   }
 
   private def init(){

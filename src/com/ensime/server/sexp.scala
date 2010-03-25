@@ -4,6 +4,7 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.parsing.input._
 
+
 abstract class SExp
 case class SExpList(items:List[SExp]) extends SExp{
   override def toString = "(" + items.mkString(" ") + ")"
@@ -15,7 +16,10 @@ case class TruthAtom() extends SExp{
   override def toString = "t"
 }
 case class StringAtom(value:String) extends SExp{
-  override def toString = "\"" + value + "\""
+  override def toString = {
+    val printable = value.replace("\\", "\\\\").replace("\"", "\\\"");
+    "\"" + printable + "\""
+  }
 }
 case class IntAtom(value:Int) extends SExp{
   override def toString = String.valueOf(value)

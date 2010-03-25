@@ -7,7 +7,6 @@ import scala.actors._
 import scala.actors.Actor._ 
 
 
-
 object Server {
   def main(args: Array[String]): Unit = {
     try {

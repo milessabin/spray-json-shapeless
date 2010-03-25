@@ -1,6 +1,5 @@
 package com.ensime.server
 
-
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
@@ -73,10 +72,14 @@ class Project extends Actor with SwankHandler{
   * Return type completion results to IDE
   */
   protected def sendTypeCompletionReturn(result:TypeCompletionResultEvent){
-    sendEmacsRexReturn(SExpList(List(
-	  KeywordAtom(":members"),
-	  SExpList(result.members.map{ _.toEmacsSExp })
-	)),
+    sendEmacsRexReturn(
+      SExpList(List(	
+	  KeywordAtom(":ok"),
+	  SExpList(List(
+	      KeywordAtom(":members"),
+	      SExpList(result.members.map{ _.toEmacsSExp })
+	    )
+	  ))),
       result.callId)
   }
 
