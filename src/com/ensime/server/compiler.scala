@@ -11,7 +11,6 @@ import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import java.io.File
 
-
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[AccessibleTypeMember], callId:SExp)
 case class ReloadFileEvent(file:File)
