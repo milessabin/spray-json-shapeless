@@ -21,10 +21,11 @@ object Server {
 	ProjectConfig(projectRootDir, projectSrcDir, projectClasspath))
 
       project.start
-      val port = 9999
-      val listener = new ServerSocket(port);
-      println("Server listening on " + port + "..")
-      writePort(portfile, port)
+      val requestedPort = 0
+      val listener = new ServerSocket(requestedPort);
+      val actualPort = listener.getLocalPort
+      println("Server listening on " + actualPort + "..")
+      writePort(portfile, actualPort)
       while (true){
 	val socket = listener.accept()
 	println("Got connection, creating handler...")
@@ -36,7 +37,7 @@ object Server {
     catch {
       case e: IOException => 
       {
-	System.err.println("Could not listen on port: 9999.")
+	System.err.println("Server listen failed: " + e)
 	System.exit(-1)
       }
     }

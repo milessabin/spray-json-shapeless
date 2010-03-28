@@ -2,7 +2,7 @@
 :server-root "/home/aemon/src/misc/ensime/"
 :server-cmd  "bin/server.sh"
 :server-host "localhost"
-;;:server-port "9999"
+:server-port "9999"
 :server-env ()
 
 :source-dir "src"
