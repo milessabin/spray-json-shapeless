@@ -21,6 +21,7 @@ object Server {
 	ProjectConfig(projectRootDir, projectSrcDir, projectClasspath))
 
       project.start
+      // 0 will cause socket to bind to first available port
       val requestedPort = 0
       val listener = new ServerSocket(requestedPort);
       val actualPort = listener.getLocalPort

@@ -154,7 +154,7 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
 	KeywordAtom(":msg"), StringAtom(msg),
 	KeywordAtom(":beg"), IntAtom(beg),
 	KeywordAtom(":end"), IntAtom(end),
-	KeywordAtom(":line"), IntAtom(line), 
+	KeywordAtom(":line"), IntAtom(line),
 	KeywordAtom(":col"), IntAtom(col),
 	KeywordAtom(":file"), StringAtom(file)
       ))
