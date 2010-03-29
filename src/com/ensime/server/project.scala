@@ -128,8 +128,8 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
       }
       case "swank:type-completion" => {
 	form match{
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! TypeCompletionEvent(new File(file), point, callId)
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
+	    compiler ! TypeCompletionEvent(new File(file), point, prefix, callId)
 	  }
 	  case _ => {}
 	}

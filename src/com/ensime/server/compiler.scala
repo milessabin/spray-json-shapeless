@@ -16,7 +16,7 @@ case class TypeCompletionResultEvent(members:List[AccessibleTypeMember], callId:
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
-case class TypeCompletionEvent(file:File, point:Int, callId:SExp)
+case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:SExp)
 
 case class BackgroundCompileCompleteEvent()
 
@@ -81,7 +81,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  println(members)
 	}
 
-	case TypeCompletionEvent(file:File, point:Int, callId:SExp) => 
+	case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:SExp) => 
 	{
 	  println("Compiler: Got type completion request...")
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
@@ -95,8 +95,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  val visMembers = members.flatMap{ m => 
 	    m match{
 	      case nsc.TypeMember(sym, tpe, access, _, _) => {
-		if(access){
-		  List(new AccessibleTypeMember(sym.toString, tpe.toString))
+		if(access && sym.nameString.startsWith(prefix)){
+		  List(new AccessibleTypeMember(sym.nameString, tpe.toString))
 		}
 		else{
 		  List()
@@ -104,7 +104,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      }
 	      case nsc.ScopeMember(sym, tpe, _, _) => List()
 	    }
-	  }
+	  }.sortWith((a,b) => a.name <= b.name)
 	  project ! TypeCompletionResultEvent(visMembers, callId)
 	}
 
@@ -121,7 +121,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   }
 }
 
-class AccessibleTypeMember(name:String, tpe:String){
+
+case class AccessibleTypeMember(name:String, tpe:String){
   def toEmacsSExp = {
     SExpList(List(
 	KeywordAtom(":name"), StringAtom(name),
