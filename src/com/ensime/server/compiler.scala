@@ -44,8 +44,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   val nsc = new PresentationCompiler(settings, reporter, this)
 
-
-
   def act() {
     println("Compiler starting..")
     nsc.newRunnerThread
@@ -86,9 +84,16 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  println("Compiler: Got type completion request...")
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
 	  val p:Position = new OffsetPosition(f, point);
-	  val x = new nsc.Response[List[nsc.Member]]()
-	  nsc.askTypeCompletion(p, x)
-	  val members:List[nsc.Member] = x.get match{
+
+	  // Force reload of current file before 
+	  // listing members..
+	  val x1 = new nsc.Response[Unit]()
+	  nsc.askReload(List(f), x1)
+	  x1.get
+
+	  val x2 = new nsc.Response[List[nsc.Member]]()
+	  nsc.askTypeCompletion(p, x2)
+	  val members:List[nsc.Member] = x2.get match{
 	    case Left(m) => m
 	    case Right(e) => List()
 	  }
@@ -160,7 +165,6 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
 	KeywordAtom(":file"), StringAtom(file)
       ))
   }
-
 }
 
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
