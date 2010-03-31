@@ -11,7 +11,6 @@ import scala.actors.Actor._
 object Server {
   def main(args: Array[String]): Unit = {
     try {
-
       // TODO use a real cmdline parser here
       val portfile = args(0)
       val projectRootDir = args(1)
@@ -22,6 +21,7 @@ object Server {
 	ProjectConfig(projectRootDir, projectSrcDir, projectSrcFiles, projectClasspath))
 
       project.start
+
       // 0 will cause socket to bind to first available port
       val requestedPort = 0
       val listener = new ServerSocket(requestedPort)

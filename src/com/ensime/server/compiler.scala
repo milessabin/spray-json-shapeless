@@ -26,7 +26,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val cpPieces = config.classpath.split(":")
   val cpFiles = cpPieces.map{ s =>
     val f = new File(rootDir, s)
-    f.getAbsolutePath
+    f.getAbsolutePath()
   }
   val srcDir = new File(rootDir, config.srcDir)
 
@@ -44,19 +44,43 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor) extends Global(settings,reporter){
 
-    // Override and send notification to parent actor when finished..
+    /**
+    * Override so we send a notification to compiler actor when finished..
+    */
     override def recompile(units: List[RichCompilationUnit]) {
       super.recompile(units)
       parent ! BackgroundCompileCompleteEvent()
+    }
+
+    
+    /** 
+    *  Make sure a set of compilation units is loaded and parsed,
+    *  but do not trigger a full recompile.
+    */
+    private def quickReload(sources: List[SourceFile], result: Response[Unit]) {
+      respond(result)(reloadSources(sources))
+    }
+
+    /** 
+    *  Make sure a set of compilation units is loaded and parsed,
+    *  but do not trigger a full recompile.
+    *  Return () to syncvar `result` on completion.
+    */
+    def askQuickReload(sources: List[SourceFile], result: Response[Unit]) = 
+    scheduler postWorkItem new WorkItem {
+      def apply() = quickReload(sources, result)
+      override def toString = "quickReload "+sources
     }
 
   }
 
   val nsc = new PresentationCompiler(settings, reporter, this)
 
+
   def act() {
     println("Compiler starting..")
     nsc.newRunnerThread
+    nsc.askReset
     loop {
       receive {
 	case ReloadFileEvent(file:File) => 
@@ -93,7 +117,12 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	{
 	  println("Compiler: Got type completion request...")
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  val p:Position = new OffsetPosition(f, point);
+	  val p:Position = new OffsetPosition(f, point)
+
+	  // Make sure the type-tree is up-to-date
+	  val x = new nsc.Response[Unit]()
+	  nsc.askQuickReload(List(f), x)
+	  x.get
 
 	  val x2 = new nsc.Response[List[nsc.Member]]()
 	  nsc.askTypeCompletion(p, x2)
@@ -105,7 +134,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    m match{
 	      case nsc.TypeMember(sym, tpe, true, _, _) => {
 		if(sym.nameString.startsWith(prefix)){
-		  List(new AccessibleTypeMember(sym.nameString, tpe.toString))
+		  List(AccessibleTypeMember(sym.nameString, tpe.toString))
 		}
 		else{
 		  List()
