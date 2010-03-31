@@ -22,14 +22,24 @@ case class BackgroundCompileCompleteEvent()
 
 class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
-  val settings:Settings = new Settings(Console.println)
-  settings.processArguments(
-    List(
-      "-cp", config.classpath,
-      "-verbose"
-    ),
-    false
+  val rootDir = new File(config.rootDir)
+  val cpPieces = config.classpath.split(":")
+  val cpFiles = cpPieces.map{ s =>
+    val f = new File(rootDir, s)
+    f.getAbsolutePath
+  }
+  val srcDir = new File(rootDir, config.srcDir)
+
+  val args = List(
+    "-cp", cpFiles.mkString(":"),
+    "-verbose",
+    "-sourcepath", srcDir.getAbsolutePath,
+    config.srcFiles.split(":").mkString(" ")
   )
+  println("COMPILER ARGS: " + args)
+
+  val settings:Settings = new Settings(Console.println)
+  settings.processArguments(args, false)
   val reporter:PresentationReporter = new PresentationReporter()
 
   class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor) extends Global(settings,reporter){
@@ -85,12 +95,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
 	  val p:Position = new OffsetPosition(f, point);
 
-	  // Force reload of current file before 
-	  // listing members..
-	  val x1 = new nsc.Response[Unit]()
-	  nsc.askReload(List(f), x1)
-	  x1.get
-
 	  val x2 = new nsc.Response[List[nsc.Member]]()
 	  nsc.askTypeCompletion(p, x2)
 	  val members:List[nsc.Member] = x2.get match{
@@ -99,15 +103,15 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  }
 	  val visMembers = members.flatMap{ m => 
 	    m match{
-	      case nsc.TypeMember(sym, tpe, access, _, _) => {
-		if(access && sym.nameString.startsWith(prefix)){
+	      case nsc.TypeMember(sym, tpe, true, _, _) => {
+		if(sym.nameString.startsWith(prefix)){
 		  List(new AccessibleTypeMember(sym.nameString, tpe.toString))
 		}
 		else{
 		  List()
 		}
 	      }
-	      case nsc.ScopeMember(sym, tpe, _, _) => List()
+	      case _ => List()
 	    }
 	  }.sortWith((a,b) => a.name <= b.name)
 	  project ! TypeCompletionResultEvent(visMembers, callId)

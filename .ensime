@@ -6,6 +6,7 @@
 :server-env ()
 
 :source-dir "src"
+:source-files ("src/com/ensime/server/*.scala")
 :classpath ("lib/jnotify/jnotify-0.93.jar"
 	     "lib/configgy/configgy-1.5.jar"
 	     "lib/scala-library.jar"

@@ -16,14 +16,15 @@ object Server {
       val portfile = args(0)
       val projectRootDir = args(1)
       val projectSrcDir = args(2)
-      val projectClasspath = args(3)
+      val projectSrcFiles = args(3)
+      val projectClasspath = args(4)
       val project:Project = new Project(
-	ProjectConfig(projectRootDir, projectSrcDir, projectClasspath))
+	ProjectConfig(projectRootDir, projectSrcDir, projectSrcFiles, projectClasspath))
 
       project.start
       // 0 will cause socket to bind to first available port
       val requestedPort = 0
-      val listener = new ServerSocket(requestedPort);
+      val listener = new ServerSocket(requestedPort)
       val actualPort = listener.getLocalPort
       println("Server listening on " + actualPort + "..")
       writePort(portfile, actualPort)
@@ -129,11 +130,9 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
     loop {  
       receive {
 	case SwankInMessageEvent(sexp) => {
-	  println("Relaying message to project...")
 	  project ! SwankInMessageEvent(sexp)
 	}
 	case SwankOutMessageEvent(sexp) => {
-	  println("Writing message to socket...")
 	  write(sexp)	  
 	}
       }

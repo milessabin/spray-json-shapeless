@@ -7,17 +7,17 @@ import scala.actors._
 import scala.actors.Actor._ 
 import java.io.File
 
-case class ProjectConfig(rootDir:String, srcDir:String, classpath:String)
+case class ProjectConfig(rootDir:String, srcDir:String, srcFiles:String, classpath:String)
 
 class Project(config:ProjectConfig) extends Actor with SwankHandler{
 
   private val compiler:Compiler = new Compiler(this, config)
-  private val fileChanges:FileChangeNotifier = new FileChangeNotifier(this, config)
+  //private val fileChanges:FileChangeNotifier = new FileChangeNotifier(this, config)
 
   def act() {
     println("Project starting with config: " + config)
     compiler.start
-    fileChanges.start
+    //fileChanges.start
     loop {
       receive {
 	case msg:SwankInMessageEvent =>
