@@ -46,6 +46,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   settings.processArguments(args, false)
   val reporter:PresentationReporter = new PresentationReporter()
 
+
   class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor) extends Global(settings,reporter){
 
     /**
@@ -206,6 +207,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  {
 	    project ! CompilationResultEvent(reporter.allNotes)
 	  }
+
 	  case other => 
 	  {
 	    println("Compiler: WTF, what's " + other)
@@ -214,7 +216,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
       }
       catch{
-	case e: Exception => 
+	case e:Exception => 
 	{
 	  System.err.println("Error at Compiler message loop: " + e)
 	}
