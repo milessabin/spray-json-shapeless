@@ -107,7 +107,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       maybeType match{
 	case Some(tpe) => {
 	  val typeSym = tpe.typeSymbol
-	  val typeInfo = TypeInfo(tpe.toString, typeSym.pos)
+	  val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
 	  TypeInspectInfo(typeInfo, visMembers)
 	}
 	case None => {
@@ -235,6 +235,7 @@ case class MemberInfo(name:String, tpe:String){
   }
 }
 
+
 case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){
   def toEmacsSExp = SExp(
     ":type", tpe.toEmacsSExp,
@@ -243,13 +244,14 @@ case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){
 }
 object TypeInspectInfo{
   def nullInspectInfo() = {
-    TypeInspectInfo(TypeInfo("NA", NoPosition), List())
+    TypeInspectInfo(TypeInfo("NA", "NA", NoPosition), List())
   }
 }
 
-case class TypeInfo(name:String, pos:Position){
+case class TypeInfo(name:String, generalName:String, pos:Position){
   def toEmacsSExp = SExp(
     ":name", name,
+    ":general-name", generalName,
     ":file", if(pos.isDefined) { pos.source.path } else { 'nil },
     ":offset", if(pos.isDefined) { pos.point } else { 'nil }
   )
