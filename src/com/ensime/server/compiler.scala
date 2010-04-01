@@ -7,6 +7,7 @@ import scala.actors._
 import scala.actors.Actor._  
 import scala.tools.nsc.io.{AbstractFile}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
+import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import java.io.File
@@ -78,19 +79,22 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     def inspectTypeAt(p: Position):TypeInspectInfo = {
       blockingQuickReload(p.source)
 
+      // First grab the type at position
       val x1 = new Response[Tree]()
       askTypeAt(p, x1)
-      val tpe:Type = x1.get match{
-	case Left(t) => t.tpe
-	case Right(e) => null
+      val maybeType:Option[Type] = x1.get match{
+	case Left(t) => Some(t.tpe)
+	case Right(e) => None
       }
 
+      // Then grab the members of that type
       val x2 = new nsc.Response[List[Member]]()
       askTypeCompletion(p, x2)
       val members:List[Member] = x2.get match{
 	case Left(m) => m
 	case Right(e) => List()
       }
+      // ...filtering out non-visible members
       val visMembers = (members.flatMap {
 	  case TypeMember(sym, tpe, true, _, _) => {
 	    List(MemberInfo(sym.nameString, tpe.toString))
@@ -98,8 +102,17 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  case _ => List()
 	}).sortWith((a,b) => a.name <= b.name)
 
-      val typeInfo = TypeInfo(tpe.toString)
-      TypeInspectInfo(typeInfo, visMembers)
+      // Then return all the info about this type..
+      maybeType match{
+	case Some(tpe) => {
+	  val typeSym = tpe.typeSymbol
+	  val typeInfo = TypeInfo(tpe.toString, typeSym.pos)
+	  TypeInspectInfo(typeInfo, visMembers)
+	}
+	case None => {
+	  TypeInspectInfo.nullInspectInfo
+	}
+      }
     }
 
     def completeMemberAt(p: Position, prefix:String):List[MemberInfo] = {
@@ -121,9 +134,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	}
 	case _ => List()
       }.sortWith((a,b) => a.name <= b.name)
-
       visMembers
-
     }
 
     def blockingQuickReload(f:SourceFile){
@@ -147,56 +158,65 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     nsc.newRunnerThread
     nsc.askReset
     loop {
-      receive {
+      try{
+	receive {
+	  case ReloadFileEvent(file:File) => 
+	  {
+	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    nsc.blockingFullReload(f)
+	    project ! CompilationResultEvent(reporter.allNotes)
+	  }
 
-	case ReloadFileEvent(file:File) => 
-	{
-	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  nsc.blockingFullReload(f)
-	  project ! CompilationResultEvent(reporter.allNotes)
-	}
+	  case RemoveFileEvent(file:File) => 
+	  {
+	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    nsc.removeUnitOf(f)
+	  }
 
-	case RemoveFileEvent(file:File) => 
-	{
-	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  nsc.removeUnitOf(f)
-	}
+	  case ScopeCompletionEvent(file:File, point:Int) => 
+	  {
+	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    val p:Position = new OffsetPosition(f, point);
+	    val x = new nsc.Response[List[nsc.Member]]()
+	    nsc.askScopeCompletion(p, x)
+	    val members:List[nsc.Member] = x.get match{
+	      case Left(m) => m
+	      case Right(e) => List()
+	    }
+	  }
 
-	case ScopeCompletionEvent(file:File, point:Int) => 
-	{
-	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  val p:Position = new OffsetPosition(f, point);
-	  val x = new nsc.Response[List[nsc.Member]]()
-	  nsc.askScopeCompletion(p, x)
-	  val members:List[nsc.Member] = x.get match{
-	    case Left(m) => m
-	    case Right(e) => List()
+	  case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
+	  {
+	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    val p:Position = new OffsetPosition(f, point)
+	    val members = nsc.completeMemberAt(p, prefix)
+	    project ! TypeCompletionResultEvent(members, callId)
+	  }
+
+	  case InspectTypeEvent(file:File, point:Int, callId:Int) => 
+	  {
+	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    val p:Position = new OffsetPosition(f, point)
+	    val inspectInfo = nsc.inspectTypeAt(p)
+
+	    project ! InspectTypeResultEvent(inspectInfo, callId)
+	  }
+
+	  case BackgroundCompileCompleteEvent() => 
+	  {
+	    project ! CompilationResultEvent(reporter.allNotes)
+	  }
+	  case other => 
+	  {
+	    println("Compiler: WTF, what's " + other)
 	  }
 	}
 
-	case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
+      }
+      catch{
+	case e: Exception => 
 	{
-	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  val p:Position = new OffsetPosition(f, point)
-	  val members = nsc.completeMemberAt(p, prefix)
-	  project ! TypeCompletionResultEvent(members, callId)
-	}
-
-	case InspectTypeEvent(file:File, point:Int, callId:Int) => 
-	{
-	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  val p:Position = new OffsetPosition(f, point)
-	  val inspectInfo = nsc.inspectTypeAt(p)
-	  project ! InspectTypeResultEvent(inspectInfo, callId)
-	}
-
-	case BackgroundCompileCompleteEvent() => 
-	{
-	  project ! CompilationResultEvent(reporter.allNotes)
-	}
-	case other => 
-	{
-	  println("Compiler: WTF, what's " + other)
+	  System.err.println("Error at Compiler message loop: " + e)
 	}
       }
     }
@@ -213,18 +233,26 @@ case class MemberInfo(name:String, tpe:String){
   }
 }
 
-
 case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){
   def toEmacsSExp = SExp(
     ":type", tpe.toEmacsSExp,
     ":members", SExp(members.map{_.toEmacsSExp})
   )
-  
+}
+object TypeInspectInfo{
+  def nullInspectInfo() = {
+    TypeInspectInfo(TypeInfo("NA", NoPosition), List())
+  }
 }
 
-case class TypeInfo(name:String){
-  def toEmacsSExp = SExp(":name", name)
+case class TypeInfo(name:String, pos:Position){
+  def toEmacsSExp = SExp(
+    ":name", name,
+    ":file", if(pos.isDefined) { pos.source.path } else { 'nil },
+    ":offset", if(pos.isDefined) { pos.point } else { 'nil }
+  )
 }
+
 
 class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){
 
@@ -256,6 +284,7 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
     )
   }
 }
+
 
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap }

@@ -18,41 +18,50 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
     println("Project starting with config: " + config)
     compiler.start
     loop {
-      receive {
-	case msg:SwankInMessageEvent =>
-	{
-	  handleIncomingSwankMessage(msg)
-	}
-	case result:CompilationResultEvent =>
-	{
-	  sendCompilationResultEvent(result)
-	}
-	case result:TypeCompletionResultEvent =>
-	{
-	  sendTypeCompletionReturn(result)
-	}
-	case result:InspectTypeResultEvent =>
-	{
-	  sendInspectTypeReturn(result)
-	}
-	case FileModifiedEvent(file:File) =>
-	{
-	  compiler ! ReloadFileEvent(file)
-	}
-	case FileCreatedEvent(file:File) =>
-	{
-	  compiler ! ReloadFileEvent(file)
-	}
-	case FileRenamedEvent(old:File, file:File) =>
-	{
-	  compiler ! RemoveFileEvent(file)
-	  compiler ! ReloadFileEvent(file)
-	}
-	case FileDeletedEvent(file:File) =>
-	{
-	  compiler ! RemoveFileEvent(file)
+      try{
+	receive {
+	  case msg:SwankInMessageEvent =>
+	  {
+	    handleIncomingSwankMessage(msg)
+	  }
+	  case result:CompilationResultEvent =>
+	  {
+	    sendCompilationResultEvent(result)
+	  }
+	  case result:TypeCompletionResultEvent =>
+	  {
+	    sendTypeCompletionReturn(result)
+	  }
+	  case result:InspectTypeResultEvent =>
+	  {
+	    sendInspectTypeReturn(result)
+	  }
+	  case FileModifiedEvent(file:File) =>
+	  {
+	    compiler ! ReloadFileEvent(file)
+	  }
+	  case FileCreatedEvent(file:File) =>
+	  {
+	    compiler ! ReloadFileEvent(file)
+	  }
+	  case FileRenamedEvent(old:File, file:File) =>
+	  {
+	    compiler ! RemoveFileEvent(file)
+	    compiler ! ReloadFileEvent(file)
+	  }
+	  case FileDeletedEvent(file:File) =>
+	  {
+	    compiler ! RemoveFileEvent(file)
+	  }
 	}
       }
+      catch{
+	case e: Exception => 
+	{
+	  System.err.println("Error at Project message loop: " + e)
+	}
+      }
+      
     }
   }
 
@@ -84,6 +93,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
       ),
       result.callId)
   }
+
 
   /*
   * Return type completion results to IDE
