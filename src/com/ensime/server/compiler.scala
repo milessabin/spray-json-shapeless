@@ -10,6 +10,7 @@ import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import java.io.File
+import com.ensime.server.SExp._
 
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfo], callId:Int)
@@ -159,10 +160,10 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 case class MemberInfo(name:String, tpe:String){
   def toEmacsSExp = {
-    SExpList(List(
-	KeywordAtom(":name"), StringAtom(name),
-	KeywordAtom(":type"), StringAtom(tpe)
-      ))
+    SExp(
+      ":name", name,
+      ":type", tpe
+    )
   }
 }
 
@@ -179,21 +180,21 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
   }
 
   def friendlySeverity = severity match {
-    case 2 => "error"
-    case 1 => "warn"
-    case 0 => "info"
+    case 2 => 'error
+    case 1 => 'warn
+    case 0 => 'info
   }
 
   def toEmacsSExp = {
-    SExpList(List(
-	KeywordAtom(":severity"), SymbolAtom(friendlySeverity),
-	KeywordAtom(":msg"), StringAtom(msg),
-	KeywordAtom(":beg"), IntAtom(beg),
-	KeywordAtom(":end"), IntAtom(end),
-	KeywordAtom(":line"), IntAtom(line),
-	KeywordAtom(":col"), IntAtom(col),
-	KeywordAtom(":file"), StringAtom(file)
-      ))
+    SExp(
+      ":severity", friendlySeverity,
+      ":msg", msg,
+      ":beg", beg,
+      ":end", end,
+      ":line", line,
+      ":col", col,
+      ":file", file
+    )
   }
 }
 
@@ -245,10 +246,12 @@ class PresentationReporter extends Reporter {
     }
   }
 
+  def formatMessage(msg:String):String = {
+    augmentString(msg).map { 
+      case '\n' => ' '
+      case '\r' => ' '
+      case c => c
+    }
+  }
 
-  def formatMessage(msg : String) = msg.map {
-    case '\n' => ' '
-    case '\r' => ' '
-    case c => c
-  }.mkString("","","")
 }
