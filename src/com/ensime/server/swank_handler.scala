@@ -31,27 +31,8 @@ trait SwankHandler { self: Project =>
 
   protected def handleMessageForm(sexp:SExp){
     sexp match{
-      case SExpList(head::body) => {
-	head match {
-	  case KeywordAtom(key) => {
-	    key match {
-	      case ":emacs-rex" => {
-		if(body.size != 3){
-		  sendReaderError(sexp, "Expected five elements in :emacs-rex.")
-		}
-		else{
-		  val form:SExp = body(0)
-		  val pack:SExp = body(1)
-		  val callId:SExp = body(2)
-		  handleEmacsRex(form, callId)
-		}
-	      }
-	    }
-	  }
-	  case _ => {
-	    sendReaderError(sexp, "Unknown protocol form.")
-	  }
-	}
+      case SExpList(KeywordAtom(":emacs-rex")::form::IntAtom(callId)::rest) => {
+	handleEmacsRex(form, callId)
       }
       case _ => {
 	sendReaderError(sexp, "Unknown protocol form.")
@@ -59,26 +40,24 @@ trait SwankHandler { self: Project =>
     }
   }
 
-  protected def handleEmacsRex(name:String, form:SExp, callId:SExp)
 
-  protected def handleEmacsRex(form:SExp, callId:SExp){
+  protected def handleEmacsRex(form:SExp, callId:Int){
     form match{
-      case SExpList(list) => {
-	list.head match {
-	  case SymbolAtom(name) => {
-	    handleEmacsRex(name, form, callId)
-	  }
-	  case _ => {
-	    sendEmacsRexError(
-	      "Unknown :emacs-rex call. Expecting leading symbol. " + form,
-	      callId)
-	  }
-	}	
+      case SExpList(SymbolAtom(name)::rest) => {
+	handleEmacsRex(name, form, callId)
       }
-    }
+      case _ => {
+	sendEmacsRexError(
+	  "Unknown :emacs-rex call. Expecting leading symbol. " + form,
+	  callId)
+      }
+    }	
   }
 
-  protected def sendEmacsRexOkReturn(callId:SExp){
+  protected def handleEmacsRex(name:String, form:SExp, callId:Int)
+
+
+  protected def sendEmacsRexOkReturn(callId:Int){
     send(SExp(
 	":return",
 	SExp( ":ok", true ),
@@ -86,7 +65,7 @@ trait SwankHandler { self: Project =>
       ))
   }
 
-  protected def sendEmacsRexReturn(value:SExp, callId:SExp){
+  protected def sendEmacsRexReturn(value:SExp, callId:Int){
     send(SExp(
 	":return",
 	value,
@@ -94,7 +73,7 @@ trait SwankHandler { self: Project =>
       ))
   }
 
-  protected def sendEmacsRexError(msg:String, callId:SExp){
+  protected def sendEmacsRexError(msg:String, callId:Int){
     send(SExp(
 	":invalid-rpc",
 	callId,

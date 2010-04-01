@@ -11,13 +11,16 @@ import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import java.io.File
 import com.ensime.server.SExp._
+import scala.tools.nsc.ast._
 
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfo], callId:Int)
+case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
+case class InspectTypeEvent(file:File, point:Int, callId:Int)
 
 case class BackgroundCompileCompleteEvent()
 
@@ -69,24 +72,75 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     def askQuickReload(sources: List[SourceFile], result: Response[Unit]) = 
     scheduler postWorkItem new WorkItem {
       def apply() = quickReload(sources, result)
-      override def toString = "quickReload "+sources
+      override def toString = "quickReload " + sources
+    }
+
+    def inspectTypeAt(p: Position):TypeInspectInfo = {
+      blockingQuickReload(p.source)
+
+      val x1 = new Response[Tree]()
+      askTypeAt(p, x1)
+      val tpe:Type = x1.get match{
+	case Left(t) => t.tpe
+	case Right(e) => null
+      }
+
+      val x2 = new nsc.Response[List[Member]]()
+      askTypeCompletion(p, x2)
+      val members:List[Member] = x2.get match{
+	case Left(m) => m
+	case Right(e) => List()
+      }
+      val visMembers = (members.flatMap {
+	  case TypeMember(sym, tpe, true, _, _) => {
+	    List(MemberInfo(sym.nameString, tpe.toString))
+	  }
+	  case _ => List()
+	}).sortWith((a,b) => a.name <= b.name)
+
+      val typeInfo = TypeInfo(tpe.toString)
+      TypeInspectInfo(typeInfo, visMembers)
+    }
+
+    def completeMemberAt(p: Position, prefix:String):List[MemberInfo] = {
+      blockingQuickReload(p.source)
+      val x2 = new Response[List[Member]]()
+      askTypeCompletion(p, x2)
+      val members:List[Member] = x2.get match{
+	case Left(m) => m
+	case Right(e) => List()
+      }
+      val visMembers = members.flatMap{
+	case TypeMember(sym, tpe, true, _, _) => {
+	  if(sym.nameString.startsWith(prefix)){
+	    List(MemberInfo(sym.nameString, tpe.toString))
+	  }
+	  else{
+	    List()
+	  }
+	}
+	case _ => List()
+      }.sortWith((a,b) => a.name <= b.name)
+
+      visMembers
+
+    }
+
+    def blockingQuickReload(f:SourceFile){
+      val x = new nsc.Response[Unit]()
+      nsc.askQuickReload(List(f), x)
+      x.get
+    }
+
+    def blockingFullReload(f:SourceFile){
+      val x = new nsc.Response[Unit]()
+      nsc.askReload(List(f), x)
+      x.get
     }
 
   }
 
   val nsc = new PresentationCompiler(settings, reporter, this)
-
-  private def blockingQuickReload(f:SourceFile){
-    val x = new nsc.Response[Unit]()
-    nsc.askQuickReload(List(f), x)
-    x.get
-  }
-
-  private def blockingFullReload(f:SourceFile){
-    val x = new nsc.Response[Unit]()
-    nsc.askReload(List(f), x)
-    x.get
-  }
 
   def act() {
     println("Compiler starting..")
@@ -94,17 +148,20 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     nsc.askReset
     loop {
       receive {
+
 	case ReloadFileEvent(file:File) => 
 	{
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  blockingFullReload(f)
+	  nsc.blockingFullReload(f)
 	  project ! CompilationResultEvent(reporter.allNotes)
 	}
+
 	case RemoveFileEvent(file:File) => 
 	{
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
 	  nsc.removeUnitOf(f)
 	}
+
 	case ScopeCompletionEvent(file:File, point:Int) => 
 	{
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
@@ -121,27 +178,16 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	{
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
 	  val p:Position = new OffsetPosition(f, point)
-	  blockingQuickReload(f)
-	  val x2 = new nsc.Response[List[nsc.Member]]()
-	  nsc.askTypeCompletion(p, x2)
-	  val members:List[nsc.Member] = x2.get match{
-	    case Left(m) => m
-	    case Right(e) => List()
-	  }
-	  val visMembers = members.flatMap{ m => 
-	    m match{
-	      case nsc.TypeMember(sym, tpe, true, _, _) => {
-		if(sym.nameString.startsWith(prefix)){
-		  List(MemberInfo(sym.nameString, tpe.toString))
-		}
-		else{
-		  List()
-		}
-	      }
-	      case _ => List()
-	    }
-	  }.sortWith((a,b) => a.name <= b.name)
-	  project ! TypeCompletionResultEvent(visMembers, callId)
+	  val members = nsc.completeMemberAt(p, prefix)
+	  project ! TypeCompletionResultEvent(members, callId)
+	}
+
+	case InspectTypeEvent(file:File, point:Int, callId:Int) => 
+	{
+	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	  val p:Position = new OffsetPosition(f, point)
+	  val inspectInfo = nsc.inspectTypeAt(p)
+	  project ! InspectTypeResultEvent(inspectInfo, callId)
 	}
 
 	case BackgroundCompileCompleteEvent() => 
@@ -165,6 +211,19 @@ case class MemberInfo(name:String, tpe:String){
       ":type", tpe
     )
   }
+}
+
+
+case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){
+  def toEmacsSExp = SExp(
+    ":type", tpe.toEmacsSExp,
+    ":members", SExp(members.map{_.toEmacsSExp})
+  )
+  
+}
+
+case class TypeInfo(name:String){
+  def toEmacsSExp = SExp(":name", name)
 }
 
 class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){

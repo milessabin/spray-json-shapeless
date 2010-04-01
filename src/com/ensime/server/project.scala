@@ -13,12 +13,10 @@ case class ProjectConfig(rootDir:String, srcDir:String, srcFiles:String, classpa
 class Project(config:ProjectConfig) extends Actor with SwankHandler{
 
   private val compiler:Compiler = new Compiler(this, config)
-  //private val fileChanges:FileChangeNotifier = new FileChangeNotifier(this, config)
 
   def act() {
     println("Project starting with config: " + config)
     compiler.start
-    //fileChanges.start
     loop {
       receive {
 	case msg:SwankInMessageEvent =>
@@ -32,6 +30,10 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
 	case result:TypeCompletionResultEvent =>
 	{
 	  sendTypeCompletionReturn(result)
+	}
+	case result:InspectTypeResultEvent =>
+	{
+	  sendInspectTypeReturn(result)
 	}
 	case FileModifiedEvent(file:File) =>
 	{
@@ -84,6 +86,18 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   }
 
   /*
+  * Return type completion results to IDE
+  */
+  protected def sendInspectTypeReturn(result:InspectTypeResultEvent){
+    sendEmacsRexReturn(
+      SExp(
+	":ok",
+	result.info.toEmacsSExp
+      ),
+      result.callId)
+  }
+
+  /*
   * A sexp describing the server configuration, per the Swank standard.
   */
   protected def getConnectionInfo = {
@@ -99,18 +113,11 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
     )
   }
 
-  protected override def handleEmacsRex(name:String, form:SExp, callIdSExp:SExp){
-    val callId:Int = callIdSExp match{
-      case IntAtom(value) => value
-      case _ => -1
-    }
+  protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
     name match {
       case "swank:connection-info" => {
 	sendEmacsRexReturn(
-	  SExp(
-	    ":ok",
-	    getConnectionInfo
-	  ),
+	  SExp(":ok", getConnectionInfo),
 	  callId)
       }
       case "swank:compile-file" => {
@@ -134,6 +141,14 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
 	    compiler ! TypeCompletionEvent(new File(file), point, prefix, callId)
+	  }
+	  case _ => {}
+	}
+      }
+      case "swank:inspect-type" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    compiler ! InspectTypeEvent(new File(file), point, callId)
 	  }
 	  case _ => {}
 	}

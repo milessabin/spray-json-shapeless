@@ -112,7 +112,7 @@ object SExp extends RegexParsers{
       NilAtom()
     }
     else{
-      SymbolAtom(value.toString)
+      SymbolAtom(value.toString.drop(1))
     }
   }
   
