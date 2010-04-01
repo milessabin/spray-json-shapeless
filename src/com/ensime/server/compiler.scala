@@ -12,11 +12,11 @@ import scala.concurrent.SyncVar
 import java.io.File
 
 case class CompilationResultEvent(notes:List[Note])
-case class TypeCompletionResultEvent(members:List[AccessibleTypeMember], callId:SExp)
+case class TypeCompletionResultEvent(members:List[MemberInfo], callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
-case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:SExp)
+case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 
 case class BackgroundCompileCompleteEvent()
 
@@ -36,7 +36,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     "-sourcepath", srcDir.getAbsolutePath,
     config.srcFiles.split(":").mkString(" ")
   )
-  println("COMPILER ARGS: " + args)
 
   val settings:Settings = new Settings(Console.println)
   settings.processArguments(args, false)
@@ -76,6 +75,17 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   val nsc = new PresentationCompiler(settings, reporter, this)
 
+  private def blockingQuickReload(f:SourceFile){
+    val x = new nsc.Response[Unit]()
+    nsc.askQuickReload(List(f), x)
+    x.get
+  }
+
+  private def blockingFullReload(f:SourceFile){
+    val x = new nsc.Response[Unit]()
+    nsc.askReload(List(f), x)
+    x.get
+  }
 
   def act() {
     println("Compiler starting..")
@@ -85,12 +95,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       receive {
 	case ReloadFileEvent(file:File) => 
 	{
-	  println("Compiler: Got reload request...")
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	  val x = new nsc.Response[Unit]()
-	  nsc.askReload(List(f), x)
-	  x.get
-	  println("Compiler: Finished reload.")
+	  blockingFullReload(f)
 	  project ! CompilationResultEvent(reporter.allNotes)
 	}
 	case RemoveFileEvent(file:File) => 
@@ -100,7 +106,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	}
 	case ScopeCompletionEvent(file:File, point:Int) => 
 	{
-	  println("Compiler: Got scope completion request...")
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
 	  val p:Position = new OffsetPosition(f, point);
 	  val x = new nsc.Response[List[nsc.Member]]()
@@ -109,21 +114,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    case Left(m) => m
 	    case Right(e) => List()
 	  }
-	  println("Compiler: Finished scope completion.")
-	  println(members)
 	}
 
-	case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:SExp) => 
+	case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
 	{
-	  println("Compiler: Got type completion request...")
 	  val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
 	  val p:Position = new OffsetPosition(f, point)
-
-	  // Make sure the type-tree is up-to-date
-	  val x = new nsc.Response[Unit]()
-	  nsc.askQuickReload(List(f), x)
-	  x.get
-
+	  blockingQuickReload(f)
 	  val x2 = new nsc.Response[List[nsc.Member]]()
 	  nsc.askTypeCompletion(p, x2)
 	  val members:List[nsc.Member] = x2.get match{
@@ -134,7 +131,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    m match{
 	      case nsc.TypeMember(sym, tpe, true, _, _) => {
 		if(sym.nameString.startsWith(prefix)){
-		  List(AccessibleTypeMember(sym.nameString, tpe.toString))
+		  List(MemberInfo(sym.nameString, tpe.toString))
 		}
 		else{
 		  List()
@@ -160,7 +157,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 }
 
 
-case class AccessibleTypeMember(name:String, tpe:String){
+case class MemberInfo(name:String, tpe:String){
   def toEmacsSExp = {
     SExpList(List(
 	KeywordAtom(":name"), StringAtom(name),
@@ -241,7 +238,6 @@ class PresentationReporter extends Reporter {
 	  pos.line,
 	  pos.column
 	)
-	println("Adding note: " + note.toEmacsSExp)
 	notes(source) += note
       }
     } catch {

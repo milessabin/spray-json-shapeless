@@ -6,7 +6,7 @@ import scala.util.parsing.input._
 
 
 abstract class SExp
-case class SExpList(items:List[SExp]) extends SExp{
+case class SExpList(items:Iterable[SExp]) extends SExp{
   override def toString = "(" + items.mkString(" ") + ")"
 }
 case class NilAtom() extends SExp{
@@ -32,7 +32,6 @@ case class KeywordAtom(value:String) extends SExp{
 }
 
 
-
 object SExp extends RegexParsers{
 
   import scala.util.matching.Regex
@@ -41,10 +40,11 @@ object SExp extends RegexParsers{
   lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ SymbolAtom
   lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
   lazy val number = regex("[0-9]+".r) ^^ {cs => IntAtom(cs.toInt)}
-  lazy val list = literal("(") ~> rep(expr) <~ literal(")") ^^ SExpList
+  lazy val list = literal("(") ~> rep(expr) <~ literal(")") ^^ SExpList.apply
   lazy val nil = literal("nil") ^^ { cs => NilAtom() }
   lazy val truth = literal("t") ^^ { cs => TruthAtom() }
   lazy val expr: Parser[SExp] = list | nil | truth | keyword | sym | number | string
+
 
   def read(r:Reader[Char]):SExp = {
     val result:ParseResult[SExp] = expr(r)
@@ -77,6 +77,44 @@ object SExp extends RegexParsers{
     }
   }
 
+  def apply(items:SExp *):SExpList = {
+    SExpList(items)
+  }
+
+  def apply(items:Iterable[SExp]):SExpList = {
+    SExpList(items)
+  }
+
+  implicit def strToSExp(str:String):SExp = {
+    if(str.startsWith(":")){
+      KeywordAtom(str)
+    }
+    else{
+      StringAtom(str)
+    }
+  }
+
+  implicit def intToSExp(value:Int):SExp = {
+    IntAtom(value)
+  }
+
+  implicit def boolToSExp(value:Boolean):SExp = {
+    if(value){
+      TruthAtom()
+    }
+    else{
+      NilAtom()
+    }
+  }
+
+  implicit def symbolToSExp(value:Symbol):SExp = {
+    if(value == 'nil){
+      NilAtom()
+    }
+    else{
+      SymbolAtom(value.toString)
+    }
+  }
   
   def main(args: Array[String]) {
     println(read(new CharArrayReader(args(0).toCharArray())))

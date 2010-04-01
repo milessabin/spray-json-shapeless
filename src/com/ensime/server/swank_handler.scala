@@ -1,6 +1,7 @@
 package com.ensime.server
 
 import scala.actors._
+import com.ensime.server.SExp._
 
 case class SwankInMessageEvent(sexp:SExp)
 case class SwankOutMessageEvent(sexp:SExp)
@@ -78,46 +79,36 @@ trait SwankHandler { self: Project =>
   }
 
   protected def sendEmacsRexOkReturn(callId:SExp){
-    send(
-      SExpList(
-	List(
-	  KeywordAtom(":return"),
-	  SExpList(List(
-	      KeywordAtom(":ok"), 
-	      TruthAtom()
-	    )),
-	  callId
-	)))
+    send(SExp(
+	":return",
+	SExp( ":ok", true ),
+	callId
+      ))
   }
 
   protected def sendEmacsRexReturn(value:SExp, callId:SExp){
-    send(
-      SExpList(
-	List(
-	  KeywordAtom(":return"),
-	  value,
-	  callId
-	)))
+    send(SExp(
+	":return",
+	value,
+	callId
+      ))
   }
 
   protected def sendEmacsRexError(msg:String, callId:SExp){
-    send(
-      SExpList(
-	List(
-	  KeywordAtom(":invalid-rpc"),
-	  callId,
-	  StringAtom(msg)
-	)))
+    send(SExp(
+	":invalid-rpc",
+	callId,
+	msg
+      ))
   }
 
   protected def sendReaderError(packet:SExp, condition:String){
     send(
-      SExpList(
-	List(
-	  KeywordAtom(":reader-error"),
-	  packet,
-	  StringAtom(condition)
-	)))
+      SExp(
+	":reader-error",
+	packet,
+	condition
+      ))
   }
 
 }

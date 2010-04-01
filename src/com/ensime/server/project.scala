@@ -5,6 +5,7 @@ import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.actors._ 
 import scala.actors.Actor._ 
+import com.ensime.server.SExp._
 import java.io.File
 
 case class ProjectConfig(rootDir:String, srcDir:String, srcFiles:String, classpath:String)
@@ -58,15 +59,13 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   * Report compilation results to IDE.
   */
   protected def sendCompilationResultEvent(result:CompilationResultEvent){
-    send(SExpList(
-	List(
-	  KeywordAtom(":compilation-result"),
-	  SExpList(List(
-	      KeywordAtom(":notes"),
-	      SExpList(result.notes.map{ _.toEmacsSExp })
-	    )
-	  )
-	)))
+    send(SExp(
+	":compilation-result",
+	SExp(
+	  ":notes",
+	  SExp(result.notes.map{ _.toEmacsSExp })
+	)
+      ))
   }
 
   /*
@@ -74,13 +73,13 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   */
   protected def sendTypeCompletionReturn(result:TypeCompletionResultEvent){
     sendEmacsRexReturn(
-      SExpList(List(	
-	  KeywordAtom(":ok"),
-	  SExpList(List(
-	      KeywordAtom(":members"),
-	      SExpList(result.members.map{ _.toEmacsSExp })
-	    )
-	  ))),
+      SExp(
+	":ok",
+	SExp(
+	  ":members",
+	  SExp(result.members.map{ _.toEmacsSExp })
+	)
+      ),
       result.callId)
   }
 
@@ -88,25 +87,30 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   * A sexp describing the server configuration, per the Swank standard.
   */
   protected def getConnectionInfo = {
-    SExpList(List(
-	KeywordAtom(":pid"), NilAtom(),
-	KeywordAtom(":server-implementation"), SExpList(List(
-	    KeywordAtom(":name"), StringAtom(SERVER_NAME)
-	  )),
-	KeywordAtom(":machine"), NilAtom(),
-	KeywordAtom(":features"), NilAtom(),
-	KeywordAtom(":version"), StringAtom(PROTOCOL_VERSION)
-      ))
+    SExp(
+      ":pid", 'nil,
+      ":server-implementation", 
+      SExp(
+	":name", SERVER_NAME
+      ),
+      ":machine", 'nil,
+      ":features", 'nil,
+      ":version", PROTOCOL_VERSION
+    )
   }
 
-  protected override def handleEmacsRex(name:String, form:SExp, callId:SExp){
+  protected override def handleEmacsRex(name:String, form:SExp, callIdSExp:SExp){
+    val callId:Int = callIdSExp match{
+      case IntAtom(value) => value
+      case _ => -1
+    }
     name match {
       case "swank:connection-info" => {
 	sendEmacsRexReturn(
-	  SExpList(List(	
-	      KeywordAtom(":ok"),
-	      getConnectionInfo
-	    )),
+	  SExp(
+	    ":ok",
+	    getConnectionInfo
+	  ),
 	  callId)
       }
       case "swank:compile-file" => {
