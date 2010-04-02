@@ -11,7 +11,7 @@ the ENhanced Scala Interaction Mode for Emacs
 
 __scala-mode__
 
-ENSIME is designed to compliment scala-mode, so it is recommended that you first install scala-mode. It can be found in the scala distribution under ./misc/scala-tool-support/emacs/
+ENSIME is designed to compliment scala-mode. scala-mode can be found in the scala distribution under ./misc/scala-tool-support/emacs/
 
 __ensime-mode__
 
