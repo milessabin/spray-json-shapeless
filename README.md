@@ -1,13 +1,13 @@
 # ENSIME
 the ENhanced Scala Interaction Mode for Emacs
 
-## Features: 
+## Features
 
 - Highlight errors and warnings in your code buffers.
 - Inspect the type of any expression.
 - Type member name completion.
 
-## Installation:
+## Installation
 
 __scala-mode__
 
