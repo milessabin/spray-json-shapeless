@@ -58,6 +58,14 @@ trait SwankHandler { self: Project =>
   protected def handleEmacsRex(name:String, form:SExp, callId:Int)
 
 
+  protected def sendEmacsBackgroundMessage(msg:String){
+    send(SExp(
+	key(":background-message"),
+	msg
+      ))
+  }
+
+
   protected def sendEmacsRexOkReturn(callId:Int){
     send(SExp(
 	key(":return"),

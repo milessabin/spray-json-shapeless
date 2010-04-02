@@ -9,6 +9,7 @@ import com.ensime.server.SExp._
 import java.io.File
 
 case class ProjectConfig(rootDir:String, srcDirs:Iterable[String], classpath:Iterable[String])
+case class SendBackgroundMessageEvent(msg:String)
 
 class Project extends Actor with SwankHandler{
 
@@ -19,6 +20,10 @@ class Project extends Actor with SwankHandler{
     loop {
       try{
 	receive {
+	  case SendBackgroundMessageEvent(msg) =>
+	  {
+	    sendEmacsBackgroundMessage(msg)
+	  }
 	  case msg:SwankInMessageEvent =>
 	  {
 	    handleIncomingSwankMessage(msg)

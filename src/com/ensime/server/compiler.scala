@@ -36,7 +36,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   }
   val srcFiles = (
     for(s <- config.srcDirs;
-      val srcRoot = new File(s);
+      val srcRoot = new File(rootDir, s);
       f <- srcRoot.andTree if f.getName.endsWith(".scala")) yield{
       f.getAbsolutePath
     })
@@ -62,10 +62,11 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       parent ! BackgroundCompileCompleteEvent()
     }
 
-    def askReloadAll() {
+    def blockingReloadAll() {
       val all = srcFiles.map(nsc.getSourceFile(_)).toList
       val x = new Response[Unit]()
       askReload(all, x)
+      x.get
     }    
     /** 
     *  Make sure a set of compilation units is loaded and parsed,
@@ -166,9 +167,10 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val nsc = new PresentationCompiler(settings, reporter, this)
 
   def act() {
-    println("Compiler starting..")
     nsc.newRunnerThread
-    nsc.askReloadAll
+    project ! SendBackgroundMessageEvent("Compiler is loading sources...")
+    nsc.blockingReloadAll
+    project ! SendBackgroundMessageEvent("Compiler finished loading!")
     loop {
       try{
 	receive {
