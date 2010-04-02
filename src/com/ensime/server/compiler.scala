@@ -32,7 +32,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val rootDir = new File(config.rootDir)
   val cpFiles = config.classpath.map{ s =>
     val f = new File(rootDir, s)
-    f.getAbsolutePath()
+    f.getAbsolutePath
   }
   val srcFiles = (
     for(s <- config.srcDirs;
@@ -48,9 +48,9 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   println("Processed compiler args:" + args)
 
-  val settings:Settings = new Settings(Console.println)
+  val settings = new Settings(Console.println)
   settings.processArguments(args, false)
-  val reporter:PresentationReporter = new PresentationReporter()
+  val reporter = new PresentationReporter()
 
   class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor) extends Global(settings,reporter){
 
@@ -95,7 +95,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       // First grab the type at position
       val x1 = new Response[Tree]()
       askTypeAt(p, x1)
-      val maybeType:Option[Type] = x1.get match{
+      val maybeType = x1.get match{
 	case Left(t) => Some(t.tpe)
 	case Right(e) => None
       }
@@ -103,7 +103,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       // Then grab the members of that type
       val x2 = new nsc.Response[List[Member]]()
       askTypeCompletion(p, x2)
-      val members:List[Member] = x2.get match{
+      val members = x2.get match{
 	case Left(m) => m
 	case Right(e) => List()
       }
@@ -132,7 +132,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       blockingQuickReload(p.source)
       val x2 = new Response[List[Member]]()
       askTypeCompletion(p, x2)
-      val members:List[Member] = x2.get match{
+      val members = x2.get match{
 	case Left(m) => m
 	case Right(e) => List()
       }
@@ -168,9 +168,9 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   def act() {
     nsc.newRunnerThread
-    project ! SendBackgroundMessageEvent("Compiler is loading sources...")
+    project ! SendBackgroundMessageEvent("Compiler is parsing sources...")
     nsc.blockingReloadAll
-    project ! SendBackgroundMessageEvent("Compiler finished loading!")
+    project ! SendBackgroundMessageEvent("Compiler finished parsing!")
     loop {
       try{
 	receive {
@@ -183,24 +183,24 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 	  case ReloadFileEvent(file:File) => 
 	  {
-	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    val f = nsc.getSourceFile(file.getAbsolutePath())
 	    nsc.blockingFullReload(f)
 	    project ! CompilationResultEvent(reporter.allNotes)
 	  }
 
 	  case RemoveFileEvent(file:File) => 
 	  {
-	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
+	    val f = nsc.getSourceFile(file.getAbsolutePath())
 	    nsc.removeUnitOf(f)
 	  }
 
 	  case ScopeCompletionEvent(file:File, point:Int) => 
 	  {
-	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	    val p:Position = new OffsetPosition(f, point)
+	    val f = nsc.getSourceFile(file.getAbsolutePath())
+	    val p = new OffsetPosition(f, point)
 	    val x = new nsc.Response[List[nsc.Member]]()
 	    nsc.askScopeCompletion(p, x)
-	    val members:List[nsc.Member] = x.get match{
+	    val members = x.get match{
 	      case Left(m) => m
 	      case Right(e) => List()
 	    }
@@ -209,18 +209,17 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 	  case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
 	  {
-	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	    val p:Position = new OffsetPosition(f, point)
+	    val f = nsc.getSourceFile(file.getAbsolutePath())
+	    val p = new OffsetPosition(f, point)
 	    val members = nsc.completeMemberAt(p, prefix)
 	    project ! TypeCompletionResultEvent(members, callId)
 	  }
 
 	  case InspectTypeEvent(file:File, point:Int, callId:Int) => 
 	  {
-	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	    val p:Position = new OffsetPosition(f, point)
+	    val f = nsc.getSourceFile(file.getAbsolutePath())
+	    val p = new OffsetPosition(f, point)
 	    val inspectInfo = nsc.inspectTypeAt(p)
-
 	    project ! InspectTypeResultEvent(inspectInfo, callId)
 	  }
 
