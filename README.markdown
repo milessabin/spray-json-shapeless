@@ -11,10 +11,12 @@ ENSIME provides IDE-like support for developing Scala code in Emacs.
 
 ## Installation:
 
+### scala-mode
 ENSIME is designed to compliment scala-mode, so it is recommended that you 
 first install scala-mode. It can be found in the scala distribution under 
 ./misc/scala-tool-support/emacs/
 
+### ENSIME
 Download and unpack the ENSIME project into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
