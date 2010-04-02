@@ -37,7 +37,7 @@ __TAB__    - Complete a type member.
 
 ## Troubleshooting
 
-You may want to examine the contents of the *inferior-ensime-server* buffer. ENSIME is a young project, and if there are bugs, they will likely be visible in the server's output.
+You may want to examine the contents of the \*inferior-ensime-server\* buffer. ENSIME is a young project, and if there are bugs, they will likely be visible in the server's output.
 
 
   
