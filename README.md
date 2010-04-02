@@ -1,18 +1,14 @@
-# ENSIME - ENhanced Scala Interaction Mode for Emacs
-
-ENSIME provides IDE-like support for developing Scala code in Emacs.
-
+# ENSIME
+the ENhanced Scala Interaction Mode for Emacs
 
 ## Features: 
-<br/>
+
 - Highlight errors and warnings in your code buffers.
 - Inspect the type of any expression, 
 - Type member name completion
 
-
-
 ## Installation:
-<br/>
+
 __scala-mode__
 
 ENSIME is designed to compliment scala-mode, so it is recommended that you first install scala-mode. It can be found in the scala distribution under ./misc/scala-tool-support/emacs/
