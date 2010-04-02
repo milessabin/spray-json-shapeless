@@ -2,21 +2,26 @@
 
 ENSIME provides IDE-like support for developing Scala code in Emacs.
 
+
+
 ### Features: 
 
-- Highlights errors and warnings in your code buffers.
+- Highlight errors and warnings in your code buffers.
 - Inspect the type of any expression, 
 - Type member name completion
+
 
 
 ### Installation:
 
 __scala-mode__
+
 ENSIME is designed to compliment scala-mode, so it is recommended that you 
 first install scala-mode. It can be found in the scala distribution under 
 ./misc/scala-tool-support/emacs/
 
 __ensime-mode__
+
 Download and unpack the ENSIME project into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
