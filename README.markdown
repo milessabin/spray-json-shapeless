@@ -1,9 +1,8 @@
 ## ENSIME - ENhanced Scala Interaction Mode for Emacs
-
+--------------------------
 ENSIME provides IDE-like support for developing Scala code in Emacs.
 
 
-<br/>
 <br/>
 ### Features: 
 
@@ -12,7 +11,6 @@ ENSIME provides IDE-like support for developing Scala code in Emacs.
 - Type member name completion
 
 
-<br/>
 <br/>
 ### Installation:
 
