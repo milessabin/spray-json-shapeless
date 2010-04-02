@@ -30,7 +30,9 @@ Finally, open one of the source files for your scala project, and execute M-x en
 ## Usage
 
 __C-c c__  ..force a recompile. Otherwise recompilation takes place whenever a file is saved.
+
 __C-c t__  ..inspect the type of the expression under the cursor.
+
 __TAB__    ..complete a type member.
 
 ## Troubleshooting
