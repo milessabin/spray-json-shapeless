@@ -4,8 +4,8 @@ the ENhanced Scala Interaction Mode for Emacs
 ## Features: 
 
 - Highlight errors and warnings in your code buffers.
-- Inspect the type of any expression, 
-- Type member name completion
+- Inspect the type of any expression.
+- Type member name completion.
 
 ## Installation:
 
