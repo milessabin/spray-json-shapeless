@@ -13,13 +13,15 @@ Installation:
 
 - Download and install scala-mode for Emacs.
 - Download and extract ENSIME to a directory of your choosing
-- Create a .ensime configuration file for your project. See the example .ensime in the root of the ENSIME distribution.
 - Add the following lines to your .emacs file:
 
-  (require 'scala-mode)
-  (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
-  (add-to-list 'load-path "ENSIME_ROOT/src/elisp/")
-  (require 'ensime)
+    (require 'scala-mode)
+    (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
+    (add-to-list 'load-path "ENSIME_ROOT/src/elisp/")
+    (require 'ensime)
+
+- Create a .ensime configuration file for your project. See the example .ensime in the root of the ENSIME distribution.
+- In a scala source buffer, M-x ensime
 
 
   
