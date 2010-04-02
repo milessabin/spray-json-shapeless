@@ -8,15 +8,14 @@ import scala.actors.Actor._
 import com.ensime.server.SExp._
 import java.io.File
 
-case class ProjectConfig(rootDir:String, srcDir:String, srcFiles:String, classpath:String)
+case class ProjectConfig(rootDir:String, srcDir:String, srcFiles:Iterable[String], classpath:Iterable[String])
 
-class Project(config:ProjectConfig) extends Actor with SwankHandler{
+class Project extends Actor with SwankHandler{
 
-  private val compiler:Compiler = new Compiler(this, config)
+  private var compiler:Actor = actor{}
 
   def act() {
-    println("Project starting with config: " + config)
-    compiler.start
+    println("Project waiting for init...")
     loop {
       try{
 	receive {
@@ -63,6 +62,32 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
       }
       
     }
+  }
+
+
+  protected def initProject(config:SExpList){
+    val m = config.toSExpMap
+    val rootDir = m.get(key(":rootDir")) match{
+      case Some(StringAtom(str)) => str
+      case _ => "."
+    }
+    val srcDir = m.get(key(":srcDir")) match{
+      case Some(StringAtom(str)) => str
+      case _ => "."
+    }
+    val srcFiles = m.get(key(":srcFiles")) match{
+      case Some(SExpList(items)) => items.map{_.toString}
+      case _ => List()
+    }
+    val classpath = m.get(key(":classpath")) match{
+      case Some(SExpList(items)) => items.map{_.toString}
+      case _ => List()
+    }
+    val conf = ProjectConfig(rootDir, srcDir, srcFiles, classpath)
+    println("Got configuration: " + conf + ". Starting compiler..")
+    compiler ! CompilerShutdownEvent
+    compiler = new Compiler(this, conf)
+    compiler.start
   }
 
 
@@ -113,7 +138,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   protected def getConnectionInfo = {
     SExp(
       key(":pid"), 'nil,
-      key(":server-implementation"), 
+      key(":server-implementation"),
       SExp(
 	key(":name"), SERVER_NAME
       ),
@@ -123,12 +148,26 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
     )
   }
 
+
+
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
+
+    def oops = sendEmacsRexErrorBadArgs(name, form, callId)
+
     name match {
       case "swank:connection-info" => {
 	sendEmacsRexReturn(
 	  SExp(key(":ok"), getConnectionInfo),
 	  callId)
+      }
+      case "swank:init-project" => {
+	form match{
+	  case SExpList(head::(config:SExpList)::body) => {
+	    initProject(config)
+	    sendEmacsRexOkReturn(callId)
+	  }
+	  case _ => oops 
+	}
       }
       case "swank:compile-file" => {
 	form match{
@@ -136,7 +175,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
 	    compiler ! ReloadFileEvent(new File(file))
 	    sendEmacsRexOkReturn(callId)
 	  }
-	  case _ => {}
+	  case _ => oops
 	}
       }
       case "swank:scope-completion" => {
@@ -144,7 +183,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
 	    compiler ! ScopeCompletionEvent(new File(file), point)
 	  }
-	  case _ => {}
+	  case _ => oops
 	}
       }
       case "swank:type-completion" => {
@@ -152,7 +191,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
 	    compiler ! TypeCompletionEvent(new File(file), point, prefix, callId)
 	  }
-	  case _ => {}
+	  case _ => oops
 	}
       }
       case "swank:inspect-type" => {
@@ -160,7 +199,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
 	    compiler ! InspectTypeEvent(new File(file), point, callId)
 	  }
-	  case _ => {}
+	  case _ => oops
 	}
       }
       case other => {

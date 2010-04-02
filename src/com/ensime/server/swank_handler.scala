@@ -82,6 +82,14 @@ trait SwankHandler { self: Project =>
       ))
   }
 
+  protected def sendEmacsRexErrorBadArgs(name:String, form:SExp, callId:Int){
+    send(SExp(
+	key(":invalid-rpc"),
+	callId,
+	"Malformed " + name + " call: " + form
+      ))
+  }
+
   protected def sendReaderError(packet:SExp, condition:String){
     send(
       SExp(

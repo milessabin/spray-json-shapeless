@@ -3,11 +3,23 @@ package com.ensime.server
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.parsing.input._
+import scala.collection.immutable.Map
 
 
 abstract class SExp
-case class SExpList(items:Iterable[SExp]) extends SExp{
+case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
+  override def iterator = items.iterator
+  override def foreach[U](f: SExp => U) = items.foreach(f)
   override def toString = "(" + items.mkString(" ") + ")"
+  def toSExpMap():Map[SExp, SExp] = {
+    var m = Map[SExp, SExp]()
+    var l = items
+    while(l.size > 1){
+      m += l.head -> l.drop(1).head
+      l = l.drop(2)
+    }
+    m
+  }
 }
 case class NilAtom() extends SExp{
   override def toString = "nil"

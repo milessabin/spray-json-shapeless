@@ -22,14 +22,14 @@ case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
+case class CompilerShutdownEvent()
 
 case class BackgroundCompileCompleteEvent()
 
 class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   val rootDir = new File(config.rootDir)
-  val cpPieces = config.classpath.split(":")
-  val cpFiles = cpPieces.map{ s =>
+  val cpFiles = config.classpath.map{ s =>
     val f = new File(rootDir, s)
     f.getAbsolutePath()
   }
@@ -39,7 +39,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     "-cp", cpFiles.mkString(":"),
     "-verbose",
     "-sourcepath", srcDir.getAbsolutePath,
-    config.srcFiles.split(":").mkString(" ")
+    config.srcFiles.mkString(" ")
   )
 
   val settings:Settings = new Settings(Console.println)
@@ -162,6 +162,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     loop {
       try{
 	receive {
+
+	  case CompilerShutdownEvent => 
+	  {
+	    nsc.askShutdown()
+	    exit('stop)
+	  }
+
 	  case ReloadFileEvent(file:File) => 
 	  {
 	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())

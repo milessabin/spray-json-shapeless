@@ -13,13 +13,7 @@ object Server {
     try {
       // TODO use a real cmdline parser here
       val portfile = args(0)
-      val projectRootDir = args(1)
-      val projectSrcDir = args(2)
-      val projectSrcFiles = args(3)
-      val projectClasspath = args(4)
-      val project:Project = new Project(
-	ProjectConfig(projectRootDir, projectSrcDir, projectSrcFiles, projectClasspath))
-
+      val project:Project = new Project()
       project.start
 
       // 0 will cause socket to bind to first available port
