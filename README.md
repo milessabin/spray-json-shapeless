@@ -25,7 +25,15 @@ Add the following lines to your .emacs file:
 
 Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime) in the root of the ENSIME distribution for an up-to-date example.
 
-Finally, open one of the source files for your scala project, and execute M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file.
+Finally, open one of the source files for your scala project, and execute M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
+
+## Usage
+
+- __C-c c__  To force a recompile. Otherwise recompilation takes place whenever a file is saved.
+- __C-c t__  To inspect the type of the expression under the cursor.
+- __TAB__    To complete a type member.
+
+## Troubleshooting
 
 You may want to examine the contents of the *inferior-ensime-server* buffer. ENSIME is a young project, and if there are bugs, they will likely be visible in the server's output.
 
