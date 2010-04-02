@@ -11,21 +11,29 @@ ENSIME provides IDE-like support for developing Scala code in Emacs.
 
 ## Installation:
 
-- Download and install scala-mode for Emacs.
-- Download and extract ENSIME to a directory of your choosing.
-- Add the following lines to your .emacs file:
+ENSIME is designed to compliment scala-mode, so it is recommended that you 
+first install scala-mode. It can be found in the scala distribution under 
+./misc/scala-tool-support/emacs/
 
-ksjdf ksd f
-skdfjdsf dkjf
+Download and unpack the ENSIME project into a directory of your choosing. 
 
+Add the following lines to your .emacs file:
     (require 'scala-mode)
     (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
     (add-to-list 'load-path "ENSIME_ROOT/src/elisp/")
     (require 'ensime)
 
+Create an .ensime configuration file for your project. See .ensime in the root 
+of the ENSIME distribution for an up-to-date example.
+[http://github.com/aemoncannon/ensime/blob/master/.ensime]
 
-- Create a .ensime configuration file for your project. See the example .ensime in the root of the ENSIME distribution.
-- In a scala source buffer, M-x ensime
+Finally, open one of the source files for your scala project, and execute M-x ensime.
+Follow the minibuffer instructions to specify the location of your .ensime project 
+file.
+
+You may want to examine the contents of the *inferior-ensime-server* buffer. ENSIME is
+a young project, and if there are bugs, they will likely be visible in the
+server's output.
 
 
   
