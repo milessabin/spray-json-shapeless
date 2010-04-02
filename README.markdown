@@ -3,7 +3,8 @@
 ENSIME provides IDE-like support for developing Scala code in Emacs.
 
 
-
+<br/>
+<br/>
 ### Features: 
 
 - Highlight errors and warnings in your code buffers.
@@ -11,7 +12,8 @@ ENSIME provides IDE-like support for developing Scala code in Emacs.
 - Type member name completion
 
 
-
+<br/>
+<br/>
 ### Installation:
 
 __scala-mode__
@@ -30,9 +32,8 @@ Add the following lines to your .emacs file:
     (add-to-list 'load-path "ENSIME_ROOT/src/elisp/")
     (require 'ensime)
 
-Create an .ensime configuration file for your project. See .ensime in the root 
+Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime) in the root 
 of the ENSIME distribution for an up-to-date example.
-[http://github.com/aemoncannon/ensime/blob/master/.ensime]
 
 Finally, open one of the source files for your scala project, and execute M-x ensime.
 Follow the minibuffer instructions to specify the location of your .ensime project 
