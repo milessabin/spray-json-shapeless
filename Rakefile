@@ -5,7 +5,7 @@ SCALA_ROOT = "/home/aemon/lib/scala"
 SCALA = "#{SCALA_ROOT}/bin/scala"
 SCALAC = "#{SCALA_ROOT}/bin/scalac"
 
-SOURCES = ["src/com/ensime/server/*.scala"]
+SOURCES = FileList["src/com/ensime/**/*.scala"]
 
 JVM_CLASSPATH = ["lib/jnotify/jnotify-0.93.jar",
                  "lib/configgy/configgy-1.5.jar",

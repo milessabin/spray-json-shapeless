@@ -3,6 +3,7 @@ package com.ensime.server
 import java.io.File;
 import net.contentobjects.jnotify._;
 import scala.actors._  
+import scala.collection.mutable.ArrayBuffer
 
 abstract class FileChangedEvent
 case class FileRenamedEvent(old:File, file:File) extends FileChangedEvent
@@ -14,7 +15,7 @@ case class ShutdownEvent()
 
 class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 
-  private var watchID:Int = -1;
+  private var watchIDs:ArrayBuffer[Int] = ArrayBuffer()
 
   def act(){
     init()
@@ -22,9 +23,11 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
       receive {
 	case msg:ShutdownEvent => 
 	{
-	  val res:Boolean = JNotify.removeWatch(watchID);
-	  if (!res){
-	    System.err.println("Invalid watch ID specified")
+	  for(watchID <- watchIDs){
+	    val res:Boolean = JNotify.removeWatch(watchID);
+	    if (!res){
+	      System.err.println("Invalid watch ID specified")
+	    }
 	  }
 	}
       }
@@ -37,10 +40,15 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 
   private def init(){
     val root = new File(config.rootDir)
-    val src = new File(config.rootDir, config.srcDir)
+    for(s <- config.srcDirs){
+      val src = new File(config.rootDir, s)
+      addWatch(src)
+    }
+  }
 
-    if(!src.isDirectory() || !src.exists()){
-      System.err.println("" + src + "is not a valid source directory!")
+  private def addWatch(dir:File){
+    if(!dir.isDirectory() || !dir.exists()){
+      System.err.println("" + dir + "is not a valid source directory!")
       return
     }
 
@@ -52,7 +60,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 
     val watchSubtree:Boolean = true;
 
-    watchID = JNotify.addWatch(src.getAbsolutePath(), mask, watchSubtree, 
+    watchIDs += JNotify.addWatch(dir.getAbsolutePath(), mask, watchSubtree, 
       new JNotifyListener(){
 	def fileRenamed(wd:Int, rootPath:String, oldName:String, newName:String){
 	  val dir = new File(rootPath);
@@ -93,7 +101,6 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 	  }
 	}
       });
-
   }
 
 

@@ -8,7 +8,7 @@ import scala.actors.Actor._
 import com.ensime.server.SExp._
 import java.io.File
 
-case class ProjectConfig(rootDir:String, srcDir:String, srcFiles:Iterable[String], classpath:Iterable[String])
+case class ProjectConfig(rootDir:String, srcDirs:Iterable[String], classpath:Iterable[String])
 
 class Project extends Actor with SwankHandler{
 
@@ -66,16 +66,12 @@ class Project extends Actor with SwankHandler{
 
 
   protected def initProject(config:SExpList){
-    val m = config.toSExpMap
-    val rootDir = m.get(key(":rootDir")) match{
+    val m = config.toKeywordMap
+    val rootDir = m.get(key(":root-dir")) match{
       case Some(StringAtom(str)) => str
       case _ => "."
     }
-    val srcDir = m.get(key(":srcDir")) match{
-      case Some(StringAtom(str)) => str
-      case _ => "."
-    }
-    val srcFiles = m.get(key(":srcFiles")) match{
+    val srcDirs = m.get(key(":source-dirs")) match{
       case Some(SExpList(items)) => items.map{_.toString}
       case _ => List()
     }
@@ -83,7 +79,7 @@ class Project extends Actor with SwankHandler{
       case Some(SExpList(items)) => items.map{_.toString}
       case _ => List()
     }
-    val conf = ProjectConfig(rootDir, srcDir, srcFiles, classpath)
+    val conf = ProjectConfig(rootDir, srcDirs, classpath)
     println("Got configuration: " + conf + ". Starting compiler..")
     compiler ! CompilerShutdownEvent
     compiler = new Compiler(this, conf)

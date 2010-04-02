@@ -108,7 +108,7 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
   val out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
   def write(sexp:SExp) {
-    val data:String = sexp.toString()
+    val data:String = sexp.toReadableString
     val header:String = String.format("%06x", int2Integer(data.length))
     val msg = header + data
     println("Writing: " + msg)

@@ -6,17 +6,26 @@ import scala.util.parsing.input._
 import scala.collection.immutable.Map
 
 
-abstract class SExp
+abstract class SExp{
+  def toReadableString = toString
+}
 case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
+
   override def iterator = items.iterator
-  override def foreach[U](f: SExp => U) = items.foreach(f)
+
   override def toString = "(" + items.mkString(" ") + ")"
-  def toSExpMap():Map[SExp, SExp] = {
-    var m = Map[SExp, SExp]()
-    var l = items
-    while(l.size > 1){
-      m += l.head -> l.drop(1).head
-      l = l.drop(2)
+
+  override def toReadableString = {
+    "(" + items.map{_.toReadableString}.mkString(" ") + ")"
+  }
+
+  def toKeywordMap():Map[KeywordAtom, SExp] = {
+    var m = Map[KeywordAtom, SExp]()
+    items.sliding(2,2).foreach{ 
+      case (key:KeywordAtom)::(sexp:SExp)::rest => {
+	m += (key -> sexp)
+      }
+      case _ => {}
     }
     m
   }
@@ -28,7 +37,8 @@ case class TruthAtom() extends SExp{
   override def toString = "t"
 }
 case class StringAtom(value:String) extends SExp{
-  override def toString = {
+  override def toString = value
+  override def toReadableString = {
     val printable = value.replace("\\", "\\\\").replace("\"", "\\\"");
     "\"" + printable + "\""
   }
@@ -101,7 +111,7 @@ object SExp extends RegexParsers{
     StringAtom(str)
   }
 
-  def key(str:String):SExp = {
+  def key(str:String):KeywordAtom = {
     KeywordAtom(str)
   }
 

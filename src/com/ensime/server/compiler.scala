@@ -13,6 +13,7 @@ import scala.concurrent.SyncVar
 import java.io.File
 import com.ensime.server.SExp._
 import scala.tools.nsc.ast._
+import com.ensime.util.RichFile._ // this makes implicit toRichFile active
 
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfo], callId:Int)
@@ -33,14 +34,19 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     val f = new File(rootDir, s)
     f.getAbsolutePath()
   }
-  val srcDir = new File(rootDir, config.srcDir)
-
+  val srcFiles = (
+    for(s <- config.srcDirs;
+      val srcRoot = new File(s);
+      f <- srcRoot.andTree if f.getName.endsWith(".scala")) yield{
+      f.getAbsolutePath
+    })
   val args = List(
     "-cp", cpFiles.mkString(":"),
     "-verbose",
-    "-sourcepath", srcDir.getAbsolutePath,
-    config.srcFiles.mkString(" ")
+    srcFiles.mkString(" ")
   )
+
+  println("Processed compiler args:" + args)
 
   val settings:Settings = new Settings(Console.println)
   settings.processArguments(args, false)
@@ -56,7 +62,11 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       parent ! BackgroundCompileCompleteEvent()
     }
 
-    
+    def askReloadAll() {
+      val all = srcFiles.map(nsc.getSourceFile(_)).toList
+      val x = new Response[Unit]()
+      askReload(all, x)
+    }    
     /** 
     *  Make sure a set of compilation units is loaded and parsed,
     *  but do not trigger a full recompile.
@@ -158,7 +168,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   def act() {
     println("Compiler starting..")
     nsc.newRunnerThread
-    nsc.askReset
+    nsc.askReloadAll
     loop {
       try{
 	receive {
