@@ -86,12 +86,11 @@ object SExp extends RegexParsers{
   }
 
   implicit def strToSExp(str:String):SExp = {
-    if(str.startsWith(":")){
-      KeywordAtom(str)
-    }
-    else{
-      StringAtom(str)
-    }
+    StringAtom(str)
+  }
+
+  def key(str:String):SExp = {
+    KeywordAtom(str)
   }
 
   implicit def intToSExp(value:Int):SExp = {

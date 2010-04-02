@@ -46,7 +46,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   settings.processArguments(args, false)
   val reporter:PresentationReporter = new PresentationReporter()
 
-
   class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor) extends Global(settings,reporter){
 
     /**
@@ -77,7 +76,9 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       override def toString = "quickReload " + sources
     }
 
+
     def inspectTypeAt(p: Position):TypeInspectInfo = {
+
       blockingQuickReload(p.source)
 
       // First grab the type at position
@@ -124,7 +125,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	case Left(m) => m
 	case Right(e) => List()
       }
-      val visMembers = members.flatMap{
+      val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
 	    List(MemberInfo(sym.nameString, tpe.toString))
@@ -135,7 +136,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	}
 	case _ => List()
       }.sortWith((a,b) => a.name <= b.name)
-      visMembers
+      visibleMembers
     }
 
     def blockingQuickReload(f:SourceFile){
@@ -177,7 +178,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  case ScopeCompletionEvent(file:File, point:Int) => 
 	  {
 	    val f:SourceFile = nsc.getSourceFile(file.getAbsolutePath())
-	    val p:Position = new OffsetPosition(f, point);
+	    val p:Position = new OffsetPosition(f, point)
 	    val x = new nsc.Response[List[nsc.Member]]()
 	    nsc.askScopeCompletion(p, x)
 	    val members:List[nsc.Member] = x.get match{
@@ -185,6 +186,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case Right(e) => List()
 	    }
 	  }
+
 
 	  case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
 	  {
@@ -218,7 +220,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       catch{
 	case e:Exception => 
 	{
-	  System.err.println("Error at Compiler message loop: " + e)
+	  System.err.println("Error at Compiler message loop: " + e + " :\n" + e.getStackTraceString)
 	}
       }
     }
@@ -229,8 +231,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 case class MemberInfo(name:String, tpe:String){
   def toEmacsSExp = {
     SExp(
-      ":name", name,
-      ":type", tpe
+      key(":name"), name,
+      key(":type"), tpe
     )
   }
 }
@@ -238,8 +240,8 @@ case class MemberInfo(name:String, tpe:String){
 
 case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){
   def toEmacsSExp = SExp(
-    ":type", tpe.toEmacsSExp,
-    ":members", SExp(members.map{_.toEmacsSExp})
+    key(":type"), tpe.toEmacsSExp,
+    key(":members"), SExp(members.map{_.toEmacsSExp})
   )
 }
 object TypeInspectInfo{
@@ -250,10 +252,10 @@ object TypeInspectInfo{
 
 case class TypeInfo(name:String, generalName:String, pos:Position){
   def toEmacsSExp = SExp(
-    ":name", name,
-    ":general-name", generalName,
-    ":file", if(pos.isDefined) { pos.source.path } else { 'nil },
-    ":offset", if(pos.isDefined) { pos.point } else { 'nil }
+    key(":name"), name,
+    key(":general-name"), generalName,
+    key(":file"), if(pos.isDefined) { pos.source.path } else { 'nil },
+    key(":offset"), if(pos.isDefined) { pos.point } else { 'nil }
   )
 }
 
@@ -276,15 +278,16 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
     case 0 => 'info
   }
 
+
   def toEmacsSExp = {
     SExp(
-      ":severity", friendlySeverity,
-      ":msg", msg,
-      ":beg", beg,
-      ":end", end,
-      ":line", line,
-      ":col", col,
-      ":file", file
+      key(":severity"), friendlySeverity,
+      key(":msg"), msg,
+      key(":beg"), beg,
+      key(":end"), end,
+      key(":line"), line,
+      key(":col"), col,
+      key(":file"), file
     )
   }
 }

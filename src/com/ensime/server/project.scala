@@ -58,7 +58,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
       catch{
 	case e: Exception => 
 	{
-	  System.err.println("Error at Project message loop: " + e)
+	  System.err.println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
 	}
       }
       
@@ -71,9 +71,9 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   */
   protected def sendCompilationResultEvent(result:CompilationResultEvent){
     send(SExp(
-	":compilation-result",
+	key(":compilation-result"),
 	SExp(
-	  ":notes",
+	  key(":notes"),
 	  SExp(result.notes.map{ _.toEmacsSExp })
 	)
       ))
@@ -85,9 +85,9 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   protected def sendTypeCompletionReturn(result:TypeCompletionResultEvent){
     sendEmacsRexReturn(
       SExp(
-	":ok",
+	key(":ok"),
 	SExp(
-	  ":members",
+	  key(":members"),
 	  SExp(result.members.map{ _.toEmacsSExp })
 	)
       ),
@@ -101,7 +101,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   protected def sendInspectTypeReturn(result:InspectTypeResultEvent){
     sendEmacsRexReturn(
       SExp(
-	":ok",
+	key(":ok"),
 	result.info.toEmacsSExp
       ),
       result.callId)
@@ -112,14 +112,14 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
   */
   protected def getConnectionInfo = {
     SExp(
-      ":pid", 'nil,
-      ":server-implementation", 
+      key(":pid"), 'nil,
+      key(":server-implementation"), 
       SExp(
-	":name", SERVER_NAME
+	key(":name"), SERVER_NAME
       ),
-      ":machine", 'nil,
-      ":features", 'nil,
-      ":version", PROTOCOL_VERSION
+      key(":machine"), 'nil,
+      key(":features"), 'nil,
+      key(":version"), PROTOCOL_VERSION
     )
   }
 
@@ -127,7 +127,7 @@ class Project(config:ProjectConfig) extends Actor with SwankHandler{
     name match {
       case "swank:connection-info" => {
 	sendEmacsRexReturn(
-	  SExp(":ok", getConnectionInfo),
+	  SExp(key(":ok"), getConnectionInfo),
 	  callId)
       }
       case "swank:compile-file" => {
