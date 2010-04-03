@@ -1,8 +1,8 @@
 package com.ensime.server
 
 import scala.actors._
-import com.ensime.server.SExp._
-
+import com.ensime.util.SExp._
+import com.ensime.util._
 
 case class SwankInMessageEvent(sexp:SExp)
 case class SwankOutMessageEvent(sexp:SExp)
@@ -64,7 +64,6 @@ trait SwankHandler { self: Project =>
 	msg
       ))
   }
-
 
   protected def sendEmacsRexOkReturn(callId:Int){
     send(SExp(

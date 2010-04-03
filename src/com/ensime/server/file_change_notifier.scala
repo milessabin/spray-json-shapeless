@@ -24,7 +24,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 	case msg:ShutdownEvent => 
 	{
 	  for(watchID <- watchIDs){
-	    val res:Boolean = JNotify.removeWatch(watchID);
+	    val res:Boolean = JNotify.removeWatch(watchID)
 	    if (!res){
 	      System.err.println("Invalid watch ID specified")
 	    }
@@ -63,7 +63,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
     watchIDs += JNotify.addWatch(dir.getAbsolutePath(), mask, watchSubtree, 
       new JNotifyListener(){
 	def fileRenamed(wd:Int, rootPath:String, oldName:String, newName:String){
-	  val dir = new File(rootPath);
+	  val dir = new File(rootPath)
 	  val old = new File(dir, oldName)
 	  val newF = new File(dir, newName)
 	  if(interesting(newF)){

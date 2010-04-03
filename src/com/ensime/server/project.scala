@@ -5,7 +5,9 @@ import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.actors._ 
 import scala.actors.Actor._ 
-import com.ensime.server.SExp._
+import com.ensime.util._
+import com.ensime.util.SExp._
+import com.ensime.util.SExpConversion._
 import java.io.File
 
 case class ProjectConfig(rootDir:String, srcDirs:Iterable[String], classpath:Iterable[String])
@@ -100,7 +102,7 @@ class Project extends Actor with SwankHandler{
 	key(":compilation-result"),
 	SExp(
 	  key(":notes"),
-	  SExp(result.notes.map{ _.toEmacsSExp })
+	  SExp(result.notes.map{ toSExp(_) })
 	)
       ))
   }
@@ -114,7 +116,7 @@ class Project extends Actor with SwankHandler{
 	key(":ok"),
 	SExp(
 	  key(":members"),
-	  SExp(result.members.map{ _.toEmacsSExp })
+	  SExp(result.members.map{ toSExp(_) })
 	)
       ),
       result.callId)
@@ -128,7 +130,7 @@ class Project extends Actor with SwankHandler{
     sendEmacsRexReturn(
       SExp(
 	key(":ok"),
-	result.info.toEmacsSExp
+	toSExp(result.info)
       ),
       result.callId)
   }

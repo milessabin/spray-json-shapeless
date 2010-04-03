@@ -16,8 +16,9 @@ JVM_CLASSPATH = ["lib/jnotify/jnotify-0.93.jar",
 
 
 task :clean => [] do
-  FileUtils.rm_rf 'classes/*'
-  FileUtils.rm_rf 'dist/*'
+  FileUtils.rm_rf COMMON_TARGET
+  FileUtils.rm_rf FileList["classes/*"]
+  FileUtils.rm_rf FileList["dist/*"]
 end
 
 COMMON_TARGET = "classes/.common"

@@ -11,12 +11,11 @@ import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import java.io.File
-import com.ensime.server.SExp._
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._ // this makes implicit toRichFile active
 
 case class CompilationResultEvent(notes:List[Note])
-case class TypeCompletionResultEvent(members:List[MemberInfo], callId:Int)
+case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
 case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
@@ -37,7 +36,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val srcFiles = (
     for(s <- config.srcDirs;
       val srcRoot = new File(rootDir, s);
-      f <- srcRoot.andTree if f.getName.endsWith(".scala")) yield{
+      f <- srcRoot.andTree if (f.getName.endsWith(".scala") && !f.isHidden))
+    yield{
       f.getAbsolutePath
     })
   val args = List(
@@ -110,7 +110,9 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       // ...filtering out non-visible members
       val visMembers = (members.flatMap {
 	  case TypeMember(sym, tpe, true, _, _) => {
-	    List(MemberInfo(sym.nameString, tpe.toString))
+	    val typeSym = tpe.typeSymbol
+	    val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
+	    List(MemberInfo(sym.nameString, typeInfo, sym.pos))
 	  }
 	  case _ => List()
 	}).sortWith((a,b) => a.name <= b.name)
@@ -128,7 +130,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       }
     }
 
-    def completeMemberAt(p: Position, prefix:String):List[MemberInfo] = {
+
+    def completeMemberAt(p: Position, prefix:String):List[MemberInfoLight] = {
       blockingQuickReload(p.source)
       val x2 = new Response[List[Member]]()
       askTypeCompletion(p, x2)
@@ -139,7 +142,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(MemberInfo(sym.nameString, tpe.toString))
+	    List(MemberInfoLight(sym.nameString, tpe.toString))
 	  }
 	  else{
 	    List()
@@ -236,7 +239,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
       }
       catch{
-	case e:Exception => 
+	case e:Exception =>
 	{
 	  System.err.println("Error at Compiler message loop: " + e + " :\n" + e.getStackTraceString)
 	}
@@ -245,40 +248,17 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   }
 }
 
-
-case class MemberInfo(name:String, tpe:String){
-  def toEmacsSExp = {
-    SExp(
-      key(":name"), name,
-      key(":type"), tpe
-    )
-  }
-}
-
-
-case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){
-  def toEmacsSExp = SExp(
-    key(":type"), tpe.toEmacsSExp,
-    key(":members"), SExp(members.map{_.toEmacsSExp})
-  )
-}
+case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
+case class MemberInfoLight(name:String, tpeName:String){}
+case class TypeInfo(name:String, generalName:String, pos:Position){}
+case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){}
 object TypeInspectInfo{
   def nullInspectInfo() = {
     TypeInspectInfo(TypeInfo("NA", "NA", NoPosition), List())
   }
 }
 
-case class TypeInfo(name:String, generalName:String, pos:Position){
-  def toEmacsSExp = SExp(
-    key(":name"), name,
-    key(":general-name"), generalName,
-    key(":file"), if(pos.isDefined) { pos.source.path } else { 'nil },
-    key(":offset"), if(pos.isDefined) { pos.point } else { 'nil }
-  )
-}
-
-
-class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){
+case class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){
 
   private val tmp = "" + file + msg + severity + beg + end + line + col;
   override val hashCode = tmp.hashCode
@@ -296,18 +276,6 @@ class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, co
     case 0 => 'info
   }
 
-
-  def toEmacsSExp = {
-    SExp(
-      key(":severity"), friendlySeverity,
-      key(":msg"), msg,
-      key(":beg"), beg,
-      key(":end"), end,
-      key(":line"), line,
-      key(":col"), col,
-      key(":file"), file
-    )
-  }
 }
 
 
