@@ -36,17 +36,21 @@ object SExpConversion{
   implicit def toSExp(t:TypeInspectInfo):SExp = {
     SExp(
       key(":type"), t.tpe,
-      key(":members"), SExp(t.members.map{toSExp(_)})
+      key(":members-by-owner"), SExp(t.membersByOwner.map{
+	  case (ownerTpe, members) => {
+	    SExp(ownerTpe, SExp(members.map{toSExp(_)}))
+	  }})
     )
   }
 
   implicit def toSExp(t:TypeInfo):SExp = {
     SExp(
       key(":name"), t.name,
-      key(":general-name"), t.generalName,
+      key(":full-name"), t.generalName,
       key(":pos"), t.pos
     )
   }
+
 
   implicit def toSExp(n:Note) = {
     SExp(

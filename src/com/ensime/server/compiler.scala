@@ -10,6 +10,7 @@ import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
+import scala.collection.{Iterable, Map}
 import java.io.File
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._ // this makes implicit toRichFile active
@@ -95,36 +96,62 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       // First grab the type at position
       val x1 = new Response[Tree]()
       askTypeAt(p, x1)
-      val maybeType = x1.get match{
-	case Left(t) => Some(t.tpe)
-	case Right(e) => None
-      }
+      x1.get match{
+	case Left(tree) => {
 
-      // Then grab the members of that type
-      val x2 = new nsc.Response[List[Member]]()
-      askTypeCompletion(p, x2)
-      val members = x2.get match{
-	case Left(m) => m
-	case Right(e) => List()
-      }
-      // ...filtering out non-visible members
-      val visMembers = (members.flatMap {
-	  case TypeMember(sym, tpe, true, _, _) => {
-	    val typeSym = tpe.typeSymbol
-	    val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
-	    List(MemberInfo(sym.nameString, typeInfo, sym.pos))
-	  }
-	  case _ => List()
-	}).sortWith((a,b) => a.name <= b.name)
-
-      // Then return all the info about this type..
-      maybeType match{
-	case Some(tpe) => {
+	  // Get the type at position..
+	  val tpe = tree.tpe
 	  val typeSym = tpe.typeSymbol
 	  val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
-	  TypeInspectInfo(typeInfo, visMembers)
+
+	  // Then grab the members of that type
+	  //
+	  // TODO - shouldn't do another blocking 
+	  // call here; we already have tpe..
+	  val x2 = new nsc.Response[List[Member]]()
+	  askTypeCompletion(p, x2)
+	  val members = x2.get match{
+	    case Left(m) => m
+	    case Right(e) => List()
+	  }
+
+	  // ...filtering out non-visible and non-type members
+	  val visMembers:Iterable[TypeMember] = members.flatMap { 
+	    case m@TypeMember(sym, tpe, true, _, _) => List(m)
+	    case _ => List()
+	  }
+
+	  // create a list of pairs [(type, members-of-type)]
+	  // ..sort the pairs on the subtype relation
+	  val membersByOwner = visMembers.groupBy{
+	    case TypeMember(sym, tpe, _, _, _) => {
+	      val ownerSym = sym.owner
+	      val ownerType = ownerSym.tpe
+	      ownerType
+	    }
+	  }.iterator.toList.sortWith{
+	    case ((t1,_),(t2,_)) => t1 <:< t2
+	  }
+
+	  // transform to [(type-info, member-infos-of-type)]..
+	  val memberInfosByOwnerInfo = membersByOwner.map{
+	    case (tpe, members) => {
+	      val ownerTypeSym = tpe.typeSymbol
+	      val info = TypeInfo(tpe.toString, ownerTypeSym.fullName, ownerTypeSym.pos)
+	      val memberInfos = members.map{
+		case TypeMember(sym, tpe, _, _, _) => {	
+		  val typeSym = tpe.typeSymbol
+		  val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
+		  MemberInfo(sym.nameString, typeInfo, sym.pos)
+		}
+	      }
+	      (info, memberInfos)
+	    }
+	  }
+	  
+	  TypeInspectInfo(typeInfo, memberInfosByOwnerInfo)
 	}
-	case None => {
+	case Right(e) => {
 	  TypeInspectInfo.nullInspectInfo
 	}
       }
@@ -209,7 +236,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    }
 	  }
 
-
 	  case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
 	  {
 	    val f = nsc.getSourceFile(file.getAbsolutePath())
@@ -251,10 +277,15 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
 case class MemberInfoLight(name:String, tpeName:String){}
 case class TypeInfo(name:String, generalName:String, pos:Position){}
-case class TypeInspectInfo(tpe:TypeInfo, members:Iterable[MemberInfo]){}
+object TypeInfo{
+  def nullTypeInfo() = {
+    TypeInfo("NA", "NA", NoPosition)
+  }
+}
+case class TypeInspectInfo(tpe:TypeInfo, membersByOwner:Iterable[(TypeInfo, Iterable[MemberInfo])]){}
 object TypeInspectInfo{
   def nullInspectInfo() = {
-    TypeInspectInfo(TypeInfo("NA", "NA", NoPosition), List())
+    TypeInspectInfo(TypeInfo.nullTypeInfo, Map())
   }
 }
 

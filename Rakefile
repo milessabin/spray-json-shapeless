@@ -23,7 +23,7 @@ end
 
 COMMON_TARGET = "classes/.common"
 file COMMON_TARGET => SOURCES do
-  sh "#{SCALAC} -deprecation -sourcepath src -classpath #{JVM_CLASSPATH} -d classes #{(SOURCES).join(' ')}"
+  sh "#{SCALAC} -deprecation -unchecked -sourcepath src -classpath #{JVM_CLASSPATH} -d classes #{(SOURCES).join(' ')}"
   touch COMMON_TARGET
 end
 
