@@ -7,6 +7,11 @@ the ENhanced Scala Interaction Mode for Emacs
 - Inspect the type of any expression.
 - Type member name completion.
 
+## System Requirements
+
+- Emacs 23(?) It may well work with earlier versions, but I haven't tested.
+- A Unixy OS. It shouldn't be much work to get it running on windows, but you're on your own for now :)
+
 ## Installation
 
 __scala-mode__
