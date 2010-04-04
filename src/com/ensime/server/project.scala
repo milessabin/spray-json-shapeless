@@ -135,23 +135,6 @@ class Project extends Actor with SwankHandler{
       result.callId)
   }
 
-  /*
-  * A sexp describing the server configuration, per the Swank standard.
-  */
-  protected def getConnectionInfo = {
-    SExp(
-      key(":pid"), 'nil,
-      key(":server-implementation"),
-      SExp(
-	key(":name"), SERVER_NAME
-      ),
-      key(":machine"), 'nil,
-      key(":features"), 'nil,
-      key(":version"), PROTOCOL_VERSION
-    )
-  }
-
-
 
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
 

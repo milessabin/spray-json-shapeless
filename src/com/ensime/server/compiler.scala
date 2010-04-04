@@ -14,6 +14,8 @@ import scala.collection.{Iterable, Map}
 import java.io.File
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._ // this makes implicit toRichFile active
+import scala.tools.nsc.symtab.Types
+
 
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
@@ -101,8 +103,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 	  // Get the type at position..
 	  val tpe = tree.tpe
-	  val typeSym = tpe.typeSymbol
-	  val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
+	  val typeInfo = TypeInfo(tpe)
 
 	  // Then grab the members of that type
 	  //
@@ -116,7 +117,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  }
 
 	  // ...filtering out non-visible and non-type members
-	  val visMembers:Iterable[TypeMember] = members.flatMap { 
+	  val visMembers:List[TypeMember] = members.flatMap { 
 	    case m@TypeMember(sym, tpe, true, _, _) => List(m)
 	    case _ => List()
 	  }
@@ -135,17 +136,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 	  // transform to [(type-info, member-infos-of-type)]..
 	  val memberInfosByOwnerInfo = membersByOwner.map{
-	    case (tpe, members) => {
-	      val ownerTypeSym = tpe.typeSymbol
-	      val info = TypeInfo(tpe.toString, ownerTypeSym.fullName, ownerTypeSym.pos)
+	    case (ownerTpe, members) => {
 	      val memberInfos = members.map{
 		case TypeMember(sym, tpe, _, _, _) => {	
-		  val typeSym = tpe.typeSymbol
-		  val typeInfo = TypeInfo(tpe.toString, typeSym.fullName, typeSym.pos)
+		  val typeInfo = TypeInfo(tpe)
 		  MemberInfo(sym.nameString, typeInfo, sym.pos)
 		}
-	      }
-	      (info, memberInfos)
+	      }.sortWith{(a,b) => a.name <= b.name}
+	      (TypeInfo(ownerTpe), memberInfos)
 	    }
 	  }
 	  
@@ -276,10 +274,31 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
 case class MemberInfoLight(name:String, tpeName:String){}
-case class TypeInfo(name:String, generalName:String, pos:Position){}
+case class TypeInfo(name:String, declaredAs:scala.Symbol, generalName:String, pos:Position){}
 object TypeInfo{
+  def apply(tpe:Types#Type):TypeInfo = {
+    val typeSym = tpe.typeSymbol
+    val declAs = (
+      if(typeSym.isTrait){
+	'trait
+      } 
+      else if(typeSym.isInterface){
+	'interface
+      } 
+      else if(typeSym.isClass){
+	'class
+      }
+      else if(typeSym.isAbstractClass){
+	'abstractclass
+      }
+      else{
+	'nil
+      }
+    )
+    TypeInfo(tpe.toString, declAs, typeSym.fullName, typeSym.pos)
+  }
   def nullTypeInfo() = {
-    TypeInfo("NA", "NA", NoPosition)
+    TypeInfo("NA", 'class, "NA", NoPosition)
   }
 }
 case class TypeInspectInfo(tpe:TypeInfo, membersByOwner:Iterable[(TypeInfo, Iterable[MemberInfo])]){}

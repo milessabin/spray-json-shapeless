@@ -47,6 +47,7 @@ object SExpConversion{
     SExp(
       key(":name"), t.name,
       key(":full-name"), t.generalName,
+      key(":declared-as"), t.declaredAs,
       key(":pos"), t.pos
     )
   }

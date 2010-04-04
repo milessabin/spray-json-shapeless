@@ -10,7 +10,7 @@ case class SwankOutMessageEvent(sexp:SExp)
 trait SwankHandler { self: Project =>
 
   val PROTOCOL_VERSION:String = "0.0.1"
-  val SERVER_NAME:String = "server_prototype"
+  val SERVER_NAME:String = "ENSIMEserver"
   private var peer:Actor = null;
 
   def setSwankPeer(peer:Actor){
@@ -104,6 +104,22 @@ trait SwankHandler { self: Project =>
 	packet,
 	condition
       ))
+  }
+
+  /*
+  * A sexp describing the server configuration, per the Swank standard.
+  */
+  protected def getConnectionInfo = {
+    SExp(
+      key(":pid"), 'nil,
+      key(":server-implementation"),
+      SExp(
+	key(":name"), SERVER_NAME
+      ),
+      key(":machine"), 'nil,
+      key(":features"), 'nil,
+      key(":version"), PROTOCOL_VERSION
+    )
   }
 
 }
