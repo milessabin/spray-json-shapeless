@@ -13,7 +13,7 @@ import scala.concurrent.SyncVar
 import scala.collection.{Iterable, Map}
 import java.io.File
 import scala.tools.nsc.ast._
-import com.ensime.util.RichFile._ // this makes implicit toRichFile active
+import com.ensime.util.RichFile._ 
 import scala.tools.nsc.symtab.Types
 
 
@@ -70,13 +70,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val x = new Response[Unit]()
       askReload(all, x)
       x.get
-    }    
+    }
+
     /** 
     *  Make sure a set of compilation units is loaded and parsed,
     *  but do not trigger a full recompile.
     */
     private def quickReload(sources: List[SourceFile], result: Response[Unit]) {
-      respond(result)(reloadSources(sources))
+      respond(result)(reloadSources(sources)) 
     }
 
     /** 
@@ -117,7 +118,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  }
 
 	  // ...filtering out non-visible and non-type members
-	  val visMembers:List[TypeMember] = members.flatMap { 
+	  val visMembers:List[TypeMember] = members.flatMap {
 	    case m@TypeMember(sym, tpe, true, _, _) => List(m)
 	    case _ => List()
 	  }
@@ -167,7 +168,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(MemberInfoLight(sym.nameString, tpe.toString))
+	    List(MemberInfoLight(sym.nameString, TypeInfo(tpe)))
 	  }
 	  else{
 	    List()
@@ -242,7 +243,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! TypeCompletionResultEvent(members, callId)
 	  }
 
-	  case InspectTypeEvent(file:File, point:Int, callId:Int) => 
+	  case InspectTypeEvent(file:File, point:Int, callId:Int) =>
 	  {
 	    val f = nsc.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
@@ -273,34 +274,63 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 }
 
 case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
-case class MemberInfoLight(name:String, tpeName:String){}
-case class TypeInfo(name:String, declaredAs:scala.Symbol, generalName:String, pos:Position){}
+case class MemberInfoLight(name:String, tpe:TypeInfo){}
+class TypeInfo(val name:String, val declaredAs:scala.Symbol, val fullName:String, val pos:Position){}
 object TypeInfo{
   def apply(tpe:Types#Type):TypeInfo = {
-    val typeSym = tpe.typeSymbol
-    val declAs = (
-      if(typeSym.isTrait){
-	'trait
-      } 
-      else if(typeSym.isInterface){
-	'interface
-      } 
-      else if(typeSym.isClass){
-	'class
+    tpe match{
+      case tpe:Types#MethodType => 
+      {
+	ArrowTypeInfo(tpe)
       }
-      else if(typeSym.isAbstractClass){
-	'abstractclass
+      case tpe:Types#PolyType => 
+      {
+	ArrowTypeInfo(tpe)
       }
-      else{
-	'nil
+      case tpe:Types#Type =>
+      {
+	val typeSym = tpe.typeSymbol
+	val declAs = (
+	  if(typeSym.isTrait){
+	    'trait
+	  } 
+	  else if(typeSym.isInterface){
+	    'interface
+	  } 
+	  else if(typeSym.isClass){
+	    'class
+	  }
+	  else if(typeSym.isAbstractClass){
+	    'abstractclass
+	  }
+	  else{
+	    'nil
+	  }
+	)
+	new TypeInfo(tpe.toString, declAs, typeSym.fullName, typeSym.pos)
       }
-    )
-    TypeInfo(tpe.toString, declAs, typeSym.fullName, typeSym.pos)
+    }
   }
   def nullTypeInfo() = {
-    TypeInfo("NA", 'class, "NA", NoPosition)
+    new TypeInfo("NA", 'nil, "NA", NoPosition)
   }
 }
+
+class ArrowTypeInfo(override val name:String, val resultType:TypeInfo, val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, 'nil, name, NoPosition){}
+
+object ArrowTypeInfo{
+  def apply(tpe:Types#MethodType):ArrowTypeInfo = {
+    new ArrowTypeInfo(tpe.toString, TypeInfo(tpe.resultType), tpe.paramTypes.map(TypeInfo.apply))
+  }
+  def apply(tpe:Types#PolyType):ArrowTypeInfo = {
+    new ArrowTypeInfo(tpe.toString, TypeInfo(tpe.resultType), tpe.paramTypes.map(TypeInfo.apply))
+  }
+  def nullTypeInfo() = {
+    new TypeInfo("NA", 'class, "NA", NoPosition)
+  }
+}
+
+
 case class TypeInspectInfo(tpe:TypeInfo, membersByOwner:Iterable[(TypeInfo, Iterable[MemberInfo])]){}
 object TypeInspectInfo{
   def nullInspectInfo() = {

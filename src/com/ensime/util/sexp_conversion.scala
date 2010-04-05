@@ -29,7 +29,7 @@ object SExpConversion{
   implicit def toSExp(m:MemberInfoLight):SExp = {
     SExp(
       key(":name"), m.name,
-      key(":type-name"), m.tpeName
+      key(":type"), m.tpe
     )
   }
 
@@ -44,12 +44,27 @@ object SExpConversion{
   }
 
   implicit def toSExp(t:TypeInfo):SExp = {
-    SExp(
-      key(":name"), t.name,
-      key(":full-name"), t.generalName,
-      key(":declared-as"), t.declaredAs,
-      key(":pos"), t.pos
-    )
+    t match{
+      case tpe:ArrowTypeInfo => 
+      {
+	SExp(
+	  key(":name"), t.name,
+	  key(":arrow-type"), true,
+	  key(":result-type"), tpe.resultType,
+	  key(":param-types"), SExp(tpe.paramTypes.map(toSExp))
+	)
+      }
+      case tpe:TypeInfo =>
+      {
+	SExp(
+	  key(":name"), t.name,
+	  key(":full-name"), t.fullName,
+	  key(":declared-as"), t.declaredAs,
+	  key(":pos"), t.pos
+	)
+      }
+    }
+
   }
 
 
