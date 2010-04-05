@@ -285,7 +285,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! TypeByIdResultEvent(tpeInfo, callId)
 	  }
 
-	  case BackgroundCompileCompleteEvent() => 
+	  case BackgroundCompileCompleteEvent() =>
 	  {
 	    project ! CompilationResultEvent(reporter.allNotes)
 	  }
@@ -343,6 +343,7 @@ object TypeInfo{
 	)
 	new TypeInfo(tpe.toString, declAs, typeSym.fullName, typeSym.pos)
       }
+      case _ => nullTypeInfo
     }
   }
   def nullTypeInfo() = {
