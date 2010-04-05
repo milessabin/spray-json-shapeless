@@ -12,7 +12,7 @@ import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import scala.collection.{Iterable, Map}
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap }
+import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.collection.immutable.TreeSet
 import java.io.File
 import scala.tools.nsc.ast._
@@ -24,11 +24,13 @@ case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
 case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
 case class TypeByIdResultEvent(info:TypeInfo, callId:Int)
+case class InspectTypeByIdResultEvent(info:TypeInspectInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
+case class InspectTypeByIdEvent(id:Int, callId:Int)
 case class TypeByIdEvent(id:Int, callId:Int)
 case class CompilerShutdownEvent()
 
@@ -72,7 +74,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     def typeById(id:Int):Option[Types#Type] = { 
       typeCache.get(id)
     }
-    def typeToCacheID(tpe:Types#Type):Int = {
+    def cacheType(tpe:Types#Type):Int = {
       if(typeCacheReverse.contains(tpe)){
 	typeCacheReverse(tpe)
       }
@@ -118,67 +120,100 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       override def toString = "quickReload " + sources
     }
 
+    import analyzer.{SearchResult, ImplicitSearch}
 
-    def inspectTypeAt(p: Position):TypeInspectInfo = {
-      blockingQuickReload(p.source)
-
-      // First grab the type at position
-      val x1 = new Response[Tree]()
-      askTypeAt(p, x1)
-      x1.get match{
-	case Left(tree) => {
-
-	  // Get the type at position..
-	  val tpe = tree.tpe
-	  val typeInfo = TypeInfo(tpe)
-
-	  // Then grab the members of that type
-	  //
-	  // TODO - shouldn't do another blocking 
-	  // call here; we already have tpe..
-	  val x2 = new nsc.Response[List[Member]]()
-	  askTypeCompletion(p, x2)
-	  val members = x2.get match{
-	    case Left(m) => m
-	    case Right(e) => List()
-	  }
-
-	  // ...filtering out non-visible and non-type members
-	  val visMembers:List[TypeMember] = members.flatMap {
-	    case m@TypeMember(sym, tpe, true, _, _) => List(m)
-	    case _ => List()
-	  }
-
-	  // create a list of pairs [(type, members-of-type)]
-	  // ..sort the pairs on the subtype relation
-	  val membersByOwner = visMembers.groupBy{
-	    case TypeMember(sym, tpe, _, _, _) => {
-	      val ownerSym = sym.owner
-	      val ownerType = ownerSym.tpe
-	      ownerType
-	    }
-	  }.iterator.toList.sortWith{
-	    case ((t1,_),(t2,_)) => t1 <:< t2
-	  }
-
-	  // transform to [(type-info, member-infos-of-type)]..
-	  val memberInfosByOwnerInfo = membersByOwner.map{
-	    case (ownerTpe, members) => {
-	      val memberInfos = members.map{
-		case TypeMember(sym, tpe, _, _, _) => {	
-		  val typeInfo = TypeInfo(tpe)
-		  MemberInfo(sym.nameString, typeInfo, sym.pos)
-		}
-	      }.sortWith{(a,b) => a.name <= b.name}
-	      (TypeInfo(ownerTpe), memberInfos)
-	    }
-	  }
-	  TypeInspectInfo(typeInfo, memberInfosByOwnerInfo)
-	}
-	case Right(e) => {
-	  TypeInspectInfo.nullInspectInfo
+    private def typePublicMembers(tpe:Type):List[TypeMember] = {
+      val scope = new Scope
+      val members = new LinkedHashMap[Symbol, TypeMember]
+      def addTypeMember(sym: Symbol, pre: Type, inherited: Boolean, viaView: Symbol) {
+	val symtpe = pre.memberType(sym)
+	if (scope.lookupAll(sym.name) forall (sym => !(members(sym).tpe matches symtpe))) {
+	  scope enter sym
+	  members(sym) = new TypeMember(
+	    sym,
+	    symtpe,
+	    sym.isPublic,
+	    inherited,
+	    viaView)
 	}
       }
+      for (sym <- tpe.decls){
+	addTypeMember(sym, tpe, false, NoSymbol)
+      }
+      for (sym <- tpe.members){
+	addTypeMember(sym, tpe, true, NoSymbol)
+      }
+      members.values.toList
+    }
+
+    def prepareSortedMemberInfo(members:List[Member]):Iterable[(TypeInfo, Iterable[MemberInfo])] = {
+      // ...filtering out non-visible and non-type members
+      val visMembers:List[TypeMember] = members.flatMap {
+	case m@TypeMember(sym, tpe, true, _, _) => List(m)
+	case _ => List()
+      }
+
+      // create a list of pairs [(type, members-of-type)]
+      // ..sort the pairs on the subtype relation
+      val membersByOwner = visMembers.groupBy{
+	case TypeMember(sym, _, _, _, _) => {
+	  val ownerSym = sym.owner
+	  val ownerType = ownerSym.tpe
+	  ownerType
+	}
+      }.iterator.toList.sortWith{
+	case ((t1,_),(t2,_)) => t1 <:< t2
+      }
+
+      // transform to [(type-info, member-infos-of-type)]..
+      val memberInfosByOwnerInfo = membersByOwner.map{
+	case (ownerTpe, members) => {
+	  val memberInfos = members.map{
+	    case TypeMember(sym, tpe, _, _, _) => {
+	      val typeInfo = TypeInfo(tpe, cacheType)
+	      MemberInfo(sym.nameString, typeInfo, sym.pos)
+	    }
+	  }.sortWith{(a,b) => a.name <= b.name}
+	  (TypeInfo(ownerTpe, cacheType), memberInfos)
+	}
+      }
+
+      memberInfosByOwnerInfo
+    }
+
+    def inspectType(tpe:Types#Type):TypeInspectInfo = {
+      TypeInspectInfo(
+	TypeInfo(tpe, cacheType), 
+	prepareSortedMemberInfo(typePublicMembers(tpe.asInstanceOf[Type]))
+      )
+    }
+
+    def inspectTypeAt(p: Position):TypeInspectInfo = {
+
+      blockingQuickReload(p.source)
+
+      // Grab the members at this position..
+      val x2 = new nsc.Response[List[Member]]()
+      askTypeCompletion(p, x2)
+      val members:List[Member] = x2.get match{
+	case Left(m) => m
+	case Right(e) => List()
+      }
+      val preparedMembers = prepareSortedMemberInfo(members)
+
+      // Grab the type at position..
+      val x1 = new Response[Tree]()
+      askTypeAt(p, x1)
+      val typeInfo = x1.get match{
+	case Left(tree) => {
+	  TypeInfo(tree.tpe, cacheType)
+	}
+	case Right(e) => {
+	  TypeInfo.nullTypeInfo
+	}
+      }
+
+      TypeInspectInfo(typeInfo, preparedMembers)
     }
 
     def completeMemberAt(p: Position, prefix:String):List[MemberInfoLight] = {
@@ -192,7 +227,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(MemberInfoLight(sym.nameString, tpe.toString, typeToCacheID(tpe)))
+	    List(MemberInfoLight(sym.nameString, tpe.toString, cacheType(tpe)))
 	  }
 	  else{
 	    List()
@@ -276,10 +311,19 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! InspectTypeResultEvent(inspectInfo, callId)
 	  }
 
+	  case InspectTypeByIdEvent(id:Int, callId:Int) =>
+	  {
+	    val inspectInfo = nsc.typeById(id) match{
+	      case Some(tpe) => nsc.inspectType(tpe)
+	      case None => TypeInspectInfo.nullInspectInfo
+	    }
+	    project ! InspectTypeResultEvent(inspectInfo, callId)
+	  }
+
 	  case TypeByIdEvent(id:Int, callId:Int) =>
 	  {
 	    val tpeInfo = nsc.typeById(id) match{
-	      case Some(tpe) => TypeInfo(tpe)
+	      case Some(tpe) => TypeInfo(tpe, nsc.cacheType)
 	      case None => TypeInfo.nullTypeInfo
 	    }
 	    project ! TypeByIdResultEvent(tpeInfo, callId)
@@ -309,59 +353,77 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
 case class MemberInfoLight(name:String, tpeName:String, tpeId:Int){}
-class TypeInfo(val name:String, val declaredAs:scala.Symbol, val fullName:String, val pos:Position){}
+class TypeInfo(
+  val name:String, 
+  val id:Int, 
+  val declaredAs:scala.Symbol, 
+  val fullName:String, 
+  val pos:Position){}
+
 object TypeInfo{
-  def apply(tpe:Types#Type):TypeInfo = {
+
+  type TypeCacher = Types#Type => Int
+
+  def apply(tpe:Types#Type, cache:TypeCacher):TypeInfo = {
     tpe match{
       case tpe:Types#MethodType => 
       {
-	ArrowTypeInfo(tpe)
+	ArrowTypeInfo(tpe, cache)
       }
       case tpe:Types#PolyType => 
       {
-	ArrowTypeInfo(tpe)
+	ArrowTypeInfo(tpe, cache)
       }
       case tpe:Types#Type =>
       {
 	val typeSym = tpe.typeSymbol
 	val declAs = (
-	  if(typeSym.isTrait){
-	    'trait
-	  } 
-	  else if(typeSym.isInterface){
-	    'interface
-	  } 
-	  else if(typeSym.isClass){
-	    'class
-	  }
-	  else if(typeSym.isAbstractClass){
-	    'abstractclass
-	  }
-	  else{
-	    'nil
-	  }
+	  if(typeSym.isTrait)
+	  'trait
+	  else if(typeSym.isInterface)
+	  'interface
+	  else if(typeSym.isClass)
+	  'class
+	  else if(typeSym.isAbstractClass)
+	  'abstractclass
+	  else 'nil
 	)
-	new TypeInfo(tpe.toString, declAs, typeSym.fullName, typeSym.pos)
+	new TypeInfo(tpe.toString, cache(tpe), declAs, typeSym.fullName, typeSym.pos)
       }
       case _ => nullTypeInfo
     }
   }
   def nullTypeInfo() = {
-    new TypeInfo("NA", 'nil, "NA", NoPosition)
+    new TypeInfo("NA", -1, 'nil, "NA", NoPosition)
   }
 }
 
-class ArrowTypeInfo(override val name:String, val resultType:TypeInfo, val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, 'nil, name, NoPosition){}
+class ArrowTypeInfo(
+  override val name:String, 
+  override val id:Int, 
+  val resultType:TypeInfo, 
+  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, NoPosition){}
 
 object ArrowTypeInfo{
-  def apply(tpe:Types#MethodType):ArrowTypeInfo = {
-    new ArrowTypeInfo(tpe.toString, TypeInfo(tpe.resultType), tpe.paramTypes.map(TypeInfo.apply))
+
+  type TypeCacher = Types#Type => Int
+
+  def apply(tpe:Types#MethodType, cache:TypeCacher):ArrowTypeInfo = {
+    new ArrowTypeInfo(
+      tpe.toString, 
+      cache(tpe), 
+      TypeInfo(tpe.resultType, cache), 
+      tpe.paramTypes.map(t => TypeInfo(t,cache)))
   }
-  def apply(tpe:Types#PolyType):ArrowTypeInfo = {
-    new ArrowTypeInfo(tpe.toString, TypeInfo(tpe.resultType), tpe.paramTypes.map(TypeInfo.apply))
+  def apply(tpe:Types#PolyType, cache:TypeCacher):ArrowTypeInfo = {
+    new ArrowTypeInfo(
+      tpe.toString, 
+      cache(tpe), 
+      TypeInfo(tpe.resultType, cache), 
+      tpe.paramTypes.map(t => TypeInfo(t,cache)))
   }
   def nullTypeInfo() = {
-    new TypeInfo("NA", 'class, "NA", NoPosition)
+    new TypeInfo("NA", -1, 'class, "NA", NoPosition)
   }
 }
 

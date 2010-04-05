@@ -50,6 +50,7 @@ object SExpConversion{
       {
 	SExp(
 	  key(":name"), t.name,
+	  key(":id"), t.id,
 	  key(":arrow-type"), true,
 	  key(":result-type"), tpe.resultType,
 	  key(":param-types"), SExp(tpe.paramTypes.map(toSExp))
@@ -59,6 +60,7 @@ object SExpConversion{
       {
 	SExp(
 	  key(":name"), t.name,
+	  key(":id"), t.id,
 	  key(":full-name"), t.fullName,
 	  key(":declared-as"), t.declaredAs,
 	  key(":pos"), t.pos

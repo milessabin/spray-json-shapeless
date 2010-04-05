@@ -203,6 +203,14 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops
 	}
       }
+      case "swank:inspect-type-by-id" => {
+	form match{
+	  case SExpList(head::IntAtom(id)::body) => {
+	    compiler ! InspectTypeByIdEvent(id, callId)
+	  }
+	  case _ => oops
+	}
+      }
       case "swank:type-by-id" => {
 	form match{
 	  case SExpList(head::IntAtom(id)::body) => {
