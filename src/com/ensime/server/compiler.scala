@@ -11,6 +11,9 @@ import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.reporters.Reporter
 import scala.concurrent.SyncVar
 import scala.collection.{Iterable, Map}
+import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
+import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap }
+import scala.collection.immutable.TreeSet
 import java.io.File
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._ 
@@ -20,11 +23,13 @@ import scala.tools.nsc.symtab.Types
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
 case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
+case class TypeByIdResultEvent(info:TypeInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
+case class TypeByIdEvent(id:Int, callId:Int)
 case class CompilerShutdownEvent()
 
 case class BackgroundCompileCompleteEvent()
@@ -55,7 +60,29 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   settings.processArguments(args, false)
   val reporter = new PresentationReporter()
 
+
   class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor) extends Global(settings,reporter){
+
+    private val typeCache = new HashMap[Int, Types#Type]
+    private val typeCacheReverse = new HashMap[Types#Type, Int]
+    def clearTypeCache(){ 
+      typeCache.clear
+      typeCacheReverse.clear
+    }
+    def typeById(id:Int):Option[Types#Type] = { 
+      typeCache.get(id)
+    }
+    def typeToCacheID(tpe:Types#Type):Int = {
+      if(typeCacheReverse.contains(tpe)){
+	typeCacheReverse(tpe)
+      }
+      else{
+	val id = typeCache.size + 1
+	typeCache(id) = tpe
+	typeCacheReverse(tpe) = id
+	id
+      }
+    }
 
     /**
     * Override so we send a notification to compiler actor when finished..
@@ -93,7 +120,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 
     def inspectTypeAt(p: Position):TypeInspectInfo = {
-
       blockingQuickReload(p.source)
 
       // First grab the type at position
@@ -147,7 +173,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      (TypeInfo(ownerTpe), memberInfos)
 	    }
 	  }
-	  
 	  TypeInspectInfo(typeInfo, memberInfosByOwnerInfo)
 	}
 	case Right(e) => {
@@ -155,7 +180,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	}
       }
     }
-
 
     def completeMemberAt(p: Position, prefix:String):List[MemberInfoLight] = {
       blockingQuickReload(p.source)
@@ -168,7 +192,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(MemberInfoLight(sym.nameString, TypeInfo(tpe)))
+	    List(MemberInfoLight(sym.nameString, tpe.toString, typeToCacheID(tpe)))
 	  }
 	  else{
 	    List()
@@ -180,13 +204,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     }
 
     def blockingQuickReload(f:SourceFile){
-      val x = new nsc.Response[Unit]()
+      val x = new Response[Unit]()
       nsc.askQuickReload(List(f), x)
       x.get
     }
 
     def blockingFullReload(f:SourceFile){
-      val x = new nsc.Response[Unit]()
+      val x = new Response[Unit]()
       nsc.askReload(List(f), x)
       x.get
     }
@@ -206,6 +230,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 	  case CompilerShutdownEvent => 
 	  {
+	    nsc.clearTypeCache
 	    nsc.askShutdown()
 	    exit('stop)
 	  }
@@ -251,6 +276,15 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! InspectTypeResultEvent(inspectInfo, callId)
 	  }
 
+	  case TypeByIdEvent(id:Int, callId:Int) =>
+	  {
+	    val tpeInfo = nsc.typeById(id) match{
+	      case Some(tpe) => TypeInfo(tpe)
+	      case None => TypeInfo.nullTypeInfo
+	    }
+	    project ! TypeByIdResultEvent(tpeInfo, callId)
+	  }
+
 	  case BackgroundCompileCompleteEvent() => 
 	  {
 	    project ! CompilationResultEvent(reporter.allNotes)
@@ -274,7 +308,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 }
 
 case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
-case class MemberInfoLight(name:String, tpe:TypeInfo){}
+case class MemberInfoLight(name:String, tpeName:String, tpeId:Int){}
 class TypeInfo(val name:String, val declaredAs:scala.Symbol, val fullName:String, val pos:Position){}
 object TypeInfo{
   def apply(tpe:Types#Type):TypeInfo = {
@@ -358,9 +392,6 @@ case class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:In
 
 }
 
-
-import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap }
 
 
 class PresentationReporter extends Reporter {

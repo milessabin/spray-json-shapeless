@@ -29,7 +29,8 @@ object SExpConversion{
   implicit def toSExp(m:MemberInfoLight):SExp = {
     SExp(
       key(":name"), m.name,
-      key(":type"), m.tpe
+      key(":type-name"), m.tpeName,
+      key(":type-id"), m.tpeId
     )
   }
 

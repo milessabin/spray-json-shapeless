@@ -42,6 +42,10 @@ class Project extends Actor with SwankHandler{
 	  {
 	    sendInspectTypeReturn(result)
 	  }
+	  case result:TypeByIdResultEvent =>
+	  {
+	    sendTypeByIdReturn(result)
+	  }
 	  case FileModifiedEvent(file:File) =>
 	  {
 	    compiler ! ReloadFileEvent(file)
@@ -135,6 +139,17 @@ class Project extends Actor with SwankHandler{
       result.callId)
   }
 
+  /*
+  * Return type completion results to IDE
+  */
+  protected def sendTypeByIdReturn(result:TypeByIdResultEvent){
+    sendEmacsRexReturn(
+      SExp(
+	key(":ok"),
+	toSExp(result.info)
+      ),
+      result.callId)
+  }
 
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
 
@@ -184,6 +199,14 @@ class Project extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
 	    compiler ! InspectTypeEvent(new File(file), point, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:type-by-id" => {
+	form match{
+	  case SExpList(head::IntAtom(id)::body) => {
+	    compiler ! TypeByIdEvent(id, callId)
 	  }
 	  case _ => oops
 	}
