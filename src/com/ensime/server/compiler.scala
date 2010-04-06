@@ -106,7 +106,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     *  but do not trigger a full recompile.
     */
     private def quickReload(sources: List[SourceFile], result: Response[Unit]) {
-      respond(result)(reloadSources(sources)) 
+      respond(result)(reloadSources(sources))
     }
 
     /** 
