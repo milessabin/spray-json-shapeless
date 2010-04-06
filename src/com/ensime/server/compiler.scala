@@ -48,7 +48,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val srcFiles = (
     for(s <- config.srcDirs;
       val srcRoot = new File(rootDir, s);
-      f <- srcRoot.andTree if (f.getName.endsWith(".scala") && !f.isHidden))
+      f <- srcRoot.andTree if ((f.getName.endsWith(".scala") || f.getName.endsWith(".java")) && !f.isHidden))
     yield{
       f.getAbsolutePath
     })
