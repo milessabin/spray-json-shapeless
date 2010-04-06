@@ -24,6 +24,7 @@ case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
 case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
 case class TypeByIdResultEvent(info:TypeInfo, callId:Int)
+case class TypeAtPointResultEvent(info:TypeInfo, callId:Int)
 case class InspectTypeByIdResultEvent(info:TypeInspectInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
@@ -32,6 +33,7 @@ case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
 case class InspectTypeByIdEvent(id:Int, callId:Int)
 case class TypeByIdEvent(id:Int, callId:Int)
+case class TypeAtPointEvent(file:File, point:Int, callId:Int)
 case class CompilerShutdownEvent()
 
 case class BackgroundCompileCompleteEvent()
@@ -216,6 +218,21 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       TypeInspectInfo(typeInfo, preparedMembers)
     }
 
+    def getTypeAt(p: Position):TypeInfo = {
+      // Grab the type at position..
+      val x1 = new Response[Tree]()
+      askTypeAt(p, x1)
+      val typeInfo = x1.get match{
+	case Left(tree) => {
+	  TypeInfo(tree.tpe, cacheType)
+	}
+	case Right(e) => {
+	  TypeInfo.nullTypeInfo
+	}
+      }
+      typeInfo
+    }
+
     def completeMemberAt(p: Position, prefix:String):List[MemberInfoLight] = {
       blockingQuickReload(p.source)
       val x2 = new Response[List[Member]]()
@@ -318,6 +335,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case None => TypeInspectInfo.nullInspectInfo
 	    }
 	    project ! InspectTypeResultEvent(inspectInfo, callId)
+	  }
+
+	  case TypeAtPointEvent(file:File, point:Int, callId:Int) =>
+	  {
+	    val f = nsc.getSourceFile(file.getAbsolutePath())
+	    val p = new OffsetPosition(f, point)
+	    val typeInfo = nsc.getTypeAt(p)
+	    project ! TypeAtPointResultEvent(typeInfo, callId)
 	  }
 
 	  case TypeByIdEvent(id:Int, callId:Int) =>

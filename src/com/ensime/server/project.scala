@@ -42,6 +42,10 @@ class Project extends Actor with SwankHandler{
 	  {
 	    sendInspectTypeReturn(result)
 	  }
+	  case result:TypeAtPointResultEvent =>
+	  {
+	    sendTypeAtPointReturn(result)
+	  }
 	  case result:TypeByIdResultEvent =>
 	  {
 	    sendTypeByIdReturn(result)
@@ -140,7 +144,7 @@ class Project extends Actor with SwankHandler{
   }
 
   /*
-  * Return type completion results to IDE
+  * Return type information to IDE
   */
   protected def sendTypeByIdReturn(result:TypeByIdResultEvent){
     sendEmacsRexReturn(
@@ -150,6 +154,19 @@ class Project extends Actor with SwankHandler{
       ),
       result.callId)
   }
+
+  /*
+  * Return type information to IDE
+  */
+  protected def sendTypeAtPointReturn(result:TypeAtPointResultEvent){
+    sendEmacsRexReturn(
+      SExp(
+	key(":ok"),
+	toSExp(result.info)
+      ),
+      result.callId)
+  }
+
 
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
 
@@ -195,7 +212,7 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops
 	}
       }
-      case "swank:inspect-type" => {
+      case "swank:inspect-type-at-point" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
 	    compiler ! InspectTypeEvent(new File(file), point, callId)
@@ -215,6 +232,14 @@ class Project extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::IntAtom(id)::body) => {
 	    compiler ! TypeByIdEvent(id, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:type-at-point" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    compiler ! TypeAtPointEvent(new File(file), point, callId)
 	  }
 	  case _ => oops
 	}
