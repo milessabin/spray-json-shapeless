@@ -5,6 +5,7 @@
 :server-env ()
 
 :source ("src")
+:exclude-source ()
 :classpath ("lib/jnotify/jnotify-0.93.jar"
 	     "lib/configgy/configgy-1.5.jar"
 	     "lib/scala-library.jar"

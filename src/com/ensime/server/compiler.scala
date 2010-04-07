@@ -43,22 +43,22 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   private val rootDir:File = new File(config.rootDir)
 
-  private val classpathFiles:Set[File] = config.classpath.map{ s =>
-    new File(rootDir, s)
+  private val classpathFiles:Set[String] = config.classpath.map{ s =>
+    (new File(rootDir, s)).getAbsolutePath
   }.toSet
 
   private def isValidSourceFile(f:File):Boolean = {
     f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
   }
 
-  private def expandSource(srcList:Iterable[String]):Set[File] = {
+  private def expandSource(srcList:Iterable[String]):Set[String] = {
     (for(
 	s <- srcList;
 	val files = (new File(rootDir, s)).andTree;
 	f <- files if isValidSourceFile(f)
       )
       yield{
-	f
+	f.getAbsolutePath
       }).toSet
   }
 
@@ -67,14 +67,12 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val srcFiles = includeSrcFiles -- excludeSrcFiles
 
   val args = List(
-    "-cp", classpathFiles.map{_.getAbsolutePath}.mkString(":"),
+    "-cp", classpathFiles.mkString(":"),
     "-verbose",
-    srcFiles.map{_.getAbsolutePath}.mkString(" ")
+    srcFiles.mkString(" ")
   )
 
-
-  println("Processed compiler args:" + args)
-
+  println("Compiler args: " + args)
 
   val settings = new Settings(Console.println)
   settings.processArguments(args, false)
@@ -113,7 +111,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     }
 
     def blockingReloadAll() {
-      val all = srcFiles.map( f => nsc.getSourceFile(f.getAbsolutePath) ).toList
+      val all = srcFiles.map(nsc.getSourceFile(_)).toList
       val x = new Response[Unit]()
       askReload(all, x)
       x.get
