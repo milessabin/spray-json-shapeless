@@ -35,11 +35,20 @@ Finally, open one of the source files for your scala project, and execute M-x en
 
 ## Usage
 
-__C-c c__  - Force a type-check. Otherwise type-checking takes place whenever a file is saved.
+__TAB__    - Complete a type member.
 
 __C-c t__  - Inspect the type of the expression under the cursor.
 
-__TAB__    - Complete a type member.
+__C-c c__  - Force a type-check. Otherwise type-checking takes place whenever a file is saved.
+
+__Mouse Double-Click__    - Inspect the type of the expression under the cursor.
+
+__Mouse Hover__    - Show type the expression under the cursor.
+
+
+
+
+
 
 ## Troubleshooting
 
