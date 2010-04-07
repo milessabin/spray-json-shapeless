@@ -43,7 +43,7 @@ __C-c c__  - Force a type-check. Otherwise type-checking takes place whenever a 
 
 __Mouse Double-Click__    - Inspect the type of the expression under the cursor.
 
-__Mouse Hover__    - Show type the expression under the cursor.
+__Mouse Hover__    - Show type of the expression under the cursor.
 
 
 
