@@ -10,7 +10,7 @@ import com.ensime.util.SExp._
 import com.ensime.util.SExpConversion._
 import java.io.File
 
-case class ProjectConfig(rootDir:String, srcDirs:Iterable[String], classpath:Iterable[String])
+case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
 case class SendBackgroundMessageEvent(msg:String)
 
 class Project extends Actor with SwankHandler{
@@ -86,7 +86,11 @@ class Project extends Actor with SwankHandler{
       case Some(StringAtom(str)) => str
       case _ => "."
     }
-    val srcDirs = m.get(key(":source-dirs")) match{
+    val srcList = m.get(key(":source")) match{
+      case Some(SExpList(items)) => items.map{_.toString}
+      case _ => List()
+    }
+    val excludeSrcList = m.get(key(":exclude-source")) match{
       case Some(SExpList(items)) => items.map{_.toString}
       case _ => List()
     }
@@ -94,7 +98,7 @@ class Project extends Actor with SwankHandler{
       case Some(SExpList(items)) => items.map{_.toString}
       case _ => List()
     }
-    val conf = ProjectConfig(rootDir, srcDirs, classpath)
+    val conf = ProjectConfig(rootDir, srcList, excludeSrcList, classpath)
     println("Got configuration: " + conf + ". Starting compiler..")
     compiler ! CompilerShutdownEvent
     compiler = new Compiler(this, conf)

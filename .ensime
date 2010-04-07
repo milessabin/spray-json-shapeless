@@ -4,7 +4,7 @@
 :server-host "localhost"
 :server-env ()
 
-:source-dirs ("src")
+:source ("src")
 :classpath ("lib/jnotify/jnotify-0.93.jar"
 	     "lib/configgy/configgy-1.5.jar"
 	     "lib/scala-library.jar"

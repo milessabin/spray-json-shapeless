@@ -40,25 +40,41 @@ case class BackgroundCompileCompleteEvent()
 
 class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
-  val rootDir = new File(config.rootDir)
-  val cpFiles = config.classpath.map{ s =>
-    val f = new File(rootDir, s)
-    f.getAbsolutePath
+
+  private val rootDir:File = new File(config.rootDir)
+
+  private val classpathFiles:Set[File] = config.classpath.map{ s =>
+    new File(rootDir, s)
+  }.toSet
+
+  private def isValidSourceFile(f:File):Boolean = {
+    f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
   }
-  val srcFiles = (
-    for(s <- config.srcDirs;
-      val srcRoot = new File(rootDir, s);
-      f <- srcRoot.andTree if ((f.getName.endsWith(".scala") || f.getName.endsWith(".java")) && !f.isHidden))
-    yield{
-      f.getAbsolutePath
-    })
+
+  private def expandSource(srcList:Iterable[String]):Set[File] = {
+    (for(
+	s <- srcList;
+	val files = (new File(rootDir, s)).andTree;
+	f <- files if isValidSourceFile(f)
+      )
+      yield{
+	f
+      }).toSet
+  }
+
+  val includeSrcFiles = expandSource(config.srcList)
+  val excludeSrcFiles = expandSource(config.excludeSrcList)
+  val srcFiles = includeSrcFiles -- excludeSrcFiles
+
   val args = List(
-    "-cp", cpFiles.mkString(":"),
+    "-cp", classpathFiles.map{_.getAbsolutePath}.mkString(":"),
     "-verbose",
-    srcFiles.mkString(" ")
+    srcFiles.map{_.getAbsolutePath}.mkString(" ")
   )
 
+
   println("Processed compiler args:" + args)
+
 
   val settings = new Settings(Console.println)
   settings.processArguments(args, false)
@@ -97,7 +113,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     }
 
     def blockingReloadAll() {
-      val all = srcFiles.map(nsc.getSourceFile(_)).toList
+      val all = srcFiles.map( f => nsc.getSourceFile(f.getAbsolutePath) ).toList
       val x = new Response[Unit]()
       askReload(all, x)
       x.get

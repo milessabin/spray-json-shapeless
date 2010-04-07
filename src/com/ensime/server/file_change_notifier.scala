@@ -40,7 +40,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 
   private def init(){
     val root = new File(config.rootDir)
-    for(s <- config.srcDirs){
+    for(s <- config.srcList){
       val src = new File(config.rootDir, s)
       addWatch(src)
     }
