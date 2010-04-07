@@ -17,7 +17,7 @@ the ENhanced Scala Interaction Mode for Emacs
 
 __scala-mode__
 
-ENSIME is designed to compliment scala-mode. scala-mode can be found in the scala distribution under ./misc/scala-tool-support/emacs/
+ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/
 
 __ensime-mode__
 
@@ -31,7 +31,7 @@ Add the following lines to your .emacs file:
 
 Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime) in the root of the ENSIME distribution for an up-to-date example.
 
-Finally, open one of the source files for your scala project, and execute M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
+Finally, open one of the source files for your Scala project and type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
 
 ## Usage
 
