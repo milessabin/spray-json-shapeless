@@ -193,14 +193,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    }
 	  }.sortWith{(a,b) => a.name <= b.name}
 	  val ownerTpeInfo = TypeInfo(ownerSym.tpe, cacheType)
-	  new NamedTypeInfo(ownerSym.nameString, ownerTpeInfo, ownerSym.pos, memberInfos)
+	  NamedTypeInfo(ownerTpeInfo, memberInfos)
 	}
       }
     }
 
     def inspectType(tpe:Types#Type):TypeInspectInfo = {
       new TypeInspectInfo(
-	new NamedTypeInfo(tpe.typeSymbol.nameString, TypeInfo(tpe, cacheType), tpe.typeSymbol.pos, List()),
+	NamedTypeInfo(TypeInfo(tpe, cacheType), List()),
 	prepareSortedSupersInfo(typePublicMembers(tpe.asInstanceOf[Type]))
       )
     }
@@ -229,7 +229,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  TypeInfo.nullInfo
 	}
       }
-      val namedTypeInfo = new NamedTypeInfo(typeInfo.name, typeInfo, typeInfo.pos, List())
+      val namedTypeInfo = NamedTypeInfo(typeInfo, List())
       new TypeInspectInfo(namedTypeInfo, preparedMembers)
     }
 

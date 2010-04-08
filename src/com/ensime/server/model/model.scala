@@ -39,49 +39,42 @@ class PackageInfo(override val name:String, override val members:Iterable[Entity
   }
 }
 
+abstract trait LooksLikeType{
+  def name:String
+  def id:Int 
+  def declaredAs:scala.Symbol
+  def fullName:String 
+  def pos:Position
+}
+
 class NamedTypeInfo(
   override val name:String, 
-  val tpe:TypeInfo, 
   val pos:Position, 
-  override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
+  override val members:Iterable[EntityInfo],
+  val declaredAs:Symbol,
+  val id:Int,
+  val fullName:String) extends EntityInfo(name, members) with LooksLikeType{
 
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
-      key(":type"), tpe.toSExp,
+      key(":full-name"), fullName,
       key(":members"), SExp(members.map{_.toSExp}),
       key(":pos"), SExpConversion.toSExp(pos),
-      key(":declared-as"), declaredAs
+      key(":declared-as"), declaredAs,
+      key(":type-id"), id
     )
   }
 
-  def declaredAs():Symbol = 'type
 
 }
 object NamedTypeInfo{
   def nullInfo() = {
-    new NamedTypeInfo("NA", TypeInfo.nullInfo, NoPosition, List())
+    new NamedTypeInfo("NA", NoPosition, List(), 'nil, -1, "NA")
   }
-}
-
-class ClassInfo(
-  override val name:String, 
-  override val tpe:TypeInfo, 
-  override val pos:Position, 
-  override val members:Iterable[EntityInfo]) extends NamedTypeInfo(name, tpe, pos, members){
-
-  override def declaredAs():Symbol = 'class
-
-}
-
-class TraitInfo(
-  override val name:String, 
-  override val tpe:TypeInfo, 
-  override val pos:Position, 
-  override val members:Iterable[EntityInfo]) extends NamedTypeInfo(name, tpe, pos, members){
-
-  override def declaredAs():Symbol = 'trait
-
+  def apply(tpe:TypeInfo, members:Iterable[EntityInfo]) = {
+    new NamedTypeInfo(tpe.name, tpe.pos, members, tpe.declaredAs, tpe.id, tpe.fullName)
+  }
 }
 
 
@@ -111,12 +104,12 @@ class TypeInfo(
   val id:Int, 
   val declaredAs:scala.Symbol,
   val fullName:String, 
-  val pos:Position) extends SExpable{
+  val pos:Position) extends SExpable with LooksLikeType{
 
   implicit def toSExp():SExp = {
     SExp(
       key(":name"), name,
-      key(":id"), id,
+      key(":type-id"), id,
       key(":full-name"), fullName,
       key(":declared-as"), declaredAs,
       key(":pos"), SExpConversion.toSExp(pos)
@@ -174,7 +167,7 @@ class ArrowTypeInfo(
   override implicit def toSExp():SExp = {
     SExp(
       key(":name"), name,
-      key(":id"), id,
+      key(":type-id"), id,
       key(":arrow-type"), true,
       key(":result-type"), resultType.toSExp,
       key(":param-types"), SExp(paramTypes.map(_.toSExp))
