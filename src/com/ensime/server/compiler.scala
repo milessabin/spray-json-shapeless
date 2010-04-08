@@ -22,7 +22,7 @@ import com.ensime.server.model.EntityInfo
 import com.ensime.server.model._
 
 case class CompilationResultEvent(notes:List[Note])
-case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
+case class TypeCompletionResultEvent(members:List[NamedTypeMemberInfoLight], callId:Int)
 case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
 case class TypeByIdResultEvent(info:TypeInfo, callId:Int)
 case class TypeAtPointResultEvent(info:TypeInfo, callId:Int)
@@ -166,45 +166,42 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       members.values.toList
     }
 
-    def prepareSortedMemberInfo(members:List[Member]):Iterable[(TypeInfo, Iterable[MemberInfo])] = {
+    def prepareSortedSupersInfo(members:List[Member]):Iterable[NamedTypeInfo] = {
       // ...filtering out non-visible and non-type members
       val visMembers:List[TypeMember] = members.flatMap {
 	case m@TypeMember(sym, tpe, true, _, _) => List(m)
 	case _ => List()
       }
 
-      // create a list of pairs [(type, members-of-type)]
+      // create a list of pairs [(sym, members-of-sym)]
       // ..sort the pairs on the subtype relation
       val membersByOwner = visMembers.groupBy{
 	case TypeMember(sym, _, _, _, _) => {
-	  val ownerSym = sym.owner
-	  val ownerType = ownerSym.tpe
-	  ownerType
+	  sym.owner
 	}
-      }.iterator.toList.sortWith{
-	case ((t1,_),(t2,_)) => t1 <:< t2
+      }.toList.sortWith{
+	case ((s1,_),(s2,_)) => s1.tpe <:< s2.tpe
       }
 
-      // transform to [(type-info, member-infos-of-type)]..
-      val memberInfosByOwnerInfo = membersByOwner.map{
-	case (ownerTpe, members) => {
+      // transform to [named-type-info]..
+      membersByOwner.map{
+	case (ownerSym, members) => {
 	  val memberInfos = members.map{
 	    case TypeMember(sym, tpe, _, _, _) => {
 	      val typeInfo = TypeInfo(tpe, cacheType)
-	      new MemberInfo(sym.nameString, typeInfo, sym.pos)
+	      new NamedTypeMemberInfo(sym.nameString, typeInfo, sym.pos)
 	    }
 	  }.sortWith{(a,b) => a.name <= b.name}
-	  (TypeInfo(ownerTpe, cacheType), memberInfos)
+	  val ownerTpeInfo = TypeInfo(ownerSym.tpe, cacheType)
+	  new NamedTypeInfo(ownerSym.nameString, ownerTpeInfo, ownerSym.pos, memberInfos)
 	}
       }
-
-      memberInfosByOwnerInfo
     }
 
     def inspectType(tpe:Types#Type):TypeInspectInfo = {
       new TypeInspectInfo(
-	TypeInfo(tpe, cacheType), 
-	prepareSortedMemberInfo(typePublicMembers(tpe.asInstanceOf[Type]))
+	new NamedTypeInfo(tpe.typeSymbol.nameString, TypeInfo(tpe, cacheType), tpe.typeSymbol.pos, List()),
+	prepareSortedSupersInfo(typePublicMembers(tpe.asInstanceOf[Type]))
       )
     }
 
@@ -219,7 +216,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	case Left(m) => m
 	case Right(e) => List()
       }
-      val preparedMembers = prepareSortedMemberInfo(members)
+      val preparedMembers = prepareSortedSupersInfo(members)
 
       // Grab the type at position..
       val x1 = new Response[Tree]()
@@ -229,10 +226,11 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  TypeInfo(tree.tpe, cacheType)
 	}
 	case Right(e) => {
-	  TypeInfo.nullTypeInfo
+	  TypeInfo.nullInfo
 	}
       }
-      new TypeInspectInfo(typeInfo, preparedMembers)
+      val namedTypeInfo = new NamedTypeInfo(typeInfo.name, typeInfo, typeInfo.pos, List())
+      new TypeInspectInfo(namedTypeInfo, preparedMembers)
     }
 
     def getTypeAt(p: Position):TypeInfo = {
@@ -244,13 +242,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  TypeInfo(tree.tpe, cacheType)
 	}
 	case Right(e) => {
-	  TypeInfo.nullTypeInfo
+	  TypeInfo.nullInfo
 	}
       }
       typeInfo
     }
 
-    def completeMemberAt(p: Position, prefix:String):List[MemberInfoLight] = {
+    def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
       blockingQuickReload(p.source)
       val x2 = new Response[List[Member]]()
       askTypeCompletion(p, x2)
@@ -261,7 +259,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(new MemberInfoLight(sym.nameString, tpe.toString, cacheType(tpe)))
+	    List(new NamedTypeMemberInfoLight(sym.nameString, tpe.toString, cacheType(tpe)))
 	  }
 	  else{
 	    List()
@@ -349,7 +347,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  {
 	    val inspectInfo = nsc.typeById(id) match{
 	      case Some(tpe) => nsc.inspectType(tpe)
-	      case None => TypeInspectInfo.nullInspectInfo
+	      case None => TypeInspectInfo.nullInfo
 	    }
 	    project ! InspectTypeResultEvent(inspectInfo, callId)
 	  }
@@ -366,7 +364,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  {
 	    val tpeInfo = nsc.typeById(id) match{
 	      case Some(tpe) => TypeInfo(tpe, nsc.cacheType)
-	      case None => TypeInfo.nullTypeInfo
+	      case None => TypeInfo.nullInfo
 	    }
 	    project ! TypeByIdResultEvent(tpeInfo, callId)
 	  }

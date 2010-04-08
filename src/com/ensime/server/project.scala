@@ -126,10 +126,7 @@ class Project extends Actor with SwankHandler{
     sendEmacsRexReturn(
       SExp(
 	key(":ok"),
-	SExp(
-	  key(":members"),
-	  SExp(result.members.map{ _.toSExp })
-	)
+	SExp(result.members.map{ _.toSExp })
       ),
       result.callId)
   }

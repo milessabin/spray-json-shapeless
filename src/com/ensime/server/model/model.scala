@@ -39,7 +39,53 @@ class PackageInfo(override val name:String, override val members:Iterable[Entity
   }
 }
 
-class MemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position) extends EntityInfo(name, List()) with SExpable {
+class NamedTypeInfo(
+  override val name:String, 
+  val tpe:TypeInfo, 
+  val pos:Position, 
+  override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
+
+  def toSExp():SExp = {
+    SExp(
+      key(":name"), name,
+      key(":type"), tpe.toSExp,
+      key(":members"), SExp(members.map{_.toSExp}),
+      key(":pos"), SExpConversion.toSExp(pos),
+      key(":declared-as"), declaredAs
+    )
+  }
+
+  def declaredAs():Symbol = 'type
+
+}
+object NamedTypeInfo{
+  def nullInfo() = {
+    new NamedTypeInfo("NA", TypeInfo.nullInfo, NoPosition, List())
+  }
+}
+
+class ClassInfo(
+  override val name:String, 
+  override val tpe:TypeInfo, 
+  override val pos:Position, 
+  override val members:Iterable[EntityInfo]) extends NamedTypeInfo(name, tpe, pos, members){
+
+  override def declaredAs():Symbol = 'class
+
+}
+
+class TraitInfo(
+  override val name:String, 
+  override val tpe:TypeInfo, 
+  override val pos:Position, 
+  override val members:Iterable[EntityInfo]) extends NamedTypeInfo(name, tpe, pos, members){
+
+  override def declaredAs():Symbol = 'trait
+
+}
+
+
+class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position) extends EntityInfo(name, List()) with SExpable {
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
@@ -49,7 +95,7 @@ class MemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position) e
   }
 }
 
-class MemberInfoLight(override val name:String, tpeName:String, tpeId:Int) extends EntityInfo(name, List()){
+class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:Int) extends EntityInfo(name, List()){
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
@@ -58,30 +104,6 @@ class MemberInfoLight(override val name:String, tpeName:String, tpeId:Int) exten
     )
   }
 }
-
-
-class ClassInfo(override val name:String, tpe:TypeInfo, pos:Position, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
-  def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type"), tpe.toSExp,
-      key(":members"), SExp(members.map{_.toSExp}),
-      key(":pos"), SExpConversion.toSExp(pos)
-    )
-  }
-}
-
-class TraitInfo(override val name:String, tpe:TypeInfo, pos:Position, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
-  def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type"), tpe.toSExp,
-      key(":members"), SExp(members.map{_.toSExp}),
-      key(":pos"), SExpConversion.toSExp(pos)
-    )
-  }
-}
-
 
 
 class TypeInfo(
@@ -134,10 +156,10 @@ object TypeInfo{
 	)
 	new TypeInfo(tpe.toString, cache(tpe), declAs, typeSym.fullName, typeSym.pos)
       }
-      case _ => nullTypeInfo
+      case _ => nullInfo
     }
   }
-  def nullTypeInfo() = {
+  def nullInfo() = {
     new TypeInfo("NA", -1, 'nil, "NA", NoPosition)
   }
 }
@@ -179,27 +201,22 @@ object ArrowTypeInfo{
       TypeInfo(tpe.resultType, cache), 
       tpe.paramTypes.map(t => TypeInfo(t,cache)))
   }
-  def nullTypeInfo() = {
+  def nullInfo() = {
     new TypeInfo("NA", -1, 'class, "NA", NoPosition)
   }
 }
 
-
-class TypeInspectInfo(tpe:TypeInfo, membersByOwner:Iterable[(TypeInfo, Iterable[EntityInfo])]) extends SExpable{
-
+class TypeInspectInfo(tpe:NamedTypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
   def toSExp():SExp = {
     SExp(
-      key(":type"), tpe.toSExp,
-      key(":members-by-owner"), SExp(membersByOwner.map{
-	  case (ownerTpe, members) => {
-	    SExp(ownerTpe.toSExp, SExp(members.map{_.toSExp}))
-	  }})
+      key(":named-type"), tpe.toSExp,
+      key(":supers"), SExp(supers.map{_.toSExp})
     )
   }
 }
 object TypeInspectInfo{
-  def nullInspectInfo() = {
-    new TypeInspectInfo(TypeInfo.nullTypeInfo, Map())
+  def nullInfo() = {
+    new TypeInspectInfo(NamedTypeInfo.nullInfo, List())
   }
 }
 
