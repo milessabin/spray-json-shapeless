@@ -27,12 +27,14 @@ case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
 case class TypeByIdResultEvent(info:TypeInfo, callId:Int)
 case class TypeAtPointResultEvent(info:TypeInfo, callId:Int)
 case class InspectTypeByIdResultEvent(info:TypeInspectInfo, callId:Int)
+case class InspectPackageByPathResultEvent(info:PackageInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
 case class InspectTypeByIdEvent(id:Int, callId:Int)
+case class InspectPackageByPathEvent(path:String, callId:Int)
 case class TypeByIdEvent(id:Int, callId:Int)
 case class TypeAtPointEvent(file:File, point:Int, callId:Int)
 case class CompilerShutdownEvent()
@@ -350,6 +352,12 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case None => TypeInspectInfo.nullInfo
 	    }
 	    project ! InspectTypeResultEvent(inspectInfo, callId)
+	  }
+
+	  case InspectPackageByPathEvent(path:String, callId:Int) =>
+	  {
+	    val packageInfo = PackageInfoBuilder.build(nsc, path)
+	    project ! InspectPackageByPathResultEvent(packageInfo, callId)
 	  }
 
 	  case TypeAtPointEvent(file:File, point:Int, callId:Int) =>

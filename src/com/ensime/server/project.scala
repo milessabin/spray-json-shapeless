@@ -43,6 +43,10 @@ class Project extends Actor with SwankHandler{
 	  {
 	    sendInspectTypeReturn(result)
 	  }
+	  case result:InspectPackageByPathResultEvent =>
+	  {
+	    sendInspectPackageByPathReturn(result)
+	  }
 	  case result:TypeAtPointResultEvent =>
 	  {
 	    sendTypeAtPointReturn(result)
@@ -168,6 +172,18 @@ class Project extends Actor with SwankHandler{
       result.callId)
   }
 
+  /*
+  * Return pacakge information to IDE
+  */
+  protected def sendInspectPackageByPathReturn(result:InspectPackageByPathResultEvent){
+    sendEmacsRexReturn(
+      SExp(
+	key(":ok"),
+	toSExp(result.info)
+      ),
+      result.callId)
+  }
+
 
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
 
@@ -241,6 +257,14 @@ class Project extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
 	    compiler ! TypeAtPointEvent(new File(file), point, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:inspect-package-by-path" => {
+	form match{
+	  case SExpList(head::StringAtom(path)::body) => {
+	    compiler ! InspectPackageByPathEvent(path, callId)
 	  }
 	  case _ => oops
 	}
