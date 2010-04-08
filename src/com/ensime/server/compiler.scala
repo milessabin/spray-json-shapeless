@@ -18,7 +18,8 @@ import java.io.File
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._ 
 import scala.tools.nsc.symtab.Types
-
+import com.ensime.server.model.EntityInfo
+import com.ensime.server.model._
 
 case class CompilationResultEvent(notes:List[Note])
 case class TypeCompletionResultEvent(members:List[MemberInfoLight], callId:Int)
@@ -62,6 +63,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       }).toSet
   }
 
+
   val includeSrcFiles = expandSource(config.srcList)
   val excludeSrcFiles = expandSource(config.excludeSrcList)
   val srcFiles = includeSrcFiles -- excludeSrcFiles
@@ -102,12 +104,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       }
     }
 
+
     /**
     * Override so we send a notification to compiler actor when finished..
     */
     override def recompile(units: List[RichCompilationUnit]) {
       super.recompile(units)
       parent ! BackgroundCompileCompleteEvent()
+      parent
     }
 
     def blockingReloadAll() {
@@ -187,7 +191,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  val memberInfos = members.map{
 	    case TypeMember(sym, tpe, _, _, _) => {
 	      val typeInfo = TypeInfo(tpe, cacheType)
-	      MemberInfo(sym.nameString, typeInfo, sym.pos)
+	      new MemberInfo(sym.nameString, typeInfo, sym.pos)
 	    }
 	  }.sortWith{(a,b) => a.name <= b.name}
 	  (TypeInfo(ownerTpe, cacheType), memberInfos)
@@ -198,7 +202,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     }
 
     def inspectType(tpe:Types#Type):TypeInspectInfo = {
-      TypeInspectInfo(
+      new TypeInspectInfo(
 	TypeInfo(tpe, cacheType), 
 	prepareSortedMemberInfo(typePublicMembers(tpe.asInstanceOf[Type]))
       )
@@ -228,8 +232,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  TypeInfo.nullTypeInfo
 	}
       }
-
-      TypeInspectInfo(typeInfo, preparedMembers)
+      new TypeInspectInfo(typeInfo, preparedMembers)
     }
 
     def getTypeAt(p: Position):TypeInfo = {
@@ -258,7 +261,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       val visibleMembers = members.flatMap{
 	case TypeMember(sym, tpe, true, _, _) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(MemberInfoLight(sym.nameString, tpe.toString, cacheType(tpe)))
+	    List(new MemberInfoLight(sym.nameString, tpe.toString, cacheType(tpe)))
 	  }
 	  else{
 	    List()
@@ -389,112 +392,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     }
   }
 }
-
-case class MemberInfo(name:String, tpe:TypeInfo, pos:Position){}
-case class MemberInfoLight(name:String, tpeName:String, tpeId:Int){}
-class TypeInfo(
-  val name:String, 
-  val id:Int, 
-  val declaredAs:scala.Symbol, 
-  val fullName:String, 
-  val pos:Position){}
-
-object TypeInfo{
-
-  type TypeCacher = Types#Type => Int
-
-  def apply(tpe:Types#Type, cache:TypeCacher):TypeInfo = {
-    tpe match{
-      case tpe:Types#MethodType => 
-      {
-	ArrowTypeInfo(tpe, cache)
-      }
-      case tpe:Types#PolyType => 
-      {
-	ArrowTypeInfo(tpe, cache)
-      }
-      case tpe:Types#Type =>
-      {
-	val typeSym = tpe.typeSymbol
-	val declAs = (
-	  if(typeSym.isTrait)
-	  'trait
-	  else if(typeSym.isInterface)
-	  'interface
-	  else if(typeSym.isClass)
-	  'class
-	  else if(typeSym.isAbstractClass)
-	  'abstractclass
-	  else 'nil
-	)
-	new TypeInfo(tpe.toString, cache(tpe), declAs, typeSym.fullName, typeSym.pos)
-      }
-      case _ => nullTypeInfo
-    }
-  }
-  def nullTypeInfo() = {
-    new TypeInfo("NA", -1, 'nil, "NA", NoPosition)
-  }
-}
-
-class ArrowTypeInfo(
-  override val name:String, 
-  override val id:Int, 
-  val resultType:TypeInfo, 
-  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, NoPosition){}
-
-object ArrowTypeInfo{
-
-  type TypeCacher = Types#Type => Int
-
-  def apply(tpe:Types#MethodType, cache:TypeCacher):ArrowTypeInfo = {
-    new ArrowTypeInfo(
-      tpe.toString, 
-      cache(tpe), 
-      TypeInfo(tpe.resultType, cache), 
-      tpe.paramTypes.map(t => TypeInfo(t,cache)))
-  }
-  def apply(tpe:Types#PolyType, cache:TypeCacher):ArrowTypeInfo = {
-    new ArrowTypeInfo(
-      tpe.toString, 
-      cache(tpe), 
-      TypeInfo(tpe.resultType, cache), 
-      tpe.paramTypes.map(t => TypeInfo(t,cache)))
-  }
-  def nullTypeInfo() = {
-    new TypeInfo("NA", -1, 'class, "NA", NoPosition)
-  }
-}
-
-
-case class TypeInspectInfo(tpe:TypeInfo, membersByOwner:Iterable[(TypeInfo, Iterable[MemberInfo])]){}
-object TypeInspectInfo{
-  def nullInspectInfo() = {
-    TypeInspectInfo(TypeInfo.nullTypeInfo, Map())
-  }
-}
-
-case class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int){
-
-  private val tmp = "" + file + msg + severity + beg + end + line + col;
-  override val hashCode = tmp.hashCode
-
-  override def equals(other:Any):Boolean = {
-    other match{
-      case n:Note => n.hashCode == this.hashCode
-      case _ => false
-    }
-  }
-
-  def friendlySeverity = severity match {
-    case 2 => 'error
-    case 1 => 'warn
-    case 0 => 'info
-  }
-
-}
-
-
 
 class PresentationReporter extends Reporter {
 

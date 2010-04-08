@@ -7,7 +7,8 @@ import scala.actors._
 import scala.actors.Actor._ 
 import com.ensime.util._
 import com.ensime.util.SExp._
-import com.ensime.util.SExpConversion._
+import com.ensime.server.model._
+import com.ensime.server.model.SExpConversion._
 import java.io.File
 
 case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
@@ -79,7 +80,6 @@ class Project extends Actor with SwankHandler{
     }
   }
 
-
   protected def initProject(config:SExpList){
     val m = config.toKeywordMap
     val rootDir = m.get(key(":root-dir")) match{
@@ -114,7 +114,7 @@ class Project extends Actor with SwankHandler{
 	key(":compilation-result"),
 	SExp(
 	  key(":notes"),
-	  SExp(result.notes.map{ toSExp(_) })
+	  SExp(result.notes.map{ _.toSExp })
 	)
       ))
   }
@@ -128,7 +128,7 @@ class Project extends Actor with SwankHandler{
 	key(":ok"),
 	SExp(
 	  key(":members"),
-	  SExp(result.members.map{ toSExp(_) })
+	  SExp(result.members.map{ _.toSExp })
 	)
       ),
       result.callId)
@@ -142,7 +142,7 @@ class Project extends Actor with SwankHandler{
     sendEmacsRexReturn(
       SExp(
 	key(":ok"),
-	toSExp(result.info)
+	result.info
       ),
       result.callId)
   }

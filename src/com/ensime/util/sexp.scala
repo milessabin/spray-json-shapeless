@@ -144,4 +144,9 @@ object SExp extends RegexParsers{
 }
 
 
+abstract trait SExpable{
+  implicit def toSExp():SExp
+}
+
+
 
