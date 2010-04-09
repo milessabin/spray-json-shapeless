@@ -185,8 +185,11 @@ trait ModelBuilders {  self: Global =>
     
     def fromSymbol(aSym: Symbol): PackageInfo = {
       val bSym = normalizeSym(aSym)
+
+      println("normalized to " + bSym)
       
       val pack = if (bSym == RootPackage) {
+	println("building root")
 	val memberSyms = (bSym.info.members ++ EmptyPackage.info.members) filter { s =>
 	  s != EmptyPackage && s != RootPackage
 	}
@@ -197,6 +200,7 @@ trait ModelBuilders {  self: Global =>
 	)
       }
       else{
+	println("building other " + bSym)
 	val memberSyms = bSym.info.members filter { s =>
 	  s != EmptyPackage && s != RootPackage
 	}
@@ -210,6 +214,7 @@ trait ModelBuilders {  self: Global =>
     }
 
     def packageMemberFromSym(aSym:Symbol): EntityInfo ={
+      println("building member " + aSym)
       val bSym = normalizeSym(aSym)
       if (bSym == RootPackage){
 	root
