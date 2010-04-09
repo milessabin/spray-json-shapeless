@@ -33,6 +33,7 @@ class PackageInfo(override val name:String, val fullname:String, override val me
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
+      key(":form"), 'package,
       key(":full-name"), fullname,
       key(":members"), SExp(members.map{_.toSExp})
     )
@@ -181,15 +182,34 @@ trait ModelBuilders {  self: Global =>
 
     def root: PackageInfo = fromSymbol(RootPackage)
 
-    def fromPath(path:String): PackageInfo = root
+    def fromPath(path:String): PackageInfo = {
+      val pack = packageSymFromPath(path)
+      pack match{
+	case Some(packSym) => fromSymbol(packSym)
+	case None => nullInfo
+      }
+    }
+
+    private def packageSymFromPath(path:String):Option[Symbol] = {
+      val pathSegs = path.split("\\.")
+      val pack = pathSegs.foldLeft(RootPackage){ (packSym,seg) =>
+	val member = packSym.info.members find { s =>
+	  s.nameString == seg && s != EmptyPackage && s != RootPackage
+	}
+	member.getOrElse(packSym)
+      }
+      if(pack == RootPackage) None
+      else Some(pack)
+    }
+
+    def nullInfo = {
+      new PackageInfo("NA", "NA", List())
+    }
     
     def fromSymbol(aSym: Symbol): PackageInfo = {
       val bSym = normalizeSym(aSym)
 
-      println("normalized to " + bSym)
-      
       val pack = if (bSym == RootPackage) {
-	println("building root")
 	val memberSyms = (bSym.info.members ++ EmptyPackage.info.members) filter { s =>
 	  s != EmptyPackage && s != RootPackage
 	}
@@ -200,7 +220,6 @@ trait ModelBuilders {  self: Global =>
 	)
       }
       else{
-	println("building other " + bSym)
 	val memberSyms = bSym.info.members filter { s =>
 	  s != EmptyPackage && s != RootPackage
 	}
@@ -214,7 +233,6 @@ trait ModelBuilders {  self: Global =>
     }
 
     def packageMemberFromSym(aSym:Symbol): EntityInfo ={
-      println("building member " + aSym)
       val bSym = normalizeSym(aSym)
       if (bSym == RootPackage){
 	root
@@ -223,7 +241,7 @@ trait ModelBuilders {  self: Global =>
 	fromSymbol(bSym)
       }
       else if(bSym.isClass || bSym.isTrait || bSym.isPackageObject){
-	NamedTypeInfo.fromSymLight(bSym)
+	NamedTypeInfo.fromSymNoMembers(bSym)
       }
       else NamedTypeInfo.nullInfo
     }
@@ -248,6 +266,15 @@ trait ModelBuilders {  self: Global =>
 	  new NamedTypeMemberInfoLight(s.nameString, typeName, cacheType(s.tpe))
 	}.sortWith{(a,b) => a.name <= b.name}
 	new NamedTypeInfo(sym.nameString, sym.pos, memberInfos, TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName)
+      }
+      else{
+	nullInfo
+      }
+    }
+
+    def fromSymNoMembers(sym:Symbol):NamedTypeInfo = {
+      if(sym.isClass || sym.isTrait || sym.isPackageObject){
+	new NamedTypeInfo(sym.nameString, sym.pos, List(), TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName)
       }
       else{
 	nullInfo
