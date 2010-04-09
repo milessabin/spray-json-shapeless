@@ -1,14 +1,16 @@
 package com.ensime.server.model
 
+import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.symtab.Types
+import scala.tools.nsc.symtab.Symbols
 import com.ensime.util.SExp._
 import com.ensime.util.{SExp, SExpable}
+import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 
 
 object SExpConversion{
-
   implicit def toSExp(pos:Position):SExp = {
     if(pos.isDefined){
       SExp(
@@ -20,20 +22,18 @@ object SExpConversion{
       'nil
     }
   }
-
   implicit def toSExp(o:SExpable):SExp = {
     o.toSExp
   }
-
 }
-
 
 abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]) extends SExpable{}
 
-class PackageInfo(override val name:String, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
+class PackageInfo(override val name:String, val fullname:String, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
+      key(":full-name"), fullname,
       key(":members"), SExp(members.map{_.toSExp})
     )
   }
@@ -51,7 +51,7 @@ class NamedTypeInfo(
   override val name:String, 
   val pos:Position, 
   override val members:Iterable[EntityInfo],
-  val declaredAs:Symbol,
+  val declaredAs:scala.Symbol,
   val id:Int,
   val fullName:String) extends EntityInfo(name, members) with LooksLikeType{
 
@@ -66,15 +66,6 @@ class NamedTypeInfo(
     )
   }
 
-
-}
-object NamedTypeInfo{
-  def nullInfo() = {
-    new NamedTypeInfo("NA", NoPosition, List(), 'nil, -1, "NA")
-  }
-  def apply(tpe:TypeInfo, members:Iterable[EntityInfo]) = {
-    new NamedTypeInfo(tpe.name, tpe.pos, members, tpe.declaredAs, tpe.id, tpe.fullName)
-  }
 }
 
 
@@ -117,47 +108,6 @@ class TypeInfo(
   }
 }
 
-
-
-object TypeInfo{
-
-  type TypeCacher = Types#Type => Int
-
-  def apply(tpe:Types#Type, cache:TypeCacher):TypeInfo = {
-    tpe match{
-      case tpe:Types#MethodType => 
-      {
-	ArrowTypeInfo(tpe, cache)
-      }
-      case tpe:Types#PolyType => 
-      {
-	ArrowTypeInfo(tpe, cache)
-      }
-      case tpe:Types#Type =>
-      {
-	val typeSym = tpe.typeSymbol
-	val declAs = (
-	  if(typeSym.isTrait)
-	  'trait
-	  else if(typeSym.isInterface)
-	  'interface
-	  else if(typeSym.isClass)
-	  'class
-	  else if(typeSym.isAbstractClass)
-	  'abstractclass
-	  else 'nil
-	)
-	new TypeInfo(tpe.toString, cache(tpe), declAs, typeSym.fullName, typeSym.pos)
-      }
-      case _ => nullInfo
-    }
-  }
-  def nullInfo() = {
-    new TypeInfo("NA", -1, 'nil, "NA", NoPosition)
-  }
-}
-
-
 class ArrowTypeInfo(
   override val name:String, 
   override val id:Int, 
@@ -176,29 +126,6 @@ class ArrowTypeInfo(
 
 }
 
-object ArrowTypeInfo{
-
-  type TypeCacher = Types#Type => Int
-
-  def apply(tpe:Types#MethodType, cache:TypeCacher):ArrowTypeInfo = {
-    new ArrowTypeInfo(
-      tpe.toString, 
-      cache(tpe), 
-      TypeInfo(tpe.resultType, cache), 
-      tpe.paramTypes.map(t => TypeInfo(t,cache)))
-  }
-  def apply(tpe:Types#PolyType, cache:TypeCacher):ArrowTypeInfo = {
-    new ArrowTypeInfo(
-      tpe.toString, 
-      cache(tpe), 
-      TypeInfo(tpe.resultType, cache), 
-      tpe.paramTypes.map(t => TypeInfo(t,cache)))
-  }
-  def nullInfo() = {
-    new TypeInfo("NA", -1, 'class, "NA", NoPosition)
-  }
-}
-
 class TypeInspectInfo(tpe:NamedTypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
   def toSExp():SExp = {
     SExp(
@@ -207,42 +134,189 @@ class TypeInspectInfo(tpe:NamedTypeInfo, supers:Iterable[NamedTypeInfo]) extends
     )
   }
 }
-object TypeInspectInfo{
-  def nullInfo() = {
-    new TypeInspectInfo(NamedTypeInfo.nullInfo, List())
+
+
+trait ModelBuilders {  self: Global => 
+
+  import self._
+  import definitions.{ ObjectClass, ScalaObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
+
+  private val typeCache = new HashMap[Int, Type]
+  private val typeCacheReverse = new HashMap[Type, Int]
+  def clearTypeCache(){ 
+    typeCache.clear
+    typeCacheReverse.clear
   }
-}
-
-class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int) extends SExpable{
-
-  private val tmp = "" + file + msg + severity + beg + end + line + col;
-  override val hashCode = tmp.hashCode
-
-  def toSExp() = {
-    SExp(
-      key(":severity"), friendlySeverity,
-      key(":msg"), msg,
-      key(":beg"), beg,
-      key(":end"), end,
-      key(":line"), line,
-      key(":col"), col,
-      key(":file"), file
-    )
+  def typeById(id:Int):Option[Type] = { 
+    typeCache.get(id)
   }
-
-  override def equals(other:Any):Boolean = {
-    other match{
-      case n:Note => n.hashCode == this.hashCode
-      case _ => false
+  def cacheType(tpe:Type):Int = {
+    if(typeCacheReverse.contains(tpe)){
+      typeCacheReverse(tpe)
+    }
+    else{
+      val id = typeCache.size + 1
+      typeCache(id) = tpe
+      typeCacheReverse(tpe) = id
+      id
     }
   }
 
 
-  def friendlySeverity = severity match {
-    case 2 => 'error
-    case 1 => 'warn
-    case 0 => 'info
+  object Helpers{
+
+    def normalizeSym(aSym: Symbol): Symbol = aSym match {
+      case null | EmptyPackage | NoSymbol                   => normalizeSym(RootPackage)
+      case ScalaObjectClass | ObjectClass                   => normalizeSym(AnyRefClass)
+      case _ if aSym.isModuleClass || aSym.isPackageObject  => normalizeSym(aSym.sourceModule)
+      case _                                                => aSym
+    }
+
   }
 
-}
 
+  object PackageInfo{
+
+    import Helpers._
+
+    def root: PackageInfo = fromSymbol(RootPackage)
+
+    def fromPath(path:String): PackageInfo = root
+    
+    def fromSymbol(aSym: Symbol): PackageInfo = {
+      val bSym = normalizeSym(aSym)
+      
+      val pack = if (bSym == RootPackage) {
+	val memberSyms = (bSym.info.members ++ EmptyPackage.info.members) filter { s =>
+	  s != EmptyPackage && s != RootPackage
+	}
+	new PackageInfo(
+	  "root",
+	  "_root_",
+	  memberSyms.map{packageMemberFromSym(_)}
+	)
+      }
+      else{
+	val memberSyms = bSym.info.members filter { s =>
+	  s != EmptyPackage && s != RootPackage
+	}
+	new PackageInfo(
+	  bSym.nameString,
+	  bSym.fullName,
+	  memberSyms.map{packageMemberFromSym(_)}
+	)
+      }
+      pack
+    }
+
+    def packageMemberFromSym(aSym:Symbol): EntityInfo ={
+      val bSym = normalizeSym(aSym)
+      if (bSym == RootPackage){
+	root
+      }
+      else if (bSym.isPackage){
+	fromSymbol(bSym)
+      }
+      else if(bSym.isClass || bSym.isTrait || bSym.isPackageObject){
+	NamedTypeInfo.fromSymLight(bSym)
+      }
+      else NamedTypeInfo.nullInfo
+    }
+
+  }
+  
+
+
+  object NamedTypeInfo {
+
+    def nullInfo = {
+      new NamedTypeInfo("NA", NoPosition, List(), 'nil, -1, "NA")
+    }
+    def apply(tpe:TypeInfo, members:Iterable[EntityInfo]) = {
+      new NamedTypeInfo(tpe.name, tpe.pos, members, tpe.declaredAs, tpe.id, tpe.fullName)
+    }
+
+    def fromSymLight(sym:Symbol):NamedTypeInfo = {
+      if(sym.isClass || sym.isTrait || sym.isPackageObject){
+	val memberInfos = sym.info.members.map{ s =>
+	  val typeName = s.tpe.typeSymbol.fullName
+	  new NamedTypeMemberInfoLight(s.nameString, typeName, cacheType(s.tpe))
+	}.sortWith{(a,b) => a.name <= b.name}
+	new NamedTypeInfo(sym.nameString, sym.pos, memberInfos, TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName)
+      }
+      else{
+	nullInfo
+      }
+    }
+  }
+
+
+  object TypeInfo{
+
+
+    def declaredAs(sym:Symbol):scala.Symbol = {
+      if(sym.isTrait)
+      'trait
+      else if(sym.isInterface)
+      'interface
+      else if(sym.isClass)
+      'class
+      else if(sym.isAbstractClass)
+      'abstractclass
+      else 'nil
+    }
+
+    def apply(tpe:Type):TypeInfo = {
+      tpe match{
+	case tpe:MethodType => 
+	{
+	  ArrowTypeInfo(tpe)
+	}
+	case tpe:PolyType => 
+	{
+	  ArrowTypeInfo(tpe)
+	}
+	case tpe:Type =>
+	{
+	  val typeSym = tpe.typeSymbol
+	  new TypeInfo(tpe.toString, 
+	    cacheType(tpe), declaredAs(typeSym), typeSym.fullName, typeSym.pos)
+	}
+	case _ => nullInfo
+      }
+    }
+    def nullInfo() = {
+      new TypeInfo("NA", -1, 'nil, "NA", NoPosition)
+    }
+  }
+
+
+  object ArrowTypeInfo{
+
+    def apply(tpe:MethodType):ArrowTypeInfo = {
+      new ArrowTypeInfo(
+	tpe.toString, 
+	cacheType(tpe), 
+	TypeInfo(tpe.resultType), 
+	tpe.paramTypes.map(t => TypeInfo(t)))
+    }
+    def apply(tpe:PolyType):ArrowTypeInfo = {
+      new ArrowTypeInfo(
+	tpe.toString, 
+	cacheType(tpe), 
+	TypeInfo(tpe.resultType), 
+	tpe.paramTypes.map(t => TypeInfo(t)))
+    }
+    def nullInfo() = {
+      new TypeInfo("NA", -1, 'class, "NA", NoPosition)
+    }
+  }
+
+  object TypeInspectInfo{
+    def nullInfo() = {
+      new TypeInspectInfo(NamedTypeInfo.nullInfo, List())
+    }
+  }
+
+
+}

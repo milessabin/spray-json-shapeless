@@ -14,6 +14,7 @@ import java.io.File
 case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
 case class SendBackgroundMessageEvent(msg:String)
 
+
 class Project extends Actor with SwankHandler{
 
   private var compiler:Actor = actor{}
@@ -108,6 +109,7 @@ class Project extends Actor with SwankHandler{
     compiler = new Compiler(this, conf)
     compiler.start
   }
+
 
 
   /*
