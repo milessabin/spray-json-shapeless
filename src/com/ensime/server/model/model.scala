@@ -33,7 +33,7 @@ class PackageInfo(override val name:String, val fullname:String, override val me
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
-      key(":form"), 'package,
+      key(":info-type"), 'package,
       key(":full-name"), fullname,
       key(":members"), SExp(members.map{_.toSExp})
     )
