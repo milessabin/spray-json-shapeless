@@ -4,6 +4,7 @@
 :server-host "localhost"
 :server-env ()
 
+:project-package "com.ensime"
 :source ("src")
 :exclude-source ()
 :classpath ("lib/jnotify/jnotify-0.93.jar"

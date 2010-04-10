@@ -124,7 +124,6 @@ class ArrowTypeInfo(
       key(":param-types"), SExp(paramTypes.map(_.toSExp))
     )
   }
-
 }
 
 class TypeInspectInfo(tpe:NamedTypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
@@ -208,6 +207,11 @@ trait ModelBuilders {  self: Global =>
     
     def fromSymbol(aSym: Symbol): PackageInfo = {
       val bSym = normalizeSym(aSym)
+
+      def makeMembers(symbols:Iterable[Symbol]) = {
+	symbols.map{packageMemberFromSym(_)}.flatten.toList.sortWith{(a,b) => a.name <= b.name}
+      }
+
       val pack = if (bSym == RootPackage) {
 	val memberSyms = (bSym.info.members ++ EmptyPackage.info.members) filter { s =>
 	  s != EmptyPackage && s != RootPackage
@@ -215,7 +219,7 @@ trait ModelBuilders {  self: Global =>
 	new PackageInfo(
 	  "root",
 	  "_root_",
-	  memberSyms.map{packageMemberFromSym(_)}.flatten
+	  makeMembers(memberSyms)
 	)
       }
       else{
@@ -225,7 +229,7 @@ trait ModelBuilders {  self: Global =>
 	new PackageInfo(
 	  bSym.name.toString,
 	  bSym.fullName,
-	  memberSyms.map{packageMemberFromSym(_)}.flatten
+	  makeMembers(memberSyms)
 	)
       }
       pack
@@ -258,7 +262,8 @@ trait ModelBuilders {  self: Global =>
     }
 
     def fromSymLight(sym:Symbol):NamedTypeInfo = {
-      if(sym.isClass || sym.isTrait){
+      if(sym.isClass || sym.isTrait && 
+	!sym.isAnonymousClass && !sym.isAnonymousFunction){
 	val memberInfos = sym.info.members.map{ s =>
 	  val typeName = s.tpe.typeSymbol.fullName
 	  new NamedTypeMemberInfoLight(s.nameString, typeName, cacheType(s.tpe))
@@ -271,7 +276,8 @@ trait ModelBuilders {  self: Global =>
     }
 
     def fromSymNoMembers(sym:Symbol):Option[NamedTypeInfo] = {
-      if(sym.isClass || sym.isTrait){
+      if((sym.isClass || sym.isTrait) && 
+	!sym.isAnonymousClass && !sym.isAnonymousFunction){
 	Some(new NamedTypeInfo(sym.nameString, sym.pos, List(), TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName))
       }
       else{
