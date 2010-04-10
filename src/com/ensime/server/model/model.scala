@@ -144,7 +144,7 @@ trait ModelBuilders {  self: Global =>
 
   private val typeCache = new HashMap[Int, Type]
   private val typeCacheReverse = new HashMap[Type, Int]
-  def clearTypeCache(){ 
+  def clearTypeCache(){
     typeCache.clear
     typeCacheReverse.clear
   }
@@ -208,7 +208,6 @@ trait ModelBuilders {  self: Global =>
     
     def fromSymbol(aSym: Symbol): PackageInfo = {
       val bSym = normalizeSym(aSym)
-
       val pack = if (bSym == RootPackage) {
 	val memberSyms = (bSym.info.members ++ EmptyPackage.info.members) filter { s =>
 	  s != EmptyPackage && s != RootPackage
@@ -216,7 +215,7 @@ trait ModelBuilders {  self: Global =>
 	new PackageInfo(
 	  "root",
 	  "_root_",
-	  memberSyms.map{packageMemberFromSym(_)}
+	  memberSyms.map{packageMemberFromSym(_)}.flatten
 	)
       }
       else{
@@ -224,43 +223,42 @@ trait ModelBuilders {  self: Global =>
 	  s != EmptyPackage && s != RootPackage
 	}
 	new PackageInfo(
-	  bSym.nameString,
+	  bSym.name.toString,
 	  bSym.fullName,
-	  memberSyms.map{packageMemberFromSym(_)}
+	  memberSyms.map{packageMemberFromSym(_)}.flatten
 	)
       }
       pack
     }
 
-    def packageMemberFromSym(aSym:Symbol): EntityInfo ={
+    def packageMemberFromSym(aSym:Symbol): Option[EntityInfo] ={
       val bSym = normalizeSym(aSym)
       if (bSym == RootPackage){
-	root
+	Some(root)
       }
       else if (bSym.isPackage){
-	fromSymbol(bSym)
+	Some(fromSymbol(bSym))
       }
-      else if(bSym.isClass || bSym.isTrait || bSym.isPackageObject){
+      else{
 	NamedTypeInfo.fromSymNoMembers(bSym)
       }
-      else NamedTypeInfo.nullInfo
     }
 
   }
-  
+
 
 
   object NamedTypeInfo {
 
-    def nullInfo = {
-      new NamedTypeInfo("NA", NoPosition, List(), 'nil, -1, "NA")
+    def nullInfo(name:String = "NA") = {
+      new NamedTypeInfo(name, NoPosition, List(), 'nil, -1, name)
     }
     def apply(tpe:TypeInfo, members:Iterable[EntityInfo]) = {
       new NamedTypeInfo(tpe.name, tpe.pos, members, tpe.declaredAs, tpe.id, tpe.fullName)
     }
 
     def fromSymLight(sym:Symbol):NamedTypeInfo = {
-      if(sym.isClass || sym.isTrait || sym.isPackageObject){
+      if(sym.isClass || sym.isTrait){
 	val memberInfos = sym.info.members.map{ s =>
 	  val typeName = s.tpe.typeSymbol.fullName
 	  new NamedTypeMemberInfoLight(s.nameString, typeName, cacheType(s.tpe))
@@ -268,16 +266,16 @@ trait ModelBuilders {  self: Global =>
 	new NamedTypeInfo(sym.nameString, sym.pos, memberInfos, TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName)
       }
       else{
-	nullInfo
+	nullInfo()
       }
     }
 
-    def fromSymNoMembers(sym:Symbol):NamedTypeInfo = {
-      if(sym.isClass || sym.isTrait || sym.isPackageObject){
-	new NamedTypeInfo(sym.nameString, sym.pos, List(), TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName)
+    def fromSymNoMembers(sym:Symbol):Option[NamedTypeInfo] = {
+      if(sym.isClass || sym.isTrait){
+	Some(new NamedTypeInfo(sym.nameString, sym.pos, List(), TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName))
       }
       else{
-	nullInfo
+	None
       }
     }
   }
@@ -346,7 +344,7 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInspectInfo{
     def nullInfo() = {
-      new TypeInspectInfo(NamedTypeInfo.nullInfo, List())
+      new TypeInspectInfo(NamedTypeInfo.nullInfo(), List())
     }
   }
 
