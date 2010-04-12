@@ -243,7 +243,7 @@ trait ModelBuilders {  self: Global =>
       else if (bSym.isPackage){	
 	Some(fromSymbol(bSym))
       }
-      else if(!(bSym.isJavaDefined) && !(bSym.isPrivate) && !(bSym.isConstructor) && !(bSym.isAuxiliaryConstructor) && !(bSym.isSynthetic)){
+      else if(!(bSym.nameString.contains("$"))){
 	NamedTypeInfo.fromSymNoMembers(bSym)
       }
       else{
