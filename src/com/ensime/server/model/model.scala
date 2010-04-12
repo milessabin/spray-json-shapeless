@@ -125,10 +125,10 @@ class ArrowTypeInfo(
   }
 }
 
-class TypeInspectInfo(tpe:NamedTypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
+class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
   def toSExp():SExp = {
     SExp(
-      key(":named-type"), tpe.toSExp,
+      key(":type"), tpe.toSExp,
       key(":supers"), SExp(supers.map{_.toSExp})
     )
   }
@@ -303,7 +303,8 @@ trait ModelBuilders {  self: Global =>
 	case tpe:Type =>
 	{
 	  val typeSym = tpe.typeSymbol
-	  new TypeInfo(tpe.toString, 
+	  val underlying = tpe.underlying
+	  new TypeInfo(underlying.toString,
 	    cacheType(tpe), declaredAs(typeSym), typeSym.fullName, typeSym.pos)
 	}
 	case _ => nullInfo
@@ -338,7 +339,7 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInspectInfo{
     def nullInfo() = {
-      new TypeInspectInfo(NamedTypeInfo.nullInfo(), List())
+      new TypeInspectInfo(TypeInfo.nullInfo(), List())
     }
   }
 

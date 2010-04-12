@@ -112,7 +112,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 
   def inspectType(tpe:Type):TypeInspectInfo = {
     new TypeInspectInfo(
-      NamedTypeInfo(TypeInfo(tpe), List()),
+      TypeInfo(tpe),
       prepareSortedSupersInfo(typePublicMembers(tpe.asInstanceOf[Type]))
     )
   }
@@ -141,8 +141,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	TypeInfo.nullInfo
       }
     }
-    val namedTypeInfo = NamedTypeInfo(typeInfo, List())
-    new TypeInspectInfo(namedTypeInfo, preparedMembers)
+    new TypeInspectInfo(typeInfo, preparedMembers)
   }
 
   def getTypeAt(p: Position):TypeInfo = {
@@ -171,7 +170,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     val visibleMembers = members.flatMap{
       case TypeMember(sym, tpe, true, _, _) => {
 	if(sym.nameString.startsWith(prefix)){
-	  List(new NamedTypeMemberInfoLight(sym.nameString, tpe.toString, cacheType(tpe)))
+	  List(new NamedTypeMemberInfoLight(sym.nameString, tpe.underlying.toString, cacheType(tpe)))
 	}
 	else{
 	  List()
