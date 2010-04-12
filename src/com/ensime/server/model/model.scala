@@ -209,7 +209,7 @@ trait ModelBuilders {  self: Global =>
       val bSym = normalizeSym(aSym)
 
       def makeMembers(symbols:Iterable[Symbol]) = {
-	symbols.map{packageMemberFromSym(_)}.flatten.toList.sortWith{(a,b) => a.name <= b.name}
+	symbols.flatMap(packageMemberFromSym).toList.sortWith{(a,b) => a.name <= b.name}
       }
 
       val pack = if (bSym == RootPackage) {
@@ -240,11 +240,14 @@ trait ModelBuilders {  self: Global =>
       if (bSym == RootPackage){
 	Some(root)
       }
-      else if (bSym.isPackage){
+      else if (bSym.isPackage){	
 	Some(fromSymbol(bSym))
       }
-      else{
+      else if(!(bSym.isJavaDefined) && !(bSym.isPrivate) && !(bSym.isConstructor) && !(bSym.isAuxiliaryConstructor) && !(bSym.isSynthetic)){
 	NamedTypeInfo.fromSymNoMembers(bSym)
+      }
+      else{
+	None
       }
     }
 
@@ -257,27 +260,13 @@ trait ModelBuilders {  self: Global =>
     def nullInfo(name:String = "NA") = {
       new NamedTypeInfo(name, NoPosition, List(), 'nil, -1, name)
     }
+
     def apply(tpe:TypeInfo, members:Iterable[EntityInfo]) = {
       new NamedTypeInfo(tpe.name, tpe.pos, members, tpe.declaredAs, tpe.id, tpe.fullName)
     }
 
-    def fromSymLight(sym:Symbol):NamedTypeInfo = {
-      if(sym.isClass || sym.isTrait && 
-	!sym.isAnonymousClass && !sym.isAnonymousFunction){
-	val memberInfos = sym.info.members.map{ s =>
-	  val typeName = s.tpe.typeSymbol.fullName
-	  new NamedTypeMemberInfoLight(s.nameString, typeName, cacheType(s.tpe))
-	}.sortWith{(a,b) => a.name <= b.name}
-	new NamedTypeInfo(sym.nameString, sym.pos, memberInfos, TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName)
-      }
-      else{
-	nullInfo()
-      }
-    }
-
     def fromSymNoMembers(sym:Symbol):Option[NamedTypeInfo] = {
-      if((sym.isClass || sym.isTrait) && 
-	!sym.isAnonymousClass && !sym.isAnonymousFunction){
+      if(sym.isClass || sym.isTrait){
 	Some(new NamedTypeInfo(sym.nameString, sym.pos, List(), TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName))
       }
       else{
