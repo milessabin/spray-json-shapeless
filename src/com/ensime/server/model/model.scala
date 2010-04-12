@@ -206,14 +206,16 @@ trait ModelBuilders {  self: Global =>
     
     def fromSymbol(aSym: Symbol): PackageInfo = {
       val bSym = normalizeSym(aSym)
+      val bSymFullName = bSym.fullName
 
       def makeMembers(symbols:Iterable[Symbol]) = {
-	symbols.flatMap(packageMemberFromSym).toList.sortWith{(a,b) => a.name <= b.name}
+	val members = symbols.flatMap(packageMemberFromSym).toList
+	members.sortWith{(a,b) => a.name <= b.name}
       }
 
       val pack = if (bSym == RootPackage) {
 	val memberSyms = (bSym.info.members ++ EmptyPackage.info.members) filter { s =>
-	  s != EmptyPackage && s != RootPackage
+	  s != EmptyPackage && s != RootPackage && s.owner.fullName == bSymFullName
 	}
 	new PackageInfo(
 	  "root",
@@ -223,7 +225,7 @@ trait ModelBuilders {  self: Global =>
       }
       else{
 	val memberSyms = bSym.info.members filter { s =>
-	  s != EmptyPackage && s != RootPackage
+	  s != EmptyPackage && s != RootPackage && s.owner.fullName == bSymFullName
 	}
 	new PackageInfo(
 	  bSym.name.toString,
