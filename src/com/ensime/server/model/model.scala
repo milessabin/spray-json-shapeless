@@ -11,6 +11,7 @@ import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 
 
 object SExpConversion{
+
   implicit def toSExp(pos:Position):SExp = {
     if(pos.isDefined){
       SExp(
@@ -22,9 +23,7 @@ object SExpConversion{
       'nil
     }
   }
-  implicit def toSExp(o:SExpable):SExp = {
-    o.toSExp
-  }
+
 }
 
 abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]) extends SExpable{}

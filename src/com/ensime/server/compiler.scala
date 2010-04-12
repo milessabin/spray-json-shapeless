@@ -18,17 +18,13 @@ import java.io.File
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._ 
 import com.ensime.server.model._
+import com.ensime.server.model.SExpConversion._
+import com.ensime.util.SExp._
 import scala.tools.nsc.symtab.Types
 
 
 case class BackgroundCompileCompleteEvent()
 case class CompilationResultEvent(notes:List[Note])
-case class TypeCompletionResultEvent(members:List[NamedTypeMemberInfoLight], callId:Int)
-case class InspectTypeResultEvent(info:TypeInspectInfo, callId:Int)
-case class TypeByIdResultEvent(info:TypeInfo, callId:Int)
-case class TypeAtPointResultEvent(info:TypeInfo, callId:Int)
-case class InspectTypeByIdResultEvent(info:TypeInspectInfo, callId:Int)
-case class InspectPackageByPathResultEvent(info:PackageInfo, callId:Int)
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int)
@@ -84,6 +80,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   import global._
 
+
   def act() {
     global.newRunnerThread
     project ! SendBackgroundMessageEvent("Compiler is parsing sources...")
@@ -130,7 +127,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
 	    val members = global.completeMemberAt(p, prefix)
-	    project ! TypeCompletionResultEvent(members, callId)
+	    project ! RPCResultEvent(members, callId)
 	  }
 
 	  case InspectTypeEvent(file:File, point:Int, callId:Int) =>
@@ -138,7 +135,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
 	    val inspectInfo = global.inspectTypeAt(p)
-	    project ! InspectTypeResultEvent(inspectInfo, callId)
+	    project ! RPCResultEvent(inspectInfo, callId)
 	  }
 
 	  case InspectTypeByIdEvent(id:Int, callId:Int) =>
@@ -147,13 +144,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case Some(tpe) => global.inspectType(tpe)
 	      case None => TypeInspectInfo.nullInfo
 	    }
-	    project ! InspectTypeResultEvent(inspectInfo, callId)
+	    project ! RPCResultEvent(inspectInfo, callId)
 	  }
 
 	  case InspectPackageByPathEvent(path:String, callId:Int) =>
 	  {
 	    val packageInfo = PackageInfo.fromPath(path)
-	    project ! InspectPackageByPathResultEvent(packageInfo, callId)
+	    project ! RPCResultEvent(packageInfo, callId)
 	  }
 
 	  case TypeAtPointEvent(file:File, point:Int, callId:Int) =>
@@ -161,7 +158,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
 	    val typeInfo = global.getTypeAt(p)
-	    project ! TypeAtPointResultEvent(typeInfo, callId)
+	    project ! RPCResultEvent(typeInfo, callId)
 	  }
 
 	  case TypeByIdEvent(id:Int, callId:Int) =>
@@ -170,7 +167,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case Some(tpe) => TypeInfo(tpe)
 	      case None => TypeInfo.nullInfo
 	    }
-	    project ! TypeByIdResultEvent(tpeInfo, callId)
+	    project ! RPCResultEvent(tpeInfo, callId)
 	  }
 
 	  case BackgroundCompileCompleteEvent() =>

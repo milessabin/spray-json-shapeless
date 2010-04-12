@@ -109,6 +109,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
+
   def inspectType(tpe:Type):TypeInspectInfo = {
     new TypeInspectInfo(
       NamedTypeInfo(TypeInfo(tpe), List()),

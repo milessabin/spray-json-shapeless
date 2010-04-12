@@ -8,12 +8,11 @@ import scala.actors.Actor._
 import com.ensime.util._
 import com.ensime.util.SExp._
 import com.ensime.server.model._
-import com.ensime.server.model.SExpConversion._
 import java.io.File
 
 case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
 case class SendBackgroundMessageEvent(msg:String)
-
+case class RPCResultEvent(value:SExpable, callId:Int)
 
 class Project extends Actor with SwankHandler{
 
@@ -34,44 +33,22 @@ class Project extends Actor with SwankHandler{
 	  }
 	  case result:CompilationResultEvent =>
 	  {
-	    sendCompilationResultEvent(result)
+	    send(SExp(
+		key(":compilation-result"),
+		SExp(
+		  key(":notes"),
+		  SExp(result.notes.map{ _.toSExp })
+		)
+	      ))
 	  }
-	  case result:TypeCompletionResultEvent =>
+	  case result:RPCResultEvent =>
 	  {
-	    sendTypeCompletionReturn(result)
-	  }
-	  case result:InspectTypeResultEvent =>
-	  {
-	    sendInspectTypeReturn(result)
-	  }
-	  case result:InspectPackageByPathResultEvent =>
-	  {
-	    sendInspectPackageByPathReturn(result)
-	  }
-	  case result:TypeAtPointResultEvent =>
-	  {
-	    sendTypeAtPointReturn(result)
-	  }
-	  case result:TypeByIdResultEvent =>
-	  {
-	    sendTypeByIdReturn(result)
-	  }
-	  case FileModifiedEvent(file:File) =>
-	  {
-	    compiler ! ReloadFileEvent(file)
-	  }
-	  case FileCreatedEvent(file:File) =>
-	  {
-	    compiler ! ReloadFileEvent(file)
-	  }
-	  case FileRenamedEvent(old:File, file:File) =>
-	  {
-	    compiler ! RemoveFileEvent(file)
-	    compiler ! ReloadFileEvent(file)
-	  }
-	  case FileDeletedEvent(file:File) =>
-	  {
-	    compiler ! RemoveFileEvent(file)
+	    sendEmacsRexReturn(
+	      SExp(
+		key(":ok"),
+		result.value
+	      ),
+	      result.callId)
 	  }
 	}
       }
@@ -110,81 +87,6 @@ class Project extends Actor with SwankHandler{
     compiler.start
   }
 
-
-
-  /*
-  * Report compilation results to IDE.
-  */
-  protected def sendCompilationResultEvent(result:CompilationResultEvent){
-    send(SExp(
-	key(":compilation-result"),
-	SExp(
-	  key(":notes"),
-	  SExp(result.notes.map{ _.toSExp })
-	)
-      ))
-  }
-
-  /*
-  * Return type completion results to IDE
-  */
-  protected def sendTypeCompletionReturn(result:TypeCompletionResultEvent){
-    sendEmacsRexReturn(
-      SExp(
-	key(":ok"),
-	SExp(result.members.map{ _.toSExp })
-      ),
-      result.callId)
-  }
-
-
-  /*
-  * Return type completion results to IDE
-  */
-  protected def sendInspectTypeReturn(result:InspectTypeResultEvent){
-    sendEmacsRexReturn(
-      SExp(
-	key(":ok"),
-	result.info
-      ),
-      result.callId)
-  }
-
-  /*
-  * Return type information to IDE
-  */
-  protected def sendTypeByIdReturn(result:TypeByIdResultEvent){
-    sendEmacsRexReturn(
-      SExp(
-	key(":ok"),
-	toSExp(result.info)
-      ),
-      result.callId)
-  }
-
-  /*
-  * Return type information to IDE
-  */
-  protected def sendTypeAtPointReturn(result:TypeAtPointResultEvent){
-    sendEmacsRexReturn(
-      SExp(
-	key(":ok"),
-	toSExp(result.info)
-      ),
-      result.callId)
-  }
-
-  /*
-  * Return pacakge information to IDE
-  */
-  protected def sendInspectPackageByPathReturn(result:InspectPackageByPathResultEvent){
-    sendEmacsRexReturn(
-      SExp(
-	key(":ok"),
-	toSExp(result.info)
-      ),
-      result.callId)
-  }
 
 
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){

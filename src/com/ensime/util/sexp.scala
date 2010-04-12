@@ -136,9 +136,14 @@ object SExp extends RegexParsers{
       SymbolAtom(value.toString.drop(1))
     }
   }
-  
-  def main(args: Array[String]) {
-    println(read(new CharArrayReader(args(0).toCharArray())))
+
+  implicit def toSExp(o:SExpable):SExp = {
+    o.toSExp
+  }
+
+  implicit def listToSExpable(o:Iterable[SExpable]):SExpable = new Iterable[SExpable] with SExpable{
+    override def iterator = o.iterator
+    override def toSExp = SExp(o.map{_.toSExp})
   }
 
 }
