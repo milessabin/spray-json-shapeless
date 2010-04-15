@@ -207,7 +207,6 @@ trait ModelBuilders {  self: Global =>
     def fromSymbol(aSym: Symbol): PackageInfo = {
       val bSym = normalizeSym(aSym)
       val bSymFullName = bSym.fullName
-
       def makeMembers(symbols:Iterable[Symbol]) = {
 	val validSyms = symbols.filter { s => 
 	  s != EmptyPackage && s != RootPackage && s.owner.fullName == bSymFullName

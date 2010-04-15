@@ -157,7 +157,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
-	    val typeInfo = global.getTypeAt(p)
+	    val typeInfo = global.getTypeInfoAt(p)
 	    project ! RPCResultEvent(typeInfo, callId)
 	  }
 
