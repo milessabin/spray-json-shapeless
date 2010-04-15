@@ -1,7 +1,7 @@
 package com.ensime.server
 
-import java.io.File;
-import net.contentobjects.jnotify._;
+import java.io.File
+import net.contentobjects.jnotify._
 import scala.actors._  
 import scala.collection.mutable.ArrayBuffer
 
