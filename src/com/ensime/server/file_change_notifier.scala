@@ -21,7 +21,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
     init()
     loop {
       receive {
-	case msg:ShutdownEvent => 
+	case msg:ShutdownEvent =>
 	{
 	  for(watchID <- watchIDs){
 	    val res:Boolean = JNotify.removeWatch(watchID)
@@ -57,6 +57,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
       JNotify.FILE_DELETED | 
       JNotify.FILE_MODIFIED| 
       JNotify.FILE_RENAMED );
+
 
     val watchSubtree:Boolean = true;
 
