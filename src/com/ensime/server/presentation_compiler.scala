@@ -205,7 +205,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
       case Left(m) => m
       case Right(e) => {
 	// Oops, failed to get the members for type at p.
-	// Try again just asking for the type.
+	// Try again, just asking for the type.
 	//
 	// TODO: why are these answers different?
 	//
@@ -215,7 +215,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	  }
 	  case Right(e) => {
 	    // Still nothing :'(
-	    println("ERROR: Failed to get any type information :(  " + e)
+	    System.err.println("ERROR: Failed to get any type information :(  " + e)
 	    List()
 	  }
 	}

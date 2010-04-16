@@ -74,8 +74,10 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
     private def fillArray(a:Array[Char]){
       var n = 0
       var l = a.length
-      while(n < l){
-	n += in.read(a, n, l - n)
+      var charsRead = 0;
+      while(charsRead > -1 && n < l){
+	charsRead = in.read(a, n, l - n)
+	n += charsRead
       }
     }
 
@@ -87,6 +89,7 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
 	  fillArray(headerBuf)
 	  val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
 	  if(msglen > 0){
+	    //TODO allocating a new array each time is inefficient!
 	    val buf:Array[Char] = new Array[Char](msglen);
 	    fillArray(buf)
 	    val sexp:SExp = SExp.read(new CharArrayReader(buf))

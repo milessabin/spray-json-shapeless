@@ -42,7 +42,9 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   private val rootDir:File = new File(config.rootDir)
 
   private val classpathFiles:Set[String] = config.classpath.map{ s =>
-    (new File(rootDir, s)).getAbsolutePath
+    val f = new File(s)
+    if(f.isAbsolute) f.getAbsolutePath
+    else (new File(rootDir, s)).getAbsolutePath
   }.toSet
 
   private def isValidSourceFile(f:File):Boolean = {
@@ -52,7 +54,8 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   private def expandSource(srcList:Iterable[String]):Set[String] = {
     (for(
 	s <- srcList;
-	val files = (new File(rootDir, s)).andTree;
+	val f = new File(s);
+	val files = if(f.isAbsolute) f.andTree else (new File(rootDir, s)).andTree;
 	f <- files if isValidSourceFile(f)
       )
       yield{
@@ -60,7 +63,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       }).toSet
   }
 
-
+  
   val includeSrcFiles = expandSource(config.srcList)
   val excludeSrcFiles = expandSource(config.excludeSrcList)
   val srcFiles = includeSrcFiles -- excludeSrcFiles
@@ -89,7 +92,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     loop {
       try{
 	receive {
-
 	  case CompilerShutdownEvent => 
 	  {
 	    global.clearTypeCache

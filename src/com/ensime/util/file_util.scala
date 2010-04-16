@@ -17,6 +17,7 @@ class RichFile(file: File) {
   
   def andTree : Iterable[File] = (
     Seq(file) ++ children.flatMap(child => new RichFile(child).andTree))
+
 }
 
 /** implicitely enrich java.io.File with methods of RichFile */
