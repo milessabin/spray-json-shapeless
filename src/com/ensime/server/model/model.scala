@@ -79,7 +79,19 @@ class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Po
   }
 }
 
+
 class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:Int) extends EntityInfo(name, List()){
+  def toSExp():SExp = {
+    SExp(
+      key(":name"), name,
+      key(":type-name"), tpeName,
+      key(":type-id"), tpeId
+    )
+  }
+}
+
+
+class ScopeNameInfoLight(override val name:String, tpeName:String, tpeId:Int) extends EntityInfo(name, List()){
   def toSExp():SExp = {
     SExp(
       key(":name"), name,

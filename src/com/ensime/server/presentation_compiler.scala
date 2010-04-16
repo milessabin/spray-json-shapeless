@@ -161,13 +161,41 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     askTypeAt(p, x1)
     x1.get match{
       case Left(tree) => {
-	Left(tree.tpe)
+	if(tree.tpe != null) Left(tree.tpe)
+	else Right(new Exception("Null tpe"))
       }
       case Right(e) => {
 	Right(e)
       }
     }
   }
+
+  def completeSymbolAt(p: Position, prefix:String):List[ScopeNameInfoLight] = {
+    val x = new Response[List[Member]]()
+    askScopeCompletion(p, x)
+    val names = x.get match{
+      case Left(m) => m
+      case Right(e) => List()
+    }
+    val visibleNames = names.flatMap{ m => 
+      m match{
+	case ScopeMember(sym, tpe, true, viaImport) => {
+	  if(sym.nameString.startsWith(prefix)){
+	    List(new ScopeNameInfoLight(
+		sym.nameString, 
+		tpe.underlying.toString, 
+		cacheType(tpe)))
+	  }
+	  else{
+	    List()
+	  }
+	}
+	case _ => List()
+      }
+    }.sortWith((a,b) => a.name <= b.name)
+    visibleNames
+  }
+
 
   def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
     blockingQuickReload(p.source)

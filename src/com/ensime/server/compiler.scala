@@ -27,7 +27,7 @@ case class BackgroundCompileCompleteEvent()
 case class CompilationResultEvent(notes:List[Note])
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
-case class ScopeCompletionEvent(file:File, point:Int)
+case class ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
 case class InspectTypeByIdEvent(id:Int, callId:Int)
@@ -110,16 +110,12 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    global.removeUnitOf(f)
 	  }
 
-	  case ScopeCompletionEvent(file:File, point:Int) => 
+	  case ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
-	    val x = new global.Response[List[global.Member]]()
-	    global.askScopeCompletion(p, x)
-	    val members = x.get match{
-	      case Left(m) => m
-	      case Right(e) => List()
-	    }
+	    val syms = global.completeSymbolAt(p, prefix)
+	    project ! RPCResultEvent(syms, callId)
 	  }
 
 	  case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
