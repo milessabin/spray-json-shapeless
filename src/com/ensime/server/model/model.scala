@@ -154,6 +154,7 @@ trait ModelBuilders {  self: Global =>
 
   private val typeCache = new HashMap[Int, Type]
   private val typeCacheReverse = new HashMap[Type, Int]
+  
   def clearTypeCache(){
     typeCache.clear
     typeCacheReverse.clear
