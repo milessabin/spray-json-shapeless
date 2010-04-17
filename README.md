@@ -43,9 +43,11 @@ __TAB__    - Complete a type member.
 
 __C-c t  /  Double-Click__  - Inspect the type of the expression under the cursor.
 
-__C-c c__  - Force a type-check. Otherwise type-checking takes place whenever a file is saved.
-
 __Mouse Hover__    - Echo the type of the expression under the cursor.
+
+__C-c p__  - Inspect the package of the current source file.
+
+__C-c o__  - Inspect the package specified in .ensime as :project-package.
 
 
 
