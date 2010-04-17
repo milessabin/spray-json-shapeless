@@ -183,7 +183,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	  if(sym.nameString.startsWith(prefix)){
 	    List(new ScopeNameInfoLight(
 		sym.nameString, 
-		tpe.underlying.toString, 
+		tpe.underlying.toString,
 		cacheType(tpe)))
 	  }
 	  else{
