@@ -5,7 +5,9 @@ the ENhanced Scala Interaction Mode for Emacs
 
 - Highlight errors and warnings in your code buffers.
 - Inspect the type of any expression.
-- Type member name completion.
+- Browse packages
+- Completion of symbols and type members
+- Check out the [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 
 ## System Requirements
 
