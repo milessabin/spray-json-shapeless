@@ -32,6 +32,7 @@ Add the following lines to your .emacs file:
     (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
     (add-to-list 'load-path "ENSIME_ROOT/src/elisp/")
     (require 'ensime)
+    (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
 Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime) in the root of the ENSIME distribution for an up-to-date example.
 
