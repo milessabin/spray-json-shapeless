@@ -23,8 +23,9 @@ import com.ensime.util.SExp._
 import scala.tools.nsc.symtab.Types
 
 
-case class BackgroundCompileCompleteEvent()
-case class CompilationResultEvent(notes:List[Note])
+case class FullTypeCheckCompleteEvent()
+case class FullTypeCheckResultEvent(notes:List[Note])
+case class QuickTypeCheckResultEvent(notes:List[Note])
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
@@ -103,7 +104,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    global.blockingFullReload(f)
-	    project ! CompilationResultEvent(reporter.allNotes)
+	    project ! QuickTypeCheckResultEvent(reporter.allNotes)
 	  }
 
 	  case RemoveFileEvent(file:File) => 
@@ -168,9 +169,9 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! RPCResultEvent(tpeInfo, callId)
 	  }
 
-	  case BackgroundCompileCompleteEvent() =>
+	  case FullTypeCheckCompleteEvent() =>
 	  {
-	    project ! CompilationResultEvent(reporter.allNotes)
+	    project ! FullTypeCheckResultEvent(reporter.allNotes)
 	  }
 
 	  case other => 

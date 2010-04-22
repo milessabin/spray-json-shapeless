@@ -31,10 +31,20 @@ class Project extends Actor with SwankHandler{
 	  {
 	    handleIncomingSwankMessage(msg)
 	  }
-	  case result:CompilationResultEvent =>
+	  case result:FullTypeCheckResultEvent =>
 	  {
 	    send(SExp(
-		key(":compilation-result"),
+		key(":full-typecheck-result"),
+		SExp(
+		  key(":notes"),
+		  SExp(result.notes.map{ _.toSExp })
+		)
+	      ))
+	  }
+	  case result:QuickTypeCheckResultEvent =>
+	  {
+	    send(SExp(
+		key(":quick-typecheck-result"),
 		SExp(
 		  key(":notes"),
 		  SExp(result.notes.map{ _.toSExp })
@@ -108,7 +118,7 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops 
 	}
       }
-      case "swank:compile-file" => {
+      case "swank:typecheck-file" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::body) => {
 	    compiler ! ReloadFileEvent(new File(file))

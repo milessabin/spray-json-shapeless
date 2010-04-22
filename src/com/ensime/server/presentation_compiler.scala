@@ -21,7 +21,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   */
   override def recompile(units: List[RichCompilationUnit]) {
     super.recompile(units)
-    parent ! BackgroundCompileCompleteEvent()
+    parent ! FullTypeCheckCompleteEvent()
     parent
   }
 
