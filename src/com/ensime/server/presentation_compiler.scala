@@ -77,6 +77,31 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     members.values.toList
   }
 
+  private def getMembersForTypeAt(p:Position):List[Member] = {
+    val x2 = new Response[List[Member]]()
+    askTypeCompletion(p, x2)
+    x2.get match{
+      case Left(m) => m
+      case Right(e) => {
+	// Oops, failed to get the members for type at p.
+	// Try again, just asking for the type.
+	//
+	// TODO: why are these answers different?
+	//
+	getTypeAt(p) match{
+	  case Left(tpe) => {
+	    typePublicMembers(tpe)
+	  }
+	  case Right(e) => {
+	    // Still nothing :'(
+	    System.err.println("ERROR: Failed to get any type information :(  " + e)
+	    List()
+	  }
+	}
+      }
+    }
+  }
+
   def prepareSortedSupersInfo(members:List[Member]):Iterable[NamedTypeInfo] = {
     // ...filtering out non-visible and non-type members
     val visMembers:List[TypeMember] = members.flatMap {
@@ -118,24 +143,13 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   }
 
   def inspectTypeAt(p: Position):TypeInspectInfo = {
-
     blockingQuickReload(p.source)
-
-    // Grab the members at this position..
-    val x2 = new Response[List[Member]]()
-    askTypeCompletion(p, x2)
-    val members:List[Member] = x2.get match{
-      case Left(m) => m
-      case Right(e) => List()
-    }
+    val members = getMembersForTypeAt(p)
     val preparedMembers = prepareSortedSupersInfo(members)
-
     // Grab the type at position..
-    val x1 = new Response[Tree]()
-    askTypeAt(p, x1)
-    val typeInfo = x1.get match{
-      case Left(tree) => {
-	TypeInfo(tree.tpe)
+    val typeInfo = getTypeAt(p) match{
+      case Left(tpe) => {
+	TypeInfo(tpe)
       }
       case Right(e) => {
 	TypeInfo.nullInfo
@@ -196,31 +210,9 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     visibleNames
   }
 
-
   def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
     blockingQuickReload(p.source)
-    val x2 = new Response[List[Member]]()
-    askTypeCompletion(p, x2)
-    val members = x2.get match{
-      case Left(m) => m
-      case Right(e) => {
-	// Oops, failed to get the members for type at p.
-	// Try again, just asking for the type.
-	//
-	// TODO: why are these answers different?
-	//
-	getTypeAt(p) match{
-	  case Left(tpe) => {
-	    typePublicMembers(tpe)
-	  }
-	  case Right(e) => {
-	    // Still nothing :'(
-	    System.err.println("ERROR: Failed to get any type information :(  " + e)
-	    List()
-	  }
-	}
-      }
-    }
+    val members = getMembersForTypeAt(p)
     val visibleMembers = members.flatMap{
       case TypeMember(sym, tpe, true, _, _) => {
 	if(sym.nameString.startsWith(prefix)){
