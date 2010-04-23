@@ -50,9 +50,9 @@ __C-c p__  - Inspect the package of the current source file.
 
 __C-c o__  - Inspect the package specified in .ensime as :project-package.
 
-__M-f  /  .__  - Forward one page in the inspector history.
+__.__  - Forward one page in the inspector history.
 
-__M-b  /  ,__  - Backward one page in the inspector history.
+__,__  - Backward one page in the inspector history.
 
 __M-n  /  TAB__  - Forward one link in the inspector.
 
