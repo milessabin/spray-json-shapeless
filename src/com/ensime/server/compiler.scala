@@ -16,7 +16,7 @@ import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.collection.immutable.TreeSet
 import java.io.File
 import scala.tools.nsc.ast._
-import com.ensime.util.RichFile._ 
+import com.ensime.util.RichFile._
 import com.ensime.server.model._
 import com.ensime.server.model.SExpConversion._
 import com.ensime.util.SExp._
@@ -100,7 +100,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    exit('stop)
 	  }
 
-	  case ReloadFileEvent(file:File) => 
+	  case ReloadFileEvent(file:File) =>
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    global.blockingFullReload(f)
