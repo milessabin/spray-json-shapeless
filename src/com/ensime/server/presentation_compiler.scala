@@ -77,27 +77,47 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     members.values.toList
   }
 
+
+
   private def getMembersForTypeAt(p:Position):List[Member] = {
-    val x2 = new Response[List[Member]]()
-    askTypeCompletion(p, x2)
-    x2.get match{
-      case Left(m) => m
-      case Right(e) => {
-	// Oops, failed to get the members for type at p.
-	// Try again, just asking for the type.
-	//
-	// TODO: why are these answers different?
-	//
-	getTypeAt(p) match{
-	  case Left(tpe) => {
-	    typePublicMembers(tpe)
-	  }
-	  case Right(e) => {
-	    // Still nothing :'(
-	    System.err.println("ERROR: Failed to get any type information :(  " + e)
-	    List()
+
+    def isNoParamArrowType(tpe:Type) ={
+      tpe match{
+	case t:MethodType => t.params.isEmpty
+	case t:PolyType => t.params.isEmpty
+	case t:Type => false
+      }
+    }
+
+    def typeOrArrowTypeResult(tpe:Type) ={
+      tpe match{
+	case t:MethodType => t.resultType
+	case t:PolyType => t.resultType
+	case t:Type => t
+      }
+    }
+
+    getTypeAt(p) match{
+      case Left(tpe) => {
+	if(isNoParamArrowType(tpe)){
+	  typePublicMembers(typeOrArrowTypeResult(tpe))	  
+	}
+	else{
+	  val x2 = new Response[List[Member]]()
+	  askTypeCompletion(p, x2)
+	  x2.get match{
+	    case Left(m) => {
+	      m
+	    }
+	    case Right(e) => {
+	      typePublicMembers(tpe)
+	    }
 	  }
 	}
+      }
+      case Right(e) => {
+	System.err.println("ERROR: Failed to get any type information :(  " + e)
+	List()
       }
     }
   }
