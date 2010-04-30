@@ -200,35 +200,23 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     askTypeAt(p, x1)
     x1.get match{
       case Left(t) => {
-
 	// Below error handling bits copied from
 	// typeMembers(pos:Position):List[TypeMember]
-
 	var tree = t
-
 	tree match {
 	  case tt : TypeTree => tree = tt.original
 	  case _ => 
 	}
-
 	tree match {
 	  case Select(qual, name) if tree.tpe == ErrorType => tree = qual
 	  case _ => 
 	}
-
-	val context = doLocateContext(p)
-
-	if (tree.tpe == null){
-	  tree = analyzer.newTyper(context).typedQualifier(tree)
-	}
-
 	if(tree.tpe != null) {
 	  Left(tree.tpe)
 	}
 	else {
 	  Right(new Exception("Null tpe"))
 	}
-
       }
       case Right(e) => {
 	Right(e)
