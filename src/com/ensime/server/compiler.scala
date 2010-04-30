@@ -34,6 +34,7 @@ case class InspectTypeEvent(file:File, point:Int, callId:Int)
 case class InspectTypeByIdEvent(id:Int, callId:Int)
 case class InspectPackageByPathEvent(path:String, callId:Int)
 case class TypeByIdEvent(id:Int, callId:Int)
+case class CallCompletionEvent(id:Int, callId:Int)
 case class TypeAtPointEvent(file:File, point:Int, callId:Int)
 case class CompilerShutdownEvent()
 
@@ -167,6 +168,15 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case None => TypeInfo.nullInfo
 	    }
 	    project ! RPCResultEvent(tpeInfo, callId)
+	  }
+
+	  case CallCompletionEvent(id:Int, callId:Int) =>
+	  {
+	    val callInfo = global.typeById(id) match{
+	      case Some(tpe) => CallCompletionInfo(tpe)
+	      case None => CallCompletionInfo.nullInfo
+	    }
+	    project ! RPCResultEvent(callInfo, callId)
 	  }
 
 	  case FullTypeCheckCompleteEvent() =>

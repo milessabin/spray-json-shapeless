@@ -77,26 +77,31 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     members.values.toList
   }
 
+  def isArrowType(tpe:Type) ={
+    tpe match{
+      case _:MethodType => true
+      case _:PolyType => true
+      case _ => false
+    }
+  }
 
+  def isNoParamArrowType(tpe:Type) ={
+    tpe match{
+      case t:MethodType => t.params.isEmpty
+      case t:PolyType => t.params.isEmpty
+      case t:Type => false
+    }
+  }
+
+  def typeOrArrowTypeResult(tpe:Type) ={
+    tpe match{
+      case t:MethodType => t.resultType
+      case t:PolyType => t.resultType
+      case t:Type => t
+    }
+  }
 
   private def getMembersForTypeAt(p:Position):List[Member] = {
-
-    def isNoParamArrowType(tpe:Type) ={
-      tpe match{
-	case t:MethodType => t.params.isEmpty
-	case t:PolyType => t.params.isEmpty
-	case t:Type => false
-      }
-    }
-
-    def typeOrArrowTypeResult(tpe:Type) ={
-      tpe match{
-	case t:MethodType => t.resultType
-	case t:PolyType => t.resultType
-	case t:Type => t
-      }
-    }
-
     getTypeAt(p) match{
       case Left(tpe) => {
 	if(isNoParamArrowType(tpe)){
@@ -194,9 +199,36 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     val x1 = new Response[Tree]()
     askTypeAt(p, x1)
     x1.get match{
-      case Left(tree) => {
-	if(tree.tpe != null) Left(tree.tpe)
-	else Right(new Exception("Null tpe"))
+      case Left(t) => {
+
+	// Below error handling bits copied from
+	// typeMembers(pos:Position):List[TypeMember]
+
+	var tree = t
+
+	tree match {
+	  case tt : TypeTree => tree = tt.original
+	  case _ => 
+	}
+
+	tree match {
+	  case Select(qual, name) if tree.tpe == ErrorType => tree = qual
+	  case _ => 
+	}
+
+	val context = doLocateContext(p)
+
+	if (tree.tpe == null){
+	  tree = analyzer.newTyper(context).typedQualifier(tree)
+	}
+
+	if(tree.tpe != null) {
+	  Left(tree.tpe)
+	}
+	else {
+	  Right(new Exception("Null tpe"))
+	}
+
       }
       case Right(e) => {
 	Right(e)
@@ -218,7 +250,9 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	    List(new ScopeNameInfoLight(
 		sym.nameString, 
 		tpe.underlying.toString,
-		cacheType(tpe)))
+		cacheType(tpe),
+		isArrowType(tpe)
+	      ))
 	  }
 	  else{
 	    List()
@@ -236,7 +270,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     val visibleMembers = members.flatMap{
       case TypeMember(sym, tpe, true, _, _) => {
 	if(sym.nameString.startsWith(prefix)){
-	  List(new NamedTypeMemberInfoLight(sym.nameString, tpe.underlying.toString, cacheType(tpe)))
+	  List(new NamedTypeMemberInfoLight(sym.nameString, tpe.underlying.toString, cacheType(tpe), isArrowType(tpe)))
 	}
 	else{
 	  List()

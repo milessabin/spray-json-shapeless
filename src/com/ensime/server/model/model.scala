@@ -80,23 +80,25 @@ class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Po
 }
 
 
-class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:Int) extends EntityInfo(name, List()){
+class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
       key(":type-name"), tpeName,
-      key(":type-id"), tpeId
+      key(":type-id"), tpeId,
+      key(":is-callable"), isCallable
     )
   }
 }
 
 
-class ScopeNameInfoLight(override val name:String, tpeName:String, tpeId:Int) extends EntityInfo(name, List()){
+class ScopeNameInfoLight(override val name:String, tpeName:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
       key(":type-name"), tpeName,
-      key(":type-id"), tpeId
+      key(":type-id"), tpeId,
+      key(":is-callable"), isCallable
     )
   }
 }
@@ -137,6 +139,21 @@ class ArrowTypeInfo(
   }
 }
 
+class CallCompletionInfo(
+  val resultType:TypeInfo, 
+  val paramTypes:Iterable[TypeInfo],
+  val paramNames:Iterable[String]) extends SExpable(){
+
+  override implicit def toSExp():SExp = {
+    SExp(
+      key(":result-type"), resultType.toSExp,
+      key(":param-types"), SExp(paramTypes.map(_.toSExp)),
+      key(":param-names"), SExp(paramNames.map(strToSExp(_)))
+    )
+  }
+}
+
+
 class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
   def toSExp():SExp = {
     SExp(
@@ -145,6 +162,7 @@ class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[NamedTypeInfo]) extends SExp
     )
   }
 }
+
 
 
 trait ModelBuilders {  self: Global => 
@@ -290,7 +308,6 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInfo{
 
-
     def declaredAs(sym:Symbol):scala.Symbol = {
       if(sym.isTrait)
       'trait
@@ -303,16 +320,10 @@ trait ModelBuilders {  self: Global =>
       else 'nil
     }
 
-    def apply(tpe:Type):TypeInfo = {
+    def apply(tpe:Type, detailed:Boolean = false):TypeInfo = {
       tpe match{
-	case tpe:MethodType => 
-	{
-	  ArrowTypeInfo(tpe)
-	}
-	case tpe:PolyType => 
-	{
-	  ArrowTypeInfo(tpe)
-	}
+	case tpe:MethodType => ArrowTypeInfo(tpe)
+	case tpe:PolyType => ArrowTypeInfo(tpe)
 	case tpe:Type =>
 	{
 	  val typeSym = tpe.typeSymbol
@@ -329,26 +340,55 @@ trait ModelBuilders {  self: Global =>
   }
 
 
-  object ArrowTypeInfo{
+  object CallCompletionInfo{
 
-    def apply(tpe:MethodType):ArrowTypeInfo = {
-      new ArrowTypeInfo(
-	tpe.toString, 
-	cacheType(tpe), 
-	TypeInfo(tpe.resultType), 
-	tpe.paramTypes.map(t => TypeInfo(t)))
+    def apply(tpe:Type):CallCompletionInfo = {
+      tpe match{
+	case tpe:MethodType => apply(tpe.paramTypes, tpe.params, tpe.resultType)
+	case tpe:PolyType => apply(tpe.paramTypes, tpe.params, tpe.resultType)
+	case _ => nullInfo
+      }
     }
-    def apply(tpe:PolyType):ArrowTypeInfo = {
-      new ArrowTypeInfo(
-	tpe.toString, 
-	cacheType(tpe), 
-	TypeInfo(tpe.resultType), 
-	tpe.paramTypes.map(t => TypeInfo(t)))
+
+    def apply(paramTypes:Iterable[Type], paramNames:Iterable[Symbol], resultType:Type):CallCompletionInfo = {
+      new CallCompletionInfo(
+	TypeInfo(resultType),
+	paramTypes.map(t => TypeInfo(t)),
+	paramNames.map(s => s.nameString)
+      )
     }
+
     def nullInfo() = {
-      new TypeInfo("NA", -1, 'class, "NA", NoPosition)
+      new CallCompletionInfo(TypeInfo.nullInfo, List(), List())
     }
   }
+
+
+
+  object ArrowTypeInfo{
+
+    def apply(tpe:Type):ArrowTypeInfo = {
+      tpe match{
+	case tpe:MethodType => apply(tpe, tpe.paramTypes, tpe.params, tpe.resultType)
+	case tpe:PolyType => apply(tpe, tpe.paramTypes, tpe.params, tpe.resultType)
+	case _ => nullInfo
+      }
+    }
+
+    def apply(tpe:Type, paramTypes:Iterable[Type], paramNames:Iterable[Symbol], resultType:Type):ArrowTypeInfo = {
+      new ArrowTypeInfo(
+	tpe.toString, 
+	cacheType(tpe), 
+	TypeInfo(tpe.resultType), 
+	tpe.paramTypes.map(t => TypeInfo(t)))
+    }
+
+    def nullInfo() = {
+      new ArrowTypeInfo("NA", -1, TypeInfo.nullInfo, List())
+    }
+  }
+
+
 
   object TypeInspectInfo{
     def nullInfo() = {

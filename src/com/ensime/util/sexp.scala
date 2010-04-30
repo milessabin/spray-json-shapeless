@@ -30,11 +30,18 @@ case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
     m
   }
 }
-case class NilAtom() extends SExp{
-  override def toString = "nil"
+
+abstract class BooleanAtom extends SExp{
+  def toBool:Boolean 
 }
-case class TruthAtom() extends SExp{
+
+case class NilAtom() extends BooleanAtom{
+  override def toString = "nil"
+  override def toBool:Boolean = false
+}
+case class TruthAtom() extends BooleanAtom{
   override def toString = "t"
+  override def toBool:Boolean = true
 }
 case class StringAtom(value:String) extends SExp{
   override def toString = value

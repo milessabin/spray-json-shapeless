@@ -168,6 +168,14 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops
 	}
       }
+      case "swank:call-completion" => {
+	form match{
+	  case SExpList(head::IntAtom(id)::body) => {
+	    compiler ! CallCompletionEvent(id, callId)
+	  }
+	  case _ => oops
+	}
+      }
       case "swank:type-at-point" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
