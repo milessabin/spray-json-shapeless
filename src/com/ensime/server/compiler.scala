@@ -71,7 +71,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val srcFiles = includeSrcFiles -- excludeSrcFiles
 
   val args = List(
-    "-classpath", classpathFiles.mkString(":"),
+    "-classpath", classpathFiles.mkString(File.pathSeparator),
     "-verbose",
     srcFiles.mkString(" ")
   )
