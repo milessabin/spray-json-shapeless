@@ -65,7 +65,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
       }).toSet
   }
 
-  
   val includeSrcFiles = expandSource(config.srcList)
   val excludeSrcFiles = expandSource(config.excludeSrcList)
   val srcFiles = includeSrcFiles -- excludeSrcFiles

@@ -11,7 +11,7 @@ the ENhanced Scala Interaction Mode for Emacs
 
 ## System Requirements
 
-- Emacs 23(?) It may well work with earlier versions, but I haven't tested.
+- Emacs 22 or later.
 - Unix-like OS or Windows. Note that you'll need to use bin/server.bat on windows.
 - Java Runtime
 - Scala 2.8 compatible source and libraries. ENSIME is built against the 2.8 nightly Scala releases. 
