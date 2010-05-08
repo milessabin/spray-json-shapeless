@@ -25,7 +25,8 @@ ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scal
 
 __ensime-mode__
 
-Download and unpack the ENSIME distribution into a directory of your choosing. 
+Download the latest ENSIME distribution form the github [downloads page](http://github.com/downloads/aemoncannon/ensime/).
+and unpack the ENSIME distribution into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
     (require 'scala-mode)

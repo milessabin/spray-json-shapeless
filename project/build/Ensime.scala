@@ -34,7 +34,8 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
     copyFile(path("README.md"), "dist" / "README.md", log)
     copyFile(path("LICENSE"), "dist" / "LICENSE", log)
 
-    
+    val toZip = ("dist" ** "*")
+    zip(toZip.get, path("ensime-" + version + ".zip"), false, log)
 
     None 
   } dependsOn(`package`) describedAs("Copy jars to bin folder for end-user conveniance.")
