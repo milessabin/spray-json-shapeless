@@ -6,3 +6,4 @@ src_managed/
 project/boot/
 project/build/target
 test_data
+dist

@@ -1,13 +1,14 @@
 (
-:server-root "/home/aemon/src/misc/ensime/"
+:server-root "/home/aemon/src/misc/ensime/dist"
 :server-cmd  "bin/server.sh"
 :server-host "localhost"
 :server-env ()
 
 :project-package "com.ensime"
-:source ("src")
+:source ("src/main/scala")
 :exclude-source ()
 :classpath ("lib/jnotify/jnotify-0.93.jar"
-	    "lib/scala/scala-library.jar"
-	    "lib/scala/scala-compiler.jar")
+	    "project/boot/scala-2.8.0.RC1/lib/scala-library.jar"
+	    "project/boot/scala-2.8.0.RC1/lib/scala-compiler.jar")
+
 )

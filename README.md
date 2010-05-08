@@ -25,12 +25,12 @@ ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scal
 
 __ensime-mode__
 
-Download and unpack the ENSIME project into a directory of your choosing. 
+Download and unpack the ENSIME distribution into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
     (require 'scala-mode)
     (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
-    (add-to-list 'load-path "ENSIME_ROOT/src/elisp/")
+    (add-to-list 'load-path "ENSIME_ROOT/elisp/")
     (require 'ensime)
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
