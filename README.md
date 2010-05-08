@@ -36,6 +36,8 @@ Add the following lines to your .emacs file:
 
 Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime) in the root of the ENSIME distribution for an up-to-date example.
 
+Verify that the startup script (usually bin/server.sh) has executable permissions.
+
 Finally, open one of the source files for your Scala project and type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
 
 ## Usage
