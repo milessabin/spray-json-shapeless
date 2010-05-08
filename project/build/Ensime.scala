@@ -28,9 +28,13 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
     val scripts = "etc" ** "server.*"
     copyFlat(scripts.get, "dist" / "bin", log)
+    val f = ("dist" / "bin" / "server.sh").asFile
+    f.setExecutable(true)
 
     copyFile(path("README.md"), "dist" / "README.md", log)
     copyFile(path("LICENSE"), "dist" / "LICENSE", log)
+
+    
 
     None 
   } dependsOn(`package`) describedAs("Copy jars to bin folder for end-user conveniance.")
