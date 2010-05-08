@@ -1,0 +1,6 @@
+<ivy-module version="2.0">
+    <info organisation="ensime" module="ensime"/>
+    <dependencies>
+        <dependency org="net.lag" name="configgy" rev="1.5.2"/>
+    </dependencies>
+</ivy-module>

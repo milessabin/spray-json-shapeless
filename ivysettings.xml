@@ -1,0 +1,12 @@
+<ivysettings>
+  <settings defaultResolver="sbt-chain"/>
+  <resolvers>
+    <chain name="sbt-chain" returnFirst="true" checkmodified="true">
+      <url name="net.lag">
+	<artifact pattern="http://www.lag.net/repo/net/lag/[artifact]/[revision]/[artifact]-[revision].[ext]" />
+      </url>
+      <ibiblio name="scala-tools" m2compatible="true" root="http://scala-tools.org/repo-releases/"/>
+      <ibiblio name="ibiblio" />
+    </chain>
+  </resolvers>
+</ivysettings>
