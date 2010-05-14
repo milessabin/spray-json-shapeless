@@ -22,10 +22,18 @@ object Server {
       println("Server listening on " + actualPort + "..")
       writePort(portfile, actualPort)
       while (true){
-	val socket = listener.accept()
-	println("Got connection, creating handler...")
-	val handler = new SocketHandler(socket, project)
-	handler.start
+	try{
+	  val socket = listener.accept()
+	  println("Got connection, creating handler...")
+	  val handler = new SocketHandler(socket, project)
+	  handler.start
+	}
+	catch {
+	  case e: IOException => 
+	  {
+	    System.err.println("Error in server listen loop: " + e)
+	  }
+	}
       }
       listener.close()
     }
@@ -75,9 +83,14 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
       var n = 0
       var l = a.length
       var charsRead = 0;
-      while(charsRead > -1 && n < l){
+      while(n < l){
 	charsRead = in.read(a, n, l - n)
-	n += charsRead
+	if(charsRead == -1){
+	  throw new EOFException("End of file reached in socket reader.");
+	}
+	else{
+	  n += charsRead
+	}
       }
     }
 
@@ -100,8 +113,8 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
       catch {
 	case e: IOException => 
 	{
-	  System.err.println("Error while reading from client socket: " + e)
-	  System.exit(-1)
+	  System.err.println("Error in socket reader: " + e)
+	  exit('error)
 	}
       }
     }
@@ -110,17 +123,27 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
   val out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
   def write(sexp:SExp) {
-    val data:String = sexp.toReadableString
-    val header:String = String.format("%06x", int2Integer(data.length))
-    val msg = header + data
-    println("Writing: " + msg)
-    out.write(msg)
-    out.flush()
+    try{
+      val data:String = sexp.toReadableString
+      val header:String = String.format("%06x", int2Integer(data.length))
+      val msg = header + data
+      println("Writing: " + msg)
+      out.write(msg)
+      out.flush()
+    }
+    catch {
+      case e: IOException => 
+      {
+	System.err.println("Write to client failed: " + e)
+	exit('error)
+      }
+    }
   }
 
   def act() {
 
     val reader:SocketReader = new SocketReader(socket, this)
+    this.link(reader)
     reader.start
 
     loop {  
@@ -131,6 +154,7 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
 	case SwankOutMessageEvent(sexp) => {
 	  write(sexp)	  
 	}
+	case Exit(_:SocketReader, reason) => exit(reason)
       }
     }
   }
