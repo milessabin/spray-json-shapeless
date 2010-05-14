@@ -18,8 +18,8 @@ import java.io.File
 import scala.tools.nsc.ast._
 import com.ensime.util.RichFile._
 import com.ensime.server.model._
-import com.ensime.server.model.SExpConversion._
 import com.ensime.util.SExp._
+import com.ensime.server.model.SExpConversion._
 import scala.tools.nsc.symtab.Types
 
 
@@ -30,6 +30,7 @@ case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
+case class LookupSymbolDefPosEvent(file:File, point:Int, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
 case class InspectTypeByIdEvent(id:Int, callId:Int)
 case class InspectPackageByPathEvent(path:String, callId:Int)
@@ -144,6 +145,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	      case None => TypeInspectInfo.nullInfo
 	    }
 	    project ! RPCResultEvent(inspectInfo, callId)
+	  }
+
+	  case LookupSymbolDefPosEvent(file:File, point:Int, callId:Int) =>
+	  {
+	    val f = global.getSourceFile(file.getAbsolutePath())
+	    val p = new OffsetPosition(f, point)
+	    val pos = global.posForDefinitionOfSymbolAt(p)
+	    project ! RPCResultEvent(pos, callId)
 	  }
 
 	  case InspectPackageByPathEvent(path:String, callId:Int) =>

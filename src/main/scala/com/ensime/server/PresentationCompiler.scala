@@ -3,7 +3,7 @@ package com.ensime.server
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
+import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition, NoPosition}
 import scala.actors._  
 import scala.actors.Actor._  
 import com.ensime.server.model._
@@ -159,6 +159,13 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
+  def posForDefinitionOfSymbolAt(p: Position):Position = {
+    blockingQuickReload(p.source)
+    getTypeAt(p) match{
+      case Left(tpe) => tpe.typeSymbol.pos
+      case Right(e) => NoPosition
+    }
+  }
 
   def inspectType(tpe:Type):TypeInspectInfo = {
     new TypeInspectInfo(

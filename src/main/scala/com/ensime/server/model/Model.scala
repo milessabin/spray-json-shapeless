@@ -12,7 +12,7 @@ import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 
 object SExpConversion{
 
-  implicit def toSExp(pos:Position):SExp = {
+  implicit def posToSExp(pos:Position):SExp = {
     if(pos.isDefined){
       SExp(
 	key(":file"), pos.source.path,
@@ -24,7 +24,15 @@ object SExpConversion{
     }
   }
 
+  implicit def toSExpable(p:Position):SExpable = {
+    new SExpable{
+      def toSExp():SExp = posToSExp(p)
+    }
+  }
+
 }
+
+import SExpConversion._
 
 abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]) extends SExpable{}
 
@@ -60,7 +68,7 @@ class NamedTypeInfo(
       key(":name"), name,
       key(":full-name"), fullName,
       key(":members"), SExp(members.map{_.toSExp}),
-      key(":pos"), SExpConversion.toSExp(pos),
+      key(":pos"), pos,
       key(":declared-as"), declaredAs,
       key(":type-id"), id
     )
@@ -74,7 +82,7 @@ class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Po
     SExp(
       key(":name"), name,
       key(":type"), tpe.toSExp,
-      key(":pos"), SExpConversion.toSExp(pos)
+      key(":pos"), pos
     )
   }
 }
@@ -117,7 +125,7 @@ class TypeInfo(
       key(":type-id"), id,
       key(":full-name"), fullName,
       key(":declared-as"), declaredAs,
-      key(":pos"), SExpConversion.toSExp(pos)
+      key(":pos"), pos
     )
   }
 }

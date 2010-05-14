@@ -160,6 +160,14 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops
 	}
       }
+      case "swank:symbol-def-pos" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    compiler ! LookupSymbolDefPosEvent(new File(file), point, callId)
+	  }
+	  case _ => oops
+	}
+      }
       case "swank:type-by-id" => {
 	form match{
 	  case SExpList(head::IntAtom(id)::body) => {
