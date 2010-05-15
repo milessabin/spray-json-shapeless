@@ -159,10 +159,10 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
-  def posForDefinitionOfSymbolAt(p: Position):Position = {
-    getTypeAt(p) match{
-      case Left(tpe) => tpe.typeSymbol.pos
-      case Right(e) => NoPosition
+  def symbolInfoAt(p: Position):SymbolInfo = {
+    getSymbolAt(p) match{
+      case Left(sym:Symbol) => SymbolInfo(sym)
+      case _ => SymbolInfo.nullInfo
     }
   }
 
@@ -226,6 +226,15 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
       case Right(e) => {
 	Right(e)
       }
+    }
+  }
+
+  def getSymbolAt(p: Position):Either[Symbol, Throwable] = {
+    val x1 = new Response[Tree]()
+    askTypeAt(p, x1)
+    x1.get match{
+      case Left(t) => Left(t.symbol)
+      case Right(e) => Right(e)
     }
   }
 

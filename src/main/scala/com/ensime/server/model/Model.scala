@@ -77,6 +77,22 @@ class NamedTypeInfo(
 }
 
 
+class SymbolInfo(
+  val name:String, 
+  val declPos:Position, 
+  val tpe:TypeInfo) extends SExpable {
+
+  def toSExp():SExp = {
+    SExp(
+      key(":name"), name,
+      key(":type"), tpe,
+      key(":decl-pos"), declPos
+    )
+  }
+
+}
+
+
 class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position) extends EntityInfo(name, List()) with SExpable {
   def toSExp():SExp = {
     SExp(
@@ -368,6 +384,20 @@ trait ModelBuilders {  self: Global =>
 
     def nullInfo() = {
       new CallCompletionInfo(TypeInfo.nullInfo, List(), List())
+    }
+  }
+
+  object SymbolInfo{
+
+    def apply(sym:Symbol):SymbolInfo = {
+      new SymbolInfo(
+	sym.name.toString,
+	sym.pos,
+	TypeInfo(sym.tpe))
+    }
+
+    def nullInfo() = {
+      new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo)
     }
   }
 

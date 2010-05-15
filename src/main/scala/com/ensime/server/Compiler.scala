@@ -30,7 +30,7 @@ case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
 case class ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
-case class LookupSymbolDefPosEvent(file:File, point:Int, callId:Int)
+case class SymbolAtPointEvent(file:File, point:Int, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
 case class InspectTypeByIdEvent(id:Int, callId:Int)
 case class InspectPackageByPathEvent(path:String, callId:Int)
@@ -147,12 +147,12 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! RPCResultEvent(inspectInfo, callId)
 	  }
 
-	  case LookupSymbolDefPosEvent(file:File, point:Int, callId:Int) =>
+	  case SymbolAtPointEvent(file:File, point:Int, callId:Int) =>
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
-	    val pos = global.posForDefinitionOfSymbolAt(p)
-	    project ! RPCResultEvent(pos, callId)
+	    val info = global.symbolInfoAt(p)
+	    project ! RPCResultEvent(info, callId)
 	  }
 
 	  case InspectPackageByPathEvent(path:String, callId:Int) =>
