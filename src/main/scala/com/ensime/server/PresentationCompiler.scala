@@ -160,7 +160,6 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   }
 
   def posForDefinitionOfSymbolAt(p: Position):Position = {
-    blockingQuickReload(p.source)
     getTypeAt(p) match{
       case Left(tpe) => tpe.typeSymbol.pos
       case Right(e) => NoPosition
@@ -175,7 +174,6 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   }
 
   def inspectTypeAt(p: Position):TypeInspectInfo = {
-    blockingQuickReload(p.source)
     val members = getMembersForTypeAt(p)
     val preparedMembers = prepareSortedSupersInfo(members)
     // Grab the type at position..
