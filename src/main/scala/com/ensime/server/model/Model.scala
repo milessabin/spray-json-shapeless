@@ -16,7 +16,7 @@ object SExpConversion{
     if(pos.isDefined){
       SExp(
 	key(":file"), pos.source.path,
-	key(":offset"), pos.point
+	key(":offset"), pos.point + 1 // <- Emacs points start at 1
       )
     }
     else{

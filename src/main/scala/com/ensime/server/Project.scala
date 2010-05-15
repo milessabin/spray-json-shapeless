@@ -10,6 +10,7 @@ import com.ensime.util.SExp._
 import com.ensime.server.model._
 import java.io.File
 
+
 case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
 case class SendBackgroundMessageEvent(msg:String)
 case class RPCResultEvent(value:SExpable, callId:Int)

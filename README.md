@@ -7,7 +7,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Inspect the type of any expression.
 - Browse packages
 - Completion of symbols and type members
-- Jump to symbol declaration.
+- Jump to symbol definitions.
 - Check out the [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 
 ## System Requirements
@@ -47,7 +47,9 @@ __TAB__    - Start completing a method/variable.
 
 __C-c t  /  Double-Click__  - Inspect the type of the expression under the cursor.
 
-__C-c d  /  Control-Click__  - Jump to decleartion of symbol under cursor.
+__M-.  /  Control-Click__  - Jump to definition of symbol under cursor.
+
+__M-,__  - Pop back to previously visited position.
 
 __Double-Click(on an import statement)__  - Inspect the package under cursor.
 
