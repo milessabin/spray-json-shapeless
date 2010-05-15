@@ -7,6 +7,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Inspect the type of any expression.
 - Browse packages
 - Completion of symbols and type members
+- Jump to symbol declaration.
 - Check out the [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 
 ## System Requirements
