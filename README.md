@@ -42,9 +42,13 @@ Finally, open one of the source files for your Scala project and type M-x ensime
 
 ## Usage
 
-__TAB__    - Complete a type member.
+__TAB__    - Start completing a method/variable.
 
 __C-c t  /  Double-Click__  - Inspect the type of the expression under the cursor.
+
+__C-c d  /  Control-Click__  - Jump to decleartion of symbol under cursor.
+
+__Double-Click(on an import statement)__  - Inspect the package under cursor.
 
 __Mouse Hover__    - Echo the type of the expression under the cursor.
 
@@ -59,6 +63,7 @@ __,__  - Backward one page in the inspector history.
 __M-n  /  TAB__  - Forward one link in the inspector.
 
 __M-p__  - Backward one link in the inspector.
+
 
 
 
