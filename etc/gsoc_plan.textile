@@ -1,0 +1,109 @@
+h2. ENSIME Summer Development Plan
+
+This is the project plan for ENSIME during GSOC 2010. The plan lists high-level goals. Each goal entry must include an implementation note that addresses feasibility. We also include a priority annotion in the MoSCoW system:
+M Must have.
+S Should have.
+C Could have if it doesn't affect other priorities.
+W Won't have, but would like for the future.
+
+_Rough_ time estimates are included.
+
+As ENSIME is already a functional project (barely), some of the goals below make reference to improving or completing existing features. As of May 17, 2010, none of the goals below has been completed.
+
+
+
+h3. Extract project information (dependencies and source locations) from existing build scripts.
+** Overall goal is that ENSIME works 'out of the box' for as many users as possible.
+** Handle at least Maven, Ivy and SBT projects. SBT already handles all these.
+** Possibly link to SBT libraries for this task.
+** Time Estimate: 1 week
+** Priority: M
+
+h3. Improvements to Entity Browser
+** Show class constructors
+** Annotate with 'implicit' for interfaces that are acquired implicitely.
+** Keyboard shortcuts for jumping to source or docs in Package Brwoser
+** Link type parameters separately
+** Time Estimate: 3-4 days
+** Priority: C
+
+h3. Fix scaladoc linking to jump to specific method in Scala html docs.
+** Priority: W
+
+h3. Improvements to Auto-Completion
+** Completion of type names and type constructors.
+** Display type signatures in a less crowded way
+** Time Estimate: 2 days
+** Priority: C
+
+h3. Show implicit parameters for methods in Auto-Completion results
+** Priority: C
+
+h3. Incremental Building
+** Probably use nsc.interactive.BuildManager
+** Depends on completion of #1 
+** Duplicates some SBT behaviour, but many folks don't use SBT
+** Time Estimate: 1.5 weeks
+** Priority: M
+
+h3. 'Problems' buffer and navigation
+** List all compilation errors and warnings, hyperlinked to source
+** This is separate from the problem highlighting which is already working
+** Time Estimate: 2 days
+** Priority: M
+
+h3. Provide commands for jumping to next or prev problem
+** Priority: C
+
+h3. Embedded Scala REPL
+** Depends on completion of #1 
+** Use exiting code for running Scala REPL as inferior process
+** Time Estimate: 2 days
+** Priority: M
+
+h3. SBT integration
+** Code already exists for running SBT as an Emacs inferior process
+** ENSIME should be able to Automatically start inferior SBT
+** Provide key shortcuts for issuing SBT commands
+** Time Estimate: 2 days
+** Priority: M
+
+h3. Debugging
+** Investigate improvement of Emacs GUD mode with respect to Scala
+** Challenge will be translation of source names and positions to underlying java classes
+** Scala debugging should work as well as Java debugging (in Emacs)
+** Time Estimate: 2 weeks
+** Priority: M
+
+h3. 'Uses' search
+** List all uses of a particular method or type, hyperlinked to source
+** Depends on some unknowns in the compiler source..(can we do a global symbol search?)
+** Time Estimate: 1 week
+** Priority: S
+
+h3. A framework for automated refactorings.
+** Should support a basic set of refactorings. At least Rename and Organize Imports.
+** Should provide a clear path for adding new refactorings in the future.
+** Should provide reassuring user interface for selecting, confirming and reverting these operations.
+** Mirko Stocker is working on stand-alone refactorings. ENSIME work should be mostly GUI glue.
+** Time Estimate: 1.5 weeks
+** Priority: S+
+
+h3. Stability 
+** Address issue in compiler back-end where type tree is sometimes not returned
+** Should make every effort to return a reasonable answer to user
+** Possibly cache last good tree
+** Time Estimate: 1 week
+** Priority: S
+
+h3. Documentation 
+** Improve the installation, startup guide.
+** Describe all user configuration options
+** Document all Scala and Elisp code and generate API docs for Scala
+** Time Estimate: 4 days
+** Priority: M
+
+
+
+
+

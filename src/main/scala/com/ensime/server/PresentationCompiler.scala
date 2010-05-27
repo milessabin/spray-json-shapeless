@@ -15,6 +15,7 @@ import scala.tools.nsc.symtab.Types
 
 class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, srcFiles:Iterable[String]) extends Global(settings,reporter) with ModelBuilders{
 
+  import Helpers._
 
   /**
   * Override so we send a notification to compiler actor when finished..
@@ -77,29 +78,6 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     members.values.toList
   }
 
-  def isArrowType(tpe:Type) ={
-    tpe match{
-      case _:MethodType => true
-      case _:PolyType => true
-      case _ => false
-    }
-  }
-
-  def isNoParamArrowType(tpe:Type) ={
-    tpe match{
-      case t:MethodType => t.params.isEmpty
-      case t:PolyType => t.params.isEmpty
-      case t:Type => false
-    }
-  }
-
-  def typeOrArrowTypeResult(tpe:Type) ={
-    tpe match{
-      case t:MethodType => t.resultType
-      case t:PolyType => t.resultType
-      case t:Type => t
-    }
-  }
 
   private def getMembersForTypeAt(p:Position):List[Member] = {
     getTypeAt(p) match{
@@ -238,7 +216,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
-  def completeSymbolAt(p: Position, prefix:String):List[ScopeNameInfoLight] = {
+  def completeSymbolAt(p: Position, prefix:String):List[SymbolInfoLight] = {
     val x = new Response[List[Member]]()
     askScopeCompletion(p, x)
     val names = x.get match{
@@ -249,12 +227,8 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
       m match{
 	case ScopeMember(sym, tpe, true, viaImport) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    List(new ScopeNameInfoLight(
-		sym.nameString, 
-		tpe.underlying.toString,
-		cacheType(tpe),
-		isArrowType(tpe)
-	      ))
+	    val constructors = SymbolInfoLight.constructorsNamed(sym,tpe)
+	    List(SymbolInfoLight(sym, tpe)) ++ constructors
 	  }
 	  else{
 	    List()

@@ -66,7 +66,7 @@ class Project extends Actor with SwankHandler{
       catch{
 	case e: Exception => 
 	{
-	  System.err.println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
+	  println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
 	}
       }
       

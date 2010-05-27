@@ -16,7 +16,7 @@ object SExpConversion{
     if(pos.isDefined){
       SExp(
 	key(":file"), pos.source.path,
-	key(":offset"), pos.point + 1 // <- Emacs points start at 1
+	key(":offset"), pos.point + 1 // <- Emacs point starts at 1
       )
     }
     else{
@@ -80,16 +80,34 @@ class NamedTypeInfo(
 class SymbolInfo(
   val name:String, 
   val declPos:Position, 
-  val tpe:TypeInfo) extends SExpable {
+  val tpe:TypeInfo,
+  val isCallable:Boolean) extends SExpable {
 
   def toSExp():SExp = {
     SExp(
       key(":name"), name,
       key(":type"), tpe,
-      key(":decl-pos"), declPos
+      key(":decl-pos"), declPos,
+      key(":is-callable"), isCallable
     )
   }
+}
 
+
+class SymbolInfoLight(
+  val name:String, 
+  val tpeName:String,
+  val tpeId:Int,
+  val isCallable:Boolean) extends SExpable {
+
+  def toSExp():SExp = {
+    SExp(
+      key(":name"), name,
+      key(":type-name"), tpeName,
+      key(":type-id"), tpeId,
+      key(":is-callable"), isCallable
+    )
+  }
 }
 
 
@@ -115,17 +133,6 @@ class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:I
   }
 }
 
-
-class ScopeNameInfoLight(override val name:String, tpeName:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
-  def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type-name"), tpeName,
-      key(":type-id"), tpeId,
-      key(":is-callable"), isCallable
-    )
-  }
-}
 
 
 class TypeInfo(
@@ -218,6 +225,30 @@ trait ModelBuilders {  self: Global =>
 
 
   object Helpers{
+
+    def isArrowType(tpe:Type) ={
+      tpe match{
+	case _:MethodType => true
+	case _:PolyType => true
+	case _ => false
+      }
+    }
+
+    def isNoParamArrowType(tpe:Type) ={
+      tpe match{
+	case t:MethodType => t.params.isEmpty
+	case t:PolyType => t.params.isEmpty
+	case t:Type => false
+      }
+    }
+
+    def typeOrArrowTypeResult(tpe:Type) ={
+      tpe match{
+	case t:MethodType => t.resultType
+	case t:PolyType => t.resultType
+	case t:Type => t
+      }
+    }
 
     def normalizeSym(aSym: Symbol): Symbol = aSym match {
       case null | EmptyPackage | NoSymbol                   => normalizeSym(RootPackage)
@@ -393,11 +424,46 @@ trait ModelBuilders {  self: Global =>
       new SymbolInfo(
 	sym.name.toString,
 	sym.pos,
-	TypeInfo(sym.tpe))
+	TypeInfo(sym.tpe),
+	Helpers.isArrowType(sym.tpe)
+      )
     }
 
     def nullInfo() = {
-      new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo)
+      new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo, false)
+    }
+
+  }
+
+  object SymbolInfoLight{
+
+    def constructorsNamed(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
+      if(sym.isClass){
+	tpe.members.flatMap{ member:Symbol =>
+	  if(member.isClassConstructor){
+	    Some(SymbolInfoLight(sym, member.tpe))
+	  }
+	  else{None}
+	}
+      }
+      else{
+	List()
+      }
+    }
+
+    def apply(sym:Symbol):SymbolInfoLight = SymbolInfoLight(sym, sym.tpe)
+
+    def apply(sym:Symbol, tpe:Type):SymbolInfoLight = {
+      new SymbolInfoLight(
+	sym.name.toString,
+	tpe.underlying.toString,
+	cacheType(tpe.underlying),
+	Helpers.isArrowType(tpe.underlying)
+      )
+    }
+
+    def nullInfo() = {
+      new SymbolInfoLight("NA", "NA", -1, false)
     }
   }
 

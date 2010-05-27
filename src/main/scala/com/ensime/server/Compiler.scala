@@ -122,7 +122,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    project ! RPCResultEvent(syms, callId)
 	  }
 
-
 	  case TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
