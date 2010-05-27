@@ -31,6 +31,16 @@ case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
   }
 }
 
+object BooleanAtom{
+
+  def unapply(z:SExp): Option[Boolean] = z match{
+    case TruthAtom() => Some(true)
+    case NilAtom() => Some(false)
+    case _ => None
+  }
+
+}
+
 abstract class BooleanAtom extends SExp{
   def toBool:Boolean 
 }

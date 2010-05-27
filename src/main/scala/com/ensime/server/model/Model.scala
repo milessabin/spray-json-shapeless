@@ -445,10 +445,24 @@ trait ModelBuilders {  self: Global =>
 
   object SymbolInfoLight{
 
-    def callableSynonyms(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
+    def constructorSynonyms(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
       if(sym.isClass || sym.isModule || sym.isModuleClass || sym.isPackageClass){
 	tpe.members.flatMap{ member:Symbol =>
-	  if(member.isConstructor || member.name.toString == "apply"){
+	  if(member.isConstructor){
+	    Some(SymbolInfoLight(sym, member.tpe))
+	  }
+	  else{None}
+	}
+      }
+      else{
+	List()
+      }
+    }
+
+    def nonConstructorSynonyms(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
+      if(sym.isClass || sym.isModule || sym.isModuleClass || sym.isPackageClass){
+	tpe.members.flatMap{ member:Symbol =>
+	  if(member.name.toString == "apply"){
 	    Some(SymbolInfoLight(sym, member.tpe))
 	  }
 	  else{None}

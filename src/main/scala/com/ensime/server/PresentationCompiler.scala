@@ -217,7 +217,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
-  def completeSymbolAt(p: Position, prefix:String):List[SymbolInfoLight] = {
+  def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
     val x = new Response[List[Member]]()
     askScopeCompletion(p, x)
     val names = x.get match{
@@ -228,8 +228,13 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
       m match{
 	case ScopeMember(sym, tpe, true, viaImport) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    val constructors = SymbolInfoLight.callableSynonyms(sym,tpe)
-	    List(SymbolInfoLight(sym, tpe)) ++ constructors
+	    if(constructor){
+	      SymbolInfoLight.constructorSynonyms(sym,tpe)
+	    }
+	    else{
+	      val synonyms = SymbolInfoLight.nonConstructorSynonyms(sym,tpe)
+	      List(SymbolInfoLight(sym, tpe)) ++ synonyms	      
+	    }
 	  }
 	  else{
 	    List()

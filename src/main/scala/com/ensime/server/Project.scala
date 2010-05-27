@@ -130,9 +130,8 @@ class Project extends Actor with SwankHandler{
       }
       case "swank:scope-completion" => {
 	form match{
-
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
-	    compiler ! ScopeCompletionEvent(new File(file), point, prefix, callId)
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::BooleanAtom(constructor)::body) => {
+	    compiler ! ScopeCompletionEvent(new File(file), point, prefix, constructor, callId)
 	  }
 	  case _ => oops
 	}

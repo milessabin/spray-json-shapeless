@@ -28,7 +28,7 @@ case class FullTypeCheckResultEvent(notes:List[Note])
 case class QuickTypeCheckResultEvent(notes:List[Note])
 case class ReloadFileEvent(file:File)
 case class RemoveFileEvent(file:File)
-case class ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
+case class ScopeCompletionEvent(file:File, point:Int, prefix:String, constructor:Boolean, callId:Int)
 case class TypeCompletionEvent(file:File, point:Int, prefix:String, callId:Int)
 case class SymbolAtPointEvent(file:File, point:Int, callId:Int)
 case class InspectTypeEvent(file:File, point:Int, callId:Int)
@@ -113,11 +113,11 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    global.removeUnitOf(f)
 	  }
 
-	  case ScopeCompletionEvent(file:File, point:Int, prefix:String, callId:Int) => 
+	  case ScopeCompletionEvent(file:File, point:Int, prefix:String, constructor:Boolean, callId:Int) => 
 	  {
 	    val f = global.getSourceFile(file.getAbsolutePath())
 	    val p = new OffsetPosition(f, point)
-	    val syms = global.completeSymbolAt(p, prefix)
+	    val syms = global.completeSymbolAt(p, prefix, constructor)
 	    project ! RPCResultEvent(syms, callId)
 	  }
 
