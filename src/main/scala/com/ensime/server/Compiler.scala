@@ -23,6 +23,7 @@ import com.ensime.server.model.SExpConversion._
 import scala.tools.nsc.symtab.Types
 
 
+
 case class FullTypeCheckCompleteEvent()
 case class FullTypeCheckResultEvent(notes:List[Note])
 case class QuickTypeCheckResultEvent(notes:List[Note])
@@ -53,6 +54,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   private def isValidSourceFile(f:File):Boolean = {
     f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
   }
+
 
   private def expandSource(srcList:Iterable[String]):Set[String] = {
     (for(

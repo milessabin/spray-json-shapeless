@@ -17,6 +17,7 @@ class FileChangeNotifier(project:Actor, config:ProjectConfig) extends Actor{
 
   private var watchIDs:ArrayBuffer[Int] = ArrayBuffer()
 
+
   def act(){
     init()
     loop {

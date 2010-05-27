@@ -18,6 +18,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 
   import Helpers._
 
+
   /**
   * Override so we send a notification to compiler actor when finished..
   */
@@ -56,6 +57,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   import analyzer.{SearchResult, ImplicitSearch}
 
   private def typePublicMembers(tpe:Type):List[TypeMember] = {
+
     val scope = new Scope
     val members = new LinkedHashMap[Symbol, TypeMember]
     def addTypeMember(sym: Symbol, pre: Type, inherited: Boolean, viaView: Symbol) {

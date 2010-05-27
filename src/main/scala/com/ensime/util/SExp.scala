@@ -100,6 +100,7 @@ object SExp extends RegexParsers{
     }
   }
 
+
   /** A parser that matches a regex string and returns the match groups */
   def regexGroups(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
     def apply(in: Input) = {

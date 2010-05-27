@@ -8,7 +8,7 @@
 :source ("src/main/scala")
 :exclude-source ()
 :classpath ("lib/jnotify/jnotify-0.93.jar"
-	    "project/boot/scala-2.8.0.RC1/lib/scala-library.jar"
-	    "project/boot/scala-2.8.0.RC1/lib/scala-compiler.jar")
+	    "project/boot/scala-2.8.0.RC3/lib/scala-library.jar"
+	    "project/boot/scala-2.8.0.RC3/lib/scala-compiler.jar")
 
 )
