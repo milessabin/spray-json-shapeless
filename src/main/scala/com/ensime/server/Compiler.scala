@@ -85,7 +85,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   import global._
 
-
   def act() {
     global.newRunnerThread
     project ! SendBackgroundMessageEvent("Compiler is parsing sources...")

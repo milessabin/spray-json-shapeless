@@ -363,11 +363,19 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInfo{
 
+    import scala.tools.nsc.symtab.Flags._
+
+    /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
+    for details on various symbol predicates. */
     def declaredAs(sym:Symbol):scala.Symbol = {
       if(sym.isTrait)
       'trait
+      else if(sym.isTrait && sym.hasFlag(JAVA))
+      'interface
       else if(sym.isInterface)
       'interface
+      else if(sym.isModule)
+      'object
       else if(sym.isClass)
       'class
       else if(sym.isAbstractClass)
@@ -437,10 +445,10 @@ trait ModelBuilders {  self: Global =>
 
   object SymbolInfoLight{
 
-    def constructorsNamed(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
-      if(sym.isClass){
+    def callableSynonyms(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
+      if(sym.isClass || sym.isModule || sym.isModuleClass || sym.isPackageClass){
 	tpe.members.flatMap{ member:Symbol =>
-	  if(member.isClassConstructor){
+	  if(member.isConstructor || member.name.toString == "apply"){
 	    Some(SymbolInfoLight(sym, member.tpe))
 	  }
 	  else{None}

@@ -10,6 +10,7 @@ import com.ensime.server.model._
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.tools.nsc.symtab.Types
+import scala.tools.nsc.symtab.Flags
 
 
 
@@ -227,7 +228,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
       m match{
 	case ScopeMember(sym, tpe, true, viaImport) => {
 	  if(sym.nameString.startsWith(prefix)){
-	    val constructors = SymbolInfoLight.constructorsNamed(sym,tpe)
+	    val constructors = SymbolInfoLight.callableSynonyms(sym,tpe)
 	    List(SymbolInfoLight(sym, tpe)) ++ constructors
 	  }
 	  else{
@@ -268,6 +269,8 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     askReload(List(f), x)
     x.get
   }
+
+
 
 }
 
