@@ -195,7 +195,6 @@ class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[NamedTypeInfo]) extends SExp
 }
 
 
-
 trait ModelBuilders {  self: Global => 
 
   import self._
