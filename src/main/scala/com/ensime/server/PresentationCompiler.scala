@@ -19,41 +19,6 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   import Helpers._
 
 
-  /**
-  * Override so we send a notification to compiler actor when finished..
-  */
-  override def recompile(units: List[RichCompilationUnit]) {
-    super.recompile(units)
-    parent ! FullTypeCheckCompleteEvent()
-    parent
-  }
-
-  def blockingReloadAll() {
-    val all = ((srcFiles.map(getSourceFile(_))) ++ firsts).toSet.toList
-    val x = new Response[Unit]()
-    askReload(all, x)
-    x.get
-  }
-
-  /** 
-  *  Make sure a set of compilation units is loaded and parsed,
-  *  but do not trigger a full recompile.
-  */
-  private def quickReload(sources: List[SourceFile], result: Response[Unit]) {
-    respond(result)(reloadSources(sources))
-  }
-
-  /** 
-  *  Make sure a set of compilation units is loaded and parsed,
-  *  but do not trigger a full recompile.
-  *  Return () to syncvar `result` on completion.
-  */
-  def askQuickReload(sources: List[SourceFile], result: Response[Unit]) = 
-  scheduler postWorkItem new WorkItem {
-    def apply() = quickReload(sources, result)
-    override def toString = "quickReload " + sources
-  }
-
   import analyzer.{SearchResult, ImplicitSearch}
 
   private def typePublicMembers(tpe:Type):List[TypeMember] = {
@@ -231,11 +196,11 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	case ScopeMember(sym, tpe, true, viaImport) => {
 	  if(sym.nameString.startsWith(prefix)){
 	    if(constructor){
-	      SymbolInfoLight.constructorSynonyms(sym,tpe)
+	      SymbolInfoLight.constructorSynonyms(sym)
 	    }
 	    else{
-	      val synonyms = SymbolInfoLight.nonConstructorSynonyms(sym,tpe)
-	      List(SymbolInfoLight(sym, tpe)) ++ synonyms	      
+	      val synonyms = SymbolInfoLight.applySynonyms(sym)
+	      List(SymbolInfoLight(sym, tpe)) ++ synonyms
 	    }
 	  }
 	  else{
@@ -277,6 +242,42 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     x.get
   }
 
+
+  def blockingReloadAll() {
+    val all = ((srcFiles.map(getSourceFile(_))) ++ firsts).toSet.toList
+    val x = new Response[Unit]()
+    askReload(all, x)
+    x.get
+  }
+
+  /** 
+  *  Make sure a set of compilation units is loaded and parsed,
+  *  but do not trigger a full recompile.
+  */
+  private def quickReload(sources: List[SourceFile], result: Response[Unit]) {
+    respond(result)(reloadSources(sources))
+  }
+
+
+
+  /**
+  * Override so we send a notification to compiler actor when finished..
+  */
+  override def recompile(units: List[RichCompilationUnit]) {
+    super.recompile(units)
+    parent ! FullTypeCheckCompleteEvent()
+  }
+
+  /** 
+  *  Make sure a set of compilation units is loaded and parsed,
+  *  but do not trigger a full recompile.
+  *  Return () to syncvar `result` on completion.
+  */
+  def askQuickReload(sources: List[SourceFile], result: Response[Unit]) = 
+  scheduler postWorkItem new WorkItem {
+    def apply() = quickReload(sources, result)
+    override def toString = "quickReload " + sources
+  }
 
 
 }

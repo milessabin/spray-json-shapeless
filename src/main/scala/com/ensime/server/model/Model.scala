@@ -445,31 +445,39 @@ trait ModelBuilders {  self: Global =>
 
   object SymbolInfoLight{
 
-    def constructorSynonyms(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
-      if(sym.isClass || sym.isModule || sym.isModuleClass || sym.isPackageClass){
-	tpe.members.flatMap{ member:Symbol =>
-	  if(member.isConstructor){
-	    Some(SymbolInfoLight(sym, member.tpe))
-	  }
-	  else{None}
+    /** 
+    *  Return symbol infos for any like-named constructors.
+    */
+    def constructorSynonyms(sym:Symbol):List[SymbolInfoLight] = {
+      val members = if(sym.isClass || sym.isPackageClass) { 
+	sym.tpe.members 
+      } else if(sym.isModule || sym.isModuleClass){ 
+	sym.companionClass.tpe.members
+      } else {List()}
+
+      members.flatMap{ member:Symbol =>
+	if(member.isConstructor){
+	  Some(SymbolInfoLight(sym, member.tpe))
 	}
-      }
-      else{
-	List()
+	else{None}
       }
     }
+    
+    /** 
+    *  Return symbol infos for any like-named apply methods.
+    */
+    def applySynonyms(sym:Symbol):List[SymbolInfoLight] = {
+      val members = if(sym.isModule || sym.isModuleClass) { 
+	sym.tpe.members
+      } else if(sym.isClass || sym.isPackageClass){ 
+	sym.companionModule.tpe.members
+      } else {List()}
 
-    def nonConstructorSynonyms(sym:Symbol, tpe:Type):List[SymbolInfoLight] = {
-      if(sym.isClass || sym.isModule || sym.isModuleClass || sym.isPackageClass){
-	tpe.members.flatMap{ member:Symbol =>
-	  if(member.name.toString == "apply"){
-	    Some(SymbolInfoLight(sym, member.tpe))
-	  }
-	  else{None}
+      members.flatMap{ member:Symbol =>
+	if(member.name.toString == "apply"){
+	  Some(SymbolInfoLight(sym, member.tpe))
 	}
-      }
-      else{
-	List()
+	else{None}
       }
     }
 
