@@ -23,7 +23,6 @@ import com.ensime.server.model.SExpConversion._
 import scala.tools.nsc.symtab.Types
 
 
-
 case class FullTypeCheckCompleteEvent()
 case class FullTypeCheckResultEvent(notes:List[Note])
 case class QuickTypeCheckResultEvent(notes:List[Note])
@@ -87,7 +86,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
   import global._
 
-  def act() {
+  def act(){
     global.newRunnerThread
     project ! SendBackgroundMessageEvent("Compiler is parsing sources...")
     global.blockingReloadAll
@@ -95,7 +94,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
     loop {
       try{
 	receive {
-	  case CompilerShutdownEvent => 
+	  case CompilerShutdownEvent =>
 	  {
 	    global.clearTypeCache
 	    global.askShutdown()
