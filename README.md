@@ -6,8 +6,9 @@ the ENhanced Scala Interaction Mode for Emacs
 - Highlight errors and warnings in your code buffers.
 - Inspect the type of any expression.
 - Browse packages
-- Completion of symbols and type members
+- Completion-on-demand for variable, methods, constructores, etc.
 - Jump to symbol definitions.
+- SBT support
 - Check out the [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 
 ## System Requirements
@@ -41,6 +42,14 @@ Verify that the startup script (usually bin/server.sh) has executable permission
 
 Finally, open one of the source files for your Scala project and type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
 
+
+__Note for SBT Users__ 
+
+Customize the ensime-sbt-compile-on-save variable if you'd like SBT to recompile your project whenever you save. This is disabled by default as it consumes a lot of CPU without much benefit over ENSIME's built-in type checking.
+
+
+
+
 ## Usage
 
 __TAB__    - Start completing a method/variable.
@@ -66,6 +75,8 @@ __,__  - Backward one page in the inspector history.
 __M-n  /  TAB__  - Forward one link in the inspector.
 
 __M-p__  - Backward one link in the inspector.
+
+__C-c C-a__  - Switch to the SBT command-line (works for SBT projects only)
 
 
 
