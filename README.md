@@ -36,7 +36,7 @@ Add the following lines to your .emacs file:
     (require 'ensime)
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
-Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime) in the root of the ENSIME distribution for an up-to-date example.
+Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime.example) in the root of the ENSIME distribution for an up-to-date example.
 
 Verify that the startup script (usually bin/server.sh) has executable permissions.
 
