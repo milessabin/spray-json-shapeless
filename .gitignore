@@ -7,3 +7,4 @@ project/boot/
 project/build/target
 test_data
 dist
+.ensime
