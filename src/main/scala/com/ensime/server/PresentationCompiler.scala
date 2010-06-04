@@ -1,7 +1,7 @@
 package com.ensime.server
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.{Settings}
+import scala.tools.nsc.{Settings, FatalError}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition, NoPosition}
 import scala.actors._  
@@ -145,7 +145,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
-  def getTypeAt(p: Position):Either[Type, Throwable] = {
+  def getTypeAt(p: Position, retryOnFatal:Boolean = true):Either[Type, Throwable] = {
     // Grab the type at position..
     val x1 = new Response[Tree]()
     askTypeAt(p, x1)
@@ -167,6 +167,15 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	}
 	else {
 	  Right(new Exception("Null tpe"))
+	}
+      }
+      case Right(e:FatalError) => {
+	if(retryOnFatal){
+	  System.err.println("Got fatal error.. retrying...")
+	  getTypeAt(p, false)
+	}
+	else{
+	  Right(e)
 	}
       }
       case Right(e) => {
