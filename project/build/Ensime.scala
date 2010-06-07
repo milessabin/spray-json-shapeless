@@ -20,16 +20,21 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
     copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
 
+
     val deps = mainDependencies
     copyFlat(deps.scalaJars.get, "dist" / "lib", log)
+    copyFlat(deps.libraries.get, "dist" / "lib", log)
 
     val elisp = "src" / "main" / "elisp" ** "*.el"
     copyFlat(elisp.get, "dist" / "elisp", log)
 
-    val scripts = "etc" ** "server.*"
+    val scripts = "etc" / "scripts" ** "*.*"
     copyFlat(scripts.get, "dist" / "bin", log)
-    val f = ("dist" / "bin" / "server.sh").asFile
-    f.setExecutable(true)
+    ("dist" / "bin" ** "*.*").get.foreach{ p => 
+      val f = p.asFile
+      f.setExecutable(true)      
+    }
+
 
     copyFile(path("README.md"), "dist" / "README.md", log)
     copyFile(path("LICENSE"), "dist" / "LICENSE", log)

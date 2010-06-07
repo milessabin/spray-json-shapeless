@@ -43,9 +43,15 @@ Verify that the startup script (usually bin/server.sh) has executable permission
 Finally, open one of the source files for your Scala project and type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
 
 
+
 __Note for SBT Users__ 
 
 Customize the ensime-sbt-compile-on-save variable if you'd like SBT to recompile your project whenever you save. This is disabled by default as it consumes a lot of CPU without much benefit over ENSIME's built-in type checking.
+
+
+__Note for Scala Standard Library (or other giant project) hackers__ 
+
+You may want to increase the jvm heap size to give ENSIME some more breathing room. We've had some reports of ENSIME hanging when retrieving type information in huge projects. You can add the necessary flags in bin/server.sh. 
 
 
 
