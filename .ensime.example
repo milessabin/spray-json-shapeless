@@ -1,14 +1,36 @@
 (
+
+ ;; Where you unpacked the ENSIME distribution.
  :server-root 
  "/home/aemon/src/misc/ensime/dist"
 
+ ;; The command with which to invoke the ENSIME server. Change this to 
+ ;; "bin/server.bat" if your're on Windows.
  :server-cmd  "bin/server.sh"
+
+ ;; The host to connect to. Connecting to remote ENSIME servers is not
+ ;; currently supported.
  :server-host "localhost"
 
+ ;; The home package for your project. 
+ ;; Used to populate the outline view.
  :project-package "com.ensime"
+
+ ;; The source folder(s) for your project.
+ ;; :source (
+ ;;    :include ([dir | file]*)
+ ;;    :exclude ([dir | file]*)
+ ;; )
  :source ( :include ("src/main/scala"))
 
+ ;; The classpath for compiling your project.
+ ;; :classpath (
+ ;;     :mvn [t | nil]
+ ;;     :ivy [t | nil]
+ ;;     :sbt [t | nil]
+ ;;     :jars ([dir | file]*)
+ ;;     :dirs ([dir]*)
+ ;; )
  :classpath (:sbt t)
 
  )
-)
