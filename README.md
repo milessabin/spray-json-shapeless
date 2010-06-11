@@ -8,7 +8,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Browse packages
 - Completion-on-demand for variable, methods, constructores, etc.
 - Jump to symbol definitions.
-- SBT support
+- sbt support
 - Check out the [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 
 ## System Requirements
@@ -44,9 +44,9 @@ Finally, open one of the source files for your Scala project and type M-x ensime
 
 
 
-__Note for SBT Users__ 
+__Note for sbt Users__ 
 
-Customize the ensime-sbt-compile-on-save variable if you'd like SBT to recompile your project whenever you save. This is disabled by default as it consumes a lot of CPU without much benefit over ENSIME's built-in type checking.
+Customize the ensime-sbt-compile-on-save variable if you'd like sbt to recompile your project whenever you save. This is disabled by default as it consumes a lot of CPU without much benefit over ENSIME's built-in type checking.
 
 
 __Note for Scala Standard Library (or other giant project) hackers__ 
@@ -82,7 +82,7 @@ __M-n  /  TAB__  - Forward one link in the inspector.
 
 __M-p__  - Backward one link in the inspector.
 
-__C-c C-a__  - Switch to the SBT command-line (works for SBT projects only)
+__C-c C-a__  - Switch to the sbt command-line (works for sbt projects only)
 
 
 
