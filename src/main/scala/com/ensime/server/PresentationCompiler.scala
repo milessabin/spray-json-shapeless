@@ -7,6 +7,7 @@ import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition, NoPosition}
 import scala.actors._  
 import scala.actors.Actor._  
 import com.ensime.server.model._
+import com.ensime.config.ProjectConfig
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.tools.nsc.symtab.Types
@@ -14,7 +15,7 @@ import scala.tools.nsc.symtab.Flags
 
 
 
-class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, srcFiles:Iterable[String]) extends Global(settings,reporter) with ModelBuilders{
+class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders{
 
   import Helpers._
 
@@ -259,7 +260,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 
 
   def blockingReloadAll() {
-    val all = ((srcFiles.map(getSourceFile(_))) ++ firsts).toSet.toList
+    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
     val x = new Response[Unit]()
     askReload(all, x)
     x.get

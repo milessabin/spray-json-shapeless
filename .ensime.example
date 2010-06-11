@@ -1,10 +1,14 @@
 (
-:server-root "/home/aemon/src/misc/ensime/dist"
-:server-cmd  "bin/server.sh"
-:server-host "localhost"
+ :server-root 
+ "/home/aemon/src/misc/ensime/dist"
 
-:project-package "com.ensime"
-:source ("src/main/scala")
-:exclude-source ()
-:classpath ("project/boot/scala-2.8.0.RC3/lib/scala-library.jar")
+ :server-cmd  "bin/server.sh"
+ :server-host "localhost"
+
+ :project-package "com.ensime"
+ :source ( :include ("src/main/scala"))
+
+ :classpath (:sbt t)
+
+ )
 )

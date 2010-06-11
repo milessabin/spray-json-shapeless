@@ -20,6 +20,7 @@ import com.ensime.util.RichFile._
 import com.ensime.server.model._
 import com.ensime.util._
 import com.ensime.util.SExp._
+import com.ensime.config.ProjectConfig
 import com.ensime.server.model.SExpConversion._
 import scala.tools.nsc.symtab.Types
 
@@ -45,47 +46,10 @@ case class TypeAtPointReq(file:File, point:Int)
 
 class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
-  private val rootDir:File = new File(config.rootDir)
-
-  private val classpathFiles:Set[String] = config.classpath.map{ s =>
-    val f = new File(s)
-    if(f.isAbsolute) f.getAbsolutePath
-    else (new File(rootDir, s)).getAbsolutePath
-  }.toSet
-
-  private def isValidSourceFile(f:File):Boolean = {
-    f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
-  }
-
-
-  private def expandSource(srcList:Iterable[String]):Set[String] = {
-    (for(
-	s <- srcList;
-	val f = new File(s);
-	val files = if(f.isAbsolute) f.andTree else (new File(rootDir, s)).andTree;
-	f <- files if isValidSourceFile(f)
-      )
-      yield{
-	f.getAbsolutePath
-      }).toSet
-  }
-
-  val includeSrcFiles = expandSource(config.srcList)
-  val excludeSrcFiles = expandSource(config.excludeSrcList)
-  val srcFiles = includeSrcFiles -- excludeSrcFiles
-
-  val args = List(
-    "-classpath", classpathFiles.mkString(File.pathSeparator),
-    "-verbose",
-    srcFiles.mkString(" ")
-  )
-
-  println("Compiler args: " + args)
-
   val settings = new Settings(Console.println)
-  settings.processArguments(args, false)
+  settings.processArguments(config.compilerArgs, false)
   val reporter = new PresentationReporter()
-  val global = new PresentationCompiler(settings, reporter, this, srcFiles)
+  val global = new PresentationCompiler(settings, reporter, this, config)
 
   import global._
 

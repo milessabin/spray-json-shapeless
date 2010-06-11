@@ -8,10 +8,10 @@ import scala.actors.Actor._
 import com.ensime.util._
 import com.ensime.util.SExp._
 import com.ensime.server.model._
+import com.ensime.config.ProjectConfig
 import java.io.File
 
 
-case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
 case class SendBackgroundMessageEvent(msg:String)
 case class RPCResultEvent(value:SExpable, callId:Int)
 case class RPCErrorEvent(value:String, callId:Int)
@@ -19,6 +19,7 @@ case class RPCErrorEvent(value:String, callId:Int)
 class Project extends Actor with SwankHandler{
 
   private var compiler:Actor = actor{}
+  private var config:ProjectConfig = ProjectConfig.nullConfig
 
   def act() {
     println("Project waiting for init...")
@@ -80,35 +81,16 @@ class Project extends Actor with SwankHandler{
 	  println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
 	}
       }
-      
     }
   }
 
-  protected def initProject(config:SExpList){
-    val m = config.toKeywordMap
-    val rootDir = m.get(key(":root-dir")) match{
-      case Some(StringAtom(str)) => str
-      case _ => "."
-    }
-    val srcList = m.get(key(":source")) match{
-      case Some(SExpList(items)) => items.map{_.toString}
-      case _ => List()
-    }
-    val excludeSrcList = m.get(key(":exclude-source")) match{
-      case Some(SExpList(items)) => items.map{_.toString}
-      case _ => List()
-    }
-    val classpath = m.get(key(":classpath")) match{
-      case Some(SExpList(items)) => items.map{_.toString}
-      case _ => List()
-    }
-    val conf = ProjectConfig(rootDir, srcList, excludeSrcList, classpath)
-    println("Got configuration: " + conf + ". Starting compiler..")
+
+  protected def initProject(conf:ProjectConfig){
+    this.config = conf;
     compiler ! CompilerShutdownEvent
     compiler = new Compiler(this, conf)
     compiler.start
   }
-
 
 
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
@@ -124,7 +106,8 @@ class Project extends Actor with SwankHandler{
       case "swank:init-project" => {
 	form match{
 	  case SExpList(head::(config:SExpList)::body) => {
-	    initProject(config)
+	    val conf = ProjectConfig(config)
+	    initProject(conf)
 	    sendEmacsRexOkReturn(callId)
 	  }
 	  case _ => oops 

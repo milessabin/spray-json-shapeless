@@ -25,5 +25,34 @@ object RichFile {
   implicit def toRichFile(file: File) = new RichFile(file)
 }
 
+object FileUtils {
+  
+  implicit def toRichFile(file: File) = new RichFile(file)
+
+  def expandRecursively(rootDir:File, srcList:Iterable[String], isValid:(File => Boolean)):Set[String] = {
+    (for(s <- srcList;
+	val f = new File(s);
+	val files = if(f.isAbsolute) f.andTree else (new File(rootDir, s)).andTree;
+	file <- files if isValid(file)
+      )
+      yield{
+	file.getAbsolutePath
+      }).toSet
+  }
+
+  def expand(rootDir:File, srcList:Iterable[String], isValid:(File => Boolean)):Set[String] = {
+    (for(s <- srcList;
+	val f = new File(s);
+	val files = List(if(f.isAbsolute) f else (new File(rootDir, s)));
+	file <- files if isValid(file)
+      )
+      yield{
+	file.getAbsolutePath
+      }).toSet
+  }
+
+
+}
+
 
 
