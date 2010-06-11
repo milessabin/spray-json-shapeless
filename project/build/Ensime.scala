@@ -32,7 +32,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
     copyFlat(scripts.get, "dist" / "bin", log)
     ("dist" / "bin" ** "*.*").get.foreach{ p => 
       val f = p.asFile
-      f.setExecutable(true)      
+      f.setExecutable(true)
     }
 
 
