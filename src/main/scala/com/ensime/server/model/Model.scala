@@ -24,13 +24,9 @@ object SExpConversion{
     }
   }
 
-  implicit def toSExpable(p:Position):SExpable = {
-    new SExpable{
-      def toSExp():SExp = posToSExp(p)
-    }
-  }
-
 }
+
+
 
 import SExpConversion._
 
@@ -375,7 +371,11 @@ trait ModelBuilders {  self: Global =>
       'interface
       else if(sym.isModule)
       'object
+      else if(sym.isModuleClass)
+      'object
       else if(sym.isClass)
+      'class
+      else if(sym.isPackageClass)
       'class
       else if(sym.isAbstractClass)
       'abstractclass

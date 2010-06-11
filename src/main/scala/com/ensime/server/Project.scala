@@ -14,6 +14,7 @@ import java.io.File
 case class ProjectConfig(rootDir:String, srcList:Iterable[String], excludeSrcList:Iterable[String], classpath:Iterable[String])
 case class SendBackgroundMessageEvent(msg:String)
 case class RPCResultEvent(value:SExpable, callId:Int)
+case class RPCErrorEvent(value:String, callId:Int)
 
 class Project extends Actor with SwankHandler{
 
@@ -52,14 +53,24 @@ class Project extends Actor with SwankHandler{
 		)
 	      ))
 	  }
-	  case result:RPCResultEvent =>
+	  case RPCResultEvent(value, callId) =>
 	  {
 	    sendEmacsRexReturn(
 	      SExp(
 		key(":ok"),
-		result.value
+		value
 	      ),
-	      result.callId)
+	      callId)
+	  }
+	  case RPCErrorEvent(msg, callId) =>
+	  {
+	    System.err.println(msg);
+	    sendEmacsRexReturn(
+	      SExp(
+		key(":abort"),
+		msg
+	      ),
+	      callId)
 	  }
 	}
       }
@@ -122,8 +133,7 @@ class Project extends Actor with SwankHandler{
       case "swank:typecheck-file" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::body) => {
-	    compiler ! ReloadFileEvent(new File(file))
-	    sendEmacsRexOkReturn(callId)
+	    compiler ! RPCRequestEvent(ReloadFileReq(new File(file)), callId)
 	  }
 	  case _ => oops
 	}
@@ -131,7 +141,7 @@ class Project extends Actor with SwankHandler{
       case "swank:scope-completion" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::BooleanAtom(constructor)::body) => {
-	    compiler ! ScopeCompletionEvent(new File(file), point, prefix, constructor, callId)
+	    compiler ! RPCRequestEvent(ScopeCompletionReq(new File(file), point, prefix, constructor), callId)
 	  }
 	  case _ => oops
 	}
@@ -139,7 +149,7 @@ class Project extends Actor with SwankHandler{
       case "swank:type-completion" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
-	    compiler ! TypeCompletionEvent(new File(file), point, prefix, callId)
+	    compiler ! RPCRequestEvent(TypeCompletionReq(new File(file), point, prefix), callId)
 	  }
 	  case _ => oops
 	}
@@ -147,7 +157,7 @@ class Project extends Actor with SwankHandler{
       case "swank:inspect-type-at-point" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! InspectTypeEvent(new File(file), point, callId)
+	    compiler ! RPCRequestEvent(InspectTypeReq(new File(file), point), callId)
 	  }
 	  case _ => oops
 	}
@@ -155,7 +165,7 @@ class Project extends Actor with SwankHandler{
       case "swank:inspect-type-by-id" => {
 	form match{
 	  case SExpList(head::IntAtom(id)::body) => {
-	    compiler ! InspectTypeByIdEvent(id, callId)
+	    compiler ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
 	  }
 	  case _ => oops
 	}
@@ -163,7 +173,7 @@ class Project extends Actor with SwankHandler{
       case "swank:symbol-at-point" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! SymbolAtPointEvent(new File(file), point, callId)
+	    compiler ! RPCRequestEvent(SymbolAtPointReq(new File(file), point), callId)
 	  }
 	  case _ => oops
 	}
@@ -171,7 +181,7 @@ class Project extends Actor with SwankHandler{
       case "swank:type-by-id" => {
 	form match{
 	  case SExpList(head::IntAtom(id)::body) => {
-	    compiler ! TypeByIdEvent(id, callId)
+	    compiler ! RPCRequestEvent(TypeByIdReq(id), callId)
 	  }
 	  case _ => oops
 	}
@@ -179,7 +189,7 @@ class Project extends Actor with SwankHandler{
       case "swank:call-completion" => {
 	form match{
 	  case SExpList(head::IntAtom(id)::body) => {
-	    compiler ! CallCompletionEvent(id, callId)
+	    compiler ! RPCRequestEvent(CallCompletionReq(id), callId)
 	  }
 	  case _ => oops
 	}
@@ -187,7 +197,7 @@ class Project extends Actor with SwankHandler{
       case "swank:type-at-point" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! TypeAtPointEvent(new File(file), point, callId)
+	    compiler ! RPCRequestEvent(TypeAtPointReq(new File(file), point), callId)
 	  }
 	  case _ => oops
 	}
@@ -195,7 +205,7 @@ class Project extends Actor with SwankHandler{
       case "swank:inspect-package-by-path" => {
 	form match{
 	  case SExpList(head::StringAtom(path)::body) => {
-	    compiler ! InspectPackageByPathEvent(path, callId)
+	    compiler ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
 	  }
 	  case _ => oops
 	}

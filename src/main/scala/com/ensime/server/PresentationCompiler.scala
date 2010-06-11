@@ -58,7 +58,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
 	  askTypeCompletion(p, x2)
 	  x2.get match{
 	    case Left(m) => {
-	      m
+	      (m ++ typePublicMembers(tpe)).toSet.toList
 	    }
 	    case Right(e) => {
 	      typePublicMembers(tpe)
@@ -122,15 +122,7 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
   def inspectTypeAt(p: Position):TypeInspectInfo = {
     val members = getMembersForTypeAt(p)
     val preparedMembers = prepareSortedSupersInfo(members)
-    // Grab the type at position..
-    val typeInfo = getTypeAt(p) match{
-      case Left(tpe) => {
-	TypeInfo(tpe)
-      }
-      case Right(e) => {
-	TypeInfo.nullInfo
-      }
-    }
+    val typeInfo = getTypeInfoAt(p)
     new TypeInspectInfo(typeInfo, preparedMembers)
   }
 
@@ -145,29 +137,43 @@ class PresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, s
     }
   }
 
+  def typeOfTree(t:Tree):Either[Type, Throwable] = {
+    var tree = t
+    println("Class of tree: " + tree.getClass)
+    tree = tree match {
+      case Select(qual, name) if tree.tpe == ErrorType => 
+      {
+	qual
+      }
+      case t:ImplDef if t.impl != null => 
+      {
+	t.impl
+      }
+      case t:ValOrDefDef if t.tpt != null => 
+      {
+	t.tpt
+      }
+      case t:ValOrDefDef if t.rhs != null => 
+      {
+	t.rhs
+      }
+      case t => t
+    }
+    if(tree.tpe != null) {
+      Left(tree.tpe)
+    }
+    else {
+      Right(new Exception("Null tpe"))
+    }
+  }
+
   def getTypeAt(p: Position, retryOnFatal:Boolean = true):Either[Type, Throwable] = {
     // Grab the type at position..
     val x1 = new Response[Tree]()
     askTypeAt(p, x1)
     x1.get match{
-      case Left(t) => {
-	// Below error handling bits copied from
-	// typeMembers(pos:Position):List[TypeMember]
-	var tree = t
-	tree match {
-	  case tt : TypeTree => tree = tt.original
-	  case _ => 
-	}
-	tree match {
-	  case Select(qual, name) if tree.tpe == ErrorType => tree = qual
-	  case _ => 
-	}
-	if(tree.tpe != null) {
-	  Left(tree.tpe)
-	}
-	else {
-	  Right(new Exception("Null tpe"))
-	}
+      case Left(tree) => {
+	typeOfTree(tree)
       }
       case Right(e:FatalError) => {
 	if(retryOnFatal){
