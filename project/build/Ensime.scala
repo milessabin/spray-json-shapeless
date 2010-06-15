@@ -3,13 +3,15 @@ import sbt.FileUtilities._
 
 class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
+import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
+
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.
   lazy val dist = task {
 
     FileUtilities.clean(path("dist"), log)
 
-    log.info("Preparing runtime environment to ./dist....")
+    log.info("Copying runtime environment to ./dist....")
 
     createDirectories(List(
 	path("dist"), 
@@ -20,10 +22,10 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
     copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
 
+    copyFlat(mainDependencies.scalaJars.get, "dist" / "lib", log)
 
-    val deps = mainDependencies
-    copyFlat(deps.scalaJars.get, "dist" / "lib", log)
-    copyFlat(deps.libraries.get, "dist" / "lib", log)
+    val deps = managedClasspath(Runtime)
+    copyFlat(deps.get, "dist" / "lib", log)
 
     val elisp = "src" / "main" / "elisp" ** "*.el"
     copyFlat(elisp.get, "dist" / "elisp", log)
