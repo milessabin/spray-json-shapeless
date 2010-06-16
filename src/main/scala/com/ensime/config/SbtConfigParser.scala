@@ -1,4 +1,5 @@
-/* sbt -- Simple Build Tool
+/*
+* Based on code from the sbt project:
 * Copyright 2009, 2010  Mark Harrah
 */
 package com.ensime.config

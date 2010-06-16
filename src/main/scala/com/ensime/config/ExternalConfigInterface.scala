@@ -15,10 +15,10 @@ import org.apache.maven.artifact.ant._
 object ExternalConfigInterface {
 
   private def newConsoleLogger = {
-    val consoleLogger:DefaultLogger = new DefaultLogger();
-    consoleLogger.setErrorPrintStream(System.err);
-    consoleLogger.setOutputPrintStream(System.out);
-    consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
+    val consoleLogger:DefaultLogger = new DefaultLogger()
+    consoleLogger.setErrorPrintStream(System.err)
+    consoleLogger.setOutputPrintStream(System.out)
+    consoleLogger.setMessageOutputLevel(Project.MSG_INFO)
     consoleLogger
   }
 
@@ -135,7 +135,7 @@ object ExternalConfigInterface {
 class IvyDepsTask extends IvyCacheTask() {
   var deps:Iterable[File] = List()
   def doExecute() {
-    prepareAndCheck();
+    prepareAndCheck()
     deps = getArtifactReports().map{ a =>
       val art = a.asInstanceOf[ArtifactDownloadReport]
       art.getLocalFile()
