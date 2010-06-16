@@ -11,78 +11,89 @@ import scala.collection.JavaConversions._
 import org.apache.tools.ant._
 import org.apache.maven.artifact.ant._
 
+
 object ExternalConfigInterface {
 
+  private def newConsoleLogger = {
+    val consoleLogger:DefaultLogger = new DefaultLogger();
+    consoleLogger.setErrorPrintStream(System.err);
+    consoleLogger.setOutputPrintStream(System.out);
+    consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
+    consoleLogger
+  }
+
   def getMavenDependencies(baseDir:File):Iterable[File] = {
-    MavenDeps.getDeps(baseDir)    
+    val project = new Project()
+    project.addBuildListener(newConsoleLogger)
+    project.setBaseDir(baseDir)
+    project.init()
+    val target = new Target()
+    target.setName("ResolveDependencies")
+    target.setProject(project)
+
+    val pom = new Pom() 
+    pom.setFile(new File(baseDir, "pom.xml"))
+    pom.setOwningTarget(target)
+    pom.setProject(project)
+    pom.setId("pom")
+    target.addTask(pom)
+
+    val task = new MavenDepsTask()
+    task.setOwningTarget(target)
+    task.setProject(project)
+    task.addPom(pom)
+    target.addTask(task)
+
+    project.addTarget("ResolveDependencies", target)
+    project.executeTarget("ResolveDependencies")
+    task.deps
   }
 
   def getIvyDependencies(baseDir:File):Iterable[File] = {
-    IvyDeps.getDeps(baseDir)
+    val project = new Project()
+    project.addBuildListener(newConsoleLogger)
+    project.setBaseDir(baseDir)
+    project.init()
+    val target = new Target()
+    target.setName("ResolveDependencies")
+    target.setProject(project)
+    val task = new IvyDepsTask()
+    task.setOwningTarget(target)
+    task.setProject(project)
+    target.addTask(task)
+    project.addTarget("ResolveDependencies", target)
+    project.executeTarget("ResolveDependencies")
+    task.deps
   }
 
 
   def getSbtDependencies(baseDir:File):Iterable[File] = {
-    def isValidJar(f:File):Boolean = f.exists
+    def isValidJar(f:File):Boolean = (
+      f.exists && f.getPath.endsWith(".jar") && !(f.isHidden)
+    )
     val propFile = new File(baseDir, "project/build.properties")
     if(propFile.exists){
+      System.out.println("Loading sbt build properties from " + propFile)
       val sbtConfig = SbtConfigParser(propFile)
       val v = sbtConfig.buildScalaVersion
       val unmanagedLibDir = "lib"
       val managedLibDir = "lib_managed/scala_" + v
       val scalaLibDir = "project/boot/scala-" + v
+      System.out.println("Using base directory " + baseDir)
+      System.out.println("Searching for dependencies in " + unmanagedLibDir)
+      System.out.println("Searching for dependencies in " + managedLibDir)
+      System.out.println("Searching for dependencies in " + scalaLibDir)
       expandRecursively(baseDir,
-	List(unmanagedLibDir, managedLibDir,scalaLibDir),
+	List(unmanagedLibDir, managedLibDir, scalaLibDir),
 	isValidJar).map{s => new File(s)}
     }
     else List()
   }
 
 
-}
-
-
-object DebugBuildListener extends BuildListener{
-  def buildFinished(event:BuildEvent) = debug(event)
-  def buildStarted(event:BuildEvent) = debug(event)
-  def messageLogged(event:BuildEvent) = debug(event)
-  def targetFinished(event:BuildEvent) = debug(event)
-  def targetStarted(event:BuildEvent) = debug(event)
-  def taskFinished(event:BuildEvent) = debug(event)   
-  def taskStarted(event:BuildEvent) = debug(event)   
-  def debug(event:BuildEvent) = {
-    val exc = event.getException
-    if(exc != null){
-    }
-  }
-}
-
-
-object IvyDeps {
-
-  def getDeps(baseDir:File):Iterable[File] = {
-    val project = new Project()
-    val consoleLogger:DefaultLogger = new DefaultLogger();
-    consoleLogger.setErrorPrintStream(System.err);
-    consoleLogger.setOutputPrintStream(System.out);
-    consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
-    project.addBuildListener(consoleLogger);
-    project.setBaseDir(baseDir)
-    project.init()
-    val target = new Target()
-    target.setName("IvyDeps")
-    target.setProject(project)
-    val task = new IvyDepsTask()
-    task.setOwningTarget(target)
-    task.setProject(project)
-    task.setConf("compile")
-    target.addTask(task)
-    project.addTarget("IvyDeps", target)
-    project.executeTarget("IvyDeps")
-    task.deps
-  }
 
 }
+
 
 
 class IvyDepsTask extends IvyCacheTask() {
@@ -98,21 +109,5 @@ class IvyDepsTask extends IvyCacheTask() {
 
 
 
-object MavenDeps {
-
-  def getDeps(baseDir:File):Iterable[File] = {
-    val project = new Project()
-    project.addBuildListener(DebugBuildListener)
-    project.setBaseDir(baseDir)
-    val target = new Target()
-    val task = new MavenDepsTask()
-    target.addTask(task)
-    target.setProject(project)
-    project.addTarget("deps", target)
-    project.executeTarget("deps")
-    task.deps
-  }
-
-}
 
 

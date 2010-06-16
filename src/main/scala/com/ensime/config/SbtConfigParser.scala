@@ -24,7 +24,7 @@ object SbtConfigParser extends NotNull
       if(line eq null) accum.reverse else readLine(parseLine(line, index) ::: accum, index+1)
     }
     val m = readLine(Nil, 0).flatten.toMap
-    val buildScalaVersion = m.get("build.scala.version").getOrElse("2.8.0.RC3")
+    val buildScalaVersion = m.get("build.scala.versions").getOrElse("2.8.0")
     new SbtConfig(buildScalaVersion)
   }
 
