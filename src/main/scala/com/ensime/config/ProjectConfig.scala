@@ -40,19 +40,23 @@ object ProjectConfig{
 	case Some(c:SExpList) => c
 	case _ => SExpList(List())
       }).toKeywordMap
+
+
+    def getDependencyConfig(s:Option[SExp]):Map[String, Any] = {
+      s match{
+	case Some(s:SExpList) => {
+	  val keyMap = s.toKeywordMap
+	  val map = keyMap.map{ ea => (ea._1.toString, ea._2.toScala)}
+	  map ++ Map(":enabled" -> true)
+	}
+	case Some(c:TruthAtom) => Map(":enabled" -> true)
+	case _ => Map()
+      }
+    }
     
-    val mvn = cp.get(key(":mvn")) match{
-      case Some(c:TruthAtom) => true
-      case _ => false
-    }
-    val ivy = cp.get(key(":ivy")) match{
-      case Some(c:TruthAtom) => true
-      case _ => false
-    }
-    val sbt = cp.get(key(":sbt")) match{
-      case Some(c:TruthAtom) => true
-      case _ => false
-    }
+    val mvnMap = getDependencyConfig(cp.get(key(":mvn")))
+    val ivyMap = getDependencyConfig(cp.get(key(":ivy")))
+    val sbtMap = getDependencyConfig(cp.get(key(":sbt")))
 
     val jarList = cp.get(key(":jars")) match{
       case Some(SExpList(items)) => items.map{_.toString}
@@ -70,23 +74,18 @@ object ProjectConfig{
       expandRecursively(rootDir,excludeSrcList,isValidSourceFile)
     ).map{s => new File(s)}
 
+
     val jarFiles = (
       expandRecursively(rootDir, jarList, isValidJar).map{s => new File(s)} ++ 
-
-      (if(ivy) ExternalConfigInterface.getIvyDependencies(rootDir)
-	else List()) ++ 
-
-      (if(mvn) ExternalConfigInterface.getMavenDependencies(rootDir)
-	else List()) ++ 
-
-      (if(sbt) ExternalConfigInterface.getSbtDependencies(rootDir)
-	else List())
-    )
+      ExternalConfigInterface.getIvyDependencies(rootDir, ivyMap) ++ 
+      ExternalConfigInterface.getMavenDependencies(rootDir, mvnMap) ++ 
+      ExternalConfigInterface.getSbtDependencies(rootDir, sbtMap))
 
     val dirFiles = expand(rootDir,jarList, isValidClassDir).map{s => new File(s)}
 
     new ProjectConfig(rootDir, sourceFiles, jarFiles, dirFiles)
   }
+
 
   private def isValidJar(f:File):Boolean = f.exists
   private def isValidClassDir(f:File):Boolean = f.isDirectory && f.exists

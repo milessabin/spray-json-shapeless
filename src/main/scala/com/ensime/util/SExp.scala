@@ -7,7 +7,8 @@ import scala.collection.immutable.Map
 
 
 abstract class SExp{
-  def toReadableString = toString
+  def toReadableString:String = toString
+  def toScala:Any = toString
 }
 case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
 
@@ -43,15 +44,18 @@ object BooleanAtom{
 
 abstract class BooleanAtom extends SExp{
   def toBool:Boolean 
+  override def toScala = toBool
 }
 
 case class NilAtom() extends BooleanAtom{
   override def toString = "nil"
   override def toBool:Boolean = false
+
 }
 case class TruthAtom() extends BooleanAtom{
   override def toString = "t"
   override def toBool:Boolean = true
+  override def toScala:Boolean = false
 }
 case class StringAtom(value:String) extends SExp{
   override def toString = value
@@ -62,6 +66,7 @@ case class StringAtom(value:String) extends SExp{
 }
 case class IntAtom(value:Int) extends SExp{
   override def toString = String.valueOf(value)
+  override def toScala = value
 }
 case class SymbolAtom(value:String) extends SExp{
   override def toString = value
