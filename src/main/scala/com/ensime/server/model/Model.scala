@@ -5,8 +5,8 @@ import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.symtab.Symbols
-import com.ensime.util.SExp._
 import com.ensime.util.{SExp, SExpable}
+import com.ensime.util.SExp._
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 
 
@@ -29,6 +29,7 @@ object SExpConversion{
 
 
 import SExpConversion._
+
 
 abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]) extends SExpable{}
 

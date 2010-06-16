@@ -121,6 +121,9 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops
 	}
       }
+      case "swank:typecheck-all" => {
+	compiler ! RPCRequestEvent(ReloadAllReq(), callId)
+      }
       case "swank:scope-completion" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::BooleanAtom(constructor)::body) => {

@@ -30,6 +30,7 @@ case class QuickTypeCheckResultEvent(notes:List[Note])
 case class CompilerShutdownEvent()
 
 case class ReloadFileReq(file:File)
+case class ReloadAllReq()
 case class RemoveFileReq(file:File)
 case class RPCRequestEvent(req:Any, callId:Int)
 case class ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean)
@@ -49,14 +50,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   val reporter = new PresentationReporter()
-  val global = new PresentationCompiler(settings, reporter, this, config)
+  val global = new RichPresentationCompiler(settings, reporter, this, config)
 
   import global._
 
   def act(){
     global.newRunnerThread
     project ! SendBackgroundMessageEvent("Compiler is parsing sources...")
-    global.blockingReloadAll
+    global.blockingReloadAllFiles
     project ! SendBackgroundMessageEvent("Compiler finished parsing!")
     loop {
       try{
@@ -77,10 +78,16 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 	    try{
 	      req match {
 
+		case ReloadAllReq() =>
+		{
+		  global.blockingReloadAllFiles()
+		  project ! RPCResultEvent(TruthAtom(), callId)
+		}
+
 		case ReloadFileReq(file:File) =>
 		{
 		  val f = global.getSourceFile(file.getAbsolutePath())
-		  global.blockingFullReload(f)
+		  global.blockingReloadFile(f)
 		  project ! RPCResultEvent(TruthAtom(), callId)
 		  project ! QuickTypeCheckResultEvent(reporter.allNotes)
 		}
