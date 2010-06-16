@@ -21,8 +21,15 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 	"dist" / "elisp"
       ), log)
 
+
+    // Copy the emacs lisp to dist
     val elisp = "src" / "main" / "elisp" ** "*.el"
     copyFlat(elisp.get, "dist" / "elisp", log)
+
+
+    // Copy the example configuration
+    val dotEnsime = "." / ".ensime.example"
+    copyFile(dotEnsime, "dist" / ".ensime.example", log)
 
 
     // Copy all the runtime dependencies over to dist
