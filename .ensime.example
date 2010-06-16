@@ -21,16 +21,20 @@
  ;;    :include ([dir | file]*)
  ;;    :exclude ([dir | file]*)
  ;; )
- :source ( :include ("src/main/scala"))
+ :source ( :include ("src/main/"))
 
  ;; The classpath for compiling your project.
  ;; :classpath (
- ;;     :mvn [t | nil]
- ;;     :ivy [t | nil]
- ;;     :sbt [t | nil]
+ ;;     :mvn [t | (:scopes "maven-scopes-str") | nil]
+ ;;     :ivy [t | (:conf "ivy-config-str") | nil]
+ ;;     :sbt [t | (:conf "ivy-config-str") | nil]
  ;;     :jars ([dir | file]*)
  ;;     :dirs ([dir]*)
  ;; )
- :classpath (:sbt t)
+ ;; Note that only the :sbt option automatically includes the scala standard library.
+ ;; Maven and Ivy users need to either declare scala as a dependency, or include it using
+ ;; the :jars option.
+
+ :classpath (:sbt (:conf "compile"))
 
  )
