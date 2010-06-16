@@ -25,6 +25,7 @@ object ExternalConfigInterface {
   def getMavenDependencies(baseDir:File, config:Map[String, Any]):Iterable[File] = {
     config.get(":enabled") match{
       case Some(true) => {
+	System.out.println("Resolving Maven dependencies...")
 	val project = new Project()
 	project.addBuildListener(newConsoleLogger)
 	project.setBaseDir(baseDir)
@@ -67,6 +68,7 @@ object ExternalConfigInterface {
   def getIvyDependencies(baseDir:File, config:Map[String, Any]):Iterable[File] = {
     config.get(":enabled") match{
       case Some(true) => {
+	System.out.println("Resolving Ivy dependencies...")
 	val project = new Project()
 	project.addBuildListener(newConsoleLogger)
 	project.setBaseDir(baseDir)
@@ -99,6 +101,7 @@ object ExternalConfigInterface {
   def getSbtDependencies(baseDir:File, config:Map[String, Any]):Iterable[File] = {
     config.get(":enabled") match{
       case Some(true) => {
+	System.out.println("Resolving sbt dependencies...")
 	def isValidJar(f:File):Boolean = (
 	  f.exists && f.getPath.endsWith(".jar") && !(f.isHidden)
 	)
