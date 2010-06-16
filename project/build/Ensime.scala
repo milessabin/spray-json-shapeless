@@ -1,9 +1,10 @@
 import sbt._
 import sbt.FileUtilities._
+import java.io.File
 
 class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
-import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
+  import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.
@@ -20,22 +21,47 @@ import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test
 	"dist" / "elisp"
       ), log)
 
-    copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
-
-    copyFlat(mainDependencies.scalaJars.get, "dist" / "lib", log)
-
-    val deps = managedClasspath(Runtime)
-    copyFlat(deps.get, "dist" / "lib", log)
-
     val elisp = "src" / "main" / "elisp" ** "*.el"
     copyFlat(elisp.get, "dist" / "elisp", log)
 
-    val scripts = "etc" / "scripts" ** "*.*"
-    copyFlat(scripts.get, "dist" / "bin", log)
-    ("dist" / "bin" ** "*.*").get.foreach{ p => 
-      val f = p.asFile
-      f.setExecutable(true)
+
+    // Copy all the runtime dependencies over to dist
+    copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
+    copyFlat(mainDependencies.scalaJars.get, "dist" / "lib", log)
+    val deps = managedClasspath(Runtime)
+    copyFlat(deps.get, "dist" / "lib", log)
+
+
+    // Grab all jars..
+    val cpLibs = ("dist" / "lib" ** "*.jar").get.map{ p => 
+      p.toString.replace("./dist/", "")
     }
+
+    def writeScript(classpath:String, from:String, to:String){
+      val tmplF = new File(from)
+      readString(tmplF,log) match {
+	case Right(tmpl) => {
+	  val s = tmpl.replace("<RUNTIME_CLASSPATH>", classpath)
+	  val f = new File(to)
+	  write(f, s, log)
+	  f.setExecutable(true)	
+	}
+	case _ => { 
+	  log.error("Failed to load script template.") 
+	}
+      }
+    }
+
+    // Expand the server invocation script templates.
+
+    writeScript(cpLibs.mkString(":"), 
+      "./etc/scripts/server.sh",
+      "./dist/bin/server.sh")
+
+    writeScript("\"" + cpLibs.mkString(";") + "\"", 
+      "./etc/scripts/server.bat",
+      "./dist/bin/server.bat")
+
 
 
     copyFile(path("README.md"), "dist" / "README.md", log)
