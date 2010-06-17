@@ -99,7 +99,13 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, parent:Acto
 	    val typeInfo = TypeInfo(tpe)
 	    new NamedTypeMemberInfo(sym.nameString, typeInfo, sym.pos)
 	  }
-	}.sortWith{(a,b) => a.name <= b.name}
+	}.sortWith{(a,b) => 
+	  // Sort constructors to front of
+	  // lists.
+	  if(a.name.equals("this")) true
+	  else if(b.name.equals("this")) false
+	  else a.name <= b.name
+	}
 	val ownerTpeInfo = TypeInfo(ownerSym.tpe)
 	NamedTypeInfo(ownerTpeInfo, memberInfos)
       }
