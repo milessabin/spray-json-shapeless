@@ -113,6 +113,15 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops 
 	}
       }
+      case "swank:repl-args" => {
+	val args:Iterable[String] = this.config.replArgs
+	sendEmacsRexReturn(
+	  SExp(
+	    key(":ok"),
+	    SExp(args.map(strToSExp(_)))
+	  ),
+	  callId)
+      }
       case "swank:typecheck-file" => {
 	form match{
 	  case SExpList(head::StringAtom(file)::body) => {

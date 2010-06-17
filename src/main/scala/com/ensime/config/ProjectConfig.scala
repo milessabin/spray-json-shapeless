@@ -119,6 +119,10 @@ class ProjectConfig(
     sourceFilenames.mkString(" ")
   )
 
+  def replArgs = List(
+    "-classpath", classpathFilenames.mkString(File.pathSeparator)
+  )
+
   override def toString = {
     "root " + root + " \n" + 
     "sources " + sources + " \n" + 
