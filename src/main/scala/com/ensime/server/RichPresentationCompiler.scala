@@ -15,7 +15,7 @@ import scala.tools.nsc.symtab.Flags
 
 
 
-class RichPresentationCompiler(settings:Settings, reporter:Reporter, parent:Actor, config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders{
+class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:Actor, config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders{
 
   import Helpers._
 
@@ -132,6 +132,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, parent:Acto
     val typeInfo = getTypeInfoAt(p)
     new TypeInspectInfo(typeInfo, preparedMembers)
   }
+
 
   def getTypeInfoAt(p: Position):TypeInfo = {
     getTypeAt(p) match{
@@ -293,7 +294,14 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, parent:Acto
   }
 
 
+  override def askShutdown(){
+    super.askShutdown()
+    parent = null
+  }
 
+  override def finalize() {
+    System.out.println("Finalizing Global instance.")
+  }
 
 }
 
