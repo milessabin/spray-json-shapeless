@@ -163,12 +163,20 @@ class CallCompletionInfo(
   }
 }
 
-
-class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[TypeInfo]) extends SExpable{
+class InterfaceInfo(tpe:TypeInfo, viaView:Option[String]) extends SExpable{
   def toSExp():SExp = {
     SExp.propList(
       (":type", tpe.toSExp),
-      (":supers", SExp(supers.map{_.toSExp}))
+      (":via-view", viaView.map(strToSExp).getOrElse('nil))
+    )
+  }  
+}
+
+class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[InterfaceInfo]) extends SExpable{
+  def toSExp():SExp = {
+    SExp.propList(
+      (":type", tpe.toSExp),
+      (":interfaces", SExp(supers.map{_.toSExp}))
     )
   }
 }

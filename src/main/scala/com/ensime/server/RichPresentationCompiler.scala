@@ -74,39 +74,47 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
-  def prepareSortedSupersInfo(members:List[Member]):Iterable[TypeInfo] = {
+  def prepareSortedInterfaceInfo(members:List[Member]):Iterable[InterfaceInfo] = {
     // ...filtering out non-visible and non-type members
     val visMembers:List[TypeMember] = members.flatMap {
       case m@TypeMember(sym, tpe, true, _, _) => List(m)
       case _ => List()
     }
 
-    // create a list of pairs [(sym, members-of-sym)]
-    // ..sort the pairs on the subtype relation
+    // Create a list of pairs [(typeSym, membersOfSym)]
     val membersByOwner = visMembers.groupBy{
       case TypeMember(sym, _, _, _, _) => {
 	sym.owner
       }
     }.toList.sortWith{
+      // Sort the pairs on the subtype relation
       case ((s1,_),(s2,_)) => s1.tpe <:< s2.tpe
     }
 
-    // transform to [named-type-info]..
     membersByOwner.map{
       case (ownerSym, members) => {
-	val memberInfos = members.map{
-	  case TypeMember(sym, tpe, _, _, _) => {
-	    val typeInfo = TypeInfo(tpe)
-	    new NamedTypeMemberInfo(sym.nameString, typeInfo, sym.pos)
-	  }
-	}.sortWith{(a,b) => 
-	  // Sort constructors to front of
-	  // lists.
+
+	// If all the members in this interface were
+	// provided by the same view, remember that 
+	// view.
+	val byView = members.groupBy(_.viaView)
+	val viaView = if(byView.size == 1){
+	  byView.keys.headOption
+	} else {None}
+
+	// Transform to [typeInfo]*
+	val memberInfos = members.map{ m =>
+	  new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), m.sym.pos)
+	}
+	
+	// Sort constructors to front.
+	val sortedInfos = memberInfos.sortWith{(a,b) => 
 	  if(a.name.equals("this")) true
 	  else if(b.name.equals("this")) false
 	  else a.name <= b.name
 	}
-	TypeInfo(ownerSym.tpe, memberInfos)
+	new InterfaceInfo(TypeInfo(ownerSym.tpe, memberInfos),
+	  viaView.map(_.name.toString))
       }
     }
   }
@@ -121,13 +129,13 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   def inspectType(tpe:Type):TypeInspectInfo = {
     new TypeInspectInfo(
       TypeInfo(tpe),
-      prepareSortedSupersInfo(typePublicMembers(tpe.asInstanceOf[Type]))
+      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
     )
   }
 
   def inspectTypeAt(p: Position):TypeInspectInfo = {
     val members = getMembersForTypeAt(p)
-    val preparedMembers = prepareSortedSupersInfo(members)
+    val preparedMembers = prepareSortedInterfaceInfo(members)
     val typeInfo = getTypeInfoAt(p)
     new TypeInspectInfo(typeInfo, preparedMembers)
   }
