@@ -61,7 +61,7 @@ object ProjectConfig{
 
     m.get(key(":use-ivy")) match{
       case Some(TruthAtom()) => {
-	val conf = m.get(key(":ivy")).map(_.toString)
+	val conf = m.get(key(":ivy-conf")).map(_.toString)
 	val (s,d,t) = getIvyConfig(rootDir, conf)
 	sources ++= s
 	dependencyJars ++= d
