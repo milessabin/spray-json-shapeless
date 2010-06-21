@@ -10,6 +10,7 @@ import com.ensime.util.RichFile._
 import com.ensime.util.FileUtils._
 import com.ensime.util.SExp._
 import com.ensime.server.model._
+import scala.collection.mutable
 import java.io.File
 
 
@@ -17,83 +18,99 @@ import java.io.File
 object ProjectConfig{
 
   def apply(config:SExpList) = {
+    import ExternalConfigInterface._
+
     val m = config.toKeywordMap
-    val root = m.get(key(":root-dir")) match{
-      case Some(StringAtom(str)) => str
-      case _ => "."
-    }
-    val src = (m.get(key(":source")) match{
-	case Some(s:SExpList) => s
-	case _ => SExpList(List())
-      }).toKeywordMap
 
-    val includeSrcList = src.get(key(":include")) match{
-      case Some(SExpList(items)) => items.map{_.toString}
-      case _ => List()
-    }
-    val excludeSrcList = src.get(key(":exclude")) match{
-      case Some(SExpList(items)) => items.map{_.toString}
-      case _ => List()
+    val rootDir = m.get(key(":root-dir")) match{
+      case Some(StringAtom(str)) => new File(str)
+      case _ => new File(".")
     }
 
-    val cp = (m.get(key(":classpath")) match{
-	case Some(c:SExpList) => c
-	case _ => SExpList(List())
-      }).toKeywordMap
+    val replCmd = m.get(key(":repl-cmd")) match{
+      case Some(StringAtom(s)) => s
+      case None => "scala"
+    }
 
+    val sources = new mutable.HashSet[File]
+    val dependencyJars = new mutable.HashSet[File]
+    val dependencyDirs = new mutable.HashSet[File]
+    var target:Option[File] = None
 
-    def getDependencyConfig(s:Option[SExp]):Map[String, Any] = {
-      s match{
-	case Some(s:SExpList) => {
-	  val keyMap = s.toKeywordMap
-	  val map = keyMap.map{ ea => (ea._1.toString, ea._2.toScala)}
-	  map ++ Map(":enabled" -> true)
-	}
-	case Some(c:TruthAtom) => Map(":enabled" -> true)
-	case _ => Map()
+    m.get(key(":use-sbt")) match{
+      case Some(TruthAtom()) => {
+	val conf = m.get(key(":sbt-conf")).map(_.toString)
+	val (s,d,t) = getSbtConfig(rootDir, conf)
+	sources ++= s
+	dependencyJars ++= d
+	target = t
       }
+      case _ => 
+    }
+
+    m.get(key(":use-maven")) match{
+      case Some(TruthAtom()) => {
+	val scopes = m.get(key(":maven-scopes")).map(_.toString)
+	val (s,d,t) = getMavenConfig(rootDir, scopes)
+	sources ++= s
+	dependencyJars ++= d
+	target = t
+      }
+      case _ => 
+    }
+
+    m.get(key(":use-ivy")) match{
+      case Some(TruthAtom()) => {
+	val conf = m.get(key(":ivy")).map(_.toString)
+	val (s,d,t) = getIvyConfig(rootDir, conf)
+	sources ++= s
+	dependencyJars ++= d
+	target = t
+      }
+      case _ => 
     }
     
-    val mvnMap = getDependencyConfig(cp.get(key(":mvn")))
-    val ivyMap = getDependencyConfig(cp.get(key(":ivy")))
-    val sbtMap = getDependencyConfig(cp.get(key(":sbt")))
 
-    val jarList = cp.get(key(":jars")) match{
+    m.get(key(":dependency-jars")) match{
+      case Some(SExpList(items)) => 
+      {
+	val jars = items.map{_.toString}
+	dependencyJars ++= expandRecursively(rootDir, jars, isValidJar).map{s => new File(s)}
+      }
+      case _ => List()
+    }
+
+    m.get(key(":dependency-dirs")) match{
+      case Some(SExpList(items)) => 
+      {
+	val dirs = items.map{_.toString}
+	dependencyDirs ++= expand(rootDir,dirs,isValidClassDir).map{s => new File(s)}
+      }
+      case _ => List()
+    }
+
+
+    val includeSrcList = m.get(key(":sources")) match{
       case Some(SExpList(items)) => items.map{_.toString}
       case _ => List()
     }
 
-    val dirsList = cp.get(key(":dirs")) match{
+    val excludeSrcList = m.get(key(":exclude-sources")) match{
       case Some(SExpList(items)) => items.map{_.toString}
       case _ => List()
     }
 
-    val rootDir = new File(root)
-    val sourceFiles = (
+    sources ++= (
       expandRecursively(rootDir,includeSrcList,isValidSourceFile) -- 
       expandRecursively(rootDir,excludeSrcList,isValidSourceFile)
     ).map{s => new File(s)}
 
-
-    val jarFiles = (
-      expandRecursively(rootDir, jarList, isValidJar).map{s => new File(s)} ++ 
-      ExternalConfigInterface.getIvyDependencies(rootDir, ivyMap) ++ 
-      ExternalConfigInterface.getMavenDependencies(rootDir, mvnMap) ++ 
-      ExternalConfigInterface.getSbtDependencies(rootDir, sbtMap))
-
-    val dirFiles = expand(rootDir,jarList, isValidClassDir).map{s => new File(s)}
-
-    new ProjectConfig(rootDir, sourceFiles, jarFiles, dirFiles)
+    new ProjectConfig(rootDir, sources, dependencyJars, dependencyDirs, target, replCmd)
   }
 
 
-  private def isValidJar(f:File):Boolean = f.exists
-  private def isValidClassDir(f:File):Boolean = f.isDirectory && f.exists
-  private def isValidSourceFile(f:File):Boolean = {
-    f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
-  }
 
-  def nullConfig = new ProjectConfig(new File("."), List(), List(), List())
+  def nullConfig = new ProjectConfig(new File("."), List(), List(), List(), None, "")
 
 }
 
@@ -102,10 +119,17 @@ class ProjectConfig(
   val root:File,
   val sources:Iterable[File],
   val classpathJars:Iterable[File],
-  val classpathDirs:Iterable[File]){
+  val classpathDirs:Iterable[File],
+  val target:Option[File],
+  val replCmd:String){
 
-  def classpathFilenames:Set[String] = {
+  def compilerClasspathFilenames:Set[String] = {
     val allFiles = classpathJars ++ classpathDirs
+    allFiles.map{ _.getAbsolutePath }.toSet
+  }
+
+  def replClasspathFilenames:Set[String] = {
+    val allFiles = classpathJars ++ classpathDirs ++ target
     allFiles.map{ _.getAbsolutePath }.toSet
   }
 
@@ -114,19 +138,21 @@ class ProjectConfig(
   }
 
   def compilerArgs = List(
-    "-classpath", classpathFilenames.mkString(File.pathSeparator),
+    "-classpath", compilerClasspathFilenames.mkString(File.pathSeparator),
     "-verbose",
     sourceFilenames.mkString(" ")
   )
 
-  def replArgs = List(
-    "-classpath", classpathFilenames.mkString(File.pathSeparator)
-  )
+  def replCmdLine = {
+    replCmd.split(" ") ++ 
+    List("-classpath", replClasspathFilenames.mkString(File.pathSeparator))
+  }
 
   override def toString = {
     "root " + root + " \n" + 
     "sources " + sources + " \n" + 
     "classpathJars " + classpathJars + " \n" + 
     "classpathDirs " + classpathDirs + " \n"
+    "target " + target + " \n"
   }
 }

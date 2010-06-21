@@ -51,6 +51,13 @@ object FileUtils {
       }).toSet
   }
 
+  def isValidJar(f:File):Boolean = f.exists && f.getName.endsWith(".jar")
+  def isValidClassDir(f:File):Boolean = f.exists && f.isDirectory
+  def isValidSourceFile(f:File):Boolean = {
+    f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
+  }
+
+
 
 }
 

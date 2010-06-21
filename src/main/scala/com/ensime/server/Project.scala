@@ -113,12 +113,12 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops 
 	}
       }
-      case "swank:repl-args" => {
-	val args:Iterable[String] = this.config.replArgs
+      case "swank:repl-cmd-line" => {
+	val cmdLine:Iterable[String] = this.config.replCmdLine
 	sendEmacsRexReturn(
 	  SExp(
 	    key(":ok"),
-	    SExp(args.map(strToSExp(_)))
+	    SExp(cmdLine.map(strToSExp(_)))
 	  ),
 	  callId)
       }
