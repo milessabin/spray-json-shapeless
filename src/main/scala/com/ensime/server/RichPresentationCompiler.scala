@@ -74,7 +74,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
-  def prepareSortedSupersInfo(members:List[Member]):Iterable[NamedTypeInfo] = {
+  def prepareSortedSupersInfo(members:List[Member]):Iterable[TypeInfo] = {
     // ...filtering out non-visible and non-type members
     val visMembers:List[TypeMember] = members.flatMap {
       case m@TypeMember(sym, tpe, true, _, _) => List(m)
@@ -106,8 +106,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 	  else if(b.name.equals("this")) false
 	  else a.name <= b.name
 	}
-	val ownerTpeInfo = TypeInfo(ownerSym.tpe)
-	NamedTypeInfo(ownerTpeInfo, memberInfos)
+	TypeInfo(ownerSym.tpe, memberInfos)
       }
     }
   }

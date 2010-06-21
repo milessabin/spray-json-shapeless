@@ -10,6 +10,7 @@ abstract class SExp{
   def toReadableString:String = toString
   def toScala:Any = toString
 }
+
 case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
 
   override def iterator = items.iterator
@@ -127,6 +128,20 @@ object SExp extends RegexParsers{
 
   def apply(items:Iterable[SExp]):SExpList = {
     SExpList(items)
+  }
+
+  // Helpers for common case of key,val prop-list.
+  // Omit keys for nil values.
+  def propList(items:(String, SExp)*):SExpList = {
+    propList(items)
+  }
+  def propList(items:Iterable[(String, SExp)]):SExpList = {
+    val nonNil = items.filter{
+      case (s, NilAtom()) => false
+      case (s, SExpList(items)) if items.isEmpty => false
+      case _ => true
+    }
+    SExpList(nonNil.flatMap(ea => List(key(ea._1),ea._2)))
   }
 
   implicit def strToSExp(str:String):SExp = {

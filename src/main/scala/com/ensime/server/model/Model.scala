@@ -14,9 +14,9 @@ object SExpConversion{
 
   implicit def posToSExp(pos:Position):SExp = {
     if(pos.isDefined){
-      SExp(
-	key(":file"), pos.source.path,
-	key(":offset"), pos.point + 1 // <- Emacs point starts at 1
+      SExp.propList(
+	(":file", pos.source.path),
+	(":offset", pos.point + 1) // <- Emacs point starts at )1
       )
     }
     else{
@@ -35,11 +35,11 @@ abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]) ext
 
 class PackageInfo(override val name:String, val fullname:String, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
   def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":info-type"), 'package,
-      key(":full-name"), fullname,
-      key(":members"), SExp(members.map{_.toSExp})
+    SExp.propList(
+      (":name", name),
+      (":info-type", 'package),
+      (":full-name", fullname),
+      (":members", SExp(members.map{_.toSExp}))
     )
   }
 }
@@ -52,27 +52,6 @@ abstract trait LooksLikeType{
   def pos:Position
 }
 
-class NamedTypeInfo(
-  override val name:String, 
-  val pos:Position, 
-  override val members:Iterable[EntityInfo],
-  val declaredAs:scala.Symbol,
-  val id:Int,
-  val fullName:String) extends EntityInfo(name, members) with LooksLikeType{
-
-  def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":full-name"), fullName,
-      key(":members"), SExp(members.map{_.toSExp}),
-      key(":pos"), pos,
-      key(":declared-as"), declaredAs,
-      key(":type-id"), id
-    )
-  }
-
-}
-
 
 class SymbolInfo(
   val name:String, 
@@ -81,11 +60,11 @@ class SymbolInfo(
   val isCallable:Boolean) extends SExpable {
 
   def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type"), tpe,
-      key(":decl-pos"), declPos,
-      key(":is-callable"), isCallable
+    SExp.propList(
+      (":name", name),
+      (":type", tpe.toSExp),
+      (":decl-pos", declPos),
+      (":is-callable", isCallable)
     )
   }
 }
@@ -98,11 +77,11 @@ class SymbolInfoLight(
   val isCallable:Boolean) extends SExpable {
 
   def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type-name"), tpeName,
-      key(":type-id"), tpeId,
-      key(":is-callable"), isCallable
+    SExp.propList(
+      (":name", name),
+      (":type-name", tpeName),
+      (":type-id", tpeId),
+      (":is-callable", isCallable)
     )
   }
 }
@@ -110,10 +89,10 @@ class SymbolInfoLight(
 
 class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position) extends EntityInfo(name, List()) with SExpable {
   def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type"), tpe.toSExp,
-      key(":pos"), pos
+    SExp.propList(
+      (":name", name),
+      (":type", tpe.toSExp),
+      (":pos", pos)
     )
   }
 }
@@ -121,31 +100,34 @@ class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Po
 
 class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
   def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type-name"), tpeName,
-      key(":type-id"), tpeId,
-      key(":is-callable"), isCallable
+    SExp.propList(
+      (":name", name),
+      (":type-name", tpeName),
+      (":type-id", tpeId),
+      (":is-callable", isCallable)
     )
   }
 }
 
 
-
 class TypeInfo(
-  val name:String, 
+  name:String, 
   val id:Int, 
   val declaredAs:scala.Symbol,
   val fullName:String, 
-  val pos:Position) extends SExpable with LooksLikeType{
+  val args:Iterable[TypeInfo], 
+  members:Iterable[EntityInfo],
+  val pos:Position) extends EntityInfo(name, members) with LooksLikeType{
 
   implicit def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type-id"), id,
-      key(":full-name"), fullName,
-      key(":declared-as"), declaredAs,
-      key(":pos"), pos
+    SExp.propList(
+      (":name", name),
+      (":type-id", id),
+      (":full-name", fullName),
+      (":declared-as", declaredAs),
+      (":type-args", SExp(args.map(_.toSExp))),
+      (":members", SExp(members.map(_.toSExp))),
+      (":pos", pos)
     )
   }
 }
@@ -153,16 +135,16 @@ class TypeInfo(
 class ArrowTypeInfo(
   override val name:String, 
   override val id:Int, 
-  val resultType:TypeInfo, 
-  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, NoPosition){
+  val resultType:TypeInfo,
+  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition){
 
   override implicit def toSExp():SExp = {
-    SExp(
-      key(":name"), name,
-      key(":type-id"), id,
-      key(":arrow-type"), true,
-      key(":result-type"), resultType.toSExp,
-      key(":param-types"), SExp(paramTypes.map(_.toSExp))
+    SExp.propList(
+      (":name", name),
+      (":type-id", id),
+      (":arrow-type", true),
+      (":result-type", resultType.toSExp),
+      (":param-types", SExp(paramTypes.map(_.toSExp)))
     )
   }
 }
@@ -173,20 +155,20 @@ class CallCompletionInfo(
   val paramNames:Iterable[String]) extends SExpable(){
 
   override implicit def toSExp():SExp = {
-    SExp(
-      key(":result-type"), resultType.toSExp,
-      key(":param-types"), SExp(paramTypes.map(_.toSExp)),
-      key(":param-names"), SExp(paramNames.map(strToSExp(_)))
+    SExp.propList(
+      (":result-type", resultType.toSExp),
+      (":param-types", SExp(paramTypes.map(_.toSExp))),
+      (":param-names", SExp(paramNames.map(strToSExp(_))))
     )
   }
 }
 
 
-class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[NamedTypeInfo]) extends SExpable{
+class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[TypeInfo]) extends SExpable{
   def toSExp():SExp = {
-    SExp(
-      key(":type"), tpe.toSExp,
-      key(":supers"), SExp(supers.map{_.toSExp})
+    SExp.propList(
+      (":type", tpe.toSExp),
+      (":supers", SExp(supers.map{_.toSExp}))
     )
   }
 }
@@ -325,7 +307,13 @@ trait ModelBuilders {  self: Global =>
 	Some(fromSymbol(bSym))
       }
       else if(!(bSym.nameString.contains("$"))){
-	NamedTypeInfo.fromSymNoMembers(bSym)
+	if(bSym.isClass || bSym.isTrait || 
+	  bSym.isModuleClass || bSym.isPackageClass){
+	  Some(TypeInfo(bSym.tpe))
+	}
+	else{
+	  None
+	}
       }
       else{
 	None
@@ -334,27 +322,6 @@ trait ModelBuilders {  self: Global =>
 
   }
 
-
-
-  object NamedTypeInfo {
-
-    def nullInfo(name:String = "NA") = {
-      new NamedTypeInfo(name, NoPosition, List(), 'nil, -1, name)
-    }
-
-    def apply(tpe:TypeInfo, members:Iterable[EntityInfo]) = {
-      new NamedTypeInfo(tpe.name, tpe.pos, members, tpe.declaredAs, tpe.id, tpe.fullName)
-    }
-
-    def fromSymNoMembers(sym:Symbol):Option[NamedTypeInfo] = {
-      if(sym.isClass || sym.isTrait){
-	Some(new NamedTypeInfo(sym.nameString, sym.pos, List(), TypeInfo.declaredAs(sym), cacheType(sym.tpe), sym.fullName))
-      }
-      else{
-	None
-      }
-    }
-  }
 
 
   object TypeInfo{
@@ -383,22 +350,31 @@ trait ModelBuilders {  self: Global =>
       else 'nil
     }
 
-    def apply(tpe:Type, detailed:Boolean = false):TypeInfo = {
+    def apply(tpe:Type, members:List[EntityInfo] = List()):TypeInfo = {
       tpe match{
 	case tpe:MethodType => ArrowTypeInfo(tpe)
 	case tpe:PolyType => ArrowTypeInfo(tpe)
 	case tpe:Type =>
 	{
+	  val params = tpe.typeParams.map(_.toString)
+	  val args = tpe.typeArgs.map(TypeInfo(_))
 	  val typeSym = tpe.typeSymbol
-	  val underlying = tpe.underlying
-	  new TypeInfo(underlying.toString,
-	    cacheType(tpe), declaredAs(typeSym), typeSym.fullName, typeSym.pos)
+	  new TypeInfo(
+	    typeSym.name.toString,
+	    cacheType(tpe), 
+	    declaredAs(typeSym), 
+	    typeSym.fullName, 
+	    args,
+	    members,
+	    typeSym.pos
+	  )
 	}
 	case _ => nullInfo
       }
     }
+
     def nullInfo() = {
-      new TypeInfo("NA", -1, 'nil, "NA", NoPosition)
+      new TypeInfo("NA", -1, 'nil, "NA", List(), List(), NoPosition)
     }
   }
 
