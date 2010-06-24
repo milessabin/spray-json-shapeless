@@ -113,13 +113,20 @@ class Project extends Actor with SwankHandler{
 	  case _ => oops 
 	}
       }
-      case "swank:repl-cmd-line" => {
-	val cmdLine:Iterable[String] = this.config.replCmdLine
+      case "swank:repl-config" => {
 	sendEmacsRexReturn(
-	  SExp(
-	    key(":ok"),
-	    SExp(cmdLine.map(strToSExp(_)))
-	  ),
+	  SExp.propList(
+	    (":ok", SExp.propList(
+		(":classpath", strToSExp(this.config.replClasspath))
+	      ))),
+	  callId)
+      }
+      case "swank:debug-config" => {
+	sendEmacsRexReturn(
+	  SExp.propList(
+	    (":ok", SExp.propList(
+		(":classpath", strToSExp(this.config.debugClasspath))
+	      ))),
 	  callId)
       }
       case "swank:typecheck-file" => {

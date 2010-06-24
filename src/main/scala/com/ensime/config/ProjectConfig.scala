@@ -27,10 +27,6 @@ object ProjectConfig{
       case _ => new File(".")
     }
 
-    val replCmd = m.get(key(":repl-cmd")) match{
-      case Some(StringAtom(s)) => s
-      case None => "scala"
-    }
 
     val sources = new mutable.HashSet[File]
     val dependencyJars = new mutable.HashSet[File]
@@ -105,12 +101,12 @@ object ProjectConfig{
       expandRecursively(rootDir,excludeSrcList,isValidSourceFile)
     ).map{s => new File(s)}
 
-    new ProjectConfig(rootDir, sources, dependencyJars, dependencyDirs, target, replCmd)
+    new ProjectConfig(rootDir, sources, dependencyJars, dependencyDirs, target)
   }
 
 
 
-  def nullConfig = new ProjectConfig(new File("."), List(), List(), List(), None, "")
+  def nullConfig = new ProjectConfig(new File("."), List(), List(), List(), None)
 
 }
 
@@ -120,16 +116,10 @@ class ProjectConfig(
   val sources:Iterable[File],
   val classpathJars:Iterable[File],
   val classpathDirs:Iterable[File],
-  val target:Option[File],
-  val replCmd:String){
+  val target:Option[File]){
 
   def compilerClasspathFilenames:Set[String] = {
     val allFiles = classpathJars ++ classpathDirs
-    allFiles.map{ _.getAbsolutePath }.toSet
-  }
-
-  def replClasspathFilenames:Set[String] = {
-    val allFiles = classpathJars ++ classpathDirs ++ target
     allFiles.map{ _.getAbsolutePath }.toSet
   }
 
@@ -143,10 +133,13 @@ class ProjectConfig(
     sourceFilenames.mkString(" ")
   )
 
-  def replCmdLine = {
-    replCmd.split(" ") ++ 
-    List("-classpath", replClasspathFilenames.mkString(File.pathSeparator))
+  def replClasspath = {
+    val allFiles = classpathJars ++ classpathDirs ++ target
+    val paths = allFiles.map{ _.getAbsolutePath }.toSet
+    paths.mkString(File.pathSeparator)
   }
+
+  def debugClasspath = replClasspath
 
   override def toString = {
     "root " + root + " \n" + 
