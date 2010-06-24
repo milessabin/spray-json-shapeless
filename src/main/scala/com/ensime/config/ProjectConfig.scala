@@ -27,17 +27,16 @@ object ProjectConfig{
       case _ => new File(".")
     }
 
-
-    val sources = new mutable.HashSet[File]
+    val sourceRoots = new mutable.HashSet[File]
     val dependencyJars = new mutable.HashSet[File]
     val dependencyDirs = new mutable.HashSet[File]
     var target:Option[File] = None
 
     m.get(key(":use-sbt")) match{
       case Some(TruthAtom()) => {
-	val conf = m.get(key(":sbt-conf")).map(_.toString)
+	val conf = m.get(key(":sbt-compile-conf")).map(_.toString)
 	val (s,d,t) = getSbtConfig(rootDir, conf)
-	sources ++= s
+	sourceRoots ++= s
 	dependencyJars ++= d
 	target = t
       }
@@ -46,9 +45,9 @@ object ProjectConfig{
 
     m.get(key(":use-maven")) match{
       case Some(TruthAtom()) => {
-	val scopes = m.get(key(":maven-scopes")).map(_.toString)
+	val scopes = m.get(key(":maven-compile-scopes")).map(_.toString)
 	val (s,d,t) = getMavenConfig(rootDir, scopes)
-	sources ++= s
+	sourceRoots ++= s
 	dependencyJars ++= d
 	target = t
       }
@@ -57,9 +56,9 @@ object ProjectConfig{
 
     m.get(key(":use-ivy")) match{
       case Some(TruthAtom()) => {
-	val conf = m.get(key(":ivy-conf")).map(_.toString)
+	val conf = m.get(key(":ivy-compile-conf")).map(_.toString)
 	val (s,d,t) = getIvyConfig(rootDir, conf)
-	sources ++= s
+	sourceRoots ++= s
 	dependencyJars ++= d
 	target = t
       }
@@ -70,8 +69,8 @@ object ProjectConfig{
     m.get(key(":dependency-jars")) match{
       case Some(SExpList(items)) => 
       {
-	val jars = items.map{_.toString}
-	dependencyJars ++= expandRecursively(rootDir, jars, isValidJar).map{s => new File(s)}
+	val jars = items.map{j => new File(j.toString)}
+	dependencyJars ++= expandRecursively(rootDir, jars, isValidJar _)
       }
       case _ => List()
     }
@@ -79,8 +78,8 @@ object ProjectConfig{
     m.get(key(":dependency-dirs")) match{
       case Some(SExpList(items)) => 
       {
-	val dirs = items.map{_.toString}
-	dependencyDirs ++= expand(rootDir,dirs,isValidClassDir).map{s => new File(s)}
+	val dirs = items.map{d => new File(d.toString)}
+	dependencyDirs ++= expand(rootDir,dirs,isValidClassDir _)
       }
       case _ => List()
     }
@@ -91,22 +90,19 @@ object ProjectConfig{
       case _ => List()
     }
 
-    val excludeSrcList = m.get(key(":exclude-sources")) match{
-      case Some(SExpList(items)) => items.map{_.toString}
-      case _ => List()
-    }
+    sourceRoots ++= includeSrcList.map(new File(_)).filter(_.isDirectory)
 
-    sources ++= (
-      expandRecursively(rootDir,includeSrcList,isValidSourceFile) -- 
-      expandRecursively(rootDir,excludeSrcList,isValidSourceFile)
-    ).map{s => new File(s)}
+    val sourceFiles = expandRecursively(
+      rootDir,sourceRoots,isValidSourceFile _)
 
-    new ProjectConfig(rootDir, sources, dependencyJars, dependencyDirs, target)
+    new ProjectConfig(rootDir, sourceFiles, sourceRoots, 
+      dependencyJars, dependencyDirs, target)
   }
 
 
 
-  def nullConfig = new ProjectConfig(new File("."), List(), List(), List(), None)
+  def nullConfig = new ProjectConfig(new File("."), List(), 
+    List(), List(), List(), None)
 
 }
 
@@ -114,6 +110,7 @@ object ProjectConfig{
 class ProjectConfig(
   val root:File,
   val sources:Iterable[File],
+  val sourceRoots:Iterable[File],
   val classpathJars:Iterable[File],
   val classpathDirs:Iterable[File],
   val target:Option[File]){
@@ -140,6 +137,10 @@ class ProjectConfig(
   }
 
   def debugClasspath = replClasspath
+
+  def debugSourcepath = {
+    sourceRoots.map{ _.getAbsolutePath }.toSet.mkString(File.pathSeparator)
+  }
 
   override def toString = {
     "root " + root + " \n" + 

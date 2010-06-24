@@ -125,7 +125,8 @@ class Project extends Actor with SwankHandler{
 	sendEmacsRexReturn(
 	  SExp.propList(
 	    (":ok", SExp.propList(
-		(":classpath", strToSExp(this.config.debugClasspath))
+		(":classpath", strToSExp(this.config.debugClasspath)),
+		(":sourcepath", strToSExp(this.config.debugSourcepath))
 	      ))),
 	  callId)
       }

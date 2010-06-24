@@ -29,27 +29,24 @@ object FileUtils {
   
   implicit def toRichFile(file: File) = new RichFile(file)
 
-  def expandRecursively(rootDir:File, srcList:Iterable[String], isValid:(File => Boolean)):Set[String] = {
-    (for(s <- srcList;
-	val f = new File(s);
-	val files = if(f.isAbsolute) f.andTree else (new File(rootDir, s)).andTree;
+  def expandRecursively(rootDir:File, fileList:Iterable[File], isValid:(File => Boolean)):Set[File] = {
+    (for(f <- fileList;
+	val files = if(f.isAbsolute) f.andTree else (new File(rootDir, f.getPath)).andTree;
+	file <- files if isValid(file)
+      )
+      yield{ file }).toSet
+  }
+
+  def expand(rootDir:File, fileList:Iterable[File], isValid:(File => Boolean)):Set[File] = {
+    (for(f <- fileList;
+	val files = List(if(f.isAbsolute) f else (new File(rootDir, f.getPath)));
 	file <- files if isValid(file)
       )
       yield{
-	file.getAbsolutePath
+	file
       }).toSet
   }
 
-  def expand(rootDir:File, srcList:Iterable[String], isValid:(File => Boolean)):Set[String] = {
-    (for(s <- srcList;
-	val f = new File(s);
-	val files = List(if(f.isAbsolute) f else (new File(rootDir, s)));
-	file <- files if isValid(file)
-      )
-      yield{
-	file.getAbsolutePath
-      }).toSet
-  }
 
   def isValidJar(f:File):Boolean = f.exists && f.getName.endsWith(".jar")
   def isValidClassDir(f:File):Boolean = f.exists && f.isDirectory

@@ -23,11 +23,10 @@ object ExternalConfigInterface {
   }
 
 
+
   def getMavenConfig(baseDir:File, buildScopes:Option[String]):(Iterable[File], Iterable[File], Option[File]) = {
 
-    val srcDirs = List("src/main/scala", "src/main/java")
-    System.out.println("Looking for sources in: " + srcDirs)
-    val sources = expandRecursively(baseDir, srcDirs, isValidSourceFile).map{new File(_)}
+    val srcDirs = List("src/main/scala", "src/main/java").map(new File(_))
 
     System.out.println("Resolving Maven dependencies...")
     val project = new Project()
@@ -68,15 +67,13 @@ object ExternalConfigInterface {
     val buildTarget = if(f.exists){Some(f)}else{None}
     System.out.println("Using build target: " + buildTarget)
 
-    (sources, task.deps, buildTarget)
+    (srcDirs, task.deps, buildTarget)
   }
 
 
   def getIvyConfig(baseDir:File, buildConf:Option[String]):(Iterable[File], Iterable[File], Option[File]) = {
 
-    val srcDirs = List("src/main/scala", "src/main/java")
-    System.out.println("Looking for sources in: " + srcDirs)
-    val sources = expandRecursively(baseDir, srcDirs, isValidSourceFile).map{new File(_)}
+    val srcDirs = List("src/main/scala", "src/main/java").map(new File(_))
 
     System.out.println("Resolving Ivy dependencies...")
     val project = new Project()
@@ -106,16 +103,13 @@ object ExternalConfigInterface {
     val buildTarget = if(f.exists){Some(f)}else{None}
     System.out.println("Using build target: " + buildTarget)
 
-    (sources, task.deps, buildTarget)
+    (srcDirs, task.deps, buildTarget)
   }
 
 
   def getSbtConfig(baseDir:File, buildConf:Option[String]):(Iterable[File], Iterable[File], Option[File]) = {
 
-    val srcDirs = List("src/main/scala", "src/main/java")
-    System.out.println("Looking for sources in: " + srcDirs)
-    val sources = expandRecursively(baseDir, srcDirs, isValidSourceFile).map{new File(_)}
-
+    val srcDirs = List("src/main/scala", "src/main/java").map(new File(_))
     val propFile = new File(baseDir, "project/build.properties")
 
     if(propFile.exists){
@@ -131,15 +125,14 @@ object ExternalConfigInterface {
       System.out.println("Searching for dependencies in " + unmanagedLibDir)
       System.out.println("Searching for dependencies in " + managedLibDir)
       System.out.println("Searching for dependencies in " + scalaLibDir)
-      val jars = expandRecursively(baseDir,
-	List(unmanagedLibDir, managedLibDir, scalaLibDir),
-	isValidJar).map{s => new File(s)}
+      var jarRoots = List(unmanagedLibDir, managedLibDir, scalaLibDir).map(new File(_))
+      val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if(f.exists){Some(f)}else{None}
       System.out.println("Using build target: " + target)
-      (sources, jars, target)
+      (srcDirs, jars, target)
     }
-    else (sources, List(), None)
+    else (srcDirs, List(), None)
   }
 
 
