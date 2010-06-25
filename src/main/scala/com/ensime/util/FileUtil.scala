@@ -47,6 +47,22 @@ object FileUtils {
       }).toSet
   }
 
+  def makeDirs(names:Iterable[String], baseDir:File):Iterable[File] = {
+    names.map{ s =>
+      val f = new File(s)
+      if(f.isAbsolute && f.isDirectory) f
+      else new File(baseDir, s)
+    }.filter( f => f.exists)
+  }
+
+  def makeFiles(names:Iterable[String], baseDir:File):Iterable[File] = {
+    names.map{ s =>
+      val f = new File(s)
+      if(f.isAbsolute) f
+      else new File(baseDir, s)
+    }.filter( f => f.exists)
+  }
+
 
   def isValidJar(f:File):Boolean = f.exists && f.getName.endsWith(".jar")
   def isValidClassDir(f:File):Boolean = f.exists && f.isDirectory

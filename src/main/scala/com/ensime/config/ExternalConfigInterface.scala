@@ -12,22 +12,27 @@ import org.apache.tools.ant._
 import org.apache.maven.artifact.ant._
 import com.ensime.util.FileUtils._
 
+
+case class ExternalConfig(
+  val sourceRoots:Iterable[File],
+  val runtimeDepJars:Iterable[File],
+  val compileDepJars:Iterable[File],
+  val target:Option[File]){
+}
+
 object ExternalConfigInterface {
 
-  private def newConsoleLogger = {
-    val consoleLogger:DefaultLogger = new DefaultLogger()
-    consoleLogger.setErrorPrintStream(System.err)
-    consoleLogger.setOutputPrintStream(System.out)
-    consoleLogger.setMessageOutputLevel(Project.MSG_INFO)
-    consoleLogger
+  def getMavenConfig(baseDir:File, runtimeScopes:Option[String], compileScopes:Option[String]):ExternalConfig = {
+    val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val runtimeDeps = resolveMavenDeps(baseDir, runtimeScopes.getOrElse("runtime"))
+    val compileDeps = resolveMavenDeps(baseDir, compileScopes.getOrElse("compile"))
+    val f = new File(baseDir, "target/classes")
+    val buildTarget = if(f.exists){Some(f)}else{None}
+    ExternalConfig(srcDirs, runtimeDeps, compileDeps, buildTarget)
   }
 
 
-
-  def getMavenConfig(baseDir:File, buildScopes:Option[String]):(Iterable[File], Iterable[File], Option[File]) = {
-
-    val srcDirs = List("src/main/scala", "src/main/java").map(new File(_))
-
+  def resolveMavenDeps(baseDir:File, scopes:String):Iterable[File] = {
     System.out.println("Resolving Maven dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
@@ -48,33 +53,31 @@ object ExternalConfigInterface {
     task.setOwningTarget(target)
     task.setProject(project)
     task.addPom(pom)
-    buildScopes match {
-      case Some(s:String) => {
-	System.out.println("Using build scopes '" + s + "'.")
-	task.setScopes(s)
-      }
-      case _ => {
-	System.out.println("Using default build scope of 'compile'.")
-	task.setScopes("compile")
-      }
-    }
+    System.out.println("Using scopes: " + scopes)
+    task.setScopes(scopes)
     target.addTask(task)
 
     project.addTarget("ResolveDependencies", target)
     project.executeTarget("ResolveDependencies")
 
+    task.deps
+  }
+
+
+
+  def getIvyConfig(baseDir:File, runtimeConf:Option[String], compileConf:Option[String]):ExternalConfig = {
+    val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val runtimeDeps = resolveIvyDeps(baseDir, runtimeConf.getOrElse("default"))
+    val compileDeps = resolveIvyDeps(baseDir, compileConf.getOrElse("default"))
+
     val f = new File(baseDir, "target/classes")
     val buildTarget = if(f.exists){Some(f)}else{None}
     System.out.println("Using build target: " + buildTarget)
 
-    (srcDirs, task.deps, buildTarget)
+    ExternalConfig(srcDirs, runtimeDeps, compileDeps, buildTarget)
   }
 
-
-  def getIvyConfig(baseDir:File, buildConf:Option[String]):(Iterable[File], Iterable[File], Option[File]) = {
-
-    val srcDirs = List("src/main/scala", "src/main/java").map(new File(_))
-
+  def resolveIvyDeps(baseDir:File, conf:String):Iterable[File] = {
     System.out.println("Resolving Ivy dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
@@ -87,57 +90,63 @@ object ExternalConfigInterface {
     val task = new IvyDepsTask()
     task.setOwningTarget(target)
     task.setProject(project)
-    buildConf match {
-      case Some(s:String) => {
-	System.out.println("Using build config '" + s + "'.")
-	task.setConf(s)
-      }
-      case _ =>
-    }
+    System.out.println("Using config '" + conf + "'.")
     target.addTask(task)
 
     project.addTarget("ResolveDependencies", target)
     project.executeTarget("ResolveDependencies")
-
-    val f = new File(baseDir, "target/classes")
-    val buildTarget = if(f.exists){Some(f)}else{None}
-    System.out.println("Using build target: " + buildTarget)
-
-    (srcDirs, task.deps, buildTarget)
+    task.deps
   }
 
 
-  def getSbtConfig(baseDir:File, buildConf:Option[String]):(Iterable[File], Iterable[File], Option[File]) = {
-
-    val srcDirs = List("src/main/scala", "src/main/java").map(new File(_))
+  def getSbtConfig(baseDir:File, runtimeConf:Option[String], compileConf:Option[String]):ExternalConfig = {
+    val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
     val propFile = new File(baseDir, "project/build.properties")
-
     if(propFile.exists){
       System.out.println("Loading sbt build properties from " + propFile)
-      val conf = buildConf.getOrElse("default")
-      System.out.println("Using build config '" + conf + "'")
       val sbtConfig = SbtConfigParser(propFile)
       val v = sbtConfig.buildScalaVersion
-      val unmanagedLibDir = "lib"
-      val managedLibDir = "lib_managed/scala_" + v + "/" + conf
-      val scalaLibDir = "project/boot/scala-" + v + "/lib"
-      System.out.println("Using base directory " + baseDir)
-      System.out.println("Searching for dependencies in " + unmanagedLibDir)
-      System.out.println("Searching for dependencies in " + managedLibDir)
-      System.out.println("Searching for dependencies in " + scalaLibDir)
-      var jarRoots = List(unmanagedLibDir, managedLibDir, scalaLibDir).map(new File(_))
-      val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
+
+      val runtimeDeps = resolveSbtDeps(baseDir, v, runtimeConf.getOrElse("default"))
+      val compileDeps = resolveSbtDeps(baseDir, v, compileConf.getOrElse("default"))
+
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if(f.exists){Some(f)}else{None}
       System.out.println("Using build target: " + target)
-      (srcDirs, jars, target)
+      ExternalConfig(srcDirs, runtimeDeps, compileDeps, target)
     }
-    else (srcDirs, List(), None)
+    else {
+      System.out.println(propFile + " does not exist! Could not load sbt dependencies.")
+      ExternalConfig(srcDirs, List(), List(), None)
+    }
+  }
+
+  def resolveSbtDeps(baseDir:File, scalaVersion:String, conf:String):Iterable[File] = {
+    System.out.println("Using build config '" + conf + "'")
+    val v = scalaVersion
+    val unmanagedLibDir = "lib"
+    val managedLibDir = "lib_managed/scala_" + v + "/" + conf
+    val scalaLibDir = "project/boot/scala-" + v + "/lib"
+    System.out.println("Using base directory " + baseDir)
+    System.out.println("Searching for dependencies in " + unmanagedLibDir)
+    System.out.println("Searching for dependencies in " + managedLibDir)
+    System.out.println("Searching for dependencies in " + scalaLibDir)
+    var jarRoots = List(unmanagedLibDir, managedLibDir, scalaLibDir).map(new File(_))
+    val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
+    jars
+  }
+
+  private def newConsoleLogger = {
+    val consoleLogger:DefaultLogger = new DefaultLogger()
+    consoleLogger.setErrorPrintStream(System.err)
+    consoleLogger.setOutputPrintStream(System.out)
+    consoleLogger.setMessageOutputLevel(Project.MSG_INFO)
+    consoleLogger
   }
 
 
-
 }
+
 
 
 
