@@ -6,6 +6,12 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
   import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
 
+
+  // override def compileOptions = List(
+  //   CompileOption("-g:notailcalls"), CompileOption("-uniqid")
+  // )
+
+
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.
   lazy val dist = task {

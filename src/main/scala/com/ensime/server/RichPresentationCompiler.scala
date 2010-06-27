@@ -26,7 +26,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 
     val scope = new Scope
     val members = new LinkedHashMap[Symbol, TypeMember]
-    def addTypeMember(sym: Symbol, pre: Type, inherited: Boolean, viaView: Symbol) {
+    def addTypeMember(sym:Symbol, pre:Type, inherited:Boolean, viaView:Symbol) {
       val symtpe = pre.memberType(sym)
       if (scope.lookupAll(sym.name) forall (sym => !(members(sym).tpe matches symtpe))) {
 	scope enter sym
@@ -96,10 +96,10 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 
 	// If all the members in this interface were
 	// provided by the same view, remember that 
-	// view.
+	// view for later display to user.
 	val byView = members.groupBy(_.viaView)
 	val viaView = if(byView.size == 1){
-	  byView.keys.headOption
+	  byView.keys.headOption.filter(_ != NoSymbol)
 	} else {None}
 
 	// Transform to [typeInfo]*
