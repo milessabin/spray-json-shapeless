@@ -27,6 +27,7 @@ import scala.tools.nsc.symtab.Types
 case class FullTypeCheckCompleteEvent()
 case class FullTypeCheckResultEvent(notes:List[Note])
 case class QuickTypeCheckResultEvent(notes:List[Note])
+case class CompilerReadyEvent()
 case class CompilerShutdownEvent()
 
 case class ReloadFileReq(file:File)
@@ -51,14 +52,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   settings.processArguments(config.compilerArgs, false)
   private val reporter = new PresentationReporter()
   private val global = new RichPresentationCompiler(settings, reporter, this, config)
+  private var awaitingInitialCompile = true
 
   import global._
 
   def act(){
     global.newRunnerThread
-    project ! SendBackgroundMessageEvent("Compiler is parsing sources...")
+    project ! SendBackgroundMessageEvent("Compiler is loading sources. Please wait...")
     global.blockingReloadAllFiles
-    project ! SendBackgroundMessageEvent("Compiler finished parsing!")
     loop {
       try{
 	receive {
@@ -71,6 +72,10 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 	  case FullTypeCheckCompleteEvent() =>
 	  {
+	    if(awaitingInitialCompile){
+	      project ! CompilerReadyEvent()
+	      awaitingInitialCompile = false
+	    }
 	    project ! FullTypeCheckResultEvent(reporter.allNotes)
 	  }
 

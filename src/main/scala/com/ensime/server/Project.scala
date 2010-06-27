@@ -34,6 +34,10 @@ class Project extends Actor with SwankHandler{
 	  {
 	    handleIncomingSwankMessage(msg)
 	  }
+	  case result:CompilerReadyEvent =>
+	  {
+	    send(SExp(key(":compiler-ready"),true))
+	  }
 	  case result:FullTypeCheckResultEvent =>
 	  {
 	    send(SExp(
