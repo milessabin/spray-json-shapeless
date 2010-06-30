@@ -9,7 +9,7 @@ import com.ensime.util._
 import com.ensime.util.SExp._
 import com.ensime.server.model._
 import com.ensime.config.ProjectConfig
-import com.ensime.debug.ClassTreeParser
+import com.ensime.debug.SourceToClassMapper
 import java.io.File
 
 
@@ -127,7 +127,7 @@ class Project extends Actor with SwankHandler{
 	  callId)
       }
       case "swank:debug-config" => {
-	val classParser = new ClassTreeParser(config.target.getOrElse(config.root))
+	val classParser = new SourceToClassMapper(config.target.getOrElse(config.root))
 	val sourceToClass = classParser.getSourceToClassMap
 	val sourceToClassSExp = SExpList(sourceToClass.toList.map(ea => SExp(ea._1, ea._2)))
 	sendEmacsRexReturn(
