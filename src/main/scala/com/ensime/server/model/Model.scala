@@ -315,7 +315,7 @@ trait ModelBuilders {  self: Global =>
 	Some(fromSymbol(bSym))
       }
       else if(!(bSym.nameString.contains("$"))){
-	if(bSym.isClass || bSym.isTrait || 
+	if(bSym.isClass || bSym.isTrait || bSym.isModule || 
 	  bSym.isModuleClass || bSym.isPackageClass){
 	  Some(TypeInfo(bSym.tpe))
 	}
