@@ -314,7 +314,7 @@ trait ModelBuilders {  self: Global =>
       else if (bSym.isPackage){	
 	Some(fromSymbol(bSym))
       }
-      else if(!(bSym.nameString.contains("$"))){
+      else if(!(bSym.nameString.contains("$")) && !(bSym.nameString == "<none>")){
 	if(bSym.isClass || bSym.isTrait || bSym.isModule || 
 	  bSym.isModuleClass || bSym.isPackageClass){
 	  Some(TypeInfo(bSym.tpe))
@@ -368,7 +368,7 @@ trait ModelBuilders {  self: Global =>
 	  val args = tpe.typeArgs.map(TypeInfo(_))
 	  val typeSym = tpe.typeSymbol
 	  new TypeInfo(
-	    typeSym.name.toString,
+	    typeSym.nameString,
 	    cacheType(tpe), 
 	    declaredAs(typeSym), 
 	    typeSym.fullName, 
