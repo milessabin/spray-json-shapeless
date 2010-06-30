@@ -314,7 +314,7 @@ trait ModelBuilders {  self: Global =>
       else if (bSym.isPackage){	
 	Some(fromSymbol(bSym))
       }
-      else if(!(bSym.nameString.contains("$")) && !(bSym.nameString == "<none>")){
+      else if(!(bSym.nameString.contains("$")) && (bSym != NoSymbol) && (bSym.tpe != NoType)){
 	if(bSym.isClass || bSym.isTrait || bSym.isModule || 
 	  bSym.isModuleClass || bSym.isPackageClass){
 	  Some(TypeInfo(bSym.tpe))

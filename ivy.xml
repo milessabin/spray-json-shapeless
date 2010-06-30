@@ -11,6 +11,7 @@
     <dependency org="org.apache.ant" name="ant" rev="1.8.1" force="true" conf="compile->compile(*),master(*);runtime->runtime(*),master(*)"/>
     <dependency org="org.apache.ivy" name="ivy" rev="2.1.0" force="true" conf="compile->compile(*),master(*);runtime->runtime(*),master(*)"/>
     <dependency org="org.apache.maven" name="maven-ant-tasks" rev="2.1.0" force="true" conf="compile->compile(*),master(*);runtime->runtime(*),master(*)"/>
+    <dependency org="org.apache.bcel" name="bcel" rev="5.2" force="true" conf="compile->compile(*),master(*);runtime->runtime(*),master(*)"/>
   </dependencies>
 
 </ivy-module>
