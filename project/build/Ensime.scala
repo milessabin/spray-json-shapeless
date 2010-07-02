@@ -6,11 +6,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
   import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
 
-
-  // override def compileOptions = List(
-  //   CompileOption("-g:notailcalls"), CompileOption("-uniqid")
-  // )
-
+  override def compileOptions = CompileOption("-g:line") :: super.compileOptions.toList
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.

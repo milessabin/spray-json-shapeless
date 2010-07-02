@@ -113,7 +113,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 	  else if(b.name.equals("this")) false
 	  else a.name <= b.name
 	}
-	new InterfaceInfo(TypeInfo(ownerSym.tpe, memberInfos),
+	new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
 	  viaView.map(_.name.toString))
       }
     }

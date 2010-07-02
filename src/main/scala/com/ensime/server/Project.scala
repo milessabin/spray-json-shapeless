@@ -9,7 +9,7 @@ import com.ensime.util._
 import com.ensime.util.SExp._
 import com.ensime.server.model._
 import com.ensime.config.ProjectConfig
-import com.ensime.debug.SourceToClassMapper
+import com.ensime.debug.ProjectDebugInfo
 import java.io.File
 
 
@@ -21,6 +21,7 @@ class Project extends Actor with SwankHandler{
 
   private var compiler:Actor = actor{}
   private var config:ProjectConfig = ProjectConfig.nullConfig
+  private var debugInfo:Option[ProjectDebugInfo] = None
 
   def act() {
     println("Project waiting for init...")
@@ -127,19 +128,43 @@ class Project extends Actor with SwankHandler{
 	  callId)
       }
       case "swank:debug-config" => {
-	val classParser = new SourceToClassMapper(config.target.getOrElse(config.root))
-	val sourceToClass = classParser.getSourceToClassMap
-	val sourceToClassSExp = SExpList(sourceToClass.toList.map(ea => SExp(ea._1, ea._2)))
+	debugInfo = Some(new ProjectDebugInfo(config))
 	sendEmacsRexReturn(
 	  SExp.propList(
 	    (":ok", SExp.propList(
 		(":classpath", strToSExp(this.config.debugClasspath)),
 		(":sourcepath", strToSExp(this.config.debugSourcepath)),
 		(":debug-class", strToSExp(this.config.debugClass.getOrElse(""))),
-		(":debug-args", strToSExp(this.config.debugArgString)),
-		(":source-map", sourceToClassSExp)
+		(":debug-args", strToSExp(this.config.debugArgString))
 	      ))),
 	  callId)
+      }
+      case "swank:debug-unit-info" => {
+	form match{
+	  case SExpList(head::StringAtom(sourceName)::IntAtom(line)::StringAtom(packPrefix)::body) => {
+	    val info = debugInfo.getOrElse(new ProjectDebugInfo(config))
+	    debugInfo = Some(info)
+	    val unit = info.findUnit(sourceName, line, packPrefix)
+	    unit match{
+	      case Some(unit) => {
+		sendEmacsRexReturn(
+		  SExp.propList(
+		    (":ok", SExp.propList(
+			(":full-name", strToSExp(unit.classQualName)),
+			(":package", strToSExp(unit.packageName)),
+			(":start-line", intToSExp(unit.startLine)),
+			(":end-line", intToSExp(unit.endLine))
+		      ))),
+		  callId)
+	      }
+	      case None => {
+		sendEmacsRexReturn(SExp(key(":ok"), NilAtom()), callId)
+	      }
+	    }
+
+	  }
+	  case _ => oops
+	}
       }
       case "swank:typecheck-file" => {
 	form match{
