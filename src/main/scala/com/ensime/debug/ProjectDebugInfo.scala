@@ -23,7 +23,7 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
   */ 
   def findUnit(source:String, line:Int, packPrefix:String):Option[DebugUnit] = {
     val units = sourceNameToUnits(source)
-    units.find{u => 
+    units.find{ u => 
       u.startLine <= line && 
       u.endLine >= line && 
       u.packageName.startsWith(packPrefix)
