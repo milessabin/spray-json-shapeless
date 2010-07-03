@@ -101,14 +101,20 @@ object ExternalConfigInterface {
 
   def getSbtConfig(baseDir:File, runtimeConf:Option[String], compileConf:Option[String]):ExternalConfig = {
     val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
-    val propFile = new File(baseDir, "project/build.properties")
-    if(propFile.exists){
-      System.out.println("Loading sbt build properties from " + propFile)
+    val projectProps = new File(baseDir, "project/build.properties")
+    val parentProjectProps = new File(baseDir, "../project/build.properties")
+
+    val isMain = projectProps.exists
+    val isSubProject = !(projectProps.exists) && parentProjectProps.exists
+
+    if(isMain || isSubProject){
+      val propFile = if(isSubProject){ parentProjectProps } else { projectProps }
+      System.out.println("Loading sbt build.properties from " + propFile + ".")
       val sbtConfig = SbtConfigParser(propFile)
       val v = sbtConfig.buildScalaVersion
 
-      val runtimeDeps = resolveSbtDeps(baseDir, v, runtimeConf.getOrElse("default"))
-      val compileDeps = resolveSbtDeps(baseDir, v, compileConf.getOrElse("default"))
+      val runtimeDeps = resolveSbtDeps(baseDir, v, runtimeConf.getOrElse("default"), isSubProject)
+      val compileDeps = resolveSbtDeps(baseDir, v, compileConf.getOrElse("default"), isSubProject)
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if(f.exists){Some(f)}else{None}
@@ -116,22 +122,23 @@ object ExternalConfigInterface {
       ExternalConfig(srcDirs, runtimeDeps, compileDeps, target)
     }
     else {
-      System.out.println(propFile + " does not exist! Could not load sbt dependencies.")
+      System.err.println("Could not locate build.properties file!")
       ExternalConfig(srcDirs, List(), List(), None)
     }
   }
 
-  def resolveSbtDeps(baseDir:File, scalaVersion:String, conf:String):Iterable[File] = {
+  def resolveSbtDeps(baseDir:File, scalaVersion:String, conf:String, isSubProject:Boolean):Iterable[File] = {
     System.out.println("Using build config '" + conf + "'")
     val v = scalaVersion
     val unmanagedLibDir = "lib"
     val managedLibDir = "lib_managed/scala_" + v + "/" + conf
-    val scalaLibDir = "project/boot/scala-" + v + "/lib"
+    val scalaLibDir = if(isSubProject){"../project/boot/scala-" + v + "/lib"}
+    else {"project/boot/scala-" + v + "/lib"}
     System.out.println("Using base directory " + baseDir)
     System.out.println("Searching for dependencies in " + unmanagedLibDir)
     System.out.println("Searching for dependencies in " + managedLibDir)
     System.out.println("Searching for dependencies in " + scalaLibDir)
-    var jarRoots = List(unmanagedLibDir, managedLibDir, scalaLibDir).map(new File(_))
+    var jarRoots = makeDirs(List(unmanagedLibDir, managedLibDir, scalaLibDir), baseDir)
     val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
     jars
   }
