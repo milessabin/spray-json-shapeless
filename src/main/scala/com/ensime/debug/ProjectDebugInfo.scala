@@ -6,6 +6,7 @@ import com.ensime.config.ProjectConfig
 import scala.collection.mutable.{HashMap, ArrayBuffer}
 import java.io.File
 import org.apache.bcel.classfile._
+import scala.math._
 
 class ProjectDebugInfo(projectConfig:ProjectConfig){
 
@@ -47,22 +48,27 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
       val packageName = javaClass.getPackageName
       val sourceName = javaClass.getSourceFileName
 
-      var startLine = -1
-      var endLine = -1
-      javaClass.getAttributes.foreach{ 
-	case lt:LineNumberTable => 
-	{
-	  val len = lt.getTableLength
-	  val tbl = lt.getLineNumberTable
-	  println("table: " + tbl.toList)
-	  startLine = tbl(0).getLineNumber
-	  endLine = tbl(len - 1).getLineNumber
-	}
-	case att => {
-	  println("Found attribute: " + att)
+      var startLine = Int.MaxValue
+      var endLine = Int.MinValue
+
+      def handleAttribute(att:Attribute){
+	att match{
+	  case code:Code => 
+	  {
+	    val lt = code.getLineNumberTable
+	    if(lt != null){
+	      val len = lt.getTableLength
+	      val tbl = lt.getLineNumberTable
+	      startLine = min(startLine, tbl(0).getLineNumber)
+	      endLine = max(endLine, tbl(len - 1).getLineNumber)
+	    }
+	  }
+	  case att => {}
 	}
       }
-      
+
+      javaClass.getMethods.foreach{ m => m.getAttributes.foreach(handleAttribute) }
+
       // Notice that a single name may resolve to many units.
       // This is either due to many classes/objects declared in one file,
       // or the fact that the mapping from source name to source path is 
@@ -77,9 +83,10 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
       if(units.length > 1){
 	units.sortWith{ (a,b) => a.startLine > b.startLine }
       }
+
+      sourceNameToUnits(sourceName) = units
     }
   }
-
 }
 
 class DebugUnit(
