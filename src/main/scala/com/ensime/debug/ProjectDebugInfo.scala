@@ -57,17 +57,22 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
 	  {
 	    val lt = code.getLineNumberTable
 	    if(lt != null){
-	      val len = lt.getTableLength
 	      val tbl = lt.getLineNumberTable
-	      startLine = min(startLine, tbl(0).getLineNumber)
-	      endLine = max(endLine, tbl(len - 1).getLineNumber)
+	      for(line <- tbl){
+		startLine = min(startLine, line.getLineNumber)
+		endLine = max(endLine, line.getLineNumber)
+	      }
 	    }
 	  }
 	  case att => {}
 	}
       }
 
-      javaClass.getMethods.foreach{ m => m.getAttributes.foreach(handleAttribute) }
+      javaClass.getMethods.foreach{ m => 
+	m.getAttributes.foreach{ at => 
+	  handleAttribute(at)
+	}
+      }
 
       // Notice that a single name may resolve to many units.
       // This is either due to many classes/objects declared in one file,
@@ -76,16 +81,14 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
       val units = sourceNameToUnits(sourceName)
       val newU = new DebugUnit(startLine,endLine,f,sourceName,packageName,qualName)
       units += newU
-      println("Adding.. " + newU.toString)
 
       // Sort in descending order of startLine, so first unit found will also be 
       // the most deeply nested.
-      if(units.length > 1){
-	units.sortWith{ (a,b) => a.startLine > b.startLine }
-      }
+      val sortedUnits = units.sortWith{ (a,b) => a.startLine > b.startLine }
 
-      sourceNameToUnits(sourceName) = units
+      sourceNameToUnits(sourceName) = sortedUnits
     }
+    println("Finished parsing " + classFiles.length + " class files.")
   }
 }
 
