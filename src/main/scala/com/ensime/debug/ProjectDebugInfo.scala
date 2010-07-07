@@ -39,6 +39,11 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
   private val sourceNameToSourcePath = new HashMap[String, ArrayBuffer[String]]{
     override def default(s:String) = new ArrayBuffer[String]
   }
+  projectConfig.sources.foreach{ f => 
+    val paths = sourceNameToSourcePath(f.getName)
+    paths += f.getAbsolutePath
+    sourceNameToSourcePath(f.getName) = paths
+  }
 
   private val classNameToSourcePath = new HashMap[String, ArrayBuffer[String]]{
     override def default(s:String) = new ArrayBuffer[String]
@@ -50,7 +55,7 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
 
   if(target.exists && target.isDirectory){
 
-    val classFiles = target.andTree.toList.filter{ 
+    val classFiles = target.andTree.toList.filter{
       f => !f.isHidden && f.getName.endsWith(".class")
     }
 
@@ -60,6 +65,13 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
       val qualName = javaClass.getClassName
       val packageName = javaClass.getPackageName
       val sourceName = javaClass.getSourceFileName
+
+      val possibleSourcePaths = sourceNameToSourcePath(sourceName)
+      possibleSourcePaths.foreach{ p =>
+	val paths = classNameToSourcePath(qualName)
+	paths += p
+	classNameToSourcePath(qualName) = paths
+      }
 
       var startLine = Int.MaxValue
       var endLine = Int.MinValue
