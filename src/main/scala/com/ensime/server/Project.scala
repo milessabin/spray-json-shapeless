@@ -25,6 +25,7 @@ class Project extends Actor with SwankHandler{
 
   def act() {
     println("Project waiting for init...")
+    println("lskdjf")
     loop {
       try{
 	receive {
@@ -162,6 +163,29 @@ class Project extends Actor with SwankHandler{
 	      }
 	    }
 
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:debug-class-locs-to-source-locas" => {
+	form match{
+	  case SExpList(head::SExpList(pairs)::body) => {
+	    val info = debugInfo.getOrElse(new ProjectDebugInfo(config))
+	    debugInfo = Some(info)
+	    val result = SExpList(pairs.flatMap{ p =>
+		p match {
+		  case SExpList((classname:StringAtom)::(line:IntAtom)::body) => {
+		    info.findSourceForClass(classname.toString) match{
+		      case Some(s) => Some(SExp(s, line))
+		      case None => Some(SExp('nil, line))
+		    }
+		  }
+		  case _ => Some(SExp('nil, 'nil))
+		}
+	      })
+	    sendEmacsRexReturn(
+	      SExpList(List(key(":ok"), result)),
+	      callId)
 	  }
 	  case _ => oops
 	}

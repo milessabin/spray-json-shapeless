@@ -31,6 +31,19 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
     }
   }
 
+  def findSourceForClass(className:String):Option[String] = {
+    val paths = classNameToSourcePath(className)
+    paths.headOption
+  }
+
+  private val sourceNameToSourcePath = new HashMap[String, ArrayBuffer[String]]{
+    override def default(s:String) = new ArrayBuffer[String]
+  }
+
+  private val classNameToSourcePath = new HashMap[String, ArrayBuffer[String]]{
+    override def default(s:String) = new ArrayBuffer[String]
+  }
+
   private val sourceNameToUnits = new HashMap[String, ArrayBuffer[DebugUnit]]{
     override def default(s:String) = new ArrayBuffer[DebugUnit]
   }
