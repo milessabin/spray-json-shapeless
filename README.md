@@ -35,12 +35,11 @@ Add the following lines to your .emacs file:
     (add-to-list 'load-path "ENSIME_ROOT/elisp/")
     (require 'ensime)
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
+    ;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
 
 Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime.example) in the root of the ENSIME distribution for an up-to-date example.
 
 Verify that the startup script (usually bin/server.sh) has executable permissions.
-
-Finally, open one of the source files for your Scala project and type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
 
 
 
@@ -57,6 +56,8 @@ You may want to increase the jvm heap size to give ENSIME some more breathing ro
 
 
 ## Usage
+
+To enable ensime type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. 
 
 __TAB__    - Start completing a method/variable.
 

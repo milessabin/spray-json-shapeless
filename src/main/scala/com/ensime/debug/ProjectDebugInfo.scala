@@ -33,6 +33,8 @@ class ProjectDebugInfo(projectConfig:ProjectConfig){
 
   def findSourceForClass(className:String):Option[String] = {
     val paths = classNameToSourcePath(className)
+
+    // TODO: Loss of precision here!
     paths.headOption
   }
 
