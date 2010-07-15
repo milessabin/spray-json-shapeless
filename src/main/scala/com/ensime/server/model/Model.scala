@@ -358,6 +358,25 @@ trait ModelBuilders {  self: Global =>
       else 'nil
     }
 
+    private def buildFullName(tpe:Type):String = {
+      def nestedClassName(sym:Symbol):String = {
+	val outerSym = sym.outerClass
+	if(outerSym.isNestedClass) nestedClassName(outerSym) + "$" + sym.nameString
+	else outerSym.nameString + "$" + sym.nameString
+      }
+      val typeSym = tpe.typeSymbol
+      if(typeSym.isNestedClass){
+	typeSym.enclosingPackage.fullName + "." + nestedClassName(typeSym)
+      }
+      else{
+	typeSym.enclosingPackage.fullName + "." + typeSym.nameString
+      }
+    }
+
+    private def buildShortName(tpe:Type):String = {
+      tpe.typeSymbol.nameString
+    }
+
     def apply(tpe:Type, members:List[EntityInfo] = List()):TypeInfo = {
       tpe match{
 	case tpe:MethodType => ArrowTypeInfo(tpe)
@@ -368,10 +387,10 @@ trait ModelBuilders {  self: Global =>
 	  val args = tpe.typeArgs.map(TypeInfo(_))
 	  val typeSym = tpe.typeSymbol
 	  new TypeInfo(
-	    typeSym.nameString,
+	    buildShortName(tpe),
 	    cacheType(tpe), 
 	    declaredAs(typeSym), 
-	    typeSym.fullName, 
+	    buildFullName(tpe), 
 	    args,
 	    members,
 	    typeSym.pos
