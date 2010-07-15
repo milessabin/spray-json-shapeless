@@ -104,15 +104,18 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 
 	// Transform to [typeInfo]*
 	val memberInfos = members.map{ m =>
-	  new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), m.sym.pos)
+	  NamedTypeMemberInfo(m)
 	}
-	
-	// Sort constructors to front.
-	val sortedInfos = memberInfos.sortWith{(a,b) => 
-	  if(a.name.equals("this")) true
-	  else if(b.name.equals("this")) false
-	  else a.name <= b.name
-	}
+
+	val nestedTypes = (memberInfos.filter(_.declaredAs != 'method)
+	  .sortWith((a,b) => a.name <= b.name))	
+	val constructors = memberInfos.filter(_.name == "this")
+	val others = (memberInfos.filter(m => 
+	    m.declaredAs == 'method && m.name != "this")
+	  .sortWith((a,b) => a.name <= b.name))
+
+	val sortedInfos = nestedTypes ++ constructors ++ others
+
 	new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
 	  viaView.map(_.name.toString))
       }

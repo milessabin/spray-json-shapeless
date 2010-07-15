@@ -87,12 +87,13 @@ class SymbolInfoLight(
 }
 
 
-class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position) extends EntityInfo(name, List()) with SExpable {
+class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position, val declaredAs:scala.Symbol) extends EntityInfo(name, List()) with SExpable {
   def toSExp():SExp = {
     SExp.propList(
       (":name", name),
       (":type", tpe.toSExp),
-      (":pos", pos)
+      (":pos", pos),
+      (":decl-as", declaredAs)
     )
   }
 }
@@ -117,17 +118,19 @@ class TypeInfo(
   val fullName:String, 
   val args:Iterable[TypeInfo], 
   members:Iterable[EntityInfo],
-  val pos:Position) extends EntityInfo(name, members) with LooksLikeType{
+  val pos:Position,
+  val outerTypeId:Option[Int]) extends EntityInfo(name, members) with LooksLikeType{
 
   implicit def toSExp():SExp = {
     SExp.propList(
       (":name", name),
       (":type-id", id),
       (":full-name", fullName),
-      (":declared-as", declaredAs),
+      (":decl-as", declaredAs),
       (":type-args", SExp(args.map(_.toSExp))),
       (":members", SExp(members.map(_.toSExp))),
-      (":pos", pos)
+      (":pos", pos),
+      (":outer-type-id", outerTypeId.map(intToSExp).getOrElse('nil))
     )
   }
 }
@@ -136,7 +139,7 @@ class ArrowTypeInfo(
   override val name:String, 
   override val id:Int, 
   val resultType:TypeInfo,
-  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition){
+  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition, None){
 
   override implicit def toSExp():SExp = {
     SExp.propList(
@@ -212,6 +215,32 @@ trait ModelBuilders {  self: Global =>
 
   object Helpers{
 
+    import scala.tools.nsc.symtab.Flags._
+
+    /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
+    for details on various symbol predicates. */
+    def declaredAs(sym:Symbol):scala.Symbol = {
+      if(sym.isMethod)
+      'method
+      else if(sym.isTrait)
+      'trait
+      else if(sym.isTrait && sym.hasFlag(JAVA))
+      'interface
+      else if(sym.isInterface)
+      'interface
+      else if(sym.isModule)
+      'object
+      else if(sym.isModuleClass)
+      'object
+      else if(sym.isClass)
+      'class
+      else if(sym.isPackageClass)
+      'class
+      else if(sym.isAbstractClass)
+      'abstractclass
+      else 'nil
+    }
+
     def isArrowType(tpe:Type) ={
       tpe match{
 	case _:MethodType => true
@@ -245,10 +274,11 @@ trait ModelBuilders {  self: Global =>
 
   }
 
+  import Helpers._
+
 
   object PackageInfo{
 
-    import Helpers._
 
     def root: PackageInfo = fromSymbol(RootPackage)
 
@@ -334,30 +364,6 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInfo{
 
-    import scala.tools.nsc.symtab.Flags._
-
-    /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
-    for details on various symbol predicates. */
-    def declaredAs(sym:Symbol):scala.Symbol = {
-      if(sym.isTrait)
-      'trait
-      else if(sym.isTrait && sym.hasFlag(JAVA))
-      'interface
-      else if(sym.isInterface)
-      'interface
-      else if(sym.isModule)
-      'object
-      else if(sym.isModuleClass)
-      'object
-      else if(sym.isClass)
-      'class
-      else if(sym.isPackageClass)
-      'class
-      else if(sym.isAbstractClass)
-      'abstractclass
-      else 'nil
-    }
-
     private def buildFullName(tpe:Type):String = {
       def nestedClassName(sym:Symbol):String = {
 	val outerSym = sym.outerClass
@@ -374,7 +380,8 @@ trait ModelBuilders {  self: Global =>
     }
 
     private def buildShortName(tpe:Type):String = {
-      tpe.typeSymbol.nameString
+      if(tpe.typeSymbol != NoSymbol) tpe.typeSymbol.nameString
+      else tpe.underlying.toString
     }
 
     def apply(tpe:Type, members:List[EntityInfo] = List()):TypeInfo = {
@@ -386,6 +393,11 @@ trait ModelBuilders {  self: Global =>
 	  val params = tpe.typeParams.map(_.toString)
 	  val args = tpe.typeArgs.map(TypeInfo(_))
 	  val typeSym = tpe.typeSymbol
+	  val outerTypeId = if(typeSym.isNestedClass){
+	    Some(cacheType(typeSym.outerClass.tpe))
+	  }
+	  else None
+
 	  new TypeInfo(
 	    buildShortName(tpe),
 	    cacheType(tpe), 
@@ -393,7 +405,8 @@ trait ModelBuilders {  self: Global =>
 	    buildFullName(tpe), 
 	    args,
 	    members,
-	    typeSym.pos
+	    typeSym.pos,
+	    outerTypeId
 	  )
 	}
 	case _ => nullInfo
@@ -401,7 +414,7 @@ trait ModelBuilders {  self: Global =>
     }
 
     def nullInfo() = {
-      new TypeInfo("NA", -1, 'nil, "NA", List(), List(), NoPosition)
+      new TypeInfo("NA", -1, 'nil, "NA", List(), List(), NoPosition, None)
     }
   }
 
@@ -500,6 +513,18 @@ trait ModelBuilders {  self: Global =>
     }
   }
 
+
+  object NamedTypeMemberInfo{
+    def apply(m:TypeMember):NamedTypeMemberInfo = {
+      val decl = if(m.sym.isMethod){
+	'method
+      } 
+      else{
+	declaredAs(m.sym)
+      }
+      new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), m.sym.pos, decl)
+    }
+  }
 
 
   object ArrowTypeInfo{
