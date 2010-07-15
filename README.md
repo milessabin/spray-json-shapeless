@@ -9,7 +9,8 @@ the ENhanced Scala Interaction Mode for Emacs
 - Completion-on-demand for variable, methods, constructores, etc.
 - Jump to symbol definitions.
 - sbt support
-- Check out the [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
+- Check out this [video](http://www.youtube.com/watch?v=A2Lai8IjLoY)
+- or this [one](http://www.youtube.com/watch?v=v7-G6vD42z8) showcasing the debugger
 
 ## System Requirements
 
