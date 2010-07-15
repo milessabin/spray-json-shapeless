@@ -393,7 +393,8 @@ trait ModelBuilders {  self: Global =>
 	  val params = tpe.typeParams.map(_.toString)
 	  val args = tpe.typeArgs.map(TypeInfo(_))
 	  val typeSym = tpe.typeSymbol
-	  val outerTypeId = if(typeSym.isNestedClass){
+	  val outerTypeId = 
+	  if(typeSym.isNestedClass){
 	    Some(cacheType(typeSym.outerClass.tpe))
 	  }
 	  else None
