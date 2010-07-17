@@ -1,16 +1,16 @@
 (
 
- ;; Where you unpacked the ENSIME distribution.
+ ;; The root of your ENSIME distribution.
+ ;; ------------------------------------------
  :server-root 
  "/home/aemon/src/misc/ensime/dist"
 
- ;; The command with which to invoke the ENSIME server. Change this to 
- ;; "bin/server.bat" if your're on Windows.
- :server-cmd  "bin/server.sh"
+ ;; The command with which to invoke the ENSIME server. By default, 
+ ;; this will be set to "bin/server.sh" on Unix systems and 
+ ;; "bin/server.bat" on Windows.
+ ;; ---------------------------------
+ ;; :server-cmd  "bin/server.sh"
 
- ;; The default repl command is 'scala'. Override here:
- ;; ------------------------------
- ;;  :repl-cmd  "scala"
 
  ;; The host to connect to. Connecting to remote ENSIME servers is not
  ;; currently supported.
@@ -22,6 +22,10 @@
  ;; locations for dependencies, sources, target, etc.
  ;; -----------------------------
  :use-sbt t
+
+ ;; Specify the names of dependency profiles to be used for compilation
+ ;; and runtime scenarios. Only necessary if you have custom configurations!
+ ;; -----------------------------
  :sbt-compile-conf "compile"
  :sbt-runtime-conf "runtime"
 
@@ -30,6 +34,10 @@
  ;; for the project. A Maven-style directory structure is assumed.
  ;; -----------------------------
  ;; :use-maven t
+
+ ;; Specify the names of dependency profiles to be used for compilation
+ ;; and runtime scenarios. Only necessary if you have custom scopes!
+ ;; -----------------------------
  ;; :maven-compile-scopes "compile"
  ;; :maven-runtime-scopes "runtime"
 
@@ -38,6 +46,10 @@
  ;; for the project. A Maven-style directory structure is assumed.
  ;; -----------------------------
  ;; :use-ivy t
+
+ ;; Specify the names of dependency profiles to be used for compilation
+ ;; and runtime scenarios. Only necessary if you have custom configurations!
+ ;; -----------------------------
  ;; :ivy-compile-conf "compile"
  ;; :ivy-runtime-conf "compile"
 
@@ -60,27 +72,28 @@
 
 
  ;; :sources ([dir | file]*)
- ;; Include source files by directory(recursively) or by filename.
+ ;; Manually include source files by directory(recursively) or by filename.
+ ;; If directory is given, only .scala and .java files will be 
+ ;; considered.
  ;; ------------------------------
  ;; :sources ("src/main/")
 
 
  ;; :dependency-jars ([dir | file]*)
- ;; Include jars by directory(recursively) or by filename.
+ ;; Manually include jars by directory(recursively) or by filename.
  ;; ------------------------------
  ;; :dependency-jars ("lib")
 
 
  ;; :dependency-dirs ([dir | file]*)
- ;; Include directories of .class files.
+ ;; Manually include directories of .class files.
  ;; ------------------------------
  ;; :dependency-dirs ("target/classes")
 
 
- ;; :target dir | file
- ;; Specify the target of the project build process. Should be 
- ;; the directory where .class files are written, or the path
- ;; to a .jar file containing all the project's classes.
+ ;; :target dir
+ ;; Manually specify the target of the project build process. Should be 
+ ;; the directory where .class files are written
  ;; 
  ;; The target is used to populate the classpath when launching
  ;; the inferior scala repl.
