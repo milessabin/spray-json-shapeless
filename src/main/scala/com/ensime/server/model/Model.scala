@@ -179,6 +179,7 @@ class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[InterfaceInfo]) extends SExp
   def toSExp():SExp = {
     SExp.propList(
       (":type", tpe.toSExp),
+      (":info-type", 'typeInspect),
       (":interfaces", SExp(supers.map{_.toSExp}))
     )
   }
@@ -366,9 +367,12 @@ trait ModelBuilders {  self: Global =>
 
     private def buildFullName(tpe:Type):String = {
       def nestedClassName(sym:Symbol):String = {
-	val outerSym = sym.outerClass
-	if(outerSym.isNestedClass) nestedClassName(outerSym) + "$" + sym.nameString
-	else outerSym.nameString + "$" + sym.nameString
+	outerClass(sym) match{
+	  case Some(outerSym) => {
+	    nestedClassName(outerSym) + "$" + sym.nameString
+	  }
+	  case None => sym.nameString
+	}
       }
       val typeSym = tpe.typeSymbol
       if(typeSym.isNestedClass){
@@ -381,10 +385,30 @@ trait ModelBuilders {  self: Global =>
 
     private def buildShortName(tpe:Type):String = {
       if(tpe.typeSymbol != NoSymbol) tpe.typeSymbol.nameString
-      else tpe.underlying.toString
+      else tpe.toString
     }
 
-    def apply(tpe:Type, members:List[EntityInfo] = List()):TypeInfo = {
+    private def outerClass(typeSym:Symbol):Option[Symbol] = {
+      try{ 
+	if(typeSym.isNestedClass){
+	  Some(typeSym.outerClass)
+	}
+	else None
+      }
+      catch{
+	// TODO accessing outerClass sometimes throws java.lang.Error
+	// Notably, when tpe = scala.Predef$Class
+	case e:java.lang.Error => None
+      }
+    }
+
+    def apply(t:Type, members:List[EntityInfo] = List()):TypeInfo = {
+      val tpe = t match{
+	// TODO: Instead of throwing away this information, would be better to 
+	// alert the user that the type is existentially quantified.
+	case et:ExistentialType => et.underlying
+	case t => t
+      }
       tpe match{
 	case tpe:MethodType => ArrowTypeInfo(tpe)
 	case tpe:PolyType => ArrowTypeInfo(tpe)
@@ -393,12 +417,7 @@ trait ModelBuilders {  self: Global =>
 	  val params = tpe.typeParams.map(_.toString)
 	  val args = tpe.typeArgs.map(TypeInfo(_))
 	  val typeSym = tpe.typeSymbol
-	  val outerTypeId = 
-	  if(typeSym.isNestedClass){
-	    Some(cacheType(typeSym.outerClass.tpe))
-	  }
-	  else None
-
+	  val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
 	  new TypeInfo(
 	    buildShortName(tpe),
 	    cacheType(tpe), 
