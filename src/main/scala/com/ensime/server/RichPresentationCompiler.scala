@@ -157,7 +157,6 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 
   def typeOfTree(t:Tree):Either[Type, Throwable] = {
     var tree = t
-    println("Class of tree: " + tree.getClass)
     tree = tree match {
       case Select(qual, name) if tree.tpe == ErrorType => 
       {
@@ -287,7 +286,6 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   * Override so we send a notification to compiler actor when finished..
   */
   override def recompile(units: List[RichCompilationUnit]) {
-    println("RECOMPILING: " + units)
     super.recompile(units)
     parent ! FullTypeCheckCompleteEvent()
   }
