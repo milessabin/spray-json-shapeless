@@ -508,7 +508,6 @@ trait ModelBuilders {  self: Global =>
       } else if(sym.isClass || sym.isPackageClass){ 
 	sym.companionModule.tpe.members
       } else {List()}
-
       members.flatMap{ member:Symbol =>
 	if(member.name.toString == "apply"){
 	  Some(SymbolInfoLight(sym, member.tpe))

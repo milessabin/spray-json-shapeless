@@ -52,7 +52,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     getTypeAt(p) match{
       case Left(tpe) => {
 	if(isNoParamArrowType(tpe)){
-	  typePublicMembers(typeOrArrowTypeResult(tpe))	  
+	  typePublicMembers(typeOrArrowTypeResult(tpe))
 	}
 	else{
 	  val x2 = new Response[List[Member]]()
