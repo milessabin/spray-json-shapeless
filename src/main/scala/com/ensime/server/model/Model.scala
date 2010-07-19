@@ -521,7 +521,7 @@ trait ModelBuilders {  self: Global =>
 
     def apply(sym:Symbol, tpe:Type):SymbolInfoLight = {
       new SymbolInfoLight(
-	sym.name.toString,
+	sym.nameString, 
 	tpe.underlying.toString,
 	cacheType(tpe.underlying),
 	Helpers.isArrowType(tpe.underlying)
