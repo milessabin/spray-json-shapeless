@@ -217,6 +217,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   }
 
   def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
+    blockingQuickReloadFile(p.source)
     val x = new Response[List[Member]]()
     askScopeCompletion(p, x)
     val names = x.get match{
@@ -291,13 +292,15 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   }
 
   /** 
-  *  Make sure a set of compilation units is loaded and parsed,
+  *  Make sure a set of source files is loaded and parsed
   *  but do not trigger a full recompile.
   *  Return () to syncvar `result` on completion.
   */
   def askQuickReload(sources: List[SourceFile], result: Response[Unit]) = 
   scheduler postWorkItem new WorkItem {
-    def apply() = respond(result)(reloadSources(sources))
+    def apply() = respond(result){
+      reloadSources(sources)
+    }
     override def toString = "quickReload " + sources
   }
 
