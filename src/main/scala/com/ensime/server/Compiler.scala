@@ -51,22 +51,23 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   private val reporter = new PresentationReporter()
-  private val global = new RichPresentationCompiler(settings, reporter, this, config)
+  private val cc:RichCompilerControl = new RichPresentationCompiler(settings, reporter, this, config)
   private var awaitingInitialCompile = true
 
-  import global._
+
+  import cc._
 
   def act(){
-    global.newRunnerThread
+    cc.askNewRunnerThread
     project ! SendBackgroundMessageEvent("Compiler is loading sources. Please wait...")
-    global.blockingReloadAllFiles
+    cc.askReloadAllFiles
     loop {
       try{
 	receive {
 	  case CompilerShutdownEvent =>
 	  {
-	    global.clearTypeCache
-	    global.askShutdown()
+	    cc.askClearTypeCache
+	    cc.askShutdown()
 	    exit('stop)
 	  }
 
@@ -85,94 +86,85 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 
 		case ReloadAllReq() =>
 		{
-		  global.blockingReloadAllFiles()
+		  cc.askReloadAllFiles()
 		  project ! RPCResultEvent(TruthAtom(), callId)
 		}
 
 		case ReloadFileReq(file:File) =>
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
-		  global.blockingReloadFile(f)
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
+		  cc.askReloadFile(f)
 		  project ! RPCResultEvent(TruthAtom(), callId)
 		  project ! QuickTypeCheckResultEvent(reporter.allNotes)
 		}
 
 		case RemoveFileReq(file:File) => 
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
-		  global.removeUnitOf(f)
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
+		  cc.removeUnitOf(f)
 		}
 
 		case ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean) => 
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
-		  val syms = global.completeSymbolAt(p, prefix, constructor)
+		  val syms = cc.askCompleteSymbolAt(p, prefix, constructor)
 		  project ! RPCResultEvent(syms, callId)
 		}
 
 		case TypeCompletionReq(file:File, point:Int, prefix:String) => 
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
-		  val members = global.completeMemberAt(p, prefix)
+		  val members = cc.askCompleteMemberAt(p, prefix)
 		  project ! RPCResultEvent(members, callId)
 		}
 
 		case InspectTypeReq(file:File, point:Int) =>
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
-		  val inspectInfo = global.inspectTypeAt(p)
+		  val inspectInfo = cc.askInspectTypeAt(p)
 		  project ! RPCResultEvent(inspectInfo, callId)
 		}
 
 		case InspectTypeByIdReq(id:Int) =>
 		{
-		  val inspectInfo = global.typeById(id) match{
-		    case Some(tpe) => global.inspectType(tpe)
-		    case None => TypeInspectInfo.nullInfo
-		  }
+		  val inspectInfo = cc.askInspectTypeById(id)
 		  project ! RPCResultEvent(inspectInfo, callId)
 		}
 
 		case SymbolAtPointReq(file:File, point:Int) =>
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
-		  val info = global.symbolInfoAt(p)
+		  val info = cc.askSymbolInfoAt(p)
 		  project ! RPCResultEvent(info, callId)
 		}
 
 		case InspectPackageByPathReq(path:String) =>
 		{
-		  val packageInfo = PackageInfo.fromPath(path)
+		  val packageInfo = cc.askPackageByPath(path)
 		  project ! RPCResultEvent(packageInfo, callId)
 		}
 
 		case TypeAtPointReq(file:File, point:Int) =>
 		{
-		  val f = global.getSourceFile(file.getAbsolutePath())
+		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
-		  val typeInfo = global.getTypeInfoAt(p)
+		  val typeInfo = cc.askTypeInfoAt(p)
 		  project ! RPCResultEvent(typeInfo, callId)
 		}
 
 		case TypeByIdReq(id:Int) =>
 		{
-		  val tpeInfo = global.typeById(id) match{
-		    case Some(tpe) => TypeInfo(tpe)
-		    case None => TypeInfo.nullInfo
-		  }
+		  val tpeInfo = cc.askTypeInfoById(id)
 		  project ! RPCResultEvent(tpeInfo, callId)
 		}
 
 		case CallCompletionReq(id:Int) =>
 		{
-		  val callInfo = global.typeById(id) match{
-		    case Some(tpe) => CallCompletionInfo(tpe)
-		    case None => CallCompletionInfo.nullInfo
-		  }
+		  val callInfo = cc.askCallCompletionInfoById(id)
 		  project ! RPCResultEvent(callInfo, callId)
 		}
 	      }

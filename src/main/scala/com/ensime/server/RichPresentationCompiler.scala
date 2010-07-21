@@ -15,15 +15,102 @@ import scala.tools.nsc.symtab.Flags
 
 
 
-class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:Actor, config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders{
+trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompiler => 
+
+  def askOr[A](op: () => A, handle:Throwable => A): A = {
+    val result = new Response[A]()
+    scheduler postWorkItem new WorkItem {
+      def apply() = respond(result)(op())
+    }
+    result.get.fold( o => o, handle)
+  }
+
+  def askSymbolInfoAt(p: Position):SymbolInfo = askOr(
+    () => symbolAt(p).fold(s => SymbolInfo(s), t => SymbolInfo.nullInfo), 
+    t => SymbolInfo.nullInfo)
+
+  def askTypeInfoAt(p: Position):TypeInfo = askOr(
+    () => typeAt(p).fold(s => TypeInfo(s), t => TypeInfo.nullInfo), 
+    t => TypeInfo.nullInfo)
+
+  def askTypeInfoById(id:Int):TypeInfo = askOr(
+    () => typeById(id) match {
+      case Some(t) => TypeInfo(t)
+      case None => TypeInfo.nullInfo
+    }, 
+    t => TypeInfo.nullInfo)
+
+  def askCallCompletionInfoById(id:Int):CallCompletionInfo = askOr(
+    () => typeById(id) match {
+      case Some(t) => CallCompletionInfo(t)
+      case None => CallCompletionInfo.nullInfo
+    }, 
+    t => CallCompletionInfo.nullInfo)
+
+  def askPackageByPath(path:String):PackageInfo = askOr(
+    () => PackageInfo.fromPath(path),
+    t => PackageInfo.nullInfo)
+
+  def askQuickReloadFile(f:SourceFile){
+    askOr( () => reloadSources(List(f)), t => ())
+  }
+
+  def askReloadFile(f:SourceFile){
+    val x = new Response[Unit]()
+    askReload(List(f), x)
+    x.get
+  }
+
+  def askReloadAllFiles() {
+    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
+    val x = new Response[Unit]()
+    askReload(all, x)
+    x.get
+  }
+
+  def askInspectTypeById(id:Int):TypeInspectInfo = askOr(
+    () => typeById(id) match {
+      case Some(t) => inspectType(t)
+      case None => TypeInspectInfo.nullInfo
+    }, 
+    t => TypeInspectInfo.nullInfo)
+
+  def askInspectTypeAt(p: Position):TypeInspectInfo = askOr(
+    () => inspectTypeAt(p),
+    t => TypeInspectInfo.nullInfo)
+
+
+  def askCompleteSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = askOr(
+    () => {
+      reloadSources(List(p.source))
+      completeSymbolAt(p, prefix, constructor)
+    },
+    t => List())
+
+  def askCompleteMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = askOr(
+    () => {
+      reloadSources(List(p.source))
+      completeMemberAt(p, prefix)
+    },
+    t => List())
+
+  def askClearTypeCache() = clearTypeCache
+
+  def askNewRunnerThread() = newRunnerThread
+
+  def sourceFileForPath(path:String) = getSourceFile(path)
+
+
+}
+
+
+class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:Actor, val config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders with RichCompilerControl{
 
   import Helpers._
-
 
   import analyzer.{SearchResult, ImplicitSearch}
 
   private def typePublicMembers(tpe:Type):List[TypeMember] = {
-
     val scope = new Scope
     val members = new LinkedHashMap[Symbol, TypeMember]
     def addTypeMember(sym:Symbol, pre:Type, inherited:Boolean, viaView:Symbol) {
@@ -49,22 +136,14 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 
 
   private def getMembersForTypeAt(p:Position):List[Member] = {
-    getTypeAt(p) match{
+    typeAt(p) match{
       case Left(tpe) => {
 	if(isNoParamArrowType(tpe)){
 	  typePublicMembers(typeOrArrowTypeResult(tpe))
 	}
 	else{
-	  val x2 = new Response[List[Member]]()
-	  askTypeCompletion(p, x2)
-	  x2.get match{
-	    case Left(m) => {
-	      (m ++ typePublicMembers(tpe)).toSet.toList
-	    }
-	    case Right(e) => {
-	      typePublicMembers(tpe)
-	    }
-	  }
+	  val members = typeMembers(p)
+	  (members ++ typePublicMembers(tpe)).toSet.toList
 	}
       }
       case Right(e) => {
@@ -74,7 +153,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
-  def prepareSortedInterfaceInfo(members:List[Member]):Iterable[InterfaceInfo] = {
+  private def prepareSortedInterfaceInfo(members:List[Member]):Iterable[InterfaceInfo] = {
     // ...filtering out non-visible and non-type members
     val visMembers:List[TypeMember] = members.flatMap {
       case m@TypeMember(sym, tpe, true, _, _) => List(m)
@@ -122,40 +201,23 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
-  def symbolInfoAt(p: Position):SymbolInfo = {
-    getSymbolAt(p) match{
-      case Left(sym:Symbol) => SymbolInfo(sym)
-      case _ => SymbolInfo.nullInfo
-    }
-  }
-
-  def inspectType(tpe:Type):TypeInspectInfo = {
+  protected def inspectType(tpe:Type):TypeInspectInfo = {
     new TypeInspectInfo(
       TypeInfo(tpe),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
     )
   }
 
-  def inspectTypeAt(p: Position):TypeInspectInfo = {
+  protected def inspectTypeAt(p: Position):TypeInspectInfo = {
     val members = getMembersForTypeAt(p)
     val preparedMembers = prepareSortedInterfaceInfo(members)
-    val typeInfo = getTypeInfoAt(p)
-    new TypeInspectInfo(typeInfo, preparedMembers)
-  }
-
-
-  def getTypeInfoAt(p: Position):TypeInfo = {
-    getTypeAt(p) match{
-      case Left(tpe) => {
-	TypeInfo(tpe)
-      }
-      case Right(e) => {
-	TypeInfo.nullInfo
-      }
+    typeAt(p) match {
+      case Left(t) => new TypeInspectInfo(TypeInfo(t), preparedMembers)
+      case Right(_) => TypeInspectInfo.nullInfo
     }
   }
 
-  def typeOfTree(t:Tree):Either[Type, Throwable] = {
+  private def typeOfTree(t:Tree):Either[Type, Throwable] = {
     var tree = t
     tree = tree match {
       case Select(qual, name) if tree.tpe == ErrorType => 
@@ -184,40 +246,22 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
-  def getTypeAt(p: Position, retryOnFatal:Boolean = true):Either[Type, Throwable] = {
-    // Grab the type at position..
-    val x1 = new Response[Tree]()
-    askTypeAt(p, x1)
-    x1.get match{
-      case Left(tree) => {
-	typeOfTree(tree)
-      }
-      case Right(e:FatalError) => {
-	if(retryOnFatal){
-	  System.err.println("Got fatal error.. retrying...")
-	  getTypeAt(p, false)
-	}
-	else{
-	  Right(e)
-	}
-      }
-      case Right(e) => {
-	Right(e)
-      }
+  protected def typeAt(p: Position):Either[Type, Throwable] = {
+    val tree = typedTreeAt(p)
+    typeOfTree(tree)
+  }
+
+  protected def symbolAt(p: Position):Either[Symbol, Throwable] = {
+    val tree = typedTreeAt(p)
+    if(tree.symbol != null){
+      Left(tree.symbol)
+    }
+    else{
+      Right(new Exception("Null sym"))
     }
   }
 
-  def getSymbolAt(p: Position):Either[Symbol, Throwable] = {
-    val x1 = new Response[Tree]()
-    askTypeAt(p, x1)
-    x1.get match{
-      case Left(t) => Left(t.symbol)
-      case Right(e) => Right(e)
-    }
-  }
-
-  def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
-    blockingQuickReloadFile(p.source)
+  protected def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
     val x = new Response[List[Member]]()
     askScopeCompletion(p, x)
     val names = x.get match{
@@ -246,8 +290,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     visibleNames
   }
 
-  def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
-    blockingQuickReloadFile(p.source)
+  protected def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
     val members = getMembersForTypeAt(p)
     val visibleMembers = members.flatMap{
       case TypeMember(sym, tpe, true, _, _) => {
@@ -263,26 +306,6 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     visibleMembers
   }
 
-  def blockingQuickReloadFile(f:SourceFile){
-    val x = new Response[Unit]()
-    askQuickReload(List(f), x)
-    x.get
-  }
-
-  def blockingReloadFile(f:SourceFile){
-    val x = new Response[Unit]()
-    askReload(List(f), x)
-    x.get
-  }
-
-  def blockingReloadAllFiles() {
-    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
-    val x = new Response[Unit]()
-    askReload(all, x)
-    x.get
-  }
-
-
   /**
   * Override so we send a notification to compiler actor when finished..
   */
@@ -290,20 +313,6 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     super.recompile(units)
     parent ! FullTypeCheckCompleteEvent()
   }
-
-  /** 
-  *  Make sure a set of source files is loaded and parsed
-  *  but do not trigger a full recompile.
-  *  Return () to syncvar `result` on completion.
-  */
-  def askQuickReload(sources: List[SourceFile], result: Response[Unit]) = 
-  scheduler postWorkItem new WorkItem {
-    def apply() = respond(result){
-      reloadSources(sources)
-    }
-    override def toString = "quickReload " + sources
-  }
-
 
   override def askShutdown(){
     super.askShutdown()
