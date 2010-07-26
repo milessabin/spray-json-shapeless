@@ -124,29 +124,17 @@ The .ensime file must be placed in the root directory of your project(or sub-pro
 Here's a quick primer on ELisp values:
 <br/>
 
-__"..."__ 
+__"..."__   -  A String
 
-* A String
+__t__   -  True
 
-__t__
+__nil__    -  False or opposite of t.
 
-* True
+__(...)__    -  A literal list.
 
-__nil__ 
+__:abcd123__   -  A keyword
 
-* False or opposite of t.
-
-__(...)__ 
-
-* A literal list.
-
-__:abcd123__
-
-	A keyword
-
-__(:key1 val1 :key2 val2)__ 
-
-* A 'property list'. Acts like a literal dictionary, indexed by keyword.
+__(:key1 val1 :key2 val2)__    -  A 'property list'. Acts like a literal dictionary, indexed by keyword.
 
 <br/>
 --------------------
