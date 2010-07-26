@@ -129,8 +129,7 @@ __:abcd123__    A keyword
 __(:key1 val1 :key2 val2)__  A 'property list'. Acts like a literal dictionary, keyed by keyword.
 
 
-And now a description of all the available configuration options:
-
+### Options
 
 :server-root "...."
 
