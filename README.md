@@ -40,7 +40,9 @@ Add the following lines to your .emacs file:
 
 __Project Configuration__
 
-ENSIME has built-in support for generating configuration files. In Emacs, execute M-x ensime-config-gen, then follow directions in the mini-buffer. ENSIME will try to guess what type of project you are defining. If the config generator does a poor job for your project, please let us know so we can improve it! and of course you can still create the .ensime file for your project manually.
+ENSIME has built-in support for generating configuration files. In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to create a .ensime file for your project.. 
+
+ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
 
 
 __Permissions__
@@ -62,7 +64,7 @@ You may want to increase the jvm heap size to give ENSIME some more breathing ro
 
 ## Installation from Git Repository (for ENSIME hackers)
 
-ENSIME is an sbt project and we have a custom sbt task, 'dist', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt dist'. Then, follow the install instructions above, using CLONE_DIR/dist as your ensime-root.
+ENSIME is an sbt project and we have a custom sbt task, 'dist', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt dist'. Then, follow the install instructions above, using CLONE_DIR/dist as your server-root.
 
 
 ## Usage
@@ -107,6 +109,82 @@ __C-c a__  - Type-check all files in the project.
 ## Troubleshooting
 
 You may want to examine the contents of the \*inferior-ensime-server\* buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging.
+
+
+
+## Configuration Format
+
+The .ensime file must be placed in the root directory of your project(or sub-project if you have a multi-module sbt build). The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values:
+
+- "..."   A String
+- t       True.
+- nil     False or opposite of t.
+- (..)    A literal list.
+- :cat    A keyword
+- (:key1 val1 :key2 val2)  A 'property list'. Acts like a literal dictionary, keyed by keyword.
+
+
+And now a description of all the available configuration options:
+
+
+:server-root "...."
+The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
+
+
+:server-cmd  "...."
+The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
+
+
+:server-host "localhost"
+The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
+
+
+:use-sbt t
+Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
+
+
+:sbt-compile-conf "compile"
+:sbt-runtime-conf "runtime"
+Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+
+  
+:use-maven t
+Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+
+
+:maven-compile-scopes "compile"
+:maven-runtime-scopes "runtime"
+Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
+
+:use-ivy t
+Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+
+
+:ivy-compile-conf "compile"
+:ivy-runtime-conf "compile"
+Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+
+
+:project-package "...."
+The main scala package for your project. Used by ENSIME to populate the project outline view. 
+
+
+:sources ([dir | file]*)
+Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
+
+
+:dependency-jars ([dir | file]*)
+Manually include jars by directory(recursively) or by filename.
+
+
+:dependency-dirs ([dir | file]*)
+Manually include directories of .class files.
+
+
+:target dir
+Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
+
+
 
 
   
