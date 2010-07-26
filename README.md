@@ -20,7 +20,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Scala 2.8 compatible source and libraries. ENSIME is built against the 2.8 nightly Scala releases. 
 
 
-## Installation
+## Installation from Distribution Zip
 
 __scala-mode__
 
