@@ -114,7 +114,12 @@ You may want to examine the contents of the \*inferior-ensime-server\* buffer. T
 
 ## Configuration Format
 
-The .ensime file must be placed in the root directory of your project(or sub-project if you have a multi-module sbt build). The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values:
+The .ensime file must be placed in the root directory of your project(or sub-project if you have a multi-module sbt build). The contents of the file must be a valid Emacs-Lisp S-Expression. 
+<br/>
+--------------------
+<br/>
+Here's a quick primer on ELisp values:
+<br/>
 
 __"..."__   -  A String
 
