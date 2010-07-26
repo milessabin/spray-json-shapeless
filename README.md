@@ -38,7 +38,8 @@ Add the following lines to your .emacs file:
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
     ;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
 
-__Project Configuration: .ensime __
+__Project Configuration__
+
 ENSIME has built-in support for generating configuration files. In Emacs, execute M-x ensime-config-gen, then follow directions in the mini-buffer. ENSIME will try to guess what type of project you are defining. If the config generator does a poor job for your project, please let us know so we can improve it! and of course you can still create the .ensime file for your project manually.
 
 
