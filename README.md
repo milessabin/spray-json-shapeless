@@ -162,7 +162,7 @@ Assume a standard sbt directory structure. Look in default sbt locations for dep
 <br/>
 
 
-__:sbt-compile-conf "compile"__
+__:sbt-compile-conf "compile"__<br/>
 __:sbt-runtime-conf "runtime"__
 
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
@@ -175,7 +175,7 @@ Use an existing pom.xml to determine the dependencies for the project. A Maven-s
 <br/>
 
 
-__:maven-compile-scopes "compile"__
+__:maven-compile-scopes "compile"__<br/>
 __:maven-runtime-scopes "runtime"__
 
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
@@ -187,7 +187,7 @@ Use an existing ivy.xml to determine the dependencies for the project. A Maven-s
 <br/>
 
 
-__:ivy-compile-conf "compile"__
+__:ivy-compile-conf "compile"__<br/>
 __:ivy-runtime-conf "compile"__
 
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
