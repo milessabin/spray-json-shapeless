@@ -128,60 +128,74 @@ And now a description of all the available configuration options:
 
 
 :server-root "...."
+
 The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 
 
 :server-cmd  "...."
+
 The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
 
 
 :server-host "localhost"
+
 The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
 
 
 :use-sbt t
+
 Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
 
 
 :sbt-compile-conf "compile"
 :sbt-runtime-conf "runtime"
+
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
 
   
 :use-maven t
+
 Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 
 
 :maven-compile-scopes "compile"
 :maven-runtime-scopes "runtime"
+
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
 
 :use-ivy t
+
 Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 
 
 :ivy-compile-conf "compile"
 :ivy-runtime-conf "compile"
+
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
 
 
 :project-package "...."
+
 The main scala package for your project. Used by ENSIME to populate the project outline view. 
 
 
 :sources ([dir | file]*)
+
 Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
 
 
 :dependency-jars ([dir | file]*)
+
 Manually include jars by directory(recursively) or by filename.
 
 
 :dependency-dirs ([dir | file]*)
+
 Manually include directories of .class files.
 
 
 :target dir
+
 Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
 
 
