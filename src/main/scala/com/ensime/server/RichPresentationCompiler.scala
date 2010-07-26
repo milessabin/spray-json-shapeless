@@ -15,7 +15,8 @@ import scala.tools.nsc.symtab.Flags
 
 
 
-trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompiler => 
+trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompiler =>
+
 
   def askOr[A](op: () => A, handle:Throwable => A): A = {
     val result = new Response[A]()
@@ -82,15 +83,17 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
 
   def askCompleteSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = askOr(
     () => {
-      reloadSources(List(p.source))
+      reloadAndRecompileFiles(List(p.source))
       completeSymbolAt(p, prefix, constructor)
     },
     t => List())
 
   def askCompleteMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = askOr(
     () => {
-      reloadSources(List(p.source))
+      reloadAndRecompileFiles(List(p.source))
       completeMemberAt(p, prefix)
+      
+      
     },
     t => List())
 
@@ -159,6 +162,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
       case m@TypeMember(sym, tpe, true, _, _) => List(m)
       case _ => List()
     }
+
 
     // Create a list of pairs [(typeSym, membersOfSym)]
     val membersByOwner = visMembers.groupBy{
@@ -252,6 +256,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   }
 
   protected def symbolAt(p: Position):Either[Symbol, Throwable] = {
+    p.source.file
     val tree = typedTreeAt(p)
     if(tree.symbol != null){
       Left(tree.symbol)
@@ -306,12 +311,34 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     visibleMembers
   }
 
+
+  // We ocassionally need to invoke recompile(...)
+  // manually, in which case we don't want to 
+  // send error/warning notes.
+  private var enableFullTypeCheckEvents = true
+  protected def withoutTypeCheckEvents(action:() => Unit) = {
+    enableFullTypeCheckEvents = false
+    action()
+    enableFullTypeCheckEvents = true
+  }
+
   /**
   * Override so we send a notification to compiler actor when finished..
   */
   override def recompile(units: List[RichCompilationUnit]) {
     super.recompile(units)
-    parent ! FullTypeCheckCompleteEvent()
+    if(enableFullTypeCheckEvents){
+      parent ! FullTypeCheckCompleteEvent()
+    }
+  }
+
+  def reloadAndRecompileFiles(sources:List[SourceFile]) = {
+    val units = sources.map{ s =>
+      val unit = new RichCompilationUnit(s)
+      unitOfFile(s.file) = unit
+      unit
+    }
+    withoutTypeCheckEvents(() => recompile(units))
   }
 
   override def askShutdown(){
