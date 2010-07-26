@@ -119,7 +119,6 @@ The .ensime file must be placed in the root directory of your project(or sub-pro
 --------------------
 <br/>
 Here's a quick primer on ELisp values:
-<br/>
 
 __"..."__   -  A String
 
