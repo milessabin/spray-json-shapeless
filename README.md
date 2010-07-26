@@ -102,6 +102,10 @@ __C-c c__  - Type-check the current file.
 
 __C-c a__  - Type-check all files in the project.
 
+__M-x ensime-reload-config__  - Reload the .ensime file and recompile the project. Useful if you hit a server bug.
+
+__M-x ensime-config-get__  - Start the automatic configuration file generator.
+
 
 
 
