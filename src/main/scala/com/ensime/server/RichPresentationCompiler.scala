@@ -92,8 +92,6 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
     () => {
       reloadAndRecompileFiles(List(p.source))
       completeMemberAt(p, prefix)
-      
-      
     },
     t => List())
 

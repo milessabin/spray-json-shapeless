@@ -144,7 +144,7 @@ And now a description of all the available configuration options:
 
 __:server-root "...."__
 
-Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
+>Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 <br/>
 
 __:server-cmd  "...."__
