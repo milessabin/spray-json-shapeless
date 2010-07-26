@@ -129,6 +129,8 @@ __:abcd123__   -  A keyword
 __(:key1 val1 :key2 val2)__    -  A 'property list'. Acts like a literal dictionary, indexed by keyword.
 
 <br/>
+--------------------
+<br/>
 And now a description of all the available configuration options:
 <br/>
 
@@ -202,6 +204,18 @@ Manually include source files by directory(recursively) or by filename. If direc
 __:dependency-jars ([dir | file]*)__
 
 Manually include jars by directory(recursively) or by filename.
+<br/>
+
+
+__:compile-dependency-jars ([dir | file]*)__
+
+Manually include jars by directory(recursively) or by filename, to be included only at compile time.
+<br/>
+
+
+__:runtime-dependency-jars ([dir | file]*)__
+
+Manually include jars by directory(recursively) or by filename, to be included only at run time.
 <br/>
 
 
