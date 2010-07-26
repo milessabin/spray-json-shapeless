@@ -38,7 +38,11 @@ Add the following lines to your .emacs file:
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
     ;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
 
-Create an .ensime configuration file for your project. See [.ensime](http://github.com/aemoncannon/ensime/blob/master/.ensime.example) in the root of the ENSIME distribution for an up-to-date example.
+__Project Configuration: .ensime __
+ENSIME has built-in support for generating configuration files. In Emacs, execute M-x ensime-config-gen, then follow directions in the mini-buffer. ENSIME will try to guess what type of project you are defining. If the config generator does a poor job for your project, please let us know so we can improve it! and of course you can still create the .ensime file for your project manually.
+
+
+__Permissions__
 
 Verify that the startup script (usually bin/server.sh) has executable permissions.
 
@@ -54,6 +58,10 @@ __Note for Scala Standard Library (or other giant project) hackers__
 You may want to increase the jvm heap size to give ENSIME some more breathing room. We've had some reports of ENSIME hanging when retrieving type information in huge projects. You can add the necessary flags in bin/server.sh. 
 
 
+
+## Installation from Git Repository (for ENSIME hackers)
+
+ENSIME is an sbt project and we have a custom sbt task, 'dist', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt dist'. Then, follow the install instructions above, using CLONE_DIR/dist as your ensime-root.
 
 
 ## Usage
@@ -91,9 +99,6 @@ __C-c C-z__  - Switch to the scala interpreter, with project classes in the clas
 __C-c c__  - Type-check the current file.
 
 __C-c a__  - Type-check all files in the project.
-
-
-
 
 
 
