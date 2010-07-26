@@ -143,13 +143,11 @@ And now a description of all the available configuration options:
 <br/>
 
 __:server-root "...."__
-
 * Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 <br/>
 
 __:server-cmd  "...."__
-
-The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
+* The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
 <br/>
 
 
