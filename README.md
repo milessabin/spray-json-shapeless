@@ -38,17 +38,16 @@ Add the following lines to your .emacs file:
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
     ;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
 
+__Permissions__
+
+Verify that the startup script (usually bin/server.sh) has executable permissions.
+
+
 __Project Configuration__
 
 ENSIME has built-in support for generating configuration files. In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to create a .ensime file for your project.. 
 
 ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
-
-
-__Permissions__
-
-Verify that the startup script (usually bin/server.sh) has executable permissions.
-
 
 
 __Note for sbt Users__ 
