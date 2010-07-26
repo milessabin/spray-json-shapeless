@@ -116,12 +116,12 @@ You may want to examine the contents of the \*inferior-ensime-server\* buffer. T
 
 The .ensime file must be placed in the root directory of your project(or sub-project if you have a multi-module sbt build). The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values:
 
-- "..."   A String
-- t       True.
-- nil     False or opposite of t.
-- (...)    A literal list.
-- :abcd123    A keyword
-- (:key1 val1 :key2 val2)  A 'property list'. Acts like a literal dictionary, keyed by keyword.
+__"..."__   A String
+__t__   True
+__nil__    False or opposite of t.
+__(...)__    A literal list.
+__:abcd123__    A keyword
+__(:key1 val1 :key2 val2)__  A 'property list'. Acts like a literal dictionary, keyed by keyword.
 
 
 And now a description of all the available configuration options:
