@@ -126,20 +126,21 @@ __(...)__    -  A literal list.
 
 __:abcd123__   -  A keyword
 
-__(:key1 val1 :key2 val2)__    -  A 'property list'. Acts like a literal dictionary, keyed by keyword.
+__(:key1 val1 :key2 val2)__    -  A 'property list'. Acts like a literal dictionary, indexed by keyword.
 
 <br/>
 And now a description of all the available configuration options:
 <br/>
 
-:server-root "...."
+__:server-root "...."__
 
 The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 <br/>
 
-:server-cmd  "...."
+__:server-cmd  "...."__
 
 The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
+<br/>
 
 
 :server-host "localhost"
