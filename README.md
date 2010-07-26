@@ -143,79 +143,81 @@ And now a description of all the available configuration options:
 <br/>
 
 __:server-root "...."__
+
 * Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 <br/>
 
 __:server-cmd  "...."__
+
 * The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
 <br/>
 
 
 __:server-host "localhost"__
 
-The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
+* The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
 <br/>
 
 
 __:use-sbt t__
 
-Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
+* Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
 <br/>
 
 
 __:sbt-compile-conf "compile"__<br/>
 __:sbt-runtime-conf "runtime"__
 
-Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+* Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
 <br/>
 
   
 __:use-maven t__
 
-Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+* Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 <br/>
 
 
 __:maven-compile-scopes "compile"__<br/>
 __:maven-runtime-scopes "runtime"__
 
-Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
+* Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
 <br/>
 
 __:use-ivy t__
 
-Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+* Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 <br/>
 
 
 __:ivy-compile-conf "compile"__<br/>
 __:ivy-runtime-conf "compile"__
 
-Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+* Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
 <br/>
 
 
 __:project-package "...."__
 
-The main scala package for your project. Used by ENSIME to populate the project outline view. 
+* The main scala package for your project. Used by ENSIME to populate the project outline view. 
 <br/>
 
 
 __:sources ([dir | file]*)__
 
-Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
+* Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
 <br/>
 
 
 __:dependency-jars ([dir | file]*)__
 
-Manually include jars by directory(recursively) or by filename.
+* Manually include jars by directory(recursively) or by filename.
 <br/>
 
 
 __:compile-dependency-jars ([dir | file]*)__
 
-Manually include jars by directory(recursively) or by filename, to be included only at compile time.
+* Manually include jars by directory(recursively) or by filename, to be included only at compile time.
 <br/>
 
 
@@ -227,13 +229,13 @@ Manually include jars by directory(recursively) or by filename, to be included o
 
 __:dependency-dirs ([dir | file]*)__
 
-Manually include directories of .class files.
+* Manually include directories of .class files.
 <br/>
 
 
 __:target dir__
 
-Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
+* Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
 <br/>
 
 
