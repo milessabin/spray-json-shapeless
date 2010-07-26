@@ -134,7 +134,7 @@ And now a description of all the available configuration options:
 
 __:server-root "...."__
 
-The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
+Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 <br/>
 
 __:server-cmd  "...."__
@@ -143,66 +143,78 @@ The command with which to invoke the ENSIME server. By default, this will be set
 <br/>
 
 
-:server-host "localhost"
+__:server-host "localhost"__
 
 The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
+<br/>
 
 
-:use-sbt t
+__:use-sbt t__
 
 Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
+<br/>
 
 
-:sbt-compile-conf "compile"
-:sbt-runtime-conf "runtime"
+__:sbt-compile-conf "compile"__
+__:sbt-runtime-conf "runtime"__
 
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+<br/>
 
   
-:use-maven t
+__:use-maven t__
 
 Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+<br/>
 
 
-:maven-compile-scopes "compile"
-:maven-runtime-scopes "runtime"
+__:maven-compile-scopes "compile"__
+__:maven-runtime-scopes "runtime"__
 
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
+<br/>
 
-:use-ivy t
+__:use-ivy t__
 
 Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+<br/>
 
 
-:ivy-compile-conf "compile"
-:ivy-runtime-conf "compile"
+__:ivy-compile-conf "compile"__
+__:ivy-runtime-conf "compile"__
 
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+<br/>
 
 
-:project-package "...."
+__:project-package "...."__
 
 The main scala package for your project. Used by ENSIME to populate the project outline view. 
+<br/>
 
 
-:sources ([dir | file]*)
+__:sources ([dir | file]*)__
 
 Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
+<br/>
 
 
-:dependency-jars ([dir | file]*)
+__:dependency-jars ([dir | file]*)__
 
 Manually include jars by directory(recursively) or by filename.
+<br/>
 
 
-:dependency-dirs ([dir | file]*)
+__:dependency-dirs ([dir | file]*)__
 
 Manually include directories of .class files.
+<br/>
 
 
-:target dir
+__:target dir__
 
 Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
+<br/>
 
 
 
