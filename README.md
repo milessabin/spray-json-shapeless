@@ -223,7 +223,7 @@ __:compile-dependency-jars ([dir | file]*)__
 
 __:runtime-dependency-jars ([dir | file]*)__
 
-Manually include jars by directory(recursively) or by filename, to be included only at run time.
+* Manually include jars by directory(recursively) or by filename, to be included only at run time.
 <br/>
 
 
