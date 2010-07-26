@@ -119,8 +119,8 @@ The .ensime file must be placed in the root directory of your project(or sub-pro
 - "..."   A String
 - t       True.
 - nil     False or opposite of t.
-- (..)    A literal list.
-- :cat    A keyword
+- (...)    A literal list.
+- :abcd123    A keyword
 - (:key1 val1 :key2 val2)  A 'property list'. Acts like a literal dictionary, keyed by keyword.
 
 
