@@ -265,12 +265,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   }
 
   protected def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
-    val x = new Response[List[Member]]()
-    askScopeCompletion(p, x)
-    val names = x.get match{
-      case Left(m) => m
-      case Right(e) => List()
-    }
+    val names = scopeMembers(p)
     val visibleNames = names.flatMap{ m => 
       m match{
 	case ScopeMember(sym, tpe, true, viaImport) => {
@@ -316,8 +311,12 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   private var enableFullTypeCheckEvents = true
   protected def withoutTypeCheckEvents(action:() => Unit) = {
     enableFullTypeCheckEvents = false
-    action()
-    enableFullTypeCheckEvents = true
+    try{
+      action()
+    }
+    finally{
+      enableFullTypeCheckEvents = true
+    }
   }
 
   /**
