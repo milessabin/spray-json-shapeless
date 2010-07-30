@@ -52,7 +52,7 @@ ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the f
 
 __Note for sbt Users__ 
 
-Customize the ensime-sbt-compile-on-save variable if you'd like sbt to recompile your project whenever you save. This is disabled by default as it consumes a lot of CPU without much benefit over ENSIME's built-in type checking.
+Add ':sbt-compile-on-save t' to your config file if you'd like sbt to recompile your project whenever you save. This is disabled by default as it consumes a lot of CPU.
 
 
 __Note for Scala Standard Library (or other giant project) hackers__ 
@@ -153,22 +153,28 @@ __:server-cmd  "...."__
 <br/>
 
 
-__:server-host "localhost"__
+__:server-host "...."__
 
 * The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
 <br/>
 
 
-__:use-sbt t__
+__:use-sbt [t|nil]__
 
 * Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
 <br/>
 
 
-__:sbt-compile-conf "compile"__<br/>
-__:sbt-runtime-conf "runtime"__
+__:sbt-compile-conf "...."__<br/>
+__:sbt-runtime-conf "...."__
 
 * Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+<br/>
+
+
+__:sbt-compile-on-save [t|nil]__<br/>
+
+* Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is disabled by default as it consumes a lot of CPU.
 <br/>
 
   
@@ -178,8 +184,8 @@ __:use-maven t__
 <br/>
 
 
-__:maven-compile-scopes "compile"__<br/>
-__:maven-runtime-scopes "runtime"__
+__:maven-compile-scopes "...."__<br/>
+__:maven-runtime-scopes "...."__
 
 * Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
 <br/>
@@ -190,8 +196,8 @@ __:use-ivy t__
 <br/>
 
 
-__:ivy-compile-conf "compile"__<br/>
-__:ivy-runtime-conf "compile"__
+__:ivy-compile-conf "...."__<br/>
+__:ivy-runtime-conf "...."__
 
 * Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
 <br/>
