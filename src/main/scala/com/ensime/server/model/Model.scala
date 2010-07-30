@@ -72,14 +72,14 @@ class SymbolInfo(
 
 class SymbolInfoLight(
   val name:String, 
-  val tpeName:String,
+  val tpeSig:String,
   val tpeId:Int,
   val isCallable:Boolean) extends SExpable {
 
   def toSExp():SExp = {
     SExp.propList(
       (":name", name),
-      (":type-name", tpeName),
+      (":type-sig", tpeSig),
       (":type-id", tpeId),
       (":is-callable", isCallable)
     )
@@ -99,11 +99,11 @@ class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Po
 }
 
 
-class NamedTypeMemberInfoLight(override val name:String, tpeName:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
+class NamedTypeMemberInfoLight(override val name:String, tpeSig:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
   def toSExp():SExp = {
     SExp.propList(
       (":name", name),
-      (":type-name", tpeName),
+      (":type-sig", tpeSig),
       (":type-id", tpeId),
       (":is-callable", isCallable)
     )
