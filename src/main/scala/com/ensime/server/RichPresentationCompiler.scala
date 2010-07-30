@@ -264,11 +264,48 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
+  override def scopeMembers(pos: Position): List[ScopeMember] = {
+    typedTreeAt(pos) // to make sure context is entered
+    val context = doLocateContext(pos)
+    val locals = new LinkedHashMap[Name, ScopeMember]
+    def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
+      if (!sym.name.decode.containsName(Dollar) &&  
+	!sym.hasFlag(Flags.SYNTHETIC) &&
+	!locals.contains(sym.name)) {
+	locals(sym.name) = new ScopeMember(
+          sym, 
+          sym.tpe,
+          context.isAccessible(sym, pre, false),
+          viaImport)
+      }
+    }
+    var cx = context
+    while (cx != NoContext) {
+      for (sym <- cx.scope){
+        addSymbol(sym, NoPrefix, EmptyTree)
+      }
+      cx = cx.enclClass
+      val pre = cx.prefix
+      for (sym <- pre.members) {
+	addSymbol(sym, pre, EmptyTree)
+      }
+      cx = cx.outer
+    }
+    for (imp <- context.imports) {
+      val pre = imp.qual.tpe
+      for (sym <- imp.allImportedSymbols) {
+	addSymbol(sym, pre, imp.qual)
+      }
+    }
+    val result = locals.values.toList
+    result
+  }
+
   protected def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
     val names = scopeMembers(p)
     val visibleNames = names.flatMap{ m => 
       m match{
-	case ScopeMember(sym, tpe, true, viaImport) => {
+	case ScopeMember(sym, tpe, true, _) => {
 	  if(sym.nameString.startsWith(prefix)){
 	    if(constructor){
 	      SymbolInfoLight.constructorSynonyms(sym)
@@ -284,7 +321,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 	}
 	case _ => List()
       }
-    }.sortWith((a,b) => a.name <= b.name)
+    }.sortWith((a,b) => a.name.length <= b.name.length)
     visibleNames
   }
 
@@ -300,7 +337,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 	}
       }
       case _ => List()
-    }.sortWith((a,b) => a.name <= b.name)
+    }.sortWith((a,b) => a.name.length <= b.name.length)
     visibleMembers
   }
 
