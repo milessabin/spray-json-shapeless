@@ -291,9 +291,9 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   protected def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
     val members = getMembersForTypeAt(p)
     val visibleMembers = members.flatMap{
-      case TypeMember(sym, tpe, true, _, _) => {
+      case tm@TypeMember(sym, tpe, true, _, _) => {
 	if(sym.nameString.startsWith(prefix)){
-	  List(new NamedTypeMemberInfoLight(sym.nameString, tpe.underlying.toString, cacheType(tpe), isArrowType(tpe)))
+	  List(NamedTypeMemberInfoLight(tm))
 	}
 	else{
 	  List()

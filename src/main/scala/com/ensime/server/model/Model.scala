@@ -273,6 +273,73 @@ trait ModelBuilders {  self: Global =>
       case _                                                => aSym
     }
 
+
+    /**
+    * Conveniance method to generate a String describing the type. Omit
+    * the package name. Include the arguments postfix.
+    * 
+    * Used for type-names of symbol and member completions
+    */
+    def typeShortNameWithArgs(tpe:Type): String = {
+      if(isArrowType(tpe)){
+	("(" + 
+	  tpe.paramTypes.map(typeShortNameWithArgs).mkString(", ") + 
+	  ") => " + 
+	  typeShortNameWithArgs(tpe.resultType))
+      }
+      else{
+	(typeShortName(tpe) + (if(tpe.typeArgs.length > 0){
+	      "[" + 
+	      tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") + 
+	      "]"
+	    }
+	    else{""}
+	  ))
+      }
+    }
+
+    /** 
+    * Generate qualified name, without args postfix.
+    */
+    def typeFullName(tpe:Type):String = {
+      def nestedClassName(sym:Symbol):String = {
+	outerClass(sym) match{
+	  case Some(outerSym) => {
+	    nestedClassName(outerSym) + "$" + sym.nameString
+	  }
+	  case None => sym.nameString
+	}
+      }
+      val typeSym = tpe.typeSymbol
+      if(typeSym.isNestedClass){
+	typeSym.enclosingPackage.fullName + "." + nestedClassName(typeSym)
+      }
+      else{
+	typeSym.enclosingPackage.fullName + "." + typeSym.nameString
+      }
+    }
+
+    def typeShortName(tpe:Type):String = {
+      if(tpe.typeSymbol != NoSymbol) tpe.typeSymbol.nameString
+      else tpe.toString
+    }
+
+    /* Give the outerClass of a symbol representing a nested type */
+    def outerClass(typeSym:Symbol):Option[Symbol] = {
+      try{ 
+	if(typeSym.isNestedClass){
+	  Some(typeSym.outerClass)
+	}
+	else None
+      }
+      catch{
+	// TODO accessing outerClass sometimes throws java.lang.Error
+	// Notably, when tpe = scala.Predef$Class
+	case e:java.lang.Error => None
+      }
+    }
+
+
   }
 
   import Helpers._
@@ -365,42 +432,6 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInfo{
 
-    private def buildFullName(tpe:Type):String = {
-      def nestedClassName(sym:Symbol):String = {
-	outerClass(sym) match{
-	  case Some(outerSym) => {
-	    nestedClassName(outerSym) + "$" + sym.nameString
-	  }
-	  case None => sym.nameString
-	}
-      }
-      val typeSym = tpe.typeSymbol
-      if(typeSym.isNestedClass){
-	typeSym.enclosingPackage.fullName + "." + nestedClassName(typeSym)
-      }
-      else{
-	typeSym.enclosingPackage.fullName + "." + typeSym.nameString
-      }
-    }
-
-    private def buildShortName(tpe:Type):String = {
-      if(tpe.typeSymbol != NoSymbol) tpe.typeSymbol.nameString
-      else tpe.toString
-    }
-
-    private def outerClass(typeSym:Symbol):Option[Symbol] = {
-      try{ 
-	if(typeSym.isNestedClass){
-	  Some(typeSym.outerClass)
-	}
-	else None
-      }
-      catch{
-	// TODO accessing outerClass sometimes throws java.lang.Error
-	// Notably, when tpe = scala.Predef$Class
-	case e:java.lang.Error => None
-      }
-    }
 
     def apply(t:Type, members:List[EntityInfo] = List()):TypeInfo = {
       val tpe = t match{
@@ -419,10 +450,10 @@ trait ModelBuilders {  self: Global =>
 	  val typeSym = tpe.typeSymbol
 	  val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
 	  new TypeInfo(
-	    buildShortName(tpe),
+	    typeShortName(tpe),
 	    cacheType(tpe), 
 	    declaredAs(typeSym), 
-	    buildFullName(tpe), 
+	    typeFullName(tpe), 
 	    args,
 	    members,
 	    typeSym.pos,
@@ -521,7 +552,7 @@ trait ModelBuilders {  self: Global =>
     def apply(sym:Symbol, tpe:Type):SymbolInfoLight = {
       new SymbolInfoLight(
 	sym.nameString, 
-	tpe.underlying.toString,
+	typeShortNameWithArgs(tpe),
 	cacheType(tpe.underlying),
 	Helpers.isArrowType(tpe.underlying)
       )
@@ -542,6 +573,15 @@ trait ModelBuilders {  self: Global =>
 	declaredAs(m.sym)
       }
       new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), m.sym.pos, decl)
+    }
+  }
+
+  object NamedTypeMemberInfoLight{
+    def apply(m:TypeMember):NamedTypeMemberInfoLight = {
+      new NamedTypeMemberInfoLight(m.sym.nameString, 
+	typeShortNameWithArgs(m.tpe), 
+	cacheType(m.tpe), 
+	isArrowType(m.tpe))
     }
   }
 
