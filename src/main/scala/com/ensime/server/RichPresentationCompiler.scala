@@ -264,6 +264,12 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
+
+  /**
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
     typedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
