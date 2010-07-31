@@ -176,6 +176,7 @@ class ProjectConfig(
     "-classpath", compilerClasspathFilenames.mkString(File.pathSeparator),
     "-verbose",
     "-d", target.getOrElse(new File(root,"classes")).getAbsolutePath,
+    "-Ybuildmanagerdebug",
     sourceFilenames.mkString(" ")
   )
 

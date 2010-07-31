@@ -1,6 +1,6 @@
 package com.ensime.server
 
-import scala.tools.nsc.interactive.{Global, RefinedBuildManager}
+import scala.tools.nsc.interactive.{Global, BuildManager, SimpleBuildManager}
 import scala.tools.nsc.{Settings}
 import scala.actors._  
 import scala.actors.Actor._  
@@ -34,7 +34,7 @@ case class UpdateSourceFilesReq(files:Iterable[File])
 class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
   private val settings = new Settings(Console.println) 
   settings.processArguments(config.builderArgs, false)
-  private val bm:RefinedBuildManager = new RefinedBuildManager(settings)
+  private val bm:BuildManager = new SimpleBuildManager(settings)
 
   import bm._
 
@@ -43,10 +43,12 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
     // Add all files
     bm.update(config.sourceFilenames.map(
 	s => AbstractFile.getFile(s)), Set())
-
+    
+    println("IncrementalBuilder: " + "Updated initial files.")
 
     loop {
       try{
+	println("IncrementalBuilder: " + "Waiting for message...")
 	receive {
 	  case BuilderShutdownEvent =>
 	  {
@@ -63,7 +65,6 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
 		  project ! RPCResultEvent(TruthAtom(), callId)
 		  bm.addSourceFiles(fileSet)
 		}
-
 		case RemoveSourceFilesReq(files:Iterable[File]) =>
 		{
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
@@ -73,15 +74,19 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
 
 		case UpdateSourceFilesReq(files:Iterable[File]) => 
 		{
+		  println("IncrementalBuilder: " + "Got update message...")
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
 		  project ! RPCResultEvent(TruthAtom(), callId)
+		  println("IncrementalBuilder: " + "Sent response to update, now updating...")
 		  bm.update(fileSet, Set())
+		  println("IncrementalBuilder: " + "Finished update.")
 		}
 	      }
 	    }
 	    catch{
 	      case e:Exception =>
 	      {
+
 		System.err.println("Error handling RPC: " + 
 		  e + " :\n" + 
 		  e.getStackTraceString)

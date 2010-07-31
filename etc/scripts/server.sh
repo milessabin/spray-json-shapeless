@@ -11,6 +11,7 @@ case "$1" in
   ;;
 esac
 
-
+INITIAL_HEAP=128M
+MAX_HEAP=512M
 CLASSPATH=<RUNTIME_CLASSPATH>
-java -classpath $CLASSPATH com.ensime.server.Server $PORT_FILE
+java -classpath $CLASSPATH -Xms${INITIAL_HEAP} -Xmx${MAX_HEAP} com.ensime.server.Server $PORT_FILE
