@@ -47,7 +47,6 @@ case class TypeAtPointReq(file:File, point:Int)
 
 
 class Compiler(project:Project, config:ProjectConfig) extends Actor{
-
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   private val reporter = new PresentationReporter()

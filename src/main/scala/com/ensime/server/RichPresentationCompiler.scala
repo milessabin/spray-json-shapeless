@@ -284,10 +284,10 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
       for (sym <- cx.scope){
         addSymbol(sym, NoPrefix, EmptyTree)
       }
-      cx = cx.enclClass
-      val pre = cx.prefix
-      for (sym <- pre.members) {
-	addSymbol(sym, pre, EmptyTree)
+      if(cx.prefix != null){
+	for (sym <- cx.prefix.members) {
+       	  addSymbol(sym, cx.prefix, EmptyTree)
+	}
       }
       cx = cx.outer
     }
