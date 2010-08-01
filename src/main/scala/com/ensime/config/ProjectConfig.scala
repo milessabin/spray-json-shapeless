@@ -126,21 +126,15 @@ object ProjectConfig{
       case _ => List()
     }
 
-    val builderEnabled = m.get(key(":use-builder")) match{
-      case Some(BooleanAtom(b)) => b
-      case None => false
-    }
-
     new ProjectConfig(rootDir, sourceFiles, 
       sourceRoots, runtimeDeps, compileDeps, 
-      classDirs, target, debugClass, debugArgs,
-      builderEnabled)
+      classDirs, target, debugClass, debugArgs)
     
   }
 
 
   def nullConfig = new ProjectConfig(new File("."), List(), List(), 
-    List(), List(), List(), None, None, List(), false)
+    List(), List(), List(), None, None, List())
 
 }
 
@@ -154,8 +148,7 @@ class ProjectConfig(
   val classDirs:Iterable[File],
   val target:Option[File],
   val debugClass:Option[String],
-  val debugArgs:Iterable[String],
-  val incrementalBuilderEnabled:Boolean){
+  val debugArgs:Iterable[String]){
 
   def compilerClasspathFilenames:Set[String] = {
     val allFiles = compileDeps ++ classDirs

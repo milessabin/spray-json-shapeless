@@ -91,22 +91,36 @@ class Project extends Actor with SwankHandler{
     }
   }
 
-
   protected def initProject(conf:ProjectConfig){
     this.config = conf;
+    restartCompiler
+    shutdownBuilder
+  }
+
+  protected def restartCompiler() {
     compiler ! CompilerShutdownEvent
-    compiler = new Compiler(this, conf)
+    compiler = new Compiler(this, this.config)
     compiler.start
   }
 
+  protected def getOrStartBuilder():Actor = {
+    builder match{
+      case Some(b) => b
+      case None => 
+      {
+	val b = new IncrementalBuilder(this, this.config)
+	builder = Some(b)
+	b.start
+	b
+      }
+    }
+  }
 
-  protected def initBuilder(conf:ProjectConfig){
+  protected def shutdownBuilder() {
     for(b <- builder){
       b ! BuilderShutdownEvent
     }
-    val b = new IncrementalBuilder(this, conf)
-    b.start
-    builder = Some(b)
+    builder = None
   }
 
 
@@ -139,16 +153,15 @@ class Project extends Actor with SwankHandler{
 	  callId)
       }
       case "swank:builder-init" => {
-	initBuilder(this.config)
+	getOrStartBuilder
 	sendEmacsRexOkReturn(callId)
       }
       case "swank:builder-add-files" => {
 	form match{
 	  case SExpList(head::SExpList(filenames)::body) => {
 	    val files = filenames.map(s => new File(s.toString))
-	    for(b <- builder){
-	      b ! RPCRequestEvent(AddSourceFilesReq(files), callId)
-	    }
+	    val b = getOrStartBuilder
+	    b ! RPCRequestEvent(AddSourceFilesReq(files), callId)
 	  }
 	  case _ => oops
 	}
@@ -157,9 +170,8 @@ class Project extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::SExpList(filenames)::body) => {
 	    val files = filenames.map(s => new File(s.toString))
-	    for(b <- builder){
-	      b ! RPCRequestEvent(UpdateSourceFilesReq(files), callId)
-	    }
+	    val b = getOrStartBuilder
+	    b ! RPCRequestEvent(UpdateSourceFilesReq(files), callId)
 	  }
 	  case _ => oops
 	}
@@ -168,9 +180,8 @@ class Project extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::SExpList(filenames)::body) => {
 	    val files = filenames.map(s => new File(s.toString))
-	    for(b <- builder){
-	      b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
-	    }
+	    val b = getOrStartBuilder
+	    b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
 	  }
 	  case _ => oops
 	}

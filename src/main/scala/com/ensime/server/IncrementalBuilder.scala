@@ -42,10 +42,11 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
 
   def act(){
 
-    // Initialize
+    project ! SendBackgroundMessageEvent("Building for the first time. Please wait...")
     val files = config.sourceFilenames.map(s => AbstractFile.getFile(s))
     bm.addSourceFiles(files)
     bm.update(files, Set())
+    project ! SendBackgroundMessageEvent("Build complete.")
 
     loop {
       try{
