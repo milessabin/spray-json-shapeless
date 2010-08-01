@@ -1,6 +1,7 @@
 package com.ensime.server
 
-import scala.tools.nsc.interactive.{Global, BuildManager, SimpleBuildManager}
+import scala.tools.nsc.interactive.{Global, 
+  BuildManager, SimpleBuildManager, RefinedBuildManager}
 import scala.tools.nsc.{Settings}
 import scala.actors._  
 import scala.actors.Actor._  
@@ -22,6 +23,7 @@ import com.ensime.server.model._
 import com.ensime.util._
 import com.ensime.config.ProjectConfig
 import com.ensime.server.model.SExpConversion._
+import com.ensime.util.SExp._
 
 
 case class BuilderShutdownEvent()
@@ -34,7 +36,7 @@ case class UpdateSourceFilesReq(files:Iterable[File])
 class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
   private val settings = new Settings(Console.println) 
   settings.processArguments(config.builderArgs, false)
-  private val bm:BuildManager = new SimpleBuildManager(settings)
+  private val bm:BuildManager = new RefinedBuildManager(settings)
 
   import bm._
 

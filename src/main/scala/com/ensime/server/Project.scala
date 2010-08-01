@@ -97,16 +97,16 @@ class Project extends Actor with SwankHandler{
     compiler ! CompilerShutdownEvent
     compiler = new Compiler(this, conf)
     compiler.start
+  }
 
+
+  protected def initBuilder(conf:ProjectConfig){
     for(b <- builder){
       b ! BuilderShutdownEvent
     }
-    if(conf.incrementalBuilderEnabled){
-      val b = new IncrementalBuilder(this, conf)
-      b.start
-      builder = Some(b)
-    }
-
+    val b = new IncrementalBuilder(this, conf)
+    b.start
+    builder = Some(b)
   }
 
 
@@ -137,6 +137,10 @@ class Project extends Actor with SwankHandler{
 		(":classpath", strToSExp(this.config.replClasspath))
 	      ))),
 	  callId)
+      }
+      case "swank:builder-init" => {
+	initBuilder(this.config)
+	sendEmacsRexOkReturn(callId)
       }
       case "swank:builder-add-files" => {
 	form match{

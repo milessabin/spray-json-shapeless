@@ -133,7 +133,7 @@ object ProjectConfig{
 
     new ProjectConfig(rootDir, sourceFiles, 
       sourceRoots, runtimeDeps, compileDeps, 
-      classDirs, target, debugClass, debugArgs, 
+      classDirs, target, debugClass, debugArgs,
       builderEnabled)
     
   }
