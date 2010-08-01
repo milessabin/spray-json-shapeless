@@ -143,7 +143,16 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
 	  typePublicMembers(typeOrArrowTypeResult(tpe))
 	}
 	else{
-	  val members = typeMembers(p)
+	  val members = try{
+	    typeMembers(p)
+	  }
+	  catch{
+	    case e => {
+	      System.err.println("Error retrieving type members:")
+	      e.printStackTrace(System.err)
+	      List()
+	    }
+	  }
 	  (members ++ typePublicMembers(tpe)).toSet.toList
 	}
       }
@@ -271,7 +280,6 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   * get these changes into Scala.
   */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
-    typedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
     val locals = new LinkedHashMap[Name, ScopeMember]
     def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
@@ -288,7 +296,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     var cx = context
     while (cx != NoContext) {
       for (sym <- cx.scope){
-        addSymbol(sym, NoPrefix, EmptyTree)
+	addSymbol(sym, NoPrefix, EmptyTree)
       }
       if(cx.prefix != null){
 	for (sym <- cx.prefix.members) {
@@ -308,7 +316,16 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
   }
 
   protected def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
-    val names = scopeMembers(p)
+    val names = try{
+      scopeMembers(p)
+    }
+    catch{
+      case e => {
+	System.err.println("Error retrieving scope members:")
+	e.printStackTrace(System.err)
+	List()
+      }
+    }
     val visibleNames = names.flatMap{ m => 
       m match{
 	case ScopeMember(sym, tpe, true, _) => {
