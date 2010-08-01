@@ -153,11 +153,9 @@ class Project extends Actor with SwankHandler{
 	form match{
 	  case SExpList(head::SExpList(filenames)::body) => {
 	    val files = filenames.map(s => new File(s.toString))
-	    println("Project: " + "Got update files request...")
 	    for(b <- builder){
 	      b ! RPCRequestEvent(UpdateSourceFilesReq(files), callId)
 	    }
-	    println("Project: " + "Finished sending to builder.")
 	  }
 	  case _ => oops
 	}

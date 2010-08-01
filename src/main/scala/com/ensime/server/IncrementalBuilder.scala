@@ -40,21 +40,18 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
 
   def act(){
 
-    // Add all files
-    bm.update(config.sourceFilenames.map(
-	s => AbstractFile.getFile(s)), Set())
-    
-    println("IncrementalBuilder: " + "Updated initial files.")
+    // Initialize
+    val files = config.sourceFilenames.map(s => AbstractFile.getFile(s))
+    bm.addSourceFiles(files)
+    bm.update(files, Set())
 
     loop {
       try{
-	println("IncrementalBuilder: " + "Waiting for message...")
 	receive {
 	  case BuilderShutdownEvent =>
 	  {
 	    exit('stop)
 	  }
-
 	  case RPCRequestEvent(req:Any, callId:Int) => {
 	    try{
 	      req match {
@@ -71,15 +68,11 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
 		  project ! RPCResultEvent(TruthAtom(), callId)
 		  bm.removeFiles(fileSet)
 		}
-
 		case UpdateSourceFilesReq(files:Iterable[File]) => 
 		{
-		  println("IncrementalBuilder: " + "Got update message...")
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
 		  project ! RPCResultEvent(TruthAtom(), callId)
-		  println("IncrementalBuilder: " + "Sent response to update, now updating...")
 		  bm.update(fileSet, Set())
-		  println("IncrementalBuilder: " + "Finished update.")
 		}
 	      }
 	    }
