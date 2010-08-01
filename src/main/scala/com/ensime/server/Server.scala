@@ -10,6 +10,10 @@ import com.ensime.util.SExp
 object Server {
   def main(args: Array[String]): Unit = {
     try {
+
+      System.setProperty("actors.corePoolSize", "5")
+      System.setProperty("actors.maxPoolSize", "10")
+
       // TODO use a real cmdline parser here
       val portfile = args(0)
       val project:Project = new Project()

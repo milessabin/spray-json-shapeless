@@ -20,6 +20,7 @@ case class RPCErrorEvent(value:String, callId:Int)
 class Project extends Actor with SwankHandler{
 
   private var compiler:Actor = actor{}
+  private var builder:Option[Actor] = None
   private var config:ProjectConfig = ProjectConfig.nullConfig
   private var debugInfo:Option[ProjectDebugInfo] = None
 
@@ -99,6 +100,16 @@ class Project extends Actor with SwankHandler{
   }
 
 
+  protected def initBuilder(conf:ProjectConfig){
+    for(b <- builder){
+      b ! BuilderShutdownEvent
+    }
+    val b = new IncrementalBuilder(this, conf)
+    b.start
+    builder = Some(b)
+  }
+
+
   protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
 
     def oops = sendEmacsRexErrorBadArgs(name, form, callId)
@@ -126,6 +137,43 @@ class Project extends Actor with SwankHandler{
 		(":classpath", strToSExp(this.config.replClasspath))
 	      ))),
 	  callId)
+      }
+      case "swank:builder-init" => {
+	initBuilder(this.config)
+	sendEmacsRexOkReturn(callId)
+      }
+      case "swank:builder-add-files" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(s => new File(s.toString))
+	    for(b <- builder){
+	      b ! RPCRequestEvent(AddSourceFilesReq(files), callId)
+	    }
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:builder-update-files" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(s => new File(s.toString))
+	    for(b <- builder){
+	      b ! RPCRequestEvent(UpdateSourceFilesReq(files), callId)
+	    }
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:builder-remove-files" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(s => new File(s.toString))
+	    for(b <- builder){
+	      b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
+	    }
+	  }
+	  case _ => oops
+	}
       }
       case "swank:debug-config" => {
 	debugInfo = Some(new ProjectDebugInfo(config))

@@ -126,13 +126,21 @@ object ProjectConfig{
       case _ => List()
     }
 
+    val builderEnabled = m.get(key(":use-builder")) match{
+      case Some(BooleanAtom(b)) => b
+      case None => false
+    }
+
     new ProjectConfig(rootDir, sourceFiles, 
       sourceRoots, runtimeDeps, compileDeps, 
-      classDirs, target, debugClass, debugArgs)
+      classDirs, target, debugClass, debugArgs,
+      builderEnabled)
+    
   }
 
 
-  def nullConfig = new ProjectConfig(new File("."), List(), List(), List(), List(), List(), None, None, List())
+  def nullConfig = new ProjectConfig(new File("."), List(), List(), 
+    List(), List(), List(), None, None, List(), false)
 
 }
 
@@ -146,7 +154,8 @@ class ProjectConfig(
   val classDirs:Iterable[File],
   val target:Option[File],
   val debugClass:Option[String],
-  val debugArgs:Iterable[String]){
+  val debugArgs:Iterable[String],
+  val incrementalBuilderEnabled:Boolean){
 
   def compilerClasspathFilenames:Set[String] = {
     val allFiles = compileDeps ++ classDirs
@@ -160,6 +169,14 @@ class ProjectConfig(
   def compilerArgs = List(
     "-classpath", compilerClasspathFilenames.mkString(File.pathSeparator),
     "-verbose",
+    sourceFilenames.mkString(" ")
+  )
+
+  def builderArgs = List(
+    "-classpath", compilerClasspathFilenames.mkString(File.pathSeparator),
+    "-verbose",
+    "-d", target.getOrElse(new File(root,"classes")).getAbsolutePath,
+    "-Ybuildmanagerdebug",
     sourceFilenames.mkString(" ")
   )
 
