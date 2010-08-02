@@ -100,7 +100,7 @@ object ExternalConfigInterface {
 
 
   def getSbtConfig(baseDir:File, runtimeConf:Option[String], compileConf:Option[String]):ExternalConfig = {
-    val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val srcDirs = makeDirs(List("src"), baseDir)
     val projectProps = new File(baseDir, "project/build.properties")
     val parentProjectProps = new File(baseDir, "../project/build.properties")
 

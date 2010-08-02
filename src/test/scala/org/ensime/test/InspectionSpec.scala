@@ -19,8 +19,8 @@ class InspectionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src))
-	val sym = cc.askSymbolInfoAt(src.position(2,5))
-	sym.name should equal("dude")
+	val info = cc.askSymbolInfoAt(src.position(2,5))
+	info.name should equal("dude")
       }
     }
     
@@ -37,8 +37,8 @@ class InspectionSpec extends Spec with ShouldMatchers{
     	    "}"
     	  ))
     	cc.askReloadAndTypeFiles(List(src))
-    	val sym = cc.askSymbolInfoAt(src.position(5,12))
-    	sym.declPos.line should equal(3)
+    	val info = cc.askSymbolInfoAt(src.position(5,12))
+    	info.declPos.line should equal(3)
       }
     }
 
@@ -58,8 +58,8 @@ class InspectionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src))
-	val sym = cc.askTypeInfoAt(src.position(2,5))
-	sym.name should equal("Int")
+	val info = cc.askTypeInfoAt(src.position(2,5))
+	info.name should equal("Int")
       }
     }
     
@@ -76,8 +76,8 @@ class InspectionSpec extends Spec with ShouldMatchers{
     	    "}"
     	  ))
     	cc.askReloadAndTypeFiles(List(src))
-    	val sym = cc.askTypeInfoAt(src.position(5,12))
-	sym.name should equal("Int")
+    	val info = cc.askTypeInfoAt(src.position(5,12))
+	info.name should equal("Int")
       }
     }
 

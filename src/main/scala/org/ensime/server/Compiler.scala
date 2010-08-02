@@ -53,7 +53,6 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   private val cc:RichCompilerControl = new RichPresentationCompiler(settings, reporter, this, config)
   private var awaitingInitialCompile = true
 
-
   import cc._
 
   def act(){
