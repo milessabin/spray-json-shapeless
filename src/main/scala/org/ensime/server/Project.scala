@@ -154,8 +154,8 @@ class Project extends Actor with SwankHandler{
 	  callId)
       }
       case "swank:builder-init" => {
-	getOrStartBuilder
-	sendEmacsRexOkReturn(callId)
+	val b = getOrStartBuilder
+	b ! RPCRequestEvent(RebuildAllReq(), callId)	
       }
       case "swank:builder-add-files" => {
 	form match{
