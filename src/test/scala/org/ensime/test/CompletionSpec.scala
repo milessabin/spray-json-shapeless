@@ -1,7 +1,7 @@
 package org.ensime.test
 import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
-import util.Helpers._
+import org.ensime.test.util.Helpers._
 
 
 class CompletionSpec extends Spec with ShouldMatchers{
@@ -20,7 +20,6 @@ class CompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	cc.askReloadAndTypeFiles(List(src))
 	val syms = cc.askCompleteSymbolAt(src.position(4,1), "du", false)
 	syms.exists(s => s.name == "dude") should be(true)
       }
@@ -38,7 +37,6 @@ class CompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	cc.askReloadAndTypeFiles(List(src))
 	val syms = cc.askCompleteSymbolAt(src.position(4,1), "ar", false)
 	syms.exists(s => s.name == "args") should be(true)
       }
@@ -55,7 +53,6 @@ class CompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	cc.askReloadAndTypeFiles(List(src))
 	val syms = cc.askCompleteSymbolAt(src.position(4,1), "du", false)
 
 	expectFailure("I suspect the context does not extend to the closing brace.",
@@ -79,9 +76,29 @@ class CompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	cc.askReloadAndTypeFiles(List(src))
 	val syms = cc.askCompleteSymbolAt(src.position(4,1), "Ve", false)
 	syms.exists(s => s.name == "Vector") should be(true)
+      }
+    }
+
+    it("should complete a from inside an incomplete context") {
+      withPresCompiler{ cc =>
+	val src = srcFile("Test1.scala", contents(
+	    "trait A {",
+	    " val foo = 12",
+	    "}",
+
+	    "class B extends A {",
+	    " def bar: Unit = {",
+	    "  ",
+	    "  "
+	  ))
+	val syms = cc.askCompleteSymbolAt(src.position(6,1), "fo", false)
+	expectFailure("'no context found' exception is expected. Not sure",
+	  "yet what's causing the problem."
+	){()=>
+	  syms.exists(s => s.name == "foo") should be(true)
+	}
       }
     }
     
@@ -98,7 +115,6 @@ class CompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	cc.askReloadAndTypeFiles(List(src))
 	val syms1 = cc.askCompleteSymbolAt(src.position(4,1), "Ha", false)
 	syms1.exists(s => s.name == "HashSet") should be(true)
 
