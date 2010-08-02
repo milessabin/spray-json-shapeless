@@ -13,12 +13,16 @@ object Helpers{
 
   def withPresCompiler(action:RichCompilerControl => Any ) =  {
     val settings = new Settings(Console.println)
+
+    //TODO: Don't hardcode this path!
     settings.processArguments(List(
-	"-classpath","",
+	"-classpath","project/boot/scala-2.8.0/lib/scala-library.jar",
 	"-verbose"), false)
     val reporter = new StoreReporter()
     val cc:RichCompilerControl = new RichPresentationCompiler(
       settings, reporter, actor{}, ProjectConfig.nullConfig)
+    cc.askNewRunnerThread
+    cc.askReloadAllFiles() // <- make sure typerRun is created
     action(cc)
   }
 

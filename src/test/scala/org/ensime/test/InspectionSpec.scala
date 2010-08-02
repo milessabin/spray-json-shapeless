@@ -19,7 +19,7 @@ class InspectionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	cc.askReloadAndRecompileFiles(List(src))
-	val sym = cc.askSymbolInfoAt(src.position(3,5))
+	val sym = cc.askSymbolInfoAt(src.position(2,5))
 	sym.name should equal("dude")
       }
     }
