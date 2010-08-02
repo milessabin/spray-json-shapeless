@@ -33,15 +33,15 @@ class Project extends Actor with SwankHandler{
 	receive {
 	  case SendBackgroundMessageEvent(msg) =>
 	  {
-	    sendEmacsBackgroundMessage(msg)
+	    sendBackgroundMessage(msg)
 	  }
-	  case msg:SwankInMessageEvent =>
+	  case msg:IncomingMessageEvent =>
 	  {
-	    handleIncomingSwankMessage(msg)
+	    handleIncomingMessage(msg)
 	  }
-	  case result:CompilerReadyEvent =>
+	  case msg:CompilerReadyEvent =>
 	  {
-	    send(SExp(key(":compiler-ready"),true))
+	    send(msg) //SExp(key(":compiler-ready"),true))
 	  }
 	  case result:FullTypeCheckResultEvent =>
 	  {
@@ -65,7 +65,7 @@ class Project extends Actor with SwankHandler{
 	  }
 	  case RPCResultEvent(value, callId) =>
 	  {
-	    sendEmacsRexReturn(
+	    sendRPCReturn(
 	      SExp(
 		key(":ok"),
 		value
@@ -75,7 +75,7 @@ class Project extends Actor with SwankHandler{
 	  case RPCErrorEvent(msg, callId) =>
 	  {
 	    System.err.println(msg);
-	    sendEmacsRexReturn(
+	    sendRPCReturn(
 	      SExp(
 		key(":abort"),
 		msg
@@ -126,28 +126,26 @@ class Project extends Actor with SwankHandler{
   }
 
 
-  protected override def handleEmacsRex(name:String, form:SExp, callId:Int){
+  override protected def handleRPCRequest(name:String, form:SExp, callId:Int){
 
-    def oops = sendEmacsRexErrorBadArgs(name, form, callId)
+    def oops = sendRPCError("Malformed " + name + " call: " + form, callId)
 
     name match {
       case "swank:connection-info" => {
-	sendEmacsRexReturn(
-	  SExp(key(":ok"), getConnectionInfo),
-	  callId)
+	sendConnectionInfo(callId)
       }
       case "swank:init-project" => {
 	form match{
 	  case SExpList(head::(config:SExpList)::body) => {
 	    val conf = ProjectConfig(config)
 	    initProject(conf)
-	    sendEmacsRexOkReturn(callId)
+	    sendRPCAckOK(callId)
 	  }
 	  case _ => oops 
 	}
       }
       case "swank:repl-config" => {
-	sendEmacsRexReturn(
+	sendRPCReturn(
 	  SExp.propList(
 	    (":ok", SExp.propList(
 		(":classpath", strToSExp(this.config.replClasspath))
@@ -190,7 +188,7 @@ class Project extends Actor with SwankHandler{
       }
       case "swank:debug-config" => {
 	debugInfo = Some(new ProjectDebugInfo(config))
-	sendEmacsRexReturn(
+	sendRPCReturn(
 	  SExp.propList(
 	    (":ok", SExp.propList(
 		(":classpath", strToSExp(this.config.debugClasspath)),
@@ -208,7 +206,7 @@ class Project extends Actor with SwankHandler{
 	    val unit = info.findUnit(sourceName, line, packPrefix)
 	    unit match{
 	      case Some(unit) => {
-		sendEmacsRexReturn(
+		sendRPCReturn(
 		  SExp.propList(
 		    (":ok", SExp.propList(
 			(":full-name", strToSExp(unit.classQualName)),
@@ -219,7 +217,7 @@ class Project extends Actor with SwankHandler{
 		  callId)
 	      }
 	      case None => {
-		sendEmacsRexReturn(SExp(key(":ok"), NilAtom()), callId)
+		sendRPCReturn(SExp(key(":ok"), NilAtom()), callId)
 	      }
 	    }
 
@@ -243,7 +241,7 @@ class Project extends Actor with SwankHandler{
 		  case _ => Some(SExp('nil, 'nil))
 		}
 	      })
-	    sendEmacsRexReturn(
+	    sendRPCReturn(
 	      SExpList(List(key(":ok"), result)),
 	      callId)
 	  }
@@ -334,7 +332,7 @@ class Project extends Actor with SwankHandler{
 	}
       }
       case other => {
-	sendEmacsRexError(
+	sendRPCError(
 	  "Unknown :emacs-rex call: " + other, 
 	  callId)
       }

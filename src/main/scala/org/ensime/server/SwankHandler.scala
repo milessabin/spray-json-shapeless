@@ -4,68 +4,59 @@ import scala.actors._
 import org.ensime.util.SExp._
 import org.ensime.util._
 
-case class SwankInMessageEvent(sexp:SExp)
-case class SwankOutMessageEvent(sexp:SExp)
 
-trait SwankHandler { self: Project =>
+trait SwankHandler extends Protocol[SExp]{ self: Project =>
 
   val PROTOCOL_VERSION:String = "0.0.1"
+  
   val SERVER_NAME:String = "ENSIMEserver"
+
   private var peer:Actor = null;
 
-  def setSwankPeer(peer:Actor){
-    this.peer = peer;
-  }
+  override def setOutputActor(peer:Actor){ this.peer = peer }
 
-  protected def send(sexp:SExp){
-    peer ! SwankOutMessageEvent(sexp)
-  }
+  //protected implicit def toWireFormat(o:String):SExp = StringAtom(o)
 
-  protected def handleIncomingSwankMessage(msg:SwankInMessageEvent){
+  override protected def handleIncomingMessage(msg:IncomingMessageEvent){
     msg match{
-      case SwankInMessageEvent(sexp:SExp) => {
+      case IncomingMessageEvent(sexp:SExp) => {
 	handleMessageForm(sexp)
       }
     }
   }
 
-
-  protected def handleMessageForm(sexp:SExp){
-    sexp match{
-      case SExpList(KeywordAtom(":emacs-rex")::form::IntAtom(callId)::rest) => {
-	handleEmacsRex(form, callId)
-      }
-      case _ => {
-	sendReaderError(sexp, "Unknown protocol form.")
-      }
-    }
-  }
-
-
-  protected def handleEmacsRex(form:SExp, callId:Int){
-    form match{
-      case SExpList(SymbolAtom(name)::rest) => {
-	handleEmacsRex(name, form, callId)
-      }
-      case _ => {
-	sendEmacsRexError(
-	  "Unknown :emacs-rex call. Expecting leading symbol. " + form,
-	  callId)
-      }
-    }	
-  }
-
-  protected def handleEmacsRex(name:String, form:SExp, callId:Int)
-
-
-  protected def sendEmacsBackgroundMessage(msg:String){
+  override protected def sendBackgroundMessage(msg:String){
     send(SExp(
 	key(":background-message"),
 	msg
       ))
   }
 
-  protected def sendEmacsRexOkReturn(callId:Int){
+  private def handleMessageForm(sexp:SExp){
+    sexp match{
+      case SExpList(KeywordAtom(":emacs-rex")::form::IntAtom(callId)::rest) => {
+	handleEmacsRex(form, callId)
+      }
+      case _ => {
+	sendProtocolError(sexp, "Unknown protocol form.")
+      }
+    }
+  }
+
+  private def handleEmacsRex(form:SExp, callId:Int){
+    form match{
+      case SExpList(SymbolAtom(name)::rest) => {
+	handleRPCRequest(name, form, callId)
+      }
+      case _ => {
+	sendRPCError(
+	  "Unknown :emacs-rex call. Expecting leading symbol. " + form,
+	  callId)
+      }
+    }	
+  }
+
+  override protected def sendRPCAckOK(callId:Int){
     send(SExp(
 	key(":return"),
 	SExp( key(":ok"), true ),
@@ -73,7 +64,7 @@ trait SwankHandler { self: Project =>
       ))
   }
 
-  protected def sendEmacsRexReturn(value:SExp, callId:Int){
+  override protected def sendRPCReturn(value:SExp, callId:Int){
     send(SExp(
 	key(":return"),
 	value,
@@ -81,7 +72,7 @@ trait SwankHandler { self: Project =>
       ))
   }
 
-  protected def sendEmacsRexError(msg:String, callId:Int){
+  override protected def sendRPCError(msg:String, callId:Int){
     send(SExp(
 	key(":invalid-rpc"),
 	callId,
@@ -89,15 +80,7 @@ trait SwankHandler { self: Project =>
       ))
   }
 
-  protected def sendEmacsRexErrorBadArgs(name:String, form:SExp, callId:Int){
-    send(SExp(
-	key(":invalid-rpc"),
-	callId,
-	"Malformed " + name + " call: " + form
-      ))
-  }
-
-  protected def sendReaderError(packet:SExp, condition:String){
+  override protected def sendProtocolError(packet:SExp, condition:String){
     send(
       SExp(
 	key(":reader-error"),
@@ -109,8 +92,8 @@ trait SwankHandler { self: Project =>
   /*
   * A sexp describing the server configuration, per the Swank standard.
   */
-  protected def getConnectionInfo = {
-    SExp(
+  override protected def sendConnectionInfo(callId:Int) = {
+    val info = SExp(
       key(":pid"), 'nil,
       key(":server-implementation"),
       SExp(
@@ -120,6 +103,7 @@ trait SwankHandler { self: Project =>
       key(":features"), 'nil,
       key(":version"), PROTOCOL_VERSION
     )
+    sendRPCReturn(SExp(key(":ok"), info), callId)
   }
 
 }
