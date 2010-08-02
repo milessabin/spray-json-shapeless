@@ -10,8 +10,8 @@ class InspectionSpec extends Spec with ShouldMatchers{
     
     it("should see local variable declaration") {
       withPresCompiler{ cc =>
-	val src = srcFile("Test.scala", contents(
-	    "object Test{",
+	val src = srcFile("Test1.scala", contents(
+	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
 	    "  ",
@@ -21,6 +21,24 @@ class InspectionSpec extends Spec with ShouldMatchers{
 	cc.askReloadAndRecompileFiles(List(src))
 	val sym = cc.askSymbolInfoAt(src.position(2,5))
 	sym.name should equal("dude")
+      }
+    }
+
+    it("should find local declaration position") {
+      withPresCompiler{ cc =>
+	val src = srcFile("Test2.scala", contents(
+	    "object Test2{",
+	    "def main{",
+	    "val dude = 1",
+	    "//space",
+	    "//space",
+	    "val horse = dude",
+	    "}",
+	    "}"
+	  ))
+	cc.askReloadAndRecompileFiles(List(src))
+	val sym = cc.askSymbolInfoAt(src.position(5,12))
+	sym.declPos.line should equal(3)
       }
     }
 
