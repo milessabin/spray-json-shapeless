@@ -1,7 +1,7 @@
 /* sbt -- Simple Build Tool
  * Copyright 2009  Mark Harrah
  */
-package com.ensime.config
+package org.ensime.config
 
 import java.io.{Closeable, File, FileInputStream, FileOutputStream, InputStream, OutputStream}
 

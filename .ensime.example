@@ -57,12 +57,12 @@
  ;; The home package for your project. 
  ;; Used by ENSIME to populate the project outline view.
  ;; ------------------------------
- :project-package "com.ensime"
+ :project-package "org.ensime"
 
  ;; :debug-class "com.example.Main"
  ;; The 'main' class to run when debugging.
  ;; ------------------------------
- :debug-class "com.ensime.server.Server"
+ :debug-class "org.ensime.server.Server"
 
  ;; :debug-args (str*)
  ;; The arguments to pass to the main class

@@ -1,8 +1,8 @@
-package com.ensime.debug
-import com.ensime.util._
-import com.ensime.util.RichFile._
-import com.ensime.util.FileUtils._
-import com.ensime.config.ProjectConfig
+package org.ensime.debug
+import org.ensime.util._
+import org.ensime.util.RichFile._
+import org.ensime.util.FileUtils._
+import org.ensime.config.ProjectConfig
 import scala.collection.mutable.{HashMap, ArrayBuffer}
 import java.io.File
 import org.apache.bcel.classfile._

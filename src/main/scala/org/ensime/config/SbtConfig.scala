@@ -1,4 +1,4 @@
-package com.ensime.config
+package org.ensime.config
 
 import java.lang.Character.isWhitespace
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader, Reader, StringReader}

@@ -1,4 +1,4 @@
-package com.ensime.server
+package org.ensime.server
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.{Settings, FatalError}
@@ -6,8 +6,8 @@ import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition, NoPosition}
 import scala.actors._  
 import scala.actors.Actor._  
-import com.ensime.server.model._
-import com.ensime.config.ProjectConfig
+import org.ensime.server.model._
+import org.ensime.config.ProjectConfig
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.tools.nsc.symtab.Types
@@ -43,8 +43,8 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
 
   def askCallCompletionInfoById(id:Int):CallCompletionInfo = askOr(
     () => typeById(id) match {
-      case Some(t) => CallCompletionInfo(t)
-      case None => CallCompletionInfo.nullInfo
+      case Some(t:Type) => CallCompletionInfo(t)
+      case _ => CallCompletionInfo.nullInfo
     }, 
     t => CallCompletionInfo.nullInfo)
 
@@ -71,8 +71,8 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
 
   def askInspectTypeById(id:Int):TypeInspectInfo = askOr(
     () => typeById(id) match {
-      case Some(t) => inspectType(t)
-      case None => TypeInspectInfo.nullInfo
+      case Some(t:Type) => inspectType(t)
+      case _ => TypeInspectInfo.nullInfo
     }, 
     t => TypeInspectInfo.nullInfo)
 
@@ -94,6 +94,12 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
       completeMemberAt(p, prefix)
     },
     t => List())
+
+  def askReloadAndRecompileFiles(files:Iterable[SourceFile]) = askOr(
+    () => {
+      reloadAndRecompileFiles(files)
+    },
+    t => ())
 
   def askClearTypeCache() = clearTypeCache
 
@@ -323,7 +329,7 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
       case e => {
 	System.err.println("Error retrieving scope members:")
 	e.printStackTrace(System.err)
-	List()
+	List[ScopeMember]()
       }
     }
     val visibleNames = names.flatMap{ m => 
@@ -389,13 +395,13 @@ class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:
     }
   }
 
-  def reloadAndRecompileFiles(sources:List[SourceFile]) = {
+  def reloadAndRecompileFiles(sources:Iterable[SourceFile]) = {
     val units = sources.map{ s =>
       val unit = new RichCompilationUnit(s)
       unitOfFile(s.file) = unit
       unit
     }
-    withoutTypeCheckEvents(() => recompile(units))
+    withoutTypeCheckEvents(() => recompile(units.toList))
   }
 
   override def askShutdown(){

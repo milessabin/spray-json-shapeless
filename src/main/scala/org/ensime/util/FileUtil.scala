@@ -1,4 +1,4 @@
-package com.ensime.util
+package org.ensime.util
 
 import scala.collection.Seq
 import java.io.File

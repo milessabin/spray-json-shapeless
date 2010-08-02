@@ -1,11 +1,11 @@
-package com.ensime.server
+package org.ensime.server
 
 import java.io._
 import java.net.{InetAddress,ServerSocket,Socket,SocketException}
 import java.util.Random
 import scala.actors._  
 import scala.actors.Actor._ 
-import com.ensime.util.SExp
+import org.ensime.util.SExp
 
 object Server {
   def main(args: Array[String]): Unit = {

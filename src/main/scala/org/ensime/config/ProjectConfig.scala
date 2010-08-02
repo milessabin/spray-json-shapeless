@@ -1,15 +1,15 @@
-package com.ensime.config
+package org.ensime.config
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.actors._ 
 import scala.actors.Actor._ 
-import com.ensime.util._
-import com.ensime.util.RichFile._
-import com.ensime.util.FileUtils._
-import com.ensime.util.SExp._
-import com.ensime.server.model._
+import org.ensime.util._
+import org.ensime.util.RichFile._
+import org.ensime.util.FileUtils._
+import org.ensime.util.SExp._
+import org.ensime.server.model._
 import scala.collection.mutable
 import java.io.File
 

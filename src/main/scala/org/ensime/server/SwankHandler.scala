@@ -1,8 +1,8 @@
-package com.ensime.server
+package org.ensime.server
 
 import scala.actors._
-import com.ensime.util.SExp._
-import com.ensime.util._
+import org.ensime.util.SExp._
+import org.ensime.util._
 
 case class SwankInMessageEvent(sexp:SExp)
 case class SwankOutMessageEvent(sexp:SExp)

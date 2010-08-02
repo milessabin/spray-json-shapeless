@@ -1,4 +1,4 @@
-package com.ensime.util
+package org.ensime.util
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.RegexParsers

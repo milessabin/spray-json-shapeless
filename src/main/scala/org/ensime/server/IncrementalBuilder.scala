@@ -1,4 +1,4 @@
-package com.ensime.server
+package org.ensime.server
 
 import scala.tools.nsc.interactive.{Global, 
   BuildManager, SimpleBuildManager, RefinedBuildManager}
@@ -18,12 +18,12 @@ import scala.tools.nsc.symtab.Types
 
 import java.io.File
 
-import com.ensime.util.RichFile._
-import com.ensime.server.model._
-import com.ensime.util._
-import com.ensime.config.ProjectConfig
-import com.ensime.server.model.SExpConversion._
-import com.ensime.util.SExp._
+import org.ensime.util.RichFile._
+import org.ensime.server.model._
+import org.ensime.util._
+import org.ensime.config.ProjectConfig
+import org.ensime.server.model.SExpConversion._
+import org.ensime.util.SExp._
 
 
 case class BuilderShutdownEvent()

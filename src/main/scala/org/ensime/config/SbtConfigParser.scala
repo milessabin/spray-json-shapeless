@@ -2,7 +2,7 @@
 * Based on code from the sbt project:
 * Copyright 2009, 2010  Mark Harrah
 */
-package com.ensime.config
+package org.ensime.config
 
 
 import java.lang.Character.isWhitespace

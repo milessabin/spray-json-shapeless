@@ -1,12 +1,12 @@
-package com.ensime.server.model
+package org.ensime.server.model
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.symtab.Symbols
-import com.ensime.util.{SExp, SExpable}
-import com.ensime.util.SExp._
+import org.ensime.util.{SExp, SExpable}
+import org.ensime.util.SExp._
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 
 
