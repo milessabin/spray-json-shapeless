@@ -13,6 +13,7 @@ import org.ensime.debug.ProjectDebugInfo
 import java.io.File
 
 
+
 case class SendBackgroundMessageEvent(msg:String)
 case class RPCResultEvent(value:SExpable, callId:Int)
 case class RPCErrorEvent(value:String, callId:Int)
