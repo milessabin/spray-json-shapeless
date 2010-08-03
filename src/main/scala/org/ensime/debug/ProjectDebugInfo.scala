@@ -8,9 +8,26 @@ import java.io.File
 import org.apache.bcel.classfile._
 import scala.math._
 
+
+case class DebugSourceLinePairs(pairs:Iterable[(String, Int)])
+
 class ProjectDebugInfo(projectConfig:ProjectConfig){
 
   private val target:File = projectConfig.target.getOrElse(new File("."))
+
+  /**
+  * For each (classname,line) pair, return the corresponding
+  * (sourcefile,line) pair.
+  */
+  def debugClassLocsToSourceLocs(pairs:Iterable[(String, Int)]):DebugSourceLinePairs = {
+    DebugSourceLinePairs(pairs.map{ ea =>
+	findSourceForClass(ea._1) match{
+	  case Some(s) => (s, ea._2)
+	  case None => ("", ea._2)
+	}
+      })
+  }
+
 
   /**
   *

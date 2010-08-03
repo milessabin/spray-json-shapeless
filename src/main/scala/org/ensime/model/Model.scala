@@ -1,114 +1,33 @@
-package org.ensime.server.model
+package org.ensime.model
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.symtab.Symbols
-import org.ensime.util.{SExp, SExpable}
-import org.ensime.util.SExp._
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 
 
-object SExpConversion{
 
-  implicit def posToSExp(pos:Position):SExp = {
-    if(pos.isDefined){
-      SExp.propList(
-	(":file", pos.source.path),
-	(":offset", pos.point + 1) // <- Emacs point starts at 1
-      )
-    }
-    else{
-      'nil
-    }
-  }
+abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]){}
 
-}
-
-
-
-import SExpConversion._
-
-
-abstract class EntityInfo(val name:String, val members:Iterable[EntityInfo]) extends SExpable{}
-
-class PackageInfo(override val name:String, val fullname:String, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){
-  def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":info-type", 'package),
-      (":full-name", fullname),
-      (":members", SExp(members.map{_.toSExp}))
-    )
-  }
-}
-
-abstract trait LooksLikeType{
-  def name:String
-  def id:Int 
-  def declaredAs:scala.Symbol
-  def fullName:String 
-  def pos:Position
-}
-
+class PackageInfo(override val name:String, val fullname:String, override val members:Iterable[EntityInfo]) extends EntityInfo(name, members){}
 
 class SymbolInfo(
   val name:String, 
   val declPos:Position, 
   val tpe:TypeInfo,
-  val isCallable:Boolean) extends SExpable {
-
-  def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":type", tpe.toSExp),
-      (":decl-pos", declPos),
-      (":is-callable", isCallable)
-    )
-  }
-}
+  val isCallable:Boolean) {}
 
 
 class SymbolInfoLight(
   val name:String, 
   val tpeSig:String,
   val tpeId:Int,
-  val isCallable:Boolean) extends SExpable {
+  val isCallable:Boolean) {}
 
-  def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":type-sig", tpeSig),
-      (":type-id", tpeId),
-      (":is-callable", isCallable)
-    )
-  }
-}
-
-
-class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position, val declaredAs:scala.Symbol) extends EntityInfo(name, List()) with SExpable {
-  def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":type", tpe.toSExp),
-      (":pos", pos),
-      (":decl-as", declaredAs)
-    )
-  }
-}
-
-
-class NamedTypeMemberInfoLight(override val name:String, tpeSig:String, tpeId:Int, isCallable:Boolean) extends EntityInfo(name, List()){
-  def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":type-sig", tpeSig),
-      (":type-id", tpeId),
-      (":is-callable", isCallable)
-    )
-  }
-}
+class NamedTypeMemberInfo(override val name:String, val tpe:TypeInfo, val pos:Position, val declaredAs:scala.Symbol) extends EntityInfo(name, List()){}
+class NamedTypeMemberInfoLight(override val name:String, val tpeSig:String, val tpeId:Int, val isCallable:Boolean) extends EntityInfo(name, List()){}
 
 
 class TypeInfo(
@@ -119,71 +38,26 @@ class TypeInfo(
   val args:Iterable[TypeInfo], 
   members:Iterable[EntityInfo],
   val pos:Position,
-  val outerTypeId:Option[Int]) extends EntityInfo(name, members) with LooksLikeType{
-
-  implicit def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":type-id", id),
-      (":full-name", fullName),
-      (":decl-as", declaredAs),
-      (":type-args", SExp(args.map(_.toSExp))),
-      (":members", SExp(members.map(_.toSExp))),
-      (":pos", pos),
-      (":outer-type-id", outerTypeId.map(intToSExp).getOrElse('nil))
-    )
-  }
-}
+  val outerTypeId:Option[Int]) extends EntityInfo(name, members){}
 
 class ArrowTypeInfo(
   override val name:String, 
   override val id:Int, 
   val resultType:TypeInfo,
-  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition, None){
-
-  override implicit def toSExp():SExp = {
-    SExp.propList(
-      (":name", name),
-      (":type-id", id),
-      (":arrow-type", true),
-      (":result-type", resultType.toSExp),
-      (":param-types", SExp(paramTypes.map(_.toSExp)))
-    )
-  }
-}
+  val paramTypes:Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition, None){}
 
 class CallCompletionInfo(
   val resultType:TypeInfo, 
   val paramTypes:Iterable[TypeInfo],
-  val paramNames:Iterable[String]) extends SExpable(){
+  val paramNames:Iterable[String]){}
 
-  override implicit def toSExp():SExp = {
-    SExp.propList(
-      (":result-type", resultType.toSExp),
-      (":param-types", SExp(paramTypes.map(_.toSExp))),
-      (":param-names", SExp(paramNames.map(strToSExp(_))))
-    )
-  }
-}
+class InterfaceInfo(val tpe:TypeInfo, val viaView:Option[String]){}
 
-class InterfaceInfo(tpe:TypeInfo, viaView:Option[String]) extends SExpable{
-  def toSExp():SExp = {
-    SExp.propList(
-      (":type", tpe.toSExp),
-      (":via-view", viaView.map(strToSExp).getOrElse('nil))
-    )
-  }  
-}
+class TypeInspectInfo(val tpe:TypeInfo, val supers:Iterable[InterfaceInfo]){}
 
-class TypeInspectInfo(tpe:TypeInfo, supers:Iterable[InterfaceInfo]) extends SExpable{
-  def toSExp():SExp = {
-    SExp.propList(
-      (":type", tpe.toSExp),
-      (":info-type", 'typeInspect),
-      (":interfaces", SExp(supers.map{_.toSExp}))
-    )
-  }
-}
+
+
+
 
 
 trait ModelBuilders {  self: Global => 
@@ -283,15 +157,15 @@ trait ModelBuilders {  self: Global =>
     def typeShortNameWithArgs(tpe:Type): String = {
       if(isArrowType(tpe)){
 	("(" + 
-	  tpe.paramTypes.map(typeShortNameWithArgs).mkString(", ") + 
-	  ") => " + 
+	    tpe.paramTypes.map(typeShortNameWithArgs).mkString(", ") + 
+	    ") => " + 
 	  typeShortNameWithArgs(tpe.resultType))
       }
       else{
 	(typeShortName(tpe) + (if(tpe.typeArgs.length > 0){
 	      "[" + 
-	      tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") + 
-	      "]"
+		tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") + 
+		"]"
 	    }
 	    else{""}
 	  ))

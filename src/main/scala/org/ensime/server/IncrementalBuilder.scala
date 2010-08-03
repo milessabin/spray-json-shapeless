@@ -19,11 +19,10 @@ import scala.tools.nsc.symtab.Types
 import java.io.File
 
 import org.ensime.util.RichFile._
-import org.ensime.server.model._
+import org.ensime.model._
 import org.ensime.util._
 import org.ensime.config.ProjectConfig
-import org.ensime.server.model.SExpConversion._
-import org.ensime.util.SExp._
+import org.ensime.protocol.ProtocolConversions
 
 
 case class BuilderShutdownEvent()
@@ -34,7 +33,7 @@ case class RemoveSourceFilesReq(files:Iterable[File])
 case class UpdateSourceFilesReq(files:Iterable[File])
 
 
-class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
+class IncrementalBuilder(project:Project, protocol:ProtocolConversions, config:ProjectConfig) extends Actor{
 
   class IncrementalBuildManager(settings: Settings, reporter:Reporter) extends RefinedBuildManager(settings) {
     class IncrementalGlobal(settings: Settings, reporter : Reporter) extends scala.tools.nsc.Global(settings, reporter)  {
@@ -53,6 +52,7 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
   private val bm:BuildManager = new IncrementalBuildManager(settings, reporter)
 
   import bm._
+  import protocol._
 
   def act(){
 
@@ -75,28 +75,28 @@ class IncrementalBuilder(project:Project, config:ProjectConfig) extends Actor{
 		  bm.addSourceFiles(files)
 		  bm.update(files, Set())
 		  project ! SendBackgroundMessageEvent("Build complete.")
-		  project ! RPCResultEvent(reporter.allNotes, callId)
+		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
 		}
 		case AddSourceFilesReq(files:Iterable[File]) =>
 		{
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
 		  bm.addSourceFiles(fileSet)
-		  project ! RPCResultEvent(reporter.allNotes, callId)
+		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
 		}
 		case RemoveSourceFilesReq(files:Iterable[File]) =>
 		{
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
-		  project ! RPCResultEvent(TruthAtom(), callId)
+		  project ! RPCResultEvent(toWF(true), callId)
 		  reporter.reset
 		  bm.removeFiles(fileSet)
-		  project ! RPCResultEvent(reporter.allNotes, callId)
+		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
 		}
 		case UpdateSourceFilesReq(files:Iterable[File]) => 
 		{
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
 		  reporter.reset
 		  bm.update(fileSet, Set())
-		  project ! RPCResultEvent(reporter.allNotes, callId)
+		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
 		}
 
 	      }

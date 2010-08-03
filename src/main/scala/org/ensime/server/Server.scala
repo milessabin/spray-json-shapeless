@@ -5,7 +5,8 @@ import java.net.{InetAddress,ServerSocket,Socket,SocketException}
 import java.util.Random
 import scala.actors._  
 import scala.actors.Actor._ 
-import org.ensime.util.SExp
+import org.ensime.util.WireFormat
+import org.ensime.protocol._
 
 object Server {
   def main(args: Array[String]): Unit = {
@@ -14,9 +15,11 @@ object Server {
       System.setProperty("actors.corePoolSize", "5")
       System.setProperty("actors.maxPoolSize", "10")
 
+      val protocol = SwankProtocol
+
       // TODO use a real cmdline parser here
       val portfile = args(0)
-      val project:Project = new Project()
+      val project:Project = new Project(SwankProtocol)
       project.start
 
       // 0 will cause socket to bind to first available port
@@ -29,7 +32,7 @@ object Server {
 	try{
 	  val socket = listener.accept()
 	  println("Got connection, creating handler...")
-	  val handler = new SocketHandler(socket, project)
+	  val handler = new SocketHandler(socket, protocol, project)
 	  handler.start
 	}
 	catch {
@@ -52,8 +55,8 @@ object Server {
 
 
   private def writePort(filename:String, port:Int){
+    val out = new OutputStreamWriter(new FileOutputStream(filename))
     try{
-      val out = new OutputStreamWriter(new FileOutputStream(filename))
       out.write(port.toString)
       out.flush()
       System.out.println("Wrote port " + port + " to " + filename + ".")
@@ -64,6 +67,9 @@ object Server {
 	System.err.println("Could not write port to " + filename + ". " + e)
 	System.exit(-1)
       }
+    }
+    finally{
+      out.close
     }
   }
 
@@ -76,9 +82,9 @@ import scala.util.parsing.input.CharArrayReader
 
 case class NewSocket(socket:Socket)
 
-class SocketHandler(socket:Socket, project:Project) extends Actor { 
+class SocketHandler(socket:Socket, protocol:Protocol, project:Project) extends Actor { 
 
-  project.setSwankPeer(this)
+  protocol.setOutputActor(this)
 
   class SocketReader(socket:Socket, handler:SocketHandler) extends Actor { 
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -109,8 +115,8 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
 	    //TODO allocating a new array each time is inefficient!
 	    val buf:Array[Char] = new Array[Char](msglen);
 	    fillArray(buf)
-	    val sexp:SExp = SExp.read(new CharArrayReader(buf))
-	    handler ! SwankInMessageEvent(sexp)
+	    val value:WireFormat = protocol.readIn(new CharArrayReader(buf))
+	    handler ! IncomingMessageEvent(value)
 	  }
 	}
       }
@@ -126,9 +132,9 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
 
   val out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-  def write(sexp:SExp) {
+  def write(value:WireFormat){
     try{
-      val data:String = sexp.toReadableString
+      val data:String = value.toWireString
       val header:String = String.format("%06x", int2Integer(data.length))
       val msg = header + data
       println("Writing: " + msg)
@@ -145,18 +151,16 @@ class SocketHandler(socket:Socket, project:Project) extends Actor {
   }
 
   def act() {
-
     val reader:SocketReader = new SocketReader(socket, this)
     this.link(reader)
     reader.start
-
     loop {  
       receive {
-	case SwankInMessageEvent(sexp) => {
-	  project ! SwankInMessageEvent(sexp)
+	case IncomingMessageEvent(value:WireFormat) => {
+	  project ! IncomingMessageEvent(value)
 	}
-	case SwankOutMessageEvent(sexp) => {
-	  write(sexp)	  
+	case OutgoingMessageEvent(value:WireFormat) => {
+	  write(value)	  
 	}
 	case Exit(_:SocketReader, reason) => exit(reason)
       }

@@ -1,33 +1,21 @@
-package org.ensime.server
+package org.ensime.util
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
 import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.symtab.Symbols
-import org.ensime.util.SExp._
-import org.ensime.util.{SExp, SExpable}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 
 
-class Note(file:String, msg:String, severity:Int, beg:Int, end:Int, line:Int, col:Int) extends SExpable{
+case class NoteList(notes:Iterable[Note])
+
+class Note(val file:String, val msg:String, val severity:Int, val beg:Int, val end:Int, val line:Int, val col:Int){
 
   private val tmp = "" + file + msg + severity + beg + end + line + col;
   override val hashCode = tmp.hashCode
-
-  def toSExp() = {
-    SExp(
-      key(":severity"), friendlySeverity,
-      key(":msg"), msg,
-      key(":beg"), beg,
-      key(":end"), end,
-      key(":line"), line,
-      key(":col"), col,
-      key(":file"), file
-    )
-  }
 
   override def equals(other:Any):Boolean = {
     other match{
@@ -51,12 +39,12 @@ class PresentationReporter extends Reporter {
     override def default(k : SourceFile) = { val v = new HashSet[Note] ; put(k, v); v }
   }
 
-  def notesFor(file:SourceFile):List[Note] = {
-    notes(file).toList
+  def notesFor(file:SourceFile):NoteList = {
+    NoteList(notes(file).toList)
   }
 
-  def allNotes():List[Note] = {
-    notes.flatMap{ e => e._2 }.toList
+  def allNotes():NoteList = {
+    NoteList(notes.flatMap{ e => e._2 }.toList)
   }
   
   override def reset{

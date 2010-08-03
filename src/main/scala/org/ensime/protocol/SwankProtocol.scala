@@ -1,0 +1,506 @@
+package org.ensime.protocol
+
+import scala.util.parsing.input._
+import scala.actors._
+import scala.tools.nsc.util.{Position}
+import org.ensime.util.SExp._
+import org.ensime.util._
+import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
+import org.ensime.debug.{DebugUnit, DebugSourceLinePairs}
+import org.ensime.model._
+import org.ensime.server.{RPCTarget, QuickTypeCheckResultEvent, FullTypeCheckResultEvent}
+
+
+
+object SwankProtocol extends SwankProtocol{}
+
+trait SwankProtocol extends Protocol{ 
+
+  import SwankProtocol._
+
+  val PROTOCOL_VERSION:String = "0.0.1"
+  
+  val SERVER_NAME:String = "ENSIMEserver"
+
+  private var outPeer:Actor = null;
+  private var rpcTarget:RPCTarget = null;
+
+  def peer = outPeer
+
+  def setOutputActor(peer:Actor){ outPeer = peer }
+
+  def setRPCTarget(target:RPCTarget){ this.rpcTarget = target }
+
+  def readIn(reader:Reader[Char]):WireFormat = {
+    SExp.read(reader)
+  }
+
+  def sendBackgroundMessage(msg:String){
+    sendMessage(SExp(
+	key(":background-message"),
+	msg
+      ))
+  }
+
+  def handleIncomingMessage(msg:Any){
+    msg match{
+      case sexp:SExp => handleMessageForm(sexp)
+      case _ => System.err.println("WTF: Unexpected message: " + msg)
+    }
+  }
+
+  private def handleMessageForm(sexp:SExp){
+    sexp match{
+      case SExpList(KeywordAtom(":emacs-rex")::form::IntAtom(callId)::rest) => {
+	handleEmacsRex(form, callId)
+      }
+      case _ => {
+	sendProtocolError(sexp.toReadableString, "Unknown protocol form.")
+      }
+    }
+  }
+
+  private def handleEmacsRex(form:SExp, callId:Int){
+    form match{
+      case SExpList(SymbolAtom(name)::rest) => {
+	handleRPCRequest(name, form, callId)
+      }
+      case _ => {
+	sendRPCError(
+	  "Unknown :emacs-rex call. Expecting leading symbol. " + form,
+	  callId)
+      }
+    }	
+  }
+
+  private def handleRPCRequest(callType:String, form:SExp, callId:Int){
+
+    def oops = sendRPCError("Malformed " + callType + " call: " + form, callId)
+
+    callType match {
+      case "swank:connection-info" => {
+	sendConnectionInfo(callId)
+      }
+      case "swank:init-project" => {
+	form match{
+	  case SExpList(head::(config:SExpList)::body) => {
+	    val conf = ProjectConfig(config)
+	    rpcTarget.rpcInitProject(conf, callId)
+	  }
+	  case _ => oops 
+	}
+      }
+      case "swank:repl-config" => {
+	rpcTarget.rpcReplConfig(callId)
+      }
+      case "swank:builder-init" => {
+	rpcTarget.rpcBuilderInit(callId)
+      }
+      case "swank:builder-add-files" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(_.toString)
+	    rpcTarget.rpcBuilderAddFiles(files, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:builder-update-files" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(_.toString)
+	    rpcTarget.rpcBuilderUpdateFiles(files, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:builder-remove-files" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(_.toString)
+	    rpcTarget.rpcBuilderRemoveFiles(files, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:debug-config" => {
+	rpcTarget.rpcDebugConfig(callId)
+      }
+      case "swank:debug-unit-info" => {
+	form match{
+	  case SExpList(head::StringAtom(sourceName)::IntAtom(line)::StringAtom(packPrefix)::body) => {
+	    rpcTarget.rpcDebugUnitInfo(sourceName, line, packPrefix, callId)
+	  }
+	  case _ => oops
+	}
+      }
+
+      case "swank:debug-class-locs-to-source-locs" => {
+	form match{
+	  case SExpList(head::SExpList(pairs)::body) => {
+	    val nameLinePairs = pairs.flatMap{ 
+	      case SExpList((classname:StringAtom)::(line:IntAtom)::body) => {
+		Some(classname.toString, line.value)
+	      }
+	      case _ => Some("", -1)
+	    }
+	    rpcTarget.rpcDebugClassLocsToSourceLocs(nameLinePairs, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:typecheck-file" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::body) => {
+	    rpcTarget.rpcTypecheckFile(file, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:typecheck-all" => {
+	rpcTarget.rpcTypecheckAll(callId)
+      }
+      case "swank:scope-completion" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::BooleanAtom(constructor)::body) => {
+	    rpcTarget.rpcScopeCompletion(file, point, prefix, constructor, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:type-completion" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
+	    rpcTarget.rpcTypeCompletion(file, point, prefix, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:inspect-type-at-point" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    rpcTarget.rpcInspectTypeAtPoint(file, point, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:inspect-type-by-id" => {
+	form match{
+	  case SExpList(head::IntAtom(id)::body) => {
+	    rpcTarget.rpcInspectTypeById(id, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:symbol-at-point" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    rpcTarget.rpcSymbolAtPoint(file, point, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:type-by-id" => {
+	form match{
+	  case SExpList(head::IntAtom(id)::body) => {
+	    rpcTarget.rpcTypeById(id, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:call-completion" => {
+	form match{
+	  case SExpList(head::IntAtom(id)::body) => {
+	    rpcTarget.rpcCallCompletion(id, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:type-at-point" => {
+	form match{
+	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
+	    rpcTarget.rpcTypeAtPoint(file, point, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case "swank:inspect-package-by-path" => {
+	form match{
+	  case SExpList(head::StringAtom(path)::body) => {
+	    rpcTarget.rpcInspectPackageByPath(path, callId)
+	  }
+	  case _ => oops
+	}
+      }
+      case other => {
+	sendRPCError(
+	  "Unknown :emacs-rex call: " + other, 
+	  callId)
+      }
+    }
+  }
+
+
+  def sendRPCAckOK(callId:Int){
+    sendRPCReturn(true, callId)
+  }
+
+  def sendRPCReturn(value:WireFormat, callId:Int){
+    value match{
+      case sexp:SExp => 
+      {
+	sendMessage(SExp(
+	    key(":return"),
+	    SExp(key(":ok"), sexp),
+	    callId
+	  ))
+      }
+      case _ => throw new IllegalStateException("Not a SExp: " + value)
+    }
+  }
+
+  def sendRPCReturnError(value:String, callId:Int){
+    sendMessage(SExp(
+	key(":return"),
+	SExp(key(":abort"),value),
+	callId
+      ))
+  }
+
+  def sendRPCError(msg:String, callId:Int){
+    sendMessage(SExp(
+	key(":invalid-rpc"),
+	callId,
+	msg
+      ))
+  }
+
+  def sendProtocolError(packet:String, condition:String){
+    sendMessage(
+      SExp(
+	key(":reader-error"),
+	packet,
+	condition
+      ))
+  }
+
+  /*
+  * A sexp describing the server configuration, per the Swank standard.
+  */
+  def sendConnectionInfo(callId:Int) = {
+    val info = SExp(
+      key(":pid"), 'nil,
+      key(":server-implementation"),
+      SExp(
+	key(":name"), SERVER_NAME
+      ),
+      key(":machine"), 'nil,
+      key(":features"), 'nil,
+      key(":version"), PROTOCOL_VERSION
+    )
+    sendRPCReturn(info, callId)
+  }
+
+  def sendCompilerReady() = sendMessage(SExp(key(":compiler-ready"),true))
+
+  def sendFullTypeCheckResult(result:FullTypeCheckResultEvent) = {
+    sendMessage(SExp(
+	key(":full-typecheck-result"),
+	SExp(
+	  key(":notes"),
+	  toWF(result.notes)
+	)
+      ))
+  }
+
+  def sendQuickTypeCheckResult(result:QuickTypeCheckResultEvent) = {
+    sendMessage(SExp(
+	key(":quick-typecheck-result"),
+	SExp(
+	  key(":notes"),
+	  toWF(result.notes)
+	)
+      ))
+  }
+
+
+  object SExpConversion{
+
+    implicit def posToSExp(pos:Position):SExp = {
+      if(pos.isDefined){
+	SExp.propList(
+	  (":file", pos.source.path),
+	  (":offset", pos.point + 1) // <- Emacs point starts at 1
+	)
+      }
+      else{
+	'nil
+      }
+    }
+
+  }
+
+  import SExpConversion._
+
+
+
+  def toWF(config:ReplConfig):SExp = {
+    SExp.propList(
+      (":classpath", strToSExp(config.classpath)))
+  }
+
+  def toWF(config:DebugConfig):SExp = {
+    SExp.propList(
+      (":classpath", strToSExp(config.classpath)),
+      (":sourcepath", strToSExp(config.sourcepath)))
+  }
+
+  def toWF(unit:DebugUnit):SExp = {
+    SExp.propList(
+      (":full-name", strToSExp(unit.classQualName)),
+      (":package", strToSExp(unit.packageName)),
+      (":start-line", intToSExp(unit.startLine)),
+      (":end-line", intToSExp(unit.endLine)))
+  }
+
+  def toWF(value:Boolean):SExp = {
+    if(value) TruthAtom()
+    else NilAtom()
+  }
+
+  def toWF(value:String):SExp = {
+    StringAtom(value)
+  }
+
+  def toWF(value:DebugSourceLinePairs):SExp = {
+    SExpList(value.pairs.map{ p => SExp(p._1, p._2)})
+  }
+
+  def toWF(value:NoteList):SExp = {
+    SExpList(value.notes.map(toWF))
+  }
+  
+  def toWF(note:Note):SExp = {
+    SExp(
+      key(":severity"), note.friendlySeverity,
+      key(":msg"), note.msg,
+      key(":beg"), note.beg,
+      key(":end"), note.end,
+      key(":line"), note.line,
+      key(":col"), note.col,
+      key(":file"), note.file
+    )
+  }
+
+  def toWF(values:Iterable[WireFormat]):SExp = {
+    SExpList(values.map(ea => ea.asInstanceOf[SExp]))
+  }
+
+  def toWF(value:SymbolInfoLight):SExp = {
+    SExp.propList(
+      (":name", value.name),
+      (":type-sig", value.tpeSig),
+      (":type-id", value.tpeId),
+      (":is-callable", value.isCallable)
+    )
+  }
+
+  def toWF(value:SymbolInfo):SExp = {
+    SExp.propList(
+      (":name", value.name),
+      (":type", toWF(value.tpe)),
+      (":decl-pos", value.declPos),
+      (":is-callable", value.isCallable)
+    )
+  }
+
+  def toWF(value:NamedTypeMemberInfoLight):SExp = {
+    SExp.propList(
+      (":name", value.name),
+      (":type-sig", value.tpeSig),
+      (":type-id", value.tpeId),
+      (":is-callable", value.isCallable))
+  }
+
+  def toWF(value:NamedTypeMemberInfo):SExp = {
+    SExp.propList(
+      (":name", value.name),
+      (":type", toWF(value.tpe)),
+      (":pos", value.pos),
+      (":decl-as", value.declaredAs)
+    )
+  }
+
+  def toWF(value:EntityInfo):SExp = {
+    value match{
+      case value:PackageInfo => toWF(value)
+      case value:TypeInfo => toWF(value)
+      case value:NamedTypeMemberInfo => toWF(value)
+      case value:NamedTypeMemberInfoLight => toWF(value)
+      case value => throw new IllegalStateException("Unknown EntityInfo: " + value)
+    }
+  }
+
+  def toWF(value:TypeInfo):SExp = {
+    value match{
+      case value:ArrowTypeInfo => 
+      {
+	SExp.propList(
+	  (":name", value.name),
+	  (":type-id", value.id),
+	  (":arrow-type", true),
+	  (":result-type", toWF(value.resultType)),
+	  (":param-types", SExp(value.paramTypes.map(toWF)))
+	)
+      }
+      case value:TypeInfo => 
+      {
+	SExp.propList(
+	  (":name", value.name),
+	  (":type-id", value.id),
+	  (":full-name", value.fullName),
+	  (":decl-as", value.declaredAs),
+	  (":type-args", SExp(value.args.map(toWF))),
+	  (":members", SExp(value.members.map(toWF))),
+	  (":pos", value.pos),
+	  (":outer-type-id", value.outerTypeId.map(intToSExp).getOrElse('nil))
+	)
+      }
+      case value => throw new IllegalStateException("Unknown TypeInfo: " + value)
+    }
+  }
+
+  def toWF(value:PackageInfo):SExp = {
+    SExp.propList(
+      (":name", value.name),
+      (":info-type", 'package),
+      (":full-name", value.fullname),
+      (":members", SExpList(value.members.map(toWF)))
+    )
+  }
+
+  def toWF(value:CallCompletionInfo):SExp = {
+    SExp.propList(
+      (":result-type", toWF(value.resultType)),
+      (":param-types", SExp(value.paramTypes.map(toWF))),
+      (":param-names", SExp(value.paramNames.map(toWF)))
+    )
+  }
+
+  def toWF(value:InterfaceInfo):SExp = {
+    SExp.propList(
+      (":type", toWF(value.tpe)),
+      (":via-view", value.viaView.map(strToSExp).getOrElse('nil))
+    )
+  }
+
+  def toWF(value:TypeInspectInfo):SExp = {
+    SExp.propList(
+      (":type", toWF(value.tpe)),
+      (":info-type", 'typeInspect),
+      (":interfaces", SExp(value.supers.map(toWF)))
+    )
+  }
+
+
+}

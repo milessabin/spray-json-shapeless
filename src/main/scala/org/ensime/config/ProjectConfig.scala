@@ -139,6 +139,10 @@ object ProjectConfig{
 }
 
 
+class ReplConfig(val classpath:String){}
+
+class DebugConfig(val classpath:String, val sourcepath:String){}
+
 class ProjectConfig(
   val root:File,
   val sources:Iterable[File],
@@ -180,6 +184,7 @@ class ProjectConfig(
   }
 
   def replClasspath = runtimeClasspath
+
   def debugClasspath = runtimeClasspath
 
   def debugArgString = debugArgs.map(_.toString).mkString(" ")
@@ -188,4 +193,11 @@ class ProjectConfig(
     sourceRoots.map(_.getAbsolutePath).toSet.mkString(File.pathSeparator)
   }
 
+  def replConfig = new ReplConfig(replClasspath)
+
+  def debugConfig = new DebugConfig(debugClasspath, debugSourcepath)
+
 }
+
+
+

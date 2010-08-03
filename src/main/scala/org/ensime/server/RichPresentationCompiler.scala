@@ -6,7 +6,7 @@ import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition, NoPosition}
 import scala.actors._  
 import scala.actors.Actor._  
-import org.ensime.server.model._
+import org.ensime.model._
 import org.ensime.config.ProjectConfig
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }

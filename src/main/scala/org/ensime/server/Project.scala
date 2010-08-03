@@ -5,82 +5,61 @@ import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.actors._ 
 import scala.actors.Actor._ 
+
+import java.io.File
+
 import org.ensime.util._
-import org.ensime.util.SExp._
-import org.ensime.server.model._
 import org.ensime.config.ProjectConfig
 import org.ensime.debug.ProjectDebugInfo
-import java.io.File
+import org.ensime.protocol._
 
 
 
 case class SendBackgroundMessageEvent(msg:String)
-case class RPCResultEvent(value:SExpable, callId:Int)
+case class RPCResultEvent(value:WireFormat, callId:Int)
 case class RPCErrorEvent(value:String, callId:Int)
 
+class Project(val protocol:Protocol) extends Actor with RPCTarget{
 
-class Project extends Actor with SwankHandler{
+  protocol.setRPCTarget(this)
 
-  private var compiler:Actor = actor{}
-  private var builder:Option[Actor] = None
-  private var config:ProjectConfig = ProjectConfig.nullConfig
-  private var debugInfo:Option[ProjectDebugInfo] = None
+  protected var compiler:Actor = actor{}
+  protected var builder:Option[Actor] = None
+  protected var config:ProjectConfig = ProjectConfig.nullConfig
+  protected var debugInfo:Option[ProjectDebugInfo] = None
 
   def act() {
     println("Project waiting for init...")
     loop {
       try{
 	receive {
-	  case SendBackgroundMessageEvent(msg) =>
+	  case SendBackgroundMessageEvent(msg:String) =>
 	  {
-	    sendBackgroundMessage(msg)
+	    protocol.sendBackgroundMessage(msg)
 	  }
-	  case msg:IncomingMessageEvent =>
+	  case IncomingMessageEvent(msg:WireFormat) =>
 	  {
-	    handleIncomingMessage(msg)
+	    protocol.handleIncomingMessage(msg)
 	  }
 	  case msg:CompilerReadyEvent =>
 	  {
-	    send(msg) //SExp(key(":compiler-ready"),true))
+	    protocol.sendCompilerReady
 	  }
 	  case result:FullTypeCheckResultEvent =>
 	  {
-	    send(SExp(
-		key(":full-typecheck-result"),
-		SExp(
-		  key(":notes"),
-		  SExp(result.notes.map{ _.toSExp })
-		)
-	      ))
+	    protocol.sendFullTypeCheckResult(result)
 	  }
 	  case result:QuickTypeCheckResultEvent =>
 	  {
-	    send(SExp(
-		key(":quick-typecheck-result"),
-		SExp(
-		  key(":notes"),
-		  SExp(result.notes.map{ _.toSExp })
-		)
-	      ))
+	    protocol.sendQuickTypeCheckResult(result)
 	  }
 	  case RPCResultEvent(value, callId) =>
 	  {
-	    sendRPCReturn(
-	      SExp(
-		key(":ok"),
-		value
-	      ),
-	      callId)
+	    protocol.sendRPCReturn(value, callId)
 	  }
 	  case RPCErrorEvent(msg, callId) =>
 	  {
-	    System.err.println(msg);
-	    sendRPCReturn(
-	      SExp(
-		key(":abort"),
-		msg
-	      ),
-	      callId)
+	    protocol.sendRPCReturnError(msg, callId)
 	  }
 	}
       }
@@ -101,7 +80,7 @@ class Project extends Actor with SwankHandler{
 
   protected def restartCompiler() {
     compiler ! CompilerShutdownEvent
-    compiler = new Compiler(this, this.config)
+    compiler = new Compiler(this, protocol, this.config)
     compiler.start
   }
 
@@ -110,7 +89,7 @@ class Project extends Actor with SwankHandler{
       case Some(b) => b
       case None => 
       {
-	val b = new IncrementalBuilder(this, this.config)
+	val b = new IncrementalBuilder(this, protocol, this.config)
 	builder = Some(b)
 	b.start
 	b
@@ -125,219 +104,6 @@ class Project extends Actor with SwankHandler{
     builder = None
   }
 
-
-  override protected def handleRPCRequest(name:String, form:SExp, callId:Int){
-
-    def oops = sendRPCError("Malformed " + name + " call: " + form, callId)
-
-    name match {
-      case "swank:connection-info" => {
-	sendConnectionInfo(callId)
-      }
-      case "swank:init-project" => {
-	form match{
-	  case SExpList(head::(config:SExpList)::body) => {
-	    val conf = ProjectConfig(config)
-	    initProject(conf)
-	    sendRPCAckOK(callId)
-	  }
-	  case _ => oops 
-	}
-      }
-      case "swank:repl-config" => {
-	sendRPCReturn(
-	  SExp.propList(
-	    (":ok", SExp.propList(
-		(":classpath", strToSExp(this.config.replClasspath))
-	      ))),
-	  callId)
-      }
-      case "swank:builder-init" => {
-	val b = getOrStartBuilder
-	b ! RPCRequestEvent(RebuildAllReq(), callId)	
-      }
-      case "swank:builder-add-files" => {
-	form match{
-	  case SExpList(head::SExpList(filenames)::body) => {
-	    val files = filenames.map(s => new File(s.toString))
-	    val b = getOrStartBuilder
-	    b ! RPCRequestEvent(AddSourceFilesReq(files), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:builder-update-files" => {
-	form match{
-	  case SExpList(head::SExpList(filenames)::body) => {
-	    val files = filenames.map(s => new File(s.toString))
-	    val b = getOrStartBuilder
-	    b ! RPCRequestEvent(UpdateSourceFilesReq(files), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:builder-remove-files" => {
-	form match{
-	  case SExpList(head::SExpList(filenames)::body) => {
-	    val files = filenames.map(s => new File(s.toString))
-	    val b = getOrStartBuilder
-	    b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:debug-config" => {
-	debugInfo = Some(new ProjectDebugInfo(config))
-	sendRPCReturn(
-	  SExp.propList(
-	    (":ok", SExp.propList(
-		(":classpath", strToSExp(this.config.debugClasspath)),
-		(":sourcepath", strToSExp(this.config.debugSourcepath)),
-		(":debug-class", strToSExp(this.config.debugClass.getOrElse(""))),
-		(":debug-args", strToSExp(this.config.debugArgString))
-	      ))),
-	  callId)
-      }
-      case "swank:debug-unit-info" => {
-	form match{
-	  case SExpList(head::StringAtom(sourceName)::IntAtom(line)::StringAtom(packPrefix)::body) => {
-	    val info = debugInfo.getOrElse(new ProjectDebugInfo(config))
-	    debugInfo = Some(info)
-	    val unit = info.findUnit(sourceName, line, packPrefix)
-	    unit match{
-	      case Some(unit) => {
-		sendRPCReturn(
-		  SExp.propList(
-		    (":ok", SExp.propList(
-			(":full-name", strToSExp(unit.classQualName)),
-			(":package", strToSExp(unit.packageName)),
-			(":start-line", intToSExp(unit.startLine)),
-			(":end-line", intToSExp(unit.endLine))
-		      ))),
-		  callId)
-	      }
-	      case None => {
-		sendRPCReturn(SExp(key(":ok"), NilAtom()), callId)
-	      }
-	    }
-
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:debug-class-locs-to-source-locs" => {
-	form match{
-	  case SExpList(head::SExpList(pairs)::body) => {
-	    val info = debugInfo.getOrElse(new ProjectDebugInfo(config))
-	    debugInfo = Some(info)
-	    val result = SExpList(pairs.flatMap{ p =>
-		p match {
-		  case SExpList((classname:StringAtom)::(line:IntAtom)::body) => {
-		    info.findSourceForClass(classname.toString) match{
-		      case Some(s) => Some(SExp(s, line))
-		      case None => Some(SExp('nil, line))
-		    }
-		  }
-		  case _ => Some(SExp('nil, 'nil))
-		}
-	      })
-	    sendRPCReturn(
-	      SExpList(List(key(":ok"), result)),
-	      callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:typecheck-file" => {
-	form match{
-	  case SExpList(head::StringAtom(file)::body) => {
-	    compiler ! RPCRequestEvent(ReloadFileReq(new File(file)), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:typecheck-all" => {
-	compiler ! RPCRequestEvent(ReloadAllReq(), callId)
-      }
-      case "swank:scope-completion" => {
-	form match{
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::BooleanAtom(constructor)::body) => {
-	    compiler ! RPCRequestEvent(ScopeCompletionReq(new File(file), point, prefix, constructor), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:type-completion" => {
-	form match{
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::StringAtom(prefix)::body) => {
-	    compiler ! RPCRequestEvent(TypeCompletionReq(new File(file), point, prefix), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:inspect-type-at-point" => {
-	form match{
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! RPCRequestEvent(InspectTypeReq(new File(file), point), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:inspect-type-by-id" => {
-	form match{
-	  case SExpList(head::IntAtom(id)::body) => {
-	    compiler ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:symbol-at-point" => {
-	form match{
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! RPCRequestEvent(SymbolAtPointReq(new File(file), point), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:type-by-id" => {
-	form match{
-	  case SExpList(head::IntAtom(id)::body) => {
-	    compiler ! RPCRequestEvent(TypeByIdReq(id), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:call-completion" => {
-	form match{
-	  case SExpList(head::IntAtom(id)::body) => {
-	    compiler ! RPCRequestEvent(CallCompletionReq(id), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:type-at-point" => {
-	form match{
-	  case SExpList(head::StringAtom(file)::IntAtom(point)::body) => {
-	    compiler ! RPCRequestEvent(TypeAtPointReq(new File(file), point), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case "swank:inspect-package-by-path" => {
-	form match{
-	  case SExpList(head::StringAtom(path)::body) => {
-	    compiler ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
-	  }
-	  case _ => oops
-	}
-      }
-      case other => {
-	sendRPCError(
-	  "Unknown :emacs-rex call: " + other, 
-	  callId)
-      }
-    }
-  }
-
-
 }
+
+

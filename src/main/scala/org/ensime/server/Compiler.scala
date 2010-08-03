@@ -14,19 +14,21 @@ import scala.collection.{Iterable, Map}
 import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.collection.immutable.TreeSet
-import java.io.File
-import scala.tools.nsc.ast._
-import org.ensime.util.RichFile._
-import org.ensime.server.model._
-import org.ensime.util._
-import org.ensime.util.SExp._
-import org.ensime.config.ProjectConfig
-import org.ensime.server.model.SExpConversion._
 import scala.tools.nsc.symtab.Types
+import scala.tools.nsc.ast._
+
+import java.io.File
+
+import org.ensime.util.RichFile._
+import org.ensime.model._
+import org.ensime.util._
+import org.ensime.config.ProjectConfig
+import org.ensime.protocol.ProtocolConversions
+
 
 case class FullTypeCheckCompleteEvent()
-case class FullTypeCheckResultEvent(notes:List[Note])
-case class QuickTypeCheckResultEvent(notes:List[Note])
+case class FullTypeCheckResultEvent(notes:NoteList)
+case class QuickTypeCheckResultEvent(notes:NoteList)
 case class CompilerReadyEvent()
 case class CompilerShutdownEvent()
 
@@ -45,8 +47,7 @@ case class CallCompletionReq(id:Int)
 case class TypeAtPointReq(file:File, point:Int)
 
 
-
-class Compiler(project:Project, config:ProjectConfig) extends Actor{
+class Compiler(project:Project, protocol:ProtocolConversions, config:ProjectConfig) extends Actor{
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   private val reporter = new PresentationReporter()
@@ -54,6 +55,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
   private var awaitingInitialCompile = true
 
   import cc._
+  import protocol._
 
   def act(){
     cc.askNewRunnerThread
@@ -85,14 +87,14 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 		case ReloadAllReq() =>
 		{
 		  cc.askReloadAllFiles()
-		  project ! RPCResultEvent(TruthAtom(), callId)
+		  project ! RPCResultEvent(toWF(true), callId)
 		}
 
 		case ReloadFileReq(file:File) =>
 		{
 		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  cc.askReloadFile(f)
-		  project ! RPCResultEvent(TruthAtom(), callId)
+		  project ! RPCResultEvent(toWF(true), callId)
 		  project ! QuickTypeCheckResultEvent(reporter.allNotes)
 		}
 
@@ -107,7 +109,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
 		  val syms = cc.askCompleteSymbolAt(p, prefix, constructor)
-		  project ! RPCResultEvent(syms, callId)
+		  project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
 		}
 
 		case TypeCompletionReq(file:File, point:Int, prefix:String) => 
@@ -115,7 +117,7 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
 		  val members = cc.askCompleteMemberAt(p, prefix)
-		  project ! RPCResultEvent(members, callId)
+		  project ! RPCResultEvent(toWF(members.map(toWF)), callId)
 		}
 
 		case InspectTypeReq(file:File, point:Int) =>
@@ -123,13 +125,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
 		  val inspectInfo = cc.askInspectTypeAt(p)
-		  project ! RPCResultEvent(inspectInfo, callId)
+		  project ! RPCResultEvent(toWF(inspectInfo), callId)
 		}
 
 		case InspectTypeByIdReq(id:Int) =>
 		{
 		  val inspectInfo = cc.askInspectTypeById(id)
-		  project ! RPCResultEvent(inspectInfo, callId)
+		  project ! RPCResultEvent(toWF(inspectInfo), callId)
 		}
 
 		case SymbolAtPointReq(file:File, point:Int) =>
@@ -137,13 +139,13 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
 		  val info = cc.askSymbolInfoAt(p)
-		  project ! RPCResultEvent(info, callId)
+		  project ! RPCResultEvent(toWF(info), callId)
 		}
 
 		case InspectPackageByPathReq(path:String) =>
 		{
 		  val packageInfo = cc.askPackageByPath(path)
-		  project ! RPCResultEvent(packageInfo, callId)
+		  project ! RPCResultEvent(toWF(packageInfo), callId)
 		}
 
 		case TypeAtPointReq(file:File, point:Int) =>
@@ -151,19 +153,19 @@ class Compiler(project:Project, config:ProjectConfig) extends Actor{
 		  val f = cc.sourceFileForPath(file.getAbsolutePath())
 		  val p = new OffsetPosition(f, point)
 		  val typeInfo = cc.askTypeInfoAt(p)
-		  project ! RPCResultEvent(typeInfo, callId)
+		  project ! RPCResultEvent(toWF(typeInfo), callId)
 		}
 
 		case TypeByIdReq(id:Int) =>
 		{
 		  val tpeInfo = cc.askTypeInfoById(id)
-		  project ! RPCResultEvent(tpeInfo, callId)
+		  project ! RPCResultEvent(toWF(tpeInfo), callId)
 		}
 
 		case CallCompletionReq(id:Int) =>
 		{
 		  val callInfo = cc.askCallCompletionInfoById(id)
-		  project ! RPCResultEvent(callInfo, callId)
+		  project ! RPCResultEvent(toWF(callInfo), callId)
 		}
 	      }
 	    }
