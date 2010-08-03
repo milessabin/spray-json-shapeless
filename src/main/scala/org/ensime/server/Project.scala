@@ -28,6 +28,7 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
   protected var config:ProjectConfig = ProjectConfig.nullConfig
   protected var debugInfo:Option[ProjectDebugInfo] = None
 
+
   def act() {
     println("Project waiting for init...")
     loop {

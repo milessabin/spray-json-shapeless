@@ -17,41 +17,166 @@ case class OutgoingMessageEvent(obj:Any)
 
 trait Protocol extends ProtocolConversions{ 
 
+  /**
+  * Read a message from the socket.
+  *
+  * @param  reader  The reader from which to read the message.
+  * @return         The message, in the intermediate format.
+  */ 
   def readMessage(reader:Reader):WireFormat
 
+  /**
+  * Write a message to the socket.
+  *
+  * @param  value  The message to write.
+  * @param  writer The writer to which to write the message.
+  * @return        Void
+  */ 
   def writeMessage(value:WireFormat, writer:Writer)
 
-  def sendBackgroundMessage(msg:String)
 
-  def handleIncomingMessage(msg:Any)
-
-  protected def peer:Actor
-
-  // TODO: Perhaps a channel would be more efficient?
-  def setOutputActor(peer:Actor)
-
-  def setRPCTarget(target:RPCTarget)
-
+  /**
+  * Send a message in wire format to the client. Message
+  * will be sent to the outputPeer, and then written to the
+  * output socket.
+  *
+  * @param  o  The message to send.
+  * @return    Void
+  */ 
   def sendMessage(o:WireFormat){
     peer ! OutgoingMessageEvent(o)
   }
 
+
+  /**
+  * Handle a message from the client. Generally
+  * messages encode RPC calls, and will be delegated
+  * to the rpcTarget.
+  *
+  * @param  msg  The message we've received.
+  * @return        Void
+  */ 
+  def handleIncomingMessage(msg:Any)
+
+
+  /**
+  * Send a string to the client editor, to be displayed 
+  * to the user. This is to be used for non-critical messaging
+  * that the user may choose to ignore.
+  *
+  * @param  msg  The message to write.
+  * @return        Void
+  */ 
+  def sendBackgroundMessage(msg:String)
+
+
+
+  /**
+  * Designate an actor that should receive outgoing 
+  * messages. 
+  * TODO: Perhaps a channel would be more efficient?
+  *
+  * @param  peer  The Actor.
+  * @return        Void
+  */ 
+  def setOutputActor(peer:Actor)
+  protected def peer:Actor
+
+  /**
+  * Designate the target to which RPC handling
+  * should be delegated.
+  *
+  * @param  target The RPCTarget instance.
+  * @return        Void
+  */ 
+  def setRPCTarget(target:RPCTarget)
+
+
+  /**
+  * Send a simple RPC Return with a 'true' value.
+  * Serves to acknowledge the RPC call when no 
+  * other return value is required.
+  *
+  * @param  callId The id of the RPC call.
+  * @return        Void
+  */ 
   def sendRPCAckOK(callId:Int)
 
+  /**
+  * Send an RPC Return with the given value.
+  *
+  * @param  value  The value to return.
+  * @param  callId The id of the RPC call.
+  * @return        Void
+  */ 
   def sendRPCReturn(value:WireFormat, callId:Int)
 
+  /**
+  * Notify the client that an error occurred in 
+  * processing the RPC call.
+  *
+  * @param  value  A message describing the error.
+  * @param  callId The id of the failed RPC call.
+  * @return        Void
+  */ 
   def sendRPCReturnError(value:String, callId:Int)
 
+  /**
+  * Notify the client that the RPC call could not
+  * be processed.
+  *
+  * @param  value  A message describing the error.
+  * @param  callId The id of the failed RPC call.
+  * @return        Void
+  */ 
   def sendRPCError(msg:String, callId:Int)
 
+  /**
+  * Notify the client that a message was received
+  * that does not conform to the protocol.
+  *
+  * @param  packet  The message that failed.
+  * @param  condition A string describing the problem.
+  * @return        Void
+  */ 
   def sendProtocolError(packet:String, condition:String)
 
+  /**
+  * Send a structure describing the connection, protocol and
+  * server. Probably not necessessary in all clients.
+  *
+  * @param  callId The id of the failed RPC call.
+  * @return        Void
+  */ 
   def sendConnectionInfo(callId:Int)
 
+  /**
+  * Send a notification that the interactive compiler is ready
+  * to process queries. Editor should not allow commands until
+  * this notification has been received.
+  *
+  * @return        Void
+  */ 
   def sendCompilerReady()
 
+  /**
+  * Send notes describing errors, warnings that the compiler
+  * generates. These results are generated asynchronously,
+  * and not in response to any single RPC call.
+  *
+  * @param result  The notes
+  * @return        Void
+  */ 
   def sendFullTypeCheckResult(result:FullTypeCheckResultEvent)
-  
+
+  /**
+  * Send notes describing errors, warnings that the compiler
+  * generates.These results are generated asynchronously,
+  * and not in response to any single RPC call.
+  *
+  * @param  result  The notes
+  * @return        Void
+  */ 
   def sendQuickTypeCheckResult(result:QuickTypeCheckResultEvent)
 
 }
