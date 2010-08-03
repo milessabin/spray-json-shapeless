@@ -1,8 +1,12 @@
 package org.ensime.protocol
 
+import java.io._
+
 import scala.util.parsing.input._
+import scala.util.parsing.input.CharArrayReader
 import scala.actors._
 import scala.tools.nsc.util.{Position}
+
 import org.ensime.util.SExp._
 import org.ensime.util._
 import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
@@ -31,8 +35,48 @@ trait SwankProtocol extends Protocol{
 
   def setRPCTarget(target:RPCTarget){ this.rpcTarget = target }
 
-  def readIn(reader:Reader[Char]):WireFormat = {
-    SExp.read(reader)
+
+
+  // Handle reading / writing of messages
+
+  def writeMessage(value:WireFormat, out:Writer){
+    val data:String = value.toWireString
+    val header:String = String.format("%06x", int2Integer(data.length))
+    val msg = header + data
+    println("Writing: " + msg)
+    out.write(msg)
+    out.flush()
+  }
+
+  private def fillArray(in:java.io.Reader, a:Array[Char]){
+    var n = 0
+    var l = a.length
+    var charsRead = 0;
+    while(n < l){
+      charsRead = in.read(a, n, l - n)
+      if(charsRead == -1){
+	throw new EOFException("End of file reached in socket reader.");
+      }
+      else{
+	n += charsRead
+      }
+    }
+  }
+
+  private val headerBuf = new Array[Char](6);
+
+  def readMessage(in:java.io.Reader):WireFormat = {
+    fillArray(in, headerBuf)
+    val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
+    if(msglen > 0){
+      //TODO allocating a new array each time is inefficient!
+      val buf:Array[Char] = new Array[Char](msglen);
+      fillArray(in, buf)
+      SExp.read(new CharArrayReader(buf))
+    }
+    else{
+      throw new IllegalStateException("Empty message read from socket!")
+    }
   }
 
   def sendBackgroundMessage(msg:String){

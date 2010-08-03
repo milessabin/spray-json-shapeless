@@ -1,7 +1,9 @@
 package org.ensime.protocol
 
+import java.io._
+
 import scala.actors._ 
-import scala.util.parsing.input._
+
 import org.ensime.model._
 import org.ensime.util._
 import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
@@ -15,7 +17,9 @@ case class OutgoingMessageEvent(obj:Any)
 
 trait Protocol extends ProtocolConversions{ 
 
-  def readIn(reader:Reader[Char]):WireFormat
+  def readMessage(reader:Reader):WireFormat
+
+  def writeMessage(value:WireFormat, writer:Writer)
 
   def sendBackgroundMessage(msg:String)
 

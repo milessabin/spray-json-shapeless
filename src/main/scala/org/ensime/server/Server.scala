@@ -15,7 +15,7 @@ object Server {
       System.setProperty("actors.corePoolSize", "5")
       System.setProperty("actors.maxPoolSize", "10")
 
-      val protocol = SwankProtocol
+      val protocol:Protocol = SwankProtocol
 
       // TODO use a real cmdline parser here
       val portfile = args(0)
@@ -88,36 +88,12 @@ class SocketHandler(socket:Socket, protocol:Protocol, project:Project) extends A
 
   class SocketReader(socket:Socket, handler:SocketHandler) extends Actor { 
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-    private def fillArray(a:Array[Char]){
-      var n = 0
-      var l = a.length
-      var charsRead = 0;
-      while(n < l){
-	charsRead = in.read(a, n, l - n)
-	if(charsRead == -1){
-	  throw new EOFException("End of file reached in socket reader.");
-	}
-	else{
-	  n += charsRead
-	}
-      }
-    }
-
     def act() {
-      val headerBuf = new Array[Char](6);
       var running = true
       try{
 	while(running){
-	  fillArray(headerBuf)
-	  val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
-	  if(msglen > 0){
-	    //TODO allocating a new array each time is inefficient!
-	    val buf:Array[Char] = new Array[Char](msglen);
-	    fillArray(buf)
-	    val value:WireFormat = protocol.readIn(new CharArrayReader(buf))
-	    handler ! IncomingMessageEvent(value)
-	  }
+	  val msg:WireFormat = protocol.readMessage(in)
+	  handler ! IncomingMessageEvent(msg)
 	}
       }
       catch {
@@ -134,12 +110,7 @@ class SocketHandler(socket:Socket, protocol:Protocol, project:Project) extends A
 
   def write(value:WireFormat){
     try{
-      val data:String = value.toWireString
-      val header:String = String.format("%06x", int2Integer(data.length))
-      val msg = header + data
-      println("Writing: " + msg)
-      out.write(msg)
-      out.flush()
+      protocol.writeMessage(value, out)
     }
     catch {
       case e: IOException => 
