@@ -6,21 +6,12 @@ import scala.tools.nsc.{Settings}
 import scala.actors._  
 import scala.actors.Actor._  
 import scala.tools.nsc.io.{AbstractFile}
-import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
-import scala.tools.nsc.util.NoPosition
 import scala.tools.nsc.reporters.Reporter
 import scala.collection.{Iterable, Map}
-import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
-import scala.collection.immutable.TreeSet
-import scala.tools.nsc.ast._
-import scala.tools.nsc.symtab.Types
 
 import java.io.File
 
-import org.ensime.util.RichFile._
-import org.ensime.model._
-import org.ensime.util._
+import org.ensime.util.PresentationReporter
 import org.ensime.config.ProjectConfig
 import org.ensime.protocol.ProtocolConversions
 

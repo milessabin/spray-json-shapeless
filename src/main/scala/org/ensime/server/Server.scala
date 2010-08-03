@@ -19,7 +19,7 @@ object Server {
 
       // TODO use a real cmdline parser here
       val portfile = args(0)
-      val project:Project = new Project(SwankProtocol)
+      val project:Project = new Project(protocol)
       project.start
 
       // 0 will cause socket to bind to first available port

@@ -115,7 +115,11 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
 }
 
 
-class RichPresentationCompiler(settings:Settings, reporter:Reporter, var parent:Actor, val config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders with RichCompilerControl{
+class RichPresentationCompiler(
+  settings:Settings, 
+  reporter:Reporter, 
+  var parent:Actor, 
+  val config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders with RichCompilerControl{
 
   import Helpers._
 
