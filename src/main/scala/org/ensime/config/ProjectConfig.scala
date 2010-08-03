@@ -9,7 +9,6 @@ import org.ensime.util._
 import org.ensime.util.RichFile._
 import org.ensime.util.FileUtils._
 import org.ensime.util.SExp._
-import org.ensime.server.model._
 import scala.collection.mutable
 import java.io.File
 
