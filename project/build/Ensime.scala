@@ -29,11 +29,6 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
     copyFlat(elisp.get, "dist" / "elisp", log)
 
 
-    // Copy the example configuration
-    val dotEnsime = "." / ".ensime.example"
-    copyFile(dotEnsime, "dist" / ".ensime.example", log)
-
-
     // Copy all the runtime dependencies over to dist
     copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
     copyFlat(mainDependencies.scalaJars.get, "dist" / "lib", log)

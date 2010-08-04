@@ -18,42 +18,42 @@ import scala.tools.nsc.symtab.Flags
 trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompiler =>
 
 
-  def askOr[A](op: () => A, handle:Throwable => A): A = {
+  def askOr[A](op: => A, handle:Throwable => A): A = {
     val result = new Response[A]()
     scheduler postWorkItem new WorkItem {
-      def apply() = respond(result)(op())
+      def apply() = respond(result)(op)
     }
     result.get.fold( o => o, handle)
   }
 
   def askSymbolInfoAt(p: Position):SymbolInfo = askOr(
-    () => symbolAt(p).fold(s => SymbolInfo(s), t => SymbolInfo.nullInfo), 
+    symbolAt(p).fold(s => SymbolInfo(s), t => SymbolInfo.nullInfo), 
     t => SymbolInfo.nullInfo)
 
   def askTypeInfoAt(p: Position):TypeInfo = askOr(
-    () => typeAt(p).fold(s => TypeInfo(s), t => TypeInfo.nullInfo), 
+    typeAt(p).fold(s => TypeInfo(s), t => TypeInfo.nullInfo), 
     t => TypeInfo.nullInfo)
 
   def askTypeInfoById(id:Int):TypeInfo = askOr(
-    () => typeById(id) match {
+    typeById(id) match {
       case Some(t) => TypeInfo(t)
       case None => TypeInfo.nullInfo
     }, 
     t => TypeInfo.nullInfo)
 
   def askCallCompletionInfoById(id:Int):CallCompletionInfo = askOr(
-    () => typeById(id) match {
+    typeById(id) match {
       case Some(t:Type) => CallCompletionInfo(t)
       case _ => CallCompletionInfo.nullInfo
     }, 
     t => CallCompletionInfo.nullInfo)
 
   def askPackageByPath(path:String):PackageInfo = askOr(
-    () => PackageInfo.fromPath(path),
+    PackageInfo.fromPath(path),
     t => PackageInfo.nullInfo)
 
   def askQuickReloadFile(f:SourceFile){
-    askOr( () => reloadSources(List(f)), t => ())
+    askOr(reloadSources(List(f)), t => ())
   }
 
   def askReloadFile(f:SourceFile){
@@ -74,33 +74,33 @@ trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompile
   }
 
   def askInspectTypeById(id:Int):TypeInspectInfo = askOr(
-    () => typeById(id) match {
+    typeById(id) match {
       case Some(t:Type) => inspectType(t)
       case _ => TypeInspectInfo.nullInfo
     }, 
     t => TypeInspectInfo.nullInfo)
 
   def askInspectTypeAt(p: Position):TypeInspectInfo = askOr(
-    () => inspectTypeAt(p),
+    inspectTypeAt(p),
     t => TypeInspectInfo.nullInfo)
 
 
   def askCompleteSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = askOr(
-    () => {
+    {
       reloadAndTypeFiles(List(p.source))
       completeSymbolAt(p, prefix, constructor)
     },
     t => List())
 
   def askCompleteMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = askOr(
-    () => {
+    {
       reloadAndTypeFiles(List(p.source))
       completeMemberAt(p, prefix)
     },
     t => List())
 
   def askReloadAndTypeFiles(files:Iterable[SourceFile]) = askOr(
-    () => {
+    {
       reloadAndTypeFiles(files)
     },
     t => ())
@@ -172,252 +172,236 @@ class RichPresentationCompiler(
       }
       case Right(e) => {
 	System.err.println("ERROR: Failed to get any type information :(  " + e)
-	  List()
-	}
+	List()
       }
     }
+  }
 
-    private def prepareSortedInterfaceInfo(members:List[Member]):Iterable[InterfaceInfo] = {
-      // ...filtering out non-visible and non-type members
-      val visMembers:List[TypeMember] = members.flatMap {
-	case m@TypeMember(sym, tpe, true, _, _) => List(m)
-	case _ => List()
-      }
-
-
-      // Create a list of pairs [(typeSym, membersOfSym)]
-      val membersByOwner = visMembers.groupBy{
-	case TypeMember(sym, _, _, _, _) => {
-	  sym.owner
-	}
-      }.toList.sortWith{
-	// Sort the pairs on the subtype relation
-	case ((s1,_),(s2,_)) => s1.tpe <:< s2.tpe
-      }
-
-      membersByOwner.map{
-	case (ownerSym, members) => {
-
-	  // If all the members in this interface were
-	  // provided by the same view, remember that 
-	  // view for later display to user.
-	  val byView = members.groupBy(_.viaView)
-	  val viaView = if(byView.size == 1){
-	    byView.keys.headOption.filter(_ != NoSymbol)
-	  } else {None}
-
-	  // Transform to [typeInfo]*
-	  val memberInfos = members.map{ m =>
-	    NamedTypeMemberInfo(m)
-	  }
-
-	  val nestedTypes = (memberInfos.filter(_.declaredAs != 'method)
-	    .sortWith((a,b) => a.name <= b.name))	
-	  val constructors = memberInfos.filter(_.name == "this")
-	  val others = (memberInfos.filter(m => 
-	      m.declaredAs == 'method && m.name != "this")
-	    .sortWith((a,b) => a.name <= b.name))
-
-	  val sortedInfos = nestedTypes ++ constructors ++ others
-
-	  new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
-	    viaView.map(_.name.toString))
-	}
-      }
-    }
-
-    protected def inspectType(tpe:Type):TypeInspectInfo = {
-      new TypeInspectInfo(
-	TypeInfo(tpe),
-	prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
-      )
-    }
-
-    protected def inspectTypeAt(p: Position):TypeInspectInfo = {
-      val members = getMembersForTypeAt(p)
-      val preparedMembers = prepareSortedInterfaceInfo(members)
-      typeAt(p) match {
-	case Left(t) => new TypeInspectInfo(TypeInfo(t), preparedMembers)
-	case Right(_) => TypeInspectInfo.nullInfo
-      }
-    }
-
-    private def typeOfTree(t:Tree):Either[Type, Throwable] = {
-      var tree = t
-      tree = tree match {
-	case Select(qual, name) if tree.tpe == ErrorType => 
-	{
-	  qual
-	}
-	case t:ImplDef if t.impl != null => 
-	{
-	  t.impl
-	}
-	case t:ValOrDefDef if t.tpt != null => 
-	{
-	  t.tpt
-	}
-	case t:ValOrDefDef if t.rhs != null => 
-	{
-	  t.rhs
-	}
-	case t => t
-      }
-      if(tree.tpe != null) {
-	Left(tree.tpe)
-      }
-      else {
-	Right(new Exception("Null tpe"))
-      }
-    }
-
-    protected def typeAt(p: Position):Either[Type, Throwable] = {
-      val tree = typedTreeAt(p)
-      typeOfTree(tree)
-    }
-
-    protected def symbolAt(p: Position):Either[Symbol, Throwable] = {
-      p.source.file
-      val tree = typedTreeAt(p)
-      if(tree.symbol != null){
-	Left(tree.symbol)
-      }
-      else{
-	Right(new Exception("Null sym"))
-      }
+  private def prepareSortedInterfaceInfo(members:List[Member]):Iterable[InterfaceInfo] = {
+    // ...filtering out non-visible and non-type members
+    val visMembers:List[TypeMember] = members.flatMap {
+      case m@TypeMember(sym, tpe, true, _, _) => List(m)
+      case _ => List()
     }
 
 
-    /**
-    * Override scopeMembers to fix issues with finding method params
-    * and occasional exception in pre.memberType. Hopefully we can
-    * get these changes into Scala.
-    */
-    override def scopeMembers(pos: Position): List[ScopeMember] = {
-      val context = doLocateContext(pos)
-      val locals = new LinkedHashMap[Name, ScopeMember]
-      def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
-	if (!sym.name.decode.containsName(Dollar) &&  
-	  !sym.hasFlag(Flags.SYNTHETIC) &&
-	  !locals.contains(sym.name)) {
-	  locals(sym.name) = new ScopeMember(
-            sym, 
-            sym.tpe,
-            context.isAccessible(sym, pre, false),
-            viaImport)
-	}
+    // Create a list of pairs [(typeSym, membersOfSym)]
+    val membersByOwner = visMembers.groupBy{
+      case TypeMember(sym, _, _, _, _) => {
+	sym.owner
       }
-      var cx = context
-      while (cx != NoContext) {
-	for (sym <- cx.scope){
-	  addSymbol(sym, NoPrefix, EmptyTree)
-	}
-	if(cx.prefix != null){
-	  for (sym <- cx.prefix.members) {
-       	    addSymbol(sym, cx.prefix, EmptyTree)
-	  }
-	}
-	cx = cx.outer
-      }
-      for (imp <- context.imports) {
-	val pre = imp.qual.tpe
-	for (sym <- imp.allImportedSymbols) {
-	  addSymbol(sym, pre, imp.qual)
-	}
-      }
-      val result = locals.values.toList
-      result
+    }.toList.sortWith{
+      // Sort the pairs on the subtype relation
+      case ((s1,_),(s2,_)) => s1.tpe <:< s2.tpe
     }
 
-    protected def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
-      val names = try{
-	scopeMembers(p)
+    membersByOwner.map{
+      case (ownerSym, members) => {
+
+	// If all the members in this interface were
+	// provided by the same view, remember that 
+	// view for later display to user.
+	val byView = members.groupBy(_.viaView)
+	val viaView = if(byView.size == 1){
+	  byView.keys.headOption.filter(_ != NoSymbol)
+	} else {None}
+
+	// Transform to [typeInfo]*
+	val memberInfos = members.map{ m =>
+	  NamedTypeMemberInfo(m)
+	}
+
+	val nestedTypes = (memberInfos.filter(_.declaredAs != 'method)
+	  .sortWith((a,b) => a.name <= b.name))	
+	val constructors = memberInfos.filter(_.name == "this")
+	val others = (memberInfos.filter(m => 
+	    m.declaredAs == 'method && m.name != "this")
+	  .sortWith((a,b) => a.name <= b.name))
+
+	val sortedInfos = nestedTypes ++ constructors ++ others
+
+	new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
+	  viaView.map(_.name.toString))
       }
-      catch{
-	case e => {
-	  System.err.println("Error retrieving scope members:")
-	  e.printStackTrace(System.err)
-	  List[ScopeMember]()
+    }
+  }
+
+  protected def inspectType(tpe:Type):TypeInspectInfo = {
+    new TypeInspectInfo(
+      TypeInfo(tpe),
+      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
+    )
+  }
+
+  protected def inspectTypeAt(p: Position):TypeInspectInfo = {
+    val members = getMembersForTypeAt(p)
+    val preparedMembers = prepareSortedInterfaceInfo(members)
+    typeAt(p) match {
+      case Left(t) => new TypeInspectInfo(TypeInfo(t), preparedMembers)
+      case Right(_) => TypeInspectInfo.nullInfo
+    }
+  }
+
+  private def typeOfTree(t:Tree):Either[Type, Throwable] = {
+    var tree = t
+    tree = tree match {
+      case Select(qual, name) if tree.tpe == ErrorType => 
+      {
+	qual
+      }
+      case t:ImplDef if t.impl != null => 
+      {
+	t.impl
+      }
+      case t:ValOrDefDef if t.tpt != null => 
+      {
+	t.tpt
+      }
+      case t:ValOrDefDef if t.rhs != null => 
+      {
+	t.rhs
+      }
+      case t => t
+    }
+    if(tree.tpe != null) {
+      Left(tree.tpe)
+    }
+    else {
+      Right(new Exception("Null tpe"))
+    }
+  }
+
+  protected def typeAt(p: Position):Either[Type, Throwable] = {
+    val tree = typedTreeAt(p)
+    typeOfTree(tree)
+  }
+
+  protected def symbolAt(p: Position):Either[Symbol, Throwable] = {
+    p.source.file
+    val tree = typedTreeAt(p)
+    if(tree.symbol != null){
+      Left(tree.symbol)
+    }
+    else{
+      Right(new Exception("Null sym"))
+    }
+  }
+
+
+  /**
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
+  override def scopeMembers(pos: Position): List[ScopeMember] = {
+    val context = doLocateContext(pos)
+    val locals = new LinkedHashMap[Name, ScopeMember]
+    def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
+      if (!sym.name.decode.containsName(Dollar) &&  
+	!sym.hasFlag(Flags.SYNTHETIC) &&
+	!locals.contains(sym.name)) {
+	locals(sym.name) = new ScopeMember(
+          sym, 
+          sym.tpe,
+          context.isAccessible(sym, pre, false),
+          viaImport)
+      }
+    }
+    var cx = context
+    while (cx != NoContext) {
+      for (sym <- cx.scope){
+	addSymbol(sym, NoPrefix, EmptyTree)
+      }
+      if(cx.prefix != null){
+	for (sym <- cx.prefix.members) {
+       	  addSymbol(sym, cx.prefix, EmptyTree)
 	}
       }
-      val visibleNames = names.flatMap{ m => 
-	m match{
-	  case ScopeMember(sym, tpe, true, _) => {
-	    if(sym.nameString.startsWith(prefix)){
-	      if(constructor){
-		SymbolInfoLight.constructorSynonyms(sym)
-	      }
-	      else{
-		val synonyms = SymbolInfoLight.applySynonyms(sym)
-		List(SymbolInfoLight(sym, tpe)) ++ synonyms
-	      }
+      cx = cx.outer
+    }
+    for (imp <- context.imports) {
+      val pre = imp.qual.tpe
+      for (sym <- imp.allImportedSymbols) {
+	addSymbol(sym, pre, imp.qual)
+      }
+    }
+    val result = locals.values.toList
+    result
+  }
+
+  protected def completeSymbolAt(p: Position, prefix:String, constructor:Boolean):List[SymbolInfoLight] = {
+    val names = try{
+      scopeMembers(p)
+    }
+    catch{
+      case e => {
+	System.err.println("Error retrieving scope members:")
+	e.printStackTrace(System.err)
+	List[ScopeMember]()
+      }
+    }
+    val visibleNames = names.flatMap{ m => 
+      m match{
+	case ScopeMember(sym, tpe, true, _) => {
+	  if(sym.nameString.startsWith(prefix)){
+	    if(constructor){
+	      SymbolInfoLight.constructorSynonyms(sym)
 	    }
 	    else{
-	      List()
+	      val synonyms = SymbolInfoLight.applySynonyms(sym)
+	      List(SymbolInfoLight(sym, tpe)) ++ synonyms
 	    }
-	  }
-	  case _ => List()
-	}
-      }.sortWith((a,b) => a.name.length <= b.name.length)
-      visibleNames
-    }
-
-    protected def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
-      val members = getMembersForTypeAt(p)
-      val visibleMembers = members.flatMap{
-	case tm@TypeMember(sym, tpe, true, _, _) => {
-	  if(sym.nameString.startsWith(prefix)){
-	    List(NamedTypeMemberInfoLight(tm))
 	  }
 	  else{
 	    List()
 	  }
 	}
 	case _ => List()
-      }.sortWith((a,b) => a.name.length <= b.name.length)
-      visibleMembers
-    }
-
-
-    // We ocassionally need to invoke recompile(...)
-    // manually, in which case we don't want to 
-    // send error/warning notes.
-    private var enableFullTypeCheckEvents = true
-    protected def withoutTypeCheckEvents(action:() => Unit) = {
-      enableFullTypeCheckEvents = false
-      try{
-	action()
       }
-      finally{
-	enableFullTypeCheckEvents = true
-      }
-    }
-
-    /**
-    * Override so we send a notification to compiler actor when finished..
-    */
-    override def recompile(units: List[RichCompilationUnit]) {
-      super.recompile(units)
-      if(enableFullTypeCheckEvents){
-	parent ! FullTypeCheckCompleteEvent()
-      }
-    }
-
-    protected def reloadAndTypeFiles(sources:Iterable[SourceFile]) = {
-      sources.foreach{ s =>
-	typedTree(s, true)
-      }
-    }
-
-    override def askShutdown(){
-      super.askShutdown()
-      parent = null
-    }
-
-    override def finalize() {
-      System.out.println("Finalizing Global instance.")
-    }
-
+    }.sortWith((a,b) => a.name.length <= b.name.length)
+    visibleNames
   }
+
+  protected def completeMemberAt(p: Position, prefix:String):List[NamedTypeMemberInfoLight] = {
+    val members = getMembersForTypeAt(p)
+    val visibleMembers = members.flatMap{
+      case tm@TypeMember(sym, tpe, true, _, _) => {
+	if(sym.nameString.startsWith(prefix)){
+	  List(NamedTypeMemberInfoLight(tm))
+	}
+	else{
+	  List()
+	}
+      }
+      case _ => List()
+    }.sortWith((a,b) => a.name.length <= b.name.length)
+    visibleMembers
+  }
+
+
+  /**
+  * Override so we send a notification to compiler actor when finished..
+  */
+  override def recompile(units: List[RichCompilationUnit]) {
+    super.recompile(units)
+    parent ! FullTypeCheckCompleteEvent()
+  }
+
+  protected def reloadAndTypeFiles(sources:Iterable[SourceFile]) = {
+    sources.foreach{ s =>
+      typedTree(s, true)
+    }
+  }
+
+  override def askShutdown(){
+    super.askShutdown()
+    parent = null
+  }
+
+  override def finalize() {
+    System.out.println("Finalizing Global instance.")
+  }
+
+}
 
 

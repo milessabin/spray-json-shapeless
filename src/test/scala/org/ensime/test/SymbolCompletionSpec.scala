@@ -4,9 +4,9 @@ import org.scalatest.matchers.ShouldMatchers
 import org.ensime.test.util.Helpers._
 
 
-class CompletionSpec extends Spec with ShouldMatchers{
+class SymbolCompletionSpec extends Spec with ShouldMatchers{
 
-  describe("Symbol Info") {
+  describe("Symbol Completion") {
 
     it("should complete local variable name") {
       withPresCompiler{ cc =>
