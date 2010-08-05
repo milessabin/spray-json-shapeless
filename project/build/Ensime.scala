@@ -6,7 +6,17 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
   import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
 
-//  override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
+
+  override def libraryDependencies = Set(
+    "org.apache.ant"%"ant"%"1.8.1"%"compile->default;runtime->default;test->default",
+    "org.apache.ivy"%"ivy"%"2.1.0"%"compile->default;runtime->default;test->default",
+    "org.apache.maven"%"maven-ant-tasks"%"2.1.0"%"compile->default;runtime->default;test->default",
+    "org.apache.bcel"%"bcel"%"5.2"%"compile->default;runtime->default;test->default",
+    "org.scalatest"%"scalatest"%"1.2"%"compile->default;test->default"
+  ) ++ super.libraryDependencies
+
+
+  //  override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.
