@@ -226,9 +226,31 @@ class RichPresentationCompiler(
     }
   }
 
+  protected def companionTypeOf(tpe:Type):Option[Type] = {
+    val sym = tpe.typeSymbol
+    if(sym != NoSymbol){
+      if(sym.isModule || sym.isModuleClass){
+	val comp = sym.companionClass
+	if(comp != NoSymbol && comp.tpe != tpe){ 
+	  Some(comp.tpe)
+	}
+	else None
+      }
+      else if(sym.isTrait || sym.isClass || sym.isPackageClass){
+	val comp = sym.companionModule
+	if(comp != NoSymbol && comp.tpe != tpe){ 
+	  Some(comp.tpe)
+	}
+	else None
+      }
+      else None
+    } else None
+  }
+
   protected def inspectType(tpe:Type):TypeInspectInfo = {
     new TypeInspectInfo(
       TypeInfo(tpe),
+      companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
     )
   }
@@ -237,7 +259,10 @@ class RichPresentationCompiler(
     val members = getMembersForTypeAt(p)
     val preparedMembers = prepareSortedInterfaceInfo(members)
     typeAt(p) match {
-      case Left(t) => new TypeInspectInfo(TypeInfo(t), preparedMembers)
+      case Left(t) => new TypeInspectInfo(
+	TypeInfo(t), 
+	companionTypeOf(t).map(cacheType),
+	preparedMembers)
       case Right(_) => TypeInspectInfo.nullInfo
     }
   }

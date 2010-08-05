@@ -53,7 +53,7 @@ class CallCompletionInfo(
 
 class InterfaceInfo(val tpe:TypeInfo, val viaView:Option[String]){}
 
-class TypeInspectInfo(val tpe:TypeInfo, val supers:Iterable[InterfaceInfo]){}
+class TypeInspectInfo(val tpe:TypeInfo, val companionId:Option[Int], val supers:Iterable[InterfaceInfo]){}
 
 
 
@@ -487,7 +487,7 @@ trait ModelBuilders {  self: Global =>
 
   object TypeInspectInfo{
     def nullInfo() = {
-      new TypeInspectInfo(TypeInfo.nullInfo(), List())
+      new TypeInspectInfo(TypeInfo.nullInfo(), None, List())
     }
   }
 

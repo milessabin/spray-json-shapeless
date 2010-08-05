@@ -542,6 +542,10 @@ trait SwankProtocol extends Protocol{
     SExp.propList(
       (":type", toWF(value.tpe)),
       (":info-type", 'typeInspect),
+      (":companion-id", value.companionId match{
+	  case Some(id) => id
+	  case None => 'nil
+	}),
       (":interfaces", SExp(value.supers.map(toWF)))
     )
   }
