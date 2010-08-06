@@ -38,12 +38,11 @@ object ProjectConfig{
 
     m.get(key(":use-sbt")) match{
       case Some(TruthAtom()) => {
-	val rConf = m.get(key(":sbt-runtime-conf")).map(_.toString)
-	val cConf = m.get(key(":sbt-compile-conf")).map(_.toString)
-	val ext = getSbtConfig(rootDir, rConf, cConf)
+	val ext = getSbtConfig(rootDir)
 	sourceRoots ++= ext.sourceRoots
 	runtimeDeps ++= ext.runtimeDepJars
 	compileDeps ++= ext.compileDepJars
+	compileDeps ++= ext.testDepJars
 	target = ext.target
       }
       case _ => 
@@ -51,12 +50,11 @@ object ProjectConfig{
 
     m.get(key(":use-maven")) match{
       case Some(TruthAtom()) => {
-	val rConf = m.get(key(":maven-runtime-scopes")).map(_.toString)
-	val cConf = m.get(key(":maven-compile-scopes")).map(_.toString)
-	val ext = getMavenConfig(rootDir, rConf, cConf)
+	val ext = getMavenConfig(rootDir)
 	sourceRoots ++= ext.sourceRoots
 	runtimeDeps ++= ext.runtimeDepJars
 	compileDeps ++= ext.compileDepJars
+	compileDeps ++= ext.testDepJars
 	target = ext.target
       }
       case _ => 
@@ -66,10 +64,12 @@ object ProjectConfig{
       case Some(TruthAtom()) => {
 	val rConf = m.get(key(":ivy-runtime-conf")).map(_.toString)
 	val cConf = m.get(key(":ivy-compile-conf")).map(_.toString)
-	val ext = getIvyConfig(rootDir, rConf, cConf)
+	val tConf = m.get(key(":ivy-test-conf")).map(_.toString)
+	val ext = getIvyConfig(rootDir, rConf, cConf, tConf)
 	sourceRoots ++= ext.sourceRoots
 	runtimeDeps ++= ext.runtimeDepJars
 	compileDeps ++= ext.compileDepJars
+	compileDeps ++= ext.testDepJars
 	target = ext.target
       }
       case _ => 

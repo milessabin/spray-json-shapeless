@@ -17,18 +17,20 @@ case class ExternalConfig(
   val sourceRoots:Iterable[File],
   val runtimeDepJars:Iterable[File],
   val compileDepJars:Iterable[File],
+  val testDepJars:Iterable[File],
   val target:Option[File]){
 }
 
 object ExternalConfigInterface {
 
-  def getMavenConfig(baseDir:File, runtimeScopes:Option[String], compileScopes:Option[String]):ExternalConfig = {
+  def getMavenConfig(baseDir:File):ExternalConfig = {
     val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
-    val runtimeDeps = resolveMavenDeps(baseDir, runtimeScopes.getOrElse("runtime"))
-    val compileDeps = resolveMavenDeps(baseDir, compileScopes.getOrElse("compile"))
+    val runtimeDeps = resolveMavenDeps(baseDir, "runtime")
+    val compileDeps = resolveMavenDeps(baseDir, "compile")
+    val testDeps = resolveMavenDeps(baseDir, "test")
     val f = new File(baseDir, "target/classes")
     val buildTarget = if(f.exists){Some(f)}else{None}
-    ExternalConfig(srcDirs, runtimeDeps, compileDeps, buildTarget)
+    ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
 
@@ -65,16 +67,24 @@ object ExternalConfigInterface {
 
 
 
-  def getIvyConfig(baseDir:File, runtimeConf:Option[String], compileConf:Option[String]):ExternalConfig = {
+  def getIvyConfig(baseDir:File, 
+    runtimeConf:Option[String], 
+    compileConf:Option[String], 
+    testConf:Option[String]):ExternalConfig = {
     val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
-    val runtimeDeps = resolveIvyDeps(baseDir, runtimeConf.getOrElse("default"))
-    val compileDeps = resolveIvyDeps(baseDir, compileConf.getOrElse("default"))
+
+    val resolve = { c:String => resolveIvyDeps(baseDir, c)}
+
+    val defaultDeps = resolve("default")
+    val runtimeDeps = runtimeConf.map(resolve(_)).getOrElse(defaultDeps)
+    val compileDeps = compileConf.map(resolve(_)).getOrElse(defaultDeps)
+    val testDeps = testConf.map(resolve(_)).getOrElse(defaultDeps)
 
     val f = new File(baseDir, "target/classes")
     val buildTarget = if(f.exists){Some(f)}else{None}
     System.out.println("Using build target: " + buildTarget)
 
-    ExternalConfig(srcDirs, runtimeDeps, compileDeps, buildTarget)
+    ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
   def resolveIvyDeps(baseDir:File, conf:String):Iterable[File] = {
@@ -99,7 +109,7 @@ object ExternalConfigInterface {
   }
 
 
-  def getSbtConfig(baseDir:File, runtimeConf:Option[String], compileConf:Option[String]):ExternalConfig = {
+  def getSbtConfig(baseDir:File):ExternalConfig = {
     val srcDirs = makeDirs(List("src"), baseDir)
     val projectProps = new File(baseDir, "project/build.properties")
     val parentProjectProps = new File(baseDir, "../project/build.properties")
@@ -113,17 +123,18 @@ object ExternalConfigInterface {
       val sbtConfig = SbtConfigParser(propFile)
       val v = sbtConfig.buildScalaVersion
 
-      val runtimeDeps = resolveSbtDeps(baseDir, v, runtimeConf.getOrElse("default"), isSubProject)
-      val compileDeps = resolveSbtDeps(baseDir, v, compileConf.getOrElse("default"), isSubProject)
+      val runtimeDeps = resolveSbtDeps(baseDir, v, "runtime", isSubProject)
+      val compileDeps = resolveSbtDeps(baseDir, v, "compile", isSubProject)
+      val testDeps = resolveSbtDeps(baseDir, v, "test", isSubProject)
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if(f.exists){Some(f)}else{None}
       System.out.println("Using build target: " + target)
-      ExternalConfig(srcDirs, runtimeDeps, compileDeps, target)
+      ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, target)
     }
     else {
       System.err.println("Could not locate build.properties file!")
-      ExternalConfig(srcDirs, List(), List(), None)
+      ExternalConfig(srcDirs, List(), List(), List(), None)
     }
   }
 
@@ -132,13 +143,14 @@ object ExternalConfigInterface {
     val v = scalaVersion
     val unmanagedLibDir = "lib"
     val managedLibDir = "lib_managed/scala_" + v + "/" + conf
+    val defaultManagedLibDir = "lib_managed/scala_" + v + "/default"
     val scalaLibDir = if(isSubProject){"../project/boot/scala-" + v + "/lib"}
     else {"project/boot/scala-" + v + "/lib"}
     System.out.println("Using base directory " + baseDir)
     System.out.println("Searching for dependencies in " + unmanagedLibDir)
     System.out.println("Searching for dependencies in " + managedLibDir)
     System.out.println("Searching for dependencies in " + scalaLibDir)
-    var jarRoots = makeDirs(List(unmanagedLibDir, managedLibDir, scalaLibDir), baseDir)
+    var jarRoots = makeDirs(List(unmanagedLibDir, managedLibDir, defaultManagedLibDir, scalaLibDir), baseDir)
     val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
     jars
   }

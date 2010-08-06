@@ -165,13 +165,6 @@ __:use-sbt [t|nil]__
 <br/>
 
 
-__:sbt-compile-conf "...."__<br/>
-__:sbt-runtime-conf "...."__
-
-* Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
-<br/>
-
-
 __:sbt-compile-on-save [t|nil]__<br/>
 
 * Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is disabled by default as it consumes a lot of CPU.
@@ -184,12 +177,6 @@ __:use-maven t__
 <br/>
 
 
-__:maven-compile-scopes "...."__<br/>
-__:maven-runtime-scopes "...."__
-
-* Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom scopes!
-<br/>
-
 __:use-ivy t__
 
 * Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
@@ -198,8 +185,9 @@ __:use-ivy t__
 
 __:ivy-compile-conf "...."__<br/>
 __:ivy-runtime-conf "...."__
+__:ivy-test-conf "...."__
 
-* Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+* Specify the names of dependency profiles to be used for compilation, runtime, and testing scenarios. Only necessary if you have custom configurations!
 <br/>
 
 
