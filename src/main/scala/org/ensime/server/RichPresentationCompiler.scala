@@ -12,7 +12,8 @@ import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.symtab.Flags
-
+import scala.tools.refactoring.implementations._
+import scala.tools.refactoring.Refactoring
 
 
 trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompiler =>
@@ -415,6 +416,17 @@ class RichPresentationCompiler(
   protected def reloadAndTypeFiles(sources:Iterable[SourceFile]) = {
     sources.foreach{ s =>
       typedTree(s, true)
+    }
+  }
+
+  protected def organizeImports(source:SourceFile) = {
+    val r = new OrganizeImports{
+      val global = RichPresentationCompiler.this
+      val selection = FileSelection(source.file, 0, source.length - 1)
+    }
+    r.prepare(r.selection) match{
+      case Right(result) => {}
+      case Left(error) => {}
     }
   }
 
