@@ -1,0 +1,335 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+
+\newenvironment{mylisting}
+{\begin{list}{}{\setlength{\leftmargin}{1em}}\item\scriptsize\bfseries}
+{\end{list}}
+
+
+\author{Aemon Cannon}
+
+\title{ENSIME: User Manual}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+
+\pagestyle{empty}
+
+
+\section{Introduction}
+
+\subsection{What is ENSIME?}
+ENSIME is an intelligent Scala environment for Emacs. It provides many features that are commonly found only in IDEs, such as live error-checking, symbol inspection, package/type browsing, and basic refactorings. ENSIME's architecture is client/server: a thin Emacs client that connects to an analysis server written in Scala. The client component is based heavily on the SLIME environment for Common Lisp - using the same Swank RPC protocol. The server component services these calls using an instance of the official Scala compiler, so the results are guaranteed to be consistent with the commandline compiler.
+
+\section{Installation}
+
+\subsection{System Requirements}
+
+\begin{itemize}
+\item Emacs 22 or later (23 is recommended)
+\item Unix(y) or Windows OS
+\item JVM Version 6
+\item Scala 2.8 compatible source and libraries.
+\end{itemize}
+
+\subsubsection{Note on Binary Compatibility}
+
+The compiler version that ENSIME uses to analyze sources is the same as that which is used to compile ENSIME itself. This version (as of the writing of this document) is 2.8.0. It may not be possible for the ENSIME compiler to load older Scala jars. We recommend that you use a version of ENSIME that targets the same Scala version as your project.
+
+\subsection{Standard Installation}
+
+\subsubsection{scala-mode}
+
+ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/
+
+\subsubsection{ensime-mode}
+
+Download the latest ENSIME distribution from github.com at \begin{verbatim}http://github.com/aemoncannon/ensime/downloads\end{verbatim} Unpack the ENSIME distribution into a directory of your choosing, and add the following lines to your .emacs file:
+
+\begin{mylisting}
+\begin{verbatim}
+(require 'scala-mode)
+(add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
+(add-to-list 'load-path "ENSIME_ROOT/elisp/")
+(require 'ensime)
+(add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
+;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
+\end{verbatim}
+\end{mylisting}
+
+
+
+\subsection{Installation from Git Repository}
+
+ENSIME is an sbt project and we have a custom sbt task, 'dist', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt dist'. Then, follow the install instructions in section 2.2 above, substituting \begin{verbatim}CLONE_DIRECTORY/dist\end{verbatim} as the root of your ENSIME distribution.
+
+
+\section{Defining a Project}
+
+\subsection{Generating a Config File}
+
+ENSIME includes a wizard for automatically generating configuration files. In Emacs, execute M-x ensime-config-gen. Then simply follow the directions in the mini-buffer to create a .ensime file for your project.  ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
+
+\subsection{Notes on Specific Project Types}
+
+\subsubsection{SBT}
+
+\subsubsection{Maven}
+
+\subsubsection{Ant + Ivy}
+
+\subsubsection{Other}
+
+
+\subsection{The Config File Format}
+
+The .ensime file must be placed in the root directory of your project(or sub-project if you have a multi-module sbt build). The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values.
+
+\vspace{1 cm}
+
+\begin{tabular}{|l|l|}
+  \hline
+  {\bf "..."} & A String  \\ \hline
+  {\bf t} & True \\ \hline
+  {\bf nil} & False, null, or opposite of t.  \\ \hline
+  {\bf (...)} & A literal list. \\ \hline
+  {\bf :abcd123} & A keyword \\ \hline
+  {\bf (:key1 val1 :key2 val2)} & An indexed property-list. \\ \hline
+\end{tabular}
+
+\vspace{1 cm}
+
+
+What follows is a description of all available configuration options. Required options are marked as 'Required'.
+
+\vspace{5 mm}
+
+\noindent
+{\bf :server-root "...."}\\
+Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :server-cmd  "...."}\\
+The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :server-host "...."}\\
+The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
+\vspace{5 mm}
+
+
+\noindent
+{\bf :use-sbt [t or nil]}\\
+Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :sbt-compile-on-save [t or nil]}\\
+Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is disabled by default as it consumes a lot of CPU.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :use-maven t}\\
+Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :use-ivy t}\\
+Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :ivy-compile-conf "...."}\\
+\noindent
+{\bf :ivy-runtime-conf "...."}\\
+Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
+\vspace{5 mm}
+
+
+\noindent
+{\bf :project-package "...."}\\
+The main scala package for your project. Used by ENSIME to populate the project outline view. 
+\vspace{5 mm}
+
+
+\noindent
+{\bf :sources ([directory or filename]*)}\\
+Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :dependency-jars ([directory or filename]*)}\\
+Manually include jars by directory(recursively) or by filename.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :compile-dependency-jars ([directory or filename]*)}\\
+Manually include jars by directory(recursively) or by filename, to be included only at compile time.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :runtime-dependency-jars ([directory or filename]*)}\\
+Manually include jars by directory(recursively) or by filename, to be included only at run time.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :dependency-dirs ([directory or filename]*)}\\
+Manually include directories of .class files.
+\vspace{5 mm}
+
+
+\noindent
+{\bf :target dir}\\
+Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
+\vspace{5 mm}
+
+
+\section{Usage}
+
+\subsection{Startup}
+To enable ensime type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the {\bf *inferior-ensime-server*} buffer.
+
+\subsection{Symbol and Member Completion}
+ENSIME completion is initiated by pressing the TAB key. To complete a symbol, type the first couple characters, then press TAB. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or SPACE followed by TAB. Completion options can be scrolled with M-n and M-p or UP and DOWN. Completion options can be searched by typing C-s. To cancel completion, type C-g. When you've selected the completion you want, press ENTER. If the selected completion was a method name, the minibuffer will display help for the method parameters.
+
+\subsection{The Inspector}
+\subsection{Package Browsing}
+\subsection{The Scala REPL}
+\subsection{Debugging}
+\subsection{SBT Integration}
+
+\subsection{Quick Command Reference}
+
+\vspace{5 mm}
+
+\noindent
+{\bf TAB}\\
+Start completing a method/variable.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c t  or  Double-Click}\\
+Inspect the type of the expression under the cursor.
+\vspace{5 mm}
+
+\noindent
+{\bf M-.  or  Control-Click}\\
+Jump to definition of symbol under cursor.
+\vspace{5 mm}
+
+\noindent
+{\bf M-,}\\
+Pop back to previously visited position.
+\vspace{5 mm}
+
+\noindent
+{\bf Double-Click(on an import statement)}\\
+Inspect the package under cursor.
+\vspace{5 mm}
+
+\noindent
+{\bf Mouse Hover}\\
+Echo the type of the expression under the cursor.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c p}\\
+Inspect the package of the current source file.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c o}\\
+Inspect the package specified in .ensime as :project-package.
+\vspace{5 mm}
+
+\noindent
+{\bf .}\\
+Forward one page in the inspector history.
+\vspace{5 mm}
+
+\noindent
+{\bf ,}\\
+Backward one page in the inspector history.
+\vspace{5 mm}
+
+\noindent
+{\bf C-n  or  TAB}\\
+Forward one link in the inspector.
+\vspace{5 mm}
+
+\noindent
+{\bf C-p}\\
+Backward one link in the inspector.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c C-a}\\
+Switch to the sbt command-line (works for sbt projects only)
+\vspace{5 mm}
+
+\noindent
+{\bf C-c C-z}\\
+Switch to the scala interpreter, with project classes in the classpath.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c c}\\
+Type-check the current file.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c a}\\
+Type-check all files in the project.
+\vspace{5 mm}
+
+\noindent
+{\bf M-x ensime-reload-config}\\
+Reload the .ensime file and recompile the project. Useful if you hit a server bug.
+\vspace{5 mm}
+
+\noindent
+{\bf M-x ensime-config-get}\\
+Start the automatic configuration file generator.
+\vspace{5 mm}
+
+\noindent
+{\bf M-x ensime-reload-config}\\
+Reload the config file from the disk, Start the automatic configuration file generator.
+\vspace{5 mm}
+
+
+\section{Troubleshooting}
+
+You may want to examine the contents of the {\bf *inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload-config. Otherwise, if things are irreperably b0rked, you can always kill the {\bf *inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
+
+If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of {\bf *inferior-ensime-server*}.
+
+
+\end{document}
+
+
+
+

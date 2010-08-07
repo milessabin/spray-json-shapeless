@@ -1,6 +1,12 @@
 .#*
 *.*#
 *.zip
+*.gz
+*.pdf
+*.toc
+*.log
+*.dvi
+*.aux
 target/
 lib_managed/
 src_managed/

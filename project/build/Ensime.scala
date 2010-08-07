@@ -6,18 +6,18 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
   import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
 
-    val ant = "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test"
-    val ivy = "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test"
-    val maven = "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test"
-    val bcel = "org.apache.bcel" % "bcel" % "5.2" % "compile;runtime;test"
-    val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
+  val ant = "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test"
+  val ivy = "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test"
+  val maven = "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test"
+  val bcel = "org.apache.bcel" % "bcel" % "5.2" % "compile;runtime;test"
+  val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
 
 
   //  override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.
-  lazy val dist = task {
+  lazy val stage = task {
 
     FileUtilities.clean(path("dist"), log)
 
@@ -39,8 +39,8 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
     // Copy all the runtime dependencies over to dist
     copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
     copyFlat(mainDependencies.scalaJars.get, "dist" / "lib", log)
-    val deps = managedClasspath(Runtime)
-    copyFlat(deps.get, "dist" / "lib", log)
+    val deps = fullClasspath(Runtime).get.filter(f => !(f.isDirectory))
+    copyFlat(deps, "dist" / "lib", log)
 
 
     // Grab all jars..
@@ -73,16 +73,19 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
       "./etc/scripts/server.bat",
       "./dist/bin/server.bat")
 
-
-
     copyFile(path("README.md"), "dist" / "README.md", log)
     copyFile(path("LICENSE"), "dist" / "LICENSE", log)
 
-    val toZip = ("dist" ** "*")
-    zip(toZip.get, path("ensime-" + version + ".zip"), false, log)
 
-    None 
-  } dependsOn(`package`) describedAs("Copy jars to bin folder for end-user conveniance.")
+  } dependsOn(`package`) describedAs("Build the deployment directory structure.")
+
+
+  lazy val dist = task {
+    val archiveName = "ensime-" + version + ".tar.gz"
+    log.info("Compressing to " + archiveName + "...")
+    Process("tar -pcvzf " + archiveName + " ./dist")!!(log)
+    None     
+  } dependsOn(stage) describedAs("Compress the deployment directory.")
 
 
 }
