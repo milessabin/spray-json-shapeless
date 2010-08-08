@@ -12,7 +12,7 @@ import org.ensime.util._
 import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
 import org.ensime.debug.{DebugUnit, DebugSourceLinePairs}
 import org.ensime.model._
-import org.ensime.server.{RPCTarget, QuickTypeCheckResultEvent, FullTypeCheckResultEvent}
+import org.ensime.server._
 
 
 
@@ -548,6 +548,24 @@ trait SwankProtocol extends Protocol{
 	}),
       (":interfaces", SExp(value.supers.map(toWF)))
     )
+  }
+
+
+  def toWF(value:RefactorFailure):WireFormat = {
+    SExp.propList(
+      (":status", "failure"),
+      (":reason", value.message)
+    )
+  }
+
+
+  def toWF(value:RefactorPrep):WireFormat = {
+    value match{
+      case value:OrganizeImportsPrep
+    }
+  }
+
+  def toWF(value:RefactorEffect):WireFormat = {
   }
 
 

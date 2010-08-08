@@ -8,7 +8,7 @@ import org.ensime.model._
 import org.ensime.util._
 import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
 import org.ensime.debug.{DebugUnit, DebugSourceLinePairs}
-import org.ensime.server.{RPCTarget, QuickTypeCheckResultEvent, FullTypeCheckResultEvent}
+import org.ensime.server._
 
 
 case class IncomingMessageEvent(obj:Any)
@@ -199,4 +199,8 @@ trait ProtocolConversions{
   def toWF(value:CallCompletionInfo):WireFormat
   def toWF(value:InterfaceInfo):WireFormat
   def toWF(value:TypeInspectInfo):WireFormat
+
+  def toWF(value:RefactorFailure):WireFormat
+  def toWF(value:RefactorPrep):WireFormat
+  def toWF(value:RefactorEffect):WireFormat
 }

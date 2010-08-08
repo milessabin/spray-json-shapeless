@@ -47,12 +47,12 @@ case class CallCompletionReq(id:Int)
 case class TypeAtPointReq(file:File, point:Int)
 
 
-class Compiler(project:Project, protocol:ProtocolConversions, config:ProjectConfig) extends Actor{
-  private val settings = new Settings(Console.println)
+class Compiler(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor{
+  protected val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
-  private val reporter = new PresentationReporter()
-  private val cc:RichCompilerControl = new RichPresentationCompiler(settings, reporter, this, config)
-  private var awaitingInitialCompile = true
+  protected val reporter = new PresentationReporter()
+  protected val cc:RichCompilerControl = new RichPresentationCompiler(settings, reporter, this, config)
+  protected var awaitingInitialCompile = true
 
   import cc._
   import protocol._
@@ -83,6 +83,21 @@ class Compiler(project:Project, protocol:ProtocolConversions, config:ProjectConf
 	  case RPCRequestEvent(req:Any, callId:Int) => {
 	    try{
 	      req match {
+
+		case req:RefactorRequest =>
+		{
+		  handleRefactorRequest(req, callId)
+		}
+
+		case perf:RefactorPerform =>
+		{
+		  handleRefactorPerform(req, callId)
+		}
+
+		case exec:RefactorExec =>
+		{
+		  handleRefactorExec(req, callId)
+		}
 
 		case ReloadAllReq() =>
 		{

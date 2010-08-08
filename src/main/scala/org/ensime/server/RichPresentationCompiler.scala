@@ -12,11 +12,10 @@ import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.symtab.Flags
-import scala.tools.refactoring.implementations._
-import scala.tools.refactoring.Refactoring
 
 
-trait RichCompilerControl extends CompilerControl{ self: RichPresentationCompiler =>
+
+trait RichCompilerControl extends CompilerControl with RefactoringInterface{ self: RichPresentationCompiler =>
 
 
   def askOr[A](op: => A, handle:Throwable => A): A = {
@@ -120,7 +119,8 @@ class RichPresentationCompiler(
   settings:Settings, 
   reporter:Reporter, 
   var parent:Actor, 
-  val config:ProjectConfig) extends Global(settings,reporter) with ModelBuilders with RichCompilerControl{
+  val config:ProjectConfig) extends Global(settings,reporter) 
+with ModelBuilders with RichCompilerControl with RefactoringImpl{
 
   import Helpers._
 
@@ -419,16 +419,6 @@ class RichPresentationCompiler(
     }
   }
 
-  protected def organizeImports(source:SourceFile) = {
-    val r = new OrganizeImports{
-      val global = RichPresentationCompiler.this
-      val selection = FileSelection(source.file, 0, source.length - 1)
-    }
-    r.prepare(r.selection) match{
-      case Right(result) => {}
-      case Left(error) => {}
-    }
-  }
 
   override def askShutdown(){
     super.askShutdown()

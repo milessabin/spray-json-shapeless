@@ -14,7 +14,7 @@ import org.ensime.debug.ProjectDebugInfo
 import java.io.File
 
 
-trait RPCTarget{ self:Project =>
+trait RPCTarget extends RefactoringController{ self:Project =>
   
   import protocol._
 
