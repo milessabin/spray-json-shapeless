@@ -13,7 +13,7 @@ import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
 import org.ensime.debug.{DebugUnit, DebugSourceLinePairs}
 import org.ensime.model._
 import org.ensime.server._
-
+import scala.tools.refactoring.common.Change
 
 
 object SwankProtocol extends SwankProtocol{}
@@ -276,6 +276,35 @@ trait SwankProtocol extends Protocol{
 	  case _ => oops
 	}
       }
+
+      case "swank:prep-refactor" => {
+	form match{
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExpList)::body) => {
+	    rpcTarget.rpcPrepRefactor(Symbol(tpe), procId, params.toSymbolMap, callId)
+	  }
+	  case _ => oops
+	}
+      }
+
+      case "swank:perform-refactor" => {
+	form match{
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExpList)::body) => {
+	    rpcTarget.rpcPerformRefactor(Symbol(tpe), procId, params.toSymbolMap, callId)
+	  }
+	  case _ => oops
+	}
+      }
+
+      case "swank:exec-refactor" => {
+	form match{
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExpList)::body) => {
+	    rpcTarget.rpcExecRefactor(Symbol(tpe), procId, params.toSymbolMap, callId)
+	  }
+	  case _ => oops
+	}
+      }
+
+
       case other => {
 	sendRPCError(
 	  "Unknown :emacs-rex call: " + other, 
@@ -551,22 +580,47 @@ trait SwankProtocol extends Protocol{
   }
 
 
-  def toWF(value:RefactorFailure):WireFormat = {
+  def toWF(value:RefactorFailure):SExp = {
     SExp.propList(
-      (":status", "failure"),
+      (":procedure-id", value.procedureId),
+      (":status", 'failure),
       (":reason", value.message)
     )
   }
 
 
-  def toWF(value:RefactorPrep):WireFormat = {
+  def toWF(value:RefactorPrep):SExp = {
     value match{
-      case value:OrganizeImportsPrep
+      case value:OrganizeImportsPrep => 
+      {
+	SExp.propList(
+	  (":procedure-id", value.procedureId),
+	  (":status", 'success)
+	)
+      }
+      case _ => throw new IllegalStateException("Unknown RefactorPrep: " + value)
     }
   }
 
-  def toWF(value:RefactorEffect):WireFormat = {
+  def toWF(value:RefactorEffect):SExp = {
+    value match{
+      case value:OrganizeImportsEffect => 
+      {
+	SExp.propList(
+	  (":procedure-id", value.procedureId),
+	  (":status", 'success),
+	  (":changes", SExpList(value.changes.map(changeToWF)))
+	)
+      }
+      case _ => throw new IllegalStateException("Unknown RefactorPrep: " + value)
+    }    
   }
 
+  private def changeToWF(ch:Change):SExp = {
+    SExp.propList(
+      (":file", ch.file.path),
+      (":diff", ch.text)
+    )
+  }
 
 }

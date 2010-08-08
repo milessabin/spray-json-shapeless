@@ -5,6 +5,7 @@ import scala.tools.nsc.{Settings}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.actors._ 
 import scala.actors.Actor._ 
+import scala.collection.immutable
 
 import org.ensime.util._
 import org.ensime.model._
@@ -14,7 +15,7 @@ import org.ensime.debug.ProjectDebugInfo
 import java.io.File
 
 
-trait RPCTarget extends RefactoringController{ self:Project =>
+trait RPCTarget{ self:Project =>
   
   import protocol._
 
@@ -121,6 +122,18 @@ trait RPCTarget extends RefactoringController{ self:Project =>
 
   def rpcInspectPackageByPath(path:String, callId:Int){
     compiler ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
+  }
+
+  def rpcPrepRefactor(refactorType:Symbol, procId:Int, params:immutable.Map[Symbol, Any], callId:Int){
+    compiler ! RPCRequestEvent(RefactorPrepReq(procId, refactorType, params), callId)
+  }
+
+  def rpcPerformRefactor(refactorType:Symbol, procId:Int, params:immutable.Map[Symbol, Any], callId:Int){
+    compiler ! RPCRequestEvent(RefactorPerformReq(procId, refactorType, params), callId)
+  }
+
+  def rpcExecRefactor(refactorType:Symbol, procId:Int, params:immutable.Map[Symbol, Any], callId:Int){
+    compiler ! RPCRequestEvent(RefactorExecReq(procId, refactorType, params), callId)
   }
 
 

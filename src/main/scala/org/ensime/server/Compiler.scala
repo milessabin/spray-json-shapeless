@@ -47,7 +47,7 @@ case class CallCompletionReq(id:Int)
 case class TypeAtPointReq(file:File, point:Int)
 
 
-class Compiler(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor{
+class Compiler(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor with RefactoringController{
   protected val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   protected val reporter = new PresentationReporter()
@@ -84,17 +84,17 @@ class Compiler(val project:Project, val protocol:ProtocolConversions, config:Pro
 	    try{
 	      req match {
 
-		case req:RefactorRequest =>
+		case req:RefactorPrepReq =>
 		{
 		  handleRefactorRequest(req, callId)
 		}
 
-		case perf:RefactorPerform =>
+		case req:RefactorPerformReq =>
 		{
 		  handleRefactorPerform(req, callId)
 		}
 
-		case exec:RefactorExec =>
+		case req:RefactorExecReq =>
 		{
 		  handleRefactorExec(req, callId)
 		}

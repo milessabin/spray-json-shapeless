@@ -32,6 +32,17 @@ case class SExpList(items:Iterable[SExp]) extends SExp with Iterable[SExp]{
     }
     m
   }
+
+ def toSymbolMap():Map[scala.Symbol, Any] = {
+    var m = Map[scala.Symbol, Any]()
+    items.sliding(2,2).foreach{ 
+      case SymbolAtom(key)::(sexp:SExp)::rest => {
+	m += (Symbol(key) -> sexp.toScala)
+      }
+      case _ => {}
+    }
+    m
+  }
 }
 
 object BooleanAtom{
