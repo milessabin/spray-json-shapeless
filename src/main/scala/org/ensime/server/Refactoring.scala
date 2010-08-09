@@ -88,11 +88,11 @@ trait RefactoringController{ self: Compiler =>
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
     }
   }
-
 }
 
-trait RefactoringInterface{ self: RichPresentationCompiler =>
 
+
+trait RefactoringInterface{ self: RichPresentationCompiler =>
 
   def askPrepRefactor(req:RefactorPrepReq):Either[RefactorFailure, RefactorPrep] = {
     req.refactorType match{
@@ -130,8 +130,9 @@ trait RefactoringInterface{ self: RichPresentationCompiler =>
 }
 
 
-trait RefactoringImpl{ self: RichPresentationCompiler =>
 
+
+trait RefactoringImpl{ self: RichPresentationCompiler =>
 
   protected def prepOrganizeImports(
     procId:Int, 
@@ -158,7 +159,6 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
     }
   }
 
-
   protected def performOrganizeImports(
     procId:Int, 
     prep:OrganizeImportsPrep, 
@@ -173,8 +173,6 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
       case Left(err) => Left(RefactorFailure(procId, err.toString))
     }
   }
-
-
 
   protected def execOrganizeImports(
     procId:Int, 

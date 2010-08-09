@@ -186,6 +186,10 @@ object SExp extends RegexParsers{
     }
   }
 
+  implicit def nilToSExpList(nil:NilAtom):SExp = {
+    SExpList(List())
+  }
+
   implicit def toSExp(o:SExpable):SExp = {
     o.toSExp
   }

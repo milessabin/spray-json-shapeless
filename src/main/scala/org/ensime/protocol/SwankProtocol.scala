@@ -279,8 +279,9 @@ trait SwankProtocol extends Protocol{
 
       case "swank:prep-refactor" => {
 	form match{
-	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExpList)::body) => {
-	    rpcTarget.rpcPrepRefactor(Symbol(tpe), procId, params.toSymbolMap, callId)
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExp)::body) => {
+	    rpcTarget.rpcPrepRefactor(Symbol(tpe), procId, 
+	      listOrEmpty(params).toSymbolMap, callId)
 	  }
 	  case _ => oops
 	}
@@ -288,8 +289,9 @@ trait SwankProtocol extends Protocol{
 
       case "swank:perform-refactor" => {
 	form match{
-	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExpList)::body) => {
-	    rpcTarget.rpcPerformRefactor(Symbol(tpe), procId, params.toSymbolMap, callId)
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExp)::body) => {
+	    rpcTarget.rpcPerformRefactor(Symbol(tpe), procId, 
+	      listOrEmpty(params).toSymbolMap, callId)
 	  }
 	  case _ => oops
 	}
@@ -297,8 +299,9 @@ trait SwankProtocol extends Protocol{
 
       case "swank:exec-refactor" => {
 	form match{
-	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExpList)::body) => {
-	    rpcTarget.rpcExecRefactor(Symbol(tpe), procId, params.toSymbolMap, callId)
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExp)::body) => {
+	    rpcTarget.rpcExecRefactor(Symbol(tpe), procId, 
+	      listOrEmpty(params).toSymbolMap, callId)
 	  }
 	  case _ => oops
 	}
@@ -310,6 +313,13 @@ trait SwankProtocol extends Protocol{
 	  "Unknown :emacs-rex call: " + other, 
 	  callId)
       }
+    }
+  }
+
+  def listOrEmpty(list:SExp):SExpList = {
+    list match{
+      case l:SExpList => l
+      case _ => SExpList(List())
     }
   }
 
