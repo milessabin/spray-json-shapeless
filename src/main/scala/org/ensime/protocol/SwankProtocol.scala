@@ -307,6 +307,15 @@ trait SwankProtocol extends Protocol{
 	}
       }
 
+      case "swank:cancel-refactor" => {
+	form match{
+	  case SExpList(head::IntAtom(procId)::body) => {
+	    rpcTarget.rpcCancelRefactor(procId, callId)
+	  }
+	  case _ => oops
+	}
+      }
+
 
       case other => {
 	sendRPCError(
@@ -619,6 +628,7 @@ trait SwankProtocol extends Protocol{
 	SExp.propList(
 	  (":procedure-id", value.procedureId),
 	  (":status", 'success),
+	  (":diffs", SExpList(value.diffs.map(strToSExp))),
 	  (":changes", SExpList(value.changes.map(changeToWF)))
 	)
       }
@@ -626,10 +636,17 @@ trait SwankProtocol extends Protocol{
     }    
   }
 
+  def toWF(value:RefactorResult):SExp = {
+    SExp.propList(
+      (":procedure-id", value.procedureId),
+      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath))))
+    )
+  }
+
   private def changeToWF(ch:Change):SExp = {
     SExp.propList(
       (":file", ch.file.path),
-      (":diff", ch.text)
+      (":text", ch.text)
     )
   }
 

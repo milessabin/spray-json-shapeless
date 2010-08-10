@@ -203,4 +203,5 @@ trait ProtocolConversions{
   def toWF(value:RefactorFailure):WireFormat
   def toWF(value:RefactorPrep):WireFormat
   def toWF(value:RefactorEffect):WireFormat
+  def toWF(value:RefactorResult):WireFormat
 }

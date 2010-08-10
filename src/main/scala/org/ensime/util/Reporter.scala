@@ -1,13 +1,10 @@
 package org.ensime.util
 
+import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap, LinkedHashMap, HashMap, HashEntry, HashSet }
 import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
-import scala.tools.nsc.util.NoPosition
-import scala.tools.nsc.symtab.Types
-import scala.tools.nsc.symtab.Symbols
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
+import scala.tools.nsc.symtab.{Symbols, Types}
+import scala.tools.nsc.util.{NoPosition, SourceFile, Position, OffsetPosition}
 
 
 case class NoteList(notes:Iterable[Note])

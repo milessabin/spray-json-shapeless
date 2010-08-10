@@ -1,29 +1,24 @@
 package org.ensime.server
-
-import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.{Settings}
-import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-import scala.actors._  
-import scala.actors.Actor._  
-import scala.tools.nsc.io.{AbstractFile}
-import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
-import scala.tools.nsc.util.NoPosition
-import scala.tools.nsc.reporters.Reporter
-import scala.concurrent.SyncVar
+import java.io.File
+import org.ensime.config.ProjectConfig
+import org.ensime.model._
+import org.ensime.protocol.ProtocolConversions
+import org.ensime.util._
+import org.ensime.util.RichFile._
+import scala.actors._
+import scala.actors.Actor._
 import scala.collection.{Iterable, Map}
-import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
 import scala.collection.immutable.TreeSet
-import scala.tools.nsc.symtab.Types
+import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap, LinkedHashMap, HashMap, HashEntry, HashSet }
+import scala.concurrent.SyncVar
+import scala.tools.nsc.{Settings}
 import scala.tools.nsc.ast._
 
-import java.io.File
-
-import org.ensime.util.RichFile._
-import org.ensime.model._
-import org.ensime.util._
-import org.ensime.config.ProjectConfig
-import org.ensime.protocol.ProtocolConversions
+import scala.tools.nsc.interactive.{Global, CompilerControl}
+import scala.tools.nsc.io.{AbstractFile}
+import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
+import scala.tools.nsc.symtab.Types
+import scala.tools.nsc.util.{NoPosition, SourceFile, Position, OffsetPosition}
 
 
 case class FullTypeCheckCompleteEvent()
@@ -97,6 +92,11 @@ class Compiler(val project:Project, val protocol:ProtocolConversions, config:Pro
 		case req:RefactorExecReq =>
 		{
 		  handleRefactorExec(req, callId)
+		}
+
+		case req:RefactorCancelReq =>
+		{
+		  handleRefactorCancel(req, callId)
 		}
 
 		case ReloadAllReq() =>

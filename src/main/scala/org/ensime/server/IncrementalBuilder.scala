@@ -1,19 +1,17 @@
 package org.ensime.server
+import java.io.File
+import org.ensime.config.ProjectConfig
+import org.ensime.protocol.ProtocolConversions
+import org.ensime.util.PresentationReporter
+import scala.actors._
+import scala.actors.Actor._
+import scala.collection.{Iterable, Map}
+import scala.tools.nsc.{Settings}
 
 import scala.tools.nsc.interactive.{Global, 
   BuildManager, SimpleBuildManager, RefinedBuildManager}
-import scala.tools.nsc.{Settings}
-import scala.actors._  
-import scala.actors.Actor._  
 import scala.tools.nsc.io.{AbstractFile}
 import scala.tools.nsc.reporters.Reporter
-import scala.collection.{Iterable, Map}
-
-import java.io.File
-
-import org.ensime.util.PresentationReporter
-import org.ensime.config.ProjectConfig
-import org.ensime.protocol.ProtocolConversions
 
 
 case class BuilderShutdownEvent()

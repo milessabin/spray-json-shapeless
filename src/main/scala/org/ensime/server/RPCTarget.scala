@@ -136,5 +136,9 @@ trait RPCTarget{ self:Project =>
     compiler ! RPCRequestEvent(RefactorExecReq(procId, refactorType, params), callId)
   }
 
+  def rpcCancelRefactor(procId:Int, callId:Int){
+    compiler ! RPCRequestEvent(RefactorCancelReq(procId), callId)
+  }
+
 
 }

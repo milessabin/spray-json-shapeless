@@ -1,7 +1,10 @@
 package org.ensime.util
 
+import java.io._
+import java.nio.channels.FileChannel
+import java.nio.charset.Charset
 import scala.collection.Seq
-import java.io.File
+
 
 // This routine stolen from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
@@ -69,6 +72,32 @@ object FileUtils {
   def isValidSourceFile(f:File):Boolean = {
     f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
   }
+
+  def readFile(file:File):Either[IOException, String] = {
+    try {
+      val stream = new FileInputStream(file);
+      val fc = stream.getChannel();
+      val bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
+      /* Instead of using default, pass in a decoder. */
+      Right(Charset.defaultCharset().decode(bb).toString())
+    }
+    catch{
+      case e:IOException => Left(e)
+    }
+  }
+
+  def replaceFileContents(file:File, newContents:String):Either[IOException, Boolean] = {
+    try {
+      val writer = new FileWriter(file, false)
+      writer.write(newContents)
+      writer.close()
+      Right(true)
+    }
+    catch{
+      case e:IOException => Left(e)
+    }
+  }
+
 
 
 
