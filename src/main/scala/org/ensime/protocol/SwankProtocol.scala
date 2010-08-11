@@ -607,33 +607,19 @@ trait SwankProtocol extends Protocol{
     )
   }
 
-
   def toWF(value:RefactorPrep):SExp = {
-    value match{
-      case value:OrganizeImportsPrep => 
-      {
-	SExp.propList(
-	  (":procedure-id", value.procedureId),
-	  (":status", 'success)
-	)
-      }
-      case _ => throw new IllegalStateException("Unknown RefactorPrep: " + value)
-    }
+    SExp.propList(
+      (":procedure-id", value.procedureId),
+      (":status", 'success)
+    )
   }
 
   def toWF(value:RefactorEffect):SExp = {
-    value match{
-      case value:OrganizeImportsEffect => 
-      {
-	SExp.propList(
-	  (":procedure-id", value.procedureId),
-	  (":status", 'success),
-	  (":diffs", SExpList(value.diffs.map(strToSExp))),
-	  (":changes", SExpList(value.changes.map(changeToWF)))
-	)
-      }
-      case _ => throw new IllegalStateException("Unknown RefactorPrep: " + value)
-    }    
+    SExp.propList(
+      (":procedure-id", value.procedureId),
+      (":status", 'success),
+      (":changes", SExpList(value.changes.map(changeToWF)))
+    )
   }
 
   def toWF(value:RefactorResult):SExp = {

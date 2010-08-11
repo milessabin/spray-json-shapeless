@@ -1,12 +1,10 @@
 package org.ensime.server
-import java.io.File
-import java.io.IOException
-import scala.tools.refactoring.implementations._
-import scala.tools.refactoring._
-import scala.collection.mutable
-import scala.collection.immutable
-import scala.tools.refactoring.common.Change
+import java.io.{IOException, File}
 import org.ensime.util._
+import scala.collection.{immutable, mutable}
+import scala.tools.refactoring._
+import scala.tools.refactoring.common.{Selections, Change}
+import scala.tools.refactoring.implementations._
 
 
 case class RefactorFailure(val procedureId:Int, val message:String)
@@ -18,43 +16,19 @@ case class RefactorCancelReq(procedureId:Int)
 
 trait RefactorProcedure{ 
   val procedureId:Int 
-  val impl:Refactoring
+  val impl:MultiStageRefactoring
 }
-
 trait RefactorPrep extends RefactorProcedure{ 
-  val prep:Any
+  val impl:MultiStageRefactoring
+  val prep:MultiStageRefactoring#PreparationResult
+  val selection:Selections#Selection
 }
-
 trait RefactorEffect extends RefactorProcedure{ 
   val changes:Iterable[Change]
 }
-
 trait RefactorResult extends RefactorProcedure{ 
   val touched:Iterable[File]
 }
-
-trait OrganizeImportsRefactoring extends RefactorProcedure{
-  val impl:OrganizeImports
-}
-
-abstract class OrganizeImportsPrep(val procedureId:Int)
-extends OrganizeImportsRefactoring with RefactorPrep{
-  val prep:impl.PreparationResult
-  val selection:impl.FileSelection
-}
-
-abstract class OrganizeImportsEffect(val procedureId:Int, val changes:List[Change], val diffs:Iterable[String])
-extends OrganizeImportsRefactoring with RefactorEffect{
-}
-
-abstract class OrganizeImportsResult(val procedureId:Int, val touched:Iterable[File])
-extends OrganizeImportsRefactoring with RefactorResult{
-}
-
-case class OrganizeImportsParams(file:File)
-case class OrganizeImportsPerformParams()
-case class OrganizeImportsExecParams()
-
 
 
 trait RefactoringController{ self: Compiler =>
@@ -112,37 +86,18 @@ trait RefactoringController{ self: Compiler =>
 trait RefactoringInterface{ self: RichPresentationCompiler =>
 
   def askPrepRefactor(req:RefactorPrepReq):Either[RefactorFailure, RefactorPrep] = {
-    req.refactorType match{
-      case 'organizeImports => {
-	askOr(prepOrganizeImports(req.procedureId, req.params), 
-	  t => Left(RefactorFailure(req.procedureId, t.toString)))
-      }
-      case _ => throw new IllegalStateException(
-	"Attempted to prep an unrecognized refactoring.")
-    }
+    askOr(prepRefactor(req.procedureId, req.refactorType, req.params), 
+      t => Left(RefactorFailure(req.procedureId, t.toString)))
   }
 
   def askPerformRefactor(req:RefactorPerformReq, prep:RefactorPrep):Either[RefactorFailure, RefactorEffect] = {
-    (req.refactorType, prep) match{
-      case ('organizeImports, prep:OrganizeImportsPrep) => {
-	askOr(performOrganizeImports(req.procedureId, prep, req.params), 
-	  t => Left(RefactorFailure(req.procedureId, t.toString)))
-      }
-      case _ => throw new IllegalStateException(
-	"Attempted to perform an unrecognized refactoring.")
-    }
+    askOr(performRefactor(req.procedureId, req.refactorType, prep, req.params), 
+      t => Left(RefactorFailure(req.procedureId, t.toString)))
   }
 
-
-  def askExecRefactor(req:RefactorExecReq, effect:RefactorEffect):Either[RefactorFailure, OrganizeImportsResult] = {
-    (req.refactorType, effect) match{
-      case ('organizeImports, effect:OrganizeImportsEffect) => {
-	askOr(execOrganizeImports(req.procedureId, effect, req.params), 
-	  t => Left(RefactorFailure(req.procedureId, t.toString)))
-      }
-      case _ => throw new IllegalStateException(
-	"Attempted to exec an unrecognized refactoring.")
-    }
+  def askExecRefactor(req:RefactorExecReq, effect:RefactorEffect):Either[RefactorFailure, RefactorResult] = {
+    askOr(execRefactor(req.procedureId, req.refactorType, effect, req.params), 
+      t => Left(RefactorFailure(req.procedureId, t.toString)))
   }
 
 }
@@ -154,22 +109,22 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
 
   import FileUtils._
 
-  protected def prepOrganizeImports(
+  protected def prepRefactor(
     procId:Int, 
+    refactorType:scala.Symbol,
     params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorPrep] = {
 
     val filepath = params.get('file).getOrElse(".").toString
     val source = getSourceFile(filepath)
-    val r = new OrganizeImports{
-      val global = RefactoringImpl.this
-    }
+    val r = newRefactoring(refactorType, params)
     val sel = r.FileSelection(source.file, 0, source.length - 1)
     r.prepare(sel) match{
       case Right(result) => {
-	val prep = new OrganizeImportsPrep(procId){
+	val prep = new RefactorPrep{
+	  val procedureId = procId
 	  val impl = r
-	  val prep = result.asInstanceOf[impl.PreparationResult]
-	  val selection = sel.asInstanceOf[impl.FileSelection]
+	  val prep = result
+	  val selection = sel
 	}
 	Right(prep)
       }
@@ -178,40 +133,40 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
       }
     }
   }
-
-  protected def performOrganizeImports(
+  protected def performRefactor(
     procId:Int, 
-    prep:OrganizeImportsPrep, 
+    refactorType:scala.Symbol,
+    prep:RefactorPrep, 
     params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorEffect] = {
 
-    val result = prep.impl.perform(prep.selection,
-      prep.prep, new prep.impl.RefactoringParameters)
+    val result = prep.impl.perform(
+      prep.selection.asInstanceOf[prep.impl.Selection],
+      prep.prep.asInstanceOf[prep.impl.PreparationResult], 
+      refactoringParams(refactorType, prep, params).asInstanceOf[prep.impl.RefactoringParameters])
+
     result match{
-      case Right(changes:List[Change]) => {
-	val diffs = changes.map{ ch => 
-	  val newContents = ch.text
-	  val oldContents = readFile(prep.selection.file.file).fold(t => "", s => s)
-	  val differ = new diff_match_patch()
-	  val patches = differ.patch_make(oldContents, newContents)
-	  differ.patch_toText(patches)
-	}
+      case Right(chngs:List[Change]) => {
 	Right(
-	  new OrganizeImportsEffect(procId, changes, diffs){
+	  new RefactorEffect{
 	    val impl = prep.impl
+	    val procedureId = procId
+	    val changes = chngs
 	  })
       }
       case Left(err) => Left(RefactorFailure(procId, err.toString))
     }
   }
-
-  protected def execOrganizeImports(
+  protected def execRefactor(
     procId:Int, 
-    effect:OrganizeImportsEffect, 
-    params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, OrganizeImportsResult] = {
+    refactorType:scala.Symbol,
+    effect:RefactorEffect, 
+    params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorResult] = {
     writeChanges(effect.changes) match{
       case Right(touchedFiles) => {
-	Right(new OrganizeImportsResult(procId, touchedFiles){
+	Right(new RefactorResult{
 	    val impl = effect.impl
+	    val procedureId = procId
+	    val touched = touchedFiles
 	  })
       }
       case Left(err) => Left(RefactorFailure(procId, err.toString))
@@ -219,7 +174,36 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
   }
 
 
-  protected def writeChanges(changes:List[Change]):Either[IOException, Iterable[File]] = {
+  protected def refactoringParams(
+    refactorType:scala.Symbol, 
+    prep:RefactorPrep, 
+    params:immutable.Map[scala.Symbol, Any]):MultiStageRefactoring#RefactoringParameters = {
+    refactorType match{
+      case 'organizeImports => {
+	val impl = prep.impl.asInstanceOf[OrganizeImports]
+	(new impl.RefactoringParameters).asInstanceOf[MultiStageRefactoring#RefactoringParameters]
+      }
+      case _ => throw new IllegalStateException(
+	"Unrecognized refactoring: " + refactorType)
+    }
+  }
+
+  protected def newRefactoring(
+    refactorType:scala.Symbol, 
+    params:immutable.Map[scala.Symbol, Any]):MultiStageRefactoring = {
+    refactorType match{
+      case 'organizeImports => {
+	new OrganizeImports{
+	  val global = RefactoringImpl.this
+	}
+      }
+      case _ => throw new IllegalStateException(
+	"Unrecognized refactoring: " + refactorType)
+    }
+  }
+
+
+  protected def writeChanges(changes:Iterable[Change]):Either[IOException, Iterable[File]] = {
     val changesByFile = changes.groupBy(_.file)
     val touchedFiles = new mutable.ListBuffer[File]
     try{
@@ -228,7 +212,7 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
 	readFile(file) match{
 	  case Right(contents) => 
 	  {
-	    val changed = Change.applyChanges(pair._2, contents)
+	    val changed = Change.applyChanges(pair._2.toList, contents)
 	    replaceFileContents(file, changed) match{
 	      case Right(s) => {
 		touchedFiles += file

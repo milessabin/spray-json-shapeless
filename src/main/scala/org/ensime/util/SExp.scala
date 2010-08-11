@@ -1,9 +1,7 @@
 package org.ensime.util
-
-import scala.util.parsing.combinator._
-import scala.util.parsing.combinator.RegexParsers
-import scala.util.parsing.input._
 import scala.collection.immutable.Map
+import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
 
 abstract class SExp extends WireFormat{
