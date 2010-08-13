@@ -1,17 +1,15 @@
 package org.ensime.server
+import org.ensime.config.ProjectConfig
+import org.ensime.model._
+import scala.actors._
+import scala.actors.Actor._
+import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap, LinkedHashMap, HashMap, HashEntry, HashSet }
+import scala.tools.nsc.{Settings, FatalError}
 
 import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.{Settings, FatalError}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
+import scala.tools.nsc.symtab.{Flags, Types}
 import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition, NoPosition}
-import scala.actors._  
-import scala.actors.Actor._  
-import org.ensime.model._
-import org.ensime.config.ProjectConfig
-import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap,LinkedHashMap }
-import scala.tools.nsc.symtab.Types
-import scala.tools.nsc.symtab.Flags
 
 
 

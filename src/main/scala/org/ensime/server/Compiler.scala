@@ -84,11 +84,6 @@ class Compiler(val project:Project, val protocol:ProtocolConversions, config:Pro
 		  handleRefactorRequest(req, callId)
 		}
 
-		case req:RefactorPerformReq =>
-		{
-		  handleRefactorPerform(req, callId)
-		}
-
 		case req:RefactorExecReq =>
 		{
 		  handleRefactorExec(req, callId)

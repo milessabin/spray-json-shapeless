@@ -287,21 +287,11 @@ trait SwankProtocol extends Protocol{
 	}
       }
 
-      case "swank:perform-refactor" => {
-	form match{
-	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExp)::body) => {
-	    rpcTarget.rpcPerformRefactor(Symbol(tpe), procId, 
-	      listOrEmpty(params).toSymbolMap, callId)
-	  }
-	  case _ => oops
-	}
-      }
 
       case "swank:exec-refactor" => {
 	form match{
-	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExp)::body) => {
-	    rpcTarget.rpcExecRefactor(Symbol(tpe), procId, 
-	      listOrEmpty(params).toSymbolMap, callId)
+	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::body) => {
+	    rpcTarget.rpcExecRefactor(Symbol(tpe), procId, callId)
 	  }
 	  case _ => oops
 	}
@@ -610,6 +600,7 @@ trait SwankProtocol extends Protocol{
   def toWF(value:RefactorPrep):SExp = {
     SExp.propList(
       (":procedure-id", value.procedureId),
+      (":refactor-type", value.refactorType),
       (":status", 'success)
     )
   }
@@ -617,6 +608,7 @@ trait SwankProtocol extends Protocol{
   def toWF(value:RefactorEffect):SExp = {
     SExp.propList(
       (":procedure-id", value.procedureId),
+      (":refactor-type", value.refactorType),
       (":status", 'success),
       (":changes", SExpList(value.changes.map(changeToWF)))
     )
@@ -625,6 +617,7 @@ trait SwankProtocol extends Protocol{
   def toWF(value:RefactorResult):SExp = {
     SExp.propList(
       (":procedure-id", value.procedureId),
+      (":refactor-type", value.refactorType),
       (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath))))
     )
   }

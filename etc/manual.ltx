@@ -30,7 +30,7 @@
 \section{Introduction}
 
 \subsection{What is ENSIME?}
-ENSIME is an intelligent Scala environment for Emacs. It provides many features that are commonly found only in IDEs, such as live error-checking, symbol inspection, package/type browsing, and basic refactorings. ENSIME's architecture is client/server: a thin Emacs client that connects to an analysis server written in Scala. The client component is based heavily on the SLIME environment for Common Lisp - using the same Swank RPC protocol. The server component services these calls using an instance of the official Scala compiler, so the results are guaranteed to be consistent with the commandline compiler.
+ENSIME is an intelligent Scala environment for Emacs. It provides many features that are commonly found only in IDEs, such as live error-checking, symbol inspection, package/type browsing, and basic refactorings. ENSIME's architecture is client/server: a thin Emacs client communicates with an analysis server written in Scala. The client component is based heavily on the SLIME environment for Common Lisp - using the same Swank RPC protocol. The server component services these calls using an instance of the official Scala compiler, so the results should always be consistent with the commandline compiler.
 
 \section{Installation}
 
@@ -72,7 +72,7 @@ Download the latest ENSIME distribution from github.com at \begin{verbatim}http:
 
 \subsection{Installation from Git Repository}
 
-ENSIME is an sbt project and we have a custom sbt task, 'dist', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt dist'. Then, follow the install instructions in section 2.2 above, substituting \begin{verbatim}CLONE_DIRECTORY/dist\end{verbatim} as the root of your ENSIME distribution.
+ENSIME is an sbt project and we have a custom sbt task, 'stage', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt stage'. Then, follow the install instructions in section 2.2 above, substituting \begin{verbatim}CLONE_DIRECTORY/dist\end{verbatim} as the root of your ENSIME distribution.
 
 
 \section{Defining a Project}

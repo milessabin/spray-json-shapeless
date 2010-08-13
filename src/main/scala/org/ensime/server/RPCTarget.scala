@@ -126,12 +126,8 @@ trait RPCTarget{ self:Project =>
     compiler ! RPCRequestEvent(RefactorPrepReq(procId, refactorType, params), callId)
   }
 
-  def rpcPerformRefactor(refactorType:Symbol, procId:Int, params:immutable.Map[Symbol, Any], callId:Int){
-    compiler ! RPCRequestEvent(RefactorPerformReq(procId, refactorType, params), callId)
-  }
-
-  def rpcExecRefactor(refactorType:Symbol, procId:Int, params:immutable.Map[Symbol, Any], callId:Int){
-    compiler ! RPCRequestEvent(RefactorExecReq(procId, refactorType, params), callId)
+  def rpcExecRefactor(refactorType:Symbol, procId:Int, callId:Int){
+    compiler ! RPCRequestEvent(RefactorExecReq(procId, refactorType), callId)
   }
 
   def rpcCancelRefactor(procId:Int, callId:Int){

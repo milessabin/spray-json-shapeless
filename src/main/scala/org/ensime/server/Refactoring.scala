@@ -4,19 +4,20 @@ import org.ensime.util._
 import scala.collection.{immutable, mutable}
 import scala.tools.refactoring._
 import scala.tools.refactoring.common.{Selections, Change}
+import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.implementations._
 
 
 case class RefactorFailure(val procedureId:Int, val message:String)
 
 case class RefactorPrepReq(procedureId:Int, refactorType:Symbol, params:immutable.Map[Symbol, Any])
-case class RefactorPerformReq(procedureId:Int, refactorType:Symbol, params:immutable.Map[Symbol, Any])
-case class RefactorExecReq(procedureId:Int, refactorType:Symbol, params:immutable.Map[Symbol, Any])
+case class RefactorExecReq(procedureId:Int, refactorType:Symbol)
 case class RefactorCancelReq(procedureId:Int)
 
 trait RefactorProcedure{ 
   val procedureId:Int 
   val impl:MultiStageRefactoring
+  val refactorType:scala.Symbol
 }
 trait RefactorPrep extends RefactorProcedure{ 
   val impl:MultiStageRefactoring
@@ -35,30 +36,22 @@ trait RefactoringController{ self: Compiler =>
 
   import protocol._
 
-  val preps:mutable.HashMap[Int, RefactorPrep] = new mutable.HashMap
   val effects:mutable.HashMap[Int, RefactorEffect] = new mutable.HashMap
-
 
   def handleRefactorRequest(req:RefactorPrepReq, callId:Int){
     val procedureId = req.procedureId
-    val result = cc.askPrepRefactor(req)
+    val result = cc.askPrepRefactor(procedureId, req.refactorType, req.params)
     result match{
       case Right(prep) => {
-	preps(procedureId) = prep
-	project ! RPCResultEvent(toWF(prep), callId)
-      }
-      case Left(f) => project ! RPCResultEvent(toWF(f), callId)
-    }
-  }
-
-  def handleRefactorPerform(req:RefactorPerformReq, callId:Int){
-    val procedureId = req.procedureId
-    val prep = preps(procedureId)
-    val result = cc.askPerformRefactor(req, prep)
-    result match{
-      case Right(effect) => {
-	effects(procedureId) = effect
-	project ! RPCResultEvent(toWF(effect), callId)
+	val result = cc.askPerformRefactor(
+	  procedureId, req.refactorType, req.params, prep)
+	result match{
+	  case Right(effect) => {
+	    effects(procedureId) = effect
+	    project ! RPCResultEvent(toWF(effect), callId)
+	  }
+	  case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+	}
       }
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
     }
@@ -67,7 +60,7 @@ trait RefactoringController{ self: Compiler =>
   def handleRefactorExec(req:RefactorExecReq, callId:Int){
     val procedureId = req.procedureId
     val effect = effects(procedureId)
-    val result = cc.askExecRefactor(req, effect)
+    val result = cc.askExecRefactor(procedureId, req.refactorType, effect)
     result match{
       case Right(result) => project ! RPCResultEvent(toWF(result), callId)
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
@@ -75,29 +68,42 @@ trait RefactoringController{ self: Compiler =>
   }
 
   def handleRefactorCancel(req:RefactorCancelReq, callId:Int){
-    preps.remove(req.procedureId)
     effects.remove(req.procedureId)
     project ! RPCResultEvent(toWF(true), callId)
   }
+
 }
 
 
 
 trait RefactoringInterface{ self: RichPresentationCompiler =>
 
-  def askPrepRefactor(req:RefactorPrepReq):Either[RefactorFailure, RefactorPrep] = {
-    askOr(prepRefactor(req.procedureId, req.refactorType, req.params), 
-      t => Left(RefactorFailure(req.procedureId, t.toString)))
+  def askPrepRefactor(
+    procId:Int, 
+    tpe:scala.Symbol, 
+    params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorPrep] = {
+
+    askOr(prepRefactor(procId, tpe, params), 
+      t => Left(RefactorFailure(procId, t.toString)))
   }
 
-  def askPerformRefactor(req:RefactorPerformReq, prep:RefactorPrep):Either[RefactorFailure, RefactorEffect] = {
-    askOr(performRefactor(req.procedureId, req.refactorType, prep, req.params), 
-      t => Left(RefactorFailure(req.procedureId, t.toString)))
+  def askPerformRefactor(
+    procId:Int, 
+    tpe:scala.Symbol, 
+    params:immutable.Map[scala.Symbol, Any],
+    prep:RefactorPrep):Either[RefactorFailure, RefactorEffect] = {
+
+    askOr(performRefactor(procId, tpe, prep, params), 
+      t => Left(RefactorFailure(procId, t.toString)))
   }
 
-  def askExecRefactor(req:RefactorExecReq, effect:RefactorEffect):Either[RefactorFailure, RefactorResult] = {
-    askOr(execRefactor(req.procedureId, req.refactorType, effect, req.params), 
-      t => Left(RefactorFailure(req.procedureId, t.toString)))
+  def askExecRefactor(
+    procId:Int, 
+    tpe:scala.Symbol, 
+    effect:RefactorEffect):Either[RefactorFailure, RefactorResult] = {
+
+    askOr(execRefactor(procId, tpe, effect), 
+      t => Left(RefactorFailure(procId, t.toString)))
   }
 
 }
@@ -111,16 +117,15 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
 
   protected def prepRefactor(
     procId:Int, 
-    refactorType:scala.Symbol,
+    refctrType:scala.Symbol,
     params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorPrep] = {
 
-    val filepath = params.get('file).getOrElse(".").toString
-    val source = getSourceFile(filepath)
-    val r = newRefactoring(refactorType, params)
-    val sel = r.FileSelection(source.file, 0, source.length - 1)
+    val r = newRefactoring(refctrType, params)
+    val sel = refactoringSelection(refctrType, r, params).asInstanceOf[r.Selection]
     r.prepare(sel) match{
       case Right(result) => {
 	val prep = new RefactorPrep{
+	  val refactorType = refctrType
 	  val procedureId = procId
 	  val impl = r
 	  val prep = result
@@ -133,21 +138,24 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
       }
     }
   }
+
+
   protected def performRefactor(
     procId:Int, 
-    refactorType:scala.Symbol,
+    refctrType:scala.Symbol,
     prep:RefactorPrep, 
     params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorEffect] = {
 
     val result = prep.impl.perform(
       prep.selection.asInstanceOf[prep.impl.Selection],
       prep.prep.asInstanceOf[prep.impl.PreparationResult], 
-      refactoringParams(refactorType, prep, params).asInstanceOf[prep.impl.RefactoringParameters])
+      refactoringParams(refctrType, prep, params).asInstanceOf[prep.impl.RefactoringParameters])
 
     result match{
       case Right(chngs:List[Change]) => {
 	Right(
 	  new RefactorEffect{
+	    val refactorType = refctrType
 	    val impl = prep.impl
 	    val procedureId = procId
 	    val changes = chngs
@@ -156,14 +164,16 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
       case Left(err) => Left(RefactorFailure(procId, err.toString))
     }
   }
+
+
   protected def execRefactor(
     procId:Int, 
-    refactorType:scala.Symbol,
-    effect:RefactorEffect, 
-    params:immutable.Map[scala.Symbol, Any]):Either[RefactorFailure, RefactorResult] = {
+    refctrType:scala.Symbol,
+    effect:RefactorEffect):Either[RefactorFailure, RefactorResult] = {
     writeChanges(effect.changes) match{
       case Right(touchedFiles) => {
 	Right(new RefactorResult{
+	    val refactorType = refctrType
 	    val impl = effect.impl
 	    val procedureId = procId
 	    val touched = touchedFiles
@@ -175,30 +185,75 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
 
 
   protected def refactoringParams(
-    refactorType:scala.Symbol, 
+    refctrType:scala.Symbol, 
     prep:RefactorPrep, 
     params:immutable.Map[scala.Symbol, Any]):MultiStageRefactoring#RefactoringParameters = {
-    refactorType match{
+    refctrType match{
       case 'organizeImports => {
 	val impl = prep.impl.asInstanceOf[OrganizeImports]
-	(new impl.RefactoringParameters).asInstanceOf[MultiStageRefactoring#RefactoringParameters]
+	(new impl.RefactoringParameters).asInstanceOf[
+	  MultiStageRefactoring#RefactoringParameters]
+      }
+      case 'rename => {
+	val impl = prep.impl.asInstanceOf[Rename]
+	(params.get('newName).getOrElse("NO_NAME").toString).asInstanceOf[
+	  MultiStageRefactoring#RefactoringParameters]
       }
       case _ => throw new IllegalStateException(
-	"Unrecognized refactoring: " + refactorType)
+	"Unrecognized refactoring: " + refctrType)
+    }
+  }
+
+  protected def refactoringSelection(
+    refctrType:scala.Symbol, 
+    ref:Refactoring, 
+    params:immutable.Map[scala.Symbol, Any]):Selections#Selection = {
+
+    val filepath = params.get('file) match{
+      case Some(f:String) => f
+      case _ => ""
+    }
+    
+    val source = getSourceFile(filepath)
+
+    val point = params.get('point) match{
+      case Some(i:Int) => i
+      case _ => -1
+    }
+
+    refctrType match{
+      case 'organizeImports => {
+	ref.FileSelection(source.file, 0, source.length - 1)
+      }
+      case 'rename => {
+	val pos = source.position(point)
+	ref.TreeSelection(ref.global.typedTreeAt(pos))
+      }
+      case _ => throw new IllegalStateException(
+	"Unrecognized refactoring: " + refctrType)
     }
   }
 
   protected def newRefactoring(
-    refactorType:scala.Symbol, 
+    refctrType:scala.Symbol, 
     params:immutable.Map[scala.Symbol, Any]):MultiStageRefactoring = {
-    refactorType match{
+    refctrType match{
       case 'organizeImports => {
 	new OrganizeImports{
 	  val global = RefactoringImpl.this
 	}
       }
+      case 'rename => {
+	new Rename with GlobalIndexes{
+	  val global = RefactoringImpl.this
+	  val cuIndexes = this.global.unitOfFile.values.toList.map{
+	    u => CompilationUnitIndex.apply(u.body)
+	  }
+	  val index = GlobalIndex(cuIndexes) 
+	}
+      }
       case _ => throw new IllegalStateException(
-	"Unrecognized refactoring: " + refactorType)
+	"Unrecognized refactoring: " + refctrType)
     }
   }
 
