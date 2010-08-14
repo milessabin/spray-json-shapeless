@@ -79,7 +79,7 @@ class Compiler(val project:Project, val protocol:ProtocolConversions, config:Pro
 	    try{
 	      req match {
 
-		case req:RefactorPrepReq =>
+		case req:RefactorPerformReq =>
 		{
 		  handleRefactorRequest(req, callId)
 		}

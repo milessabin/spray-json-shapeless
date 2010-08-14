@@ -1,20 +1,16 @@
 package org.ensime.protocol
 
 import java.io._
-
-import scala.util.parsing.input._
-import scala.util.parsing.input.CharArrayReader
-import scala.actors._
-import scala.tools.nsc.util.{Position}
-
-import org.ensime.util.SExp._
-import org.ensime.util._
 import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
 import org.ensime.debug.{DebugUnit, DebugSourceLinePairs}
 import org.ensime.model._
 import org.ensime.server._
+import org.ensime.util._
+import org.ensime.util.SExp._
+import scala.actors._
+import scala.tools.nsc.util.{Position}
 import scala.tools.refactoring.common.Change
-
+import scala.util.parsing.input
 
 object SwankProtocol extends SwankProtocol{}
 
@@ -34,7 +30,6 @@ trait SwankProtocol extends Protocol{
   def setOutputActor(peer:Actor){ outPeer = peer }
 
   def setRPCTarget(target:RPCTarget){ this.rpcTarget = target }
-
 
 
   // Handle reading / writing of messages
@@ -72,7 +67,7 @@ trait SwankProtocol extends Protocol{
       //TODO allocating a new array each time is inefficient!
       val buf:Array[Char] = new Array[Char](msglen);
       fillArray(in, buf)
-      SExp.read(new CharArrayReader(buf))
+      SExp.read(new input.CharArrayReader(buf))
     }
     else{
       throw new IllegalStateException("Empty message read from socket!")
@@ -277,10 +272,10 @@ trait SwankProtocol extends Protocol{
 	}
       }
 
-      case "swank:prep-refactor" => {
+      case "swank:perform-refactor" => {
 	form match{
 	  case SExpList(head::IntAtom(procId)::SymbolAtom(tpe)::(params:SExp)::body) => {
-	    rpcTarget.rpcPrepRefactor(Symbol(tpe), procId, 
+	    rpcTarget.rpcPerformRefactor(Symbol(tpe), procId, 
 	      listOrEmpty(params).toSymbolMap, callId)
 	  }
 	  case _ => oops
@@ -597,14 +592,6 @@ trait SwankProtocol extends Protocol{
     )
   }
 
-  def toWF(value:RefactorPrep):SExp = {
-    SExp.propList(
-      (":procedure-id", value.procedureId),
-      (":refactor-type", value.refactorType),
-      (":status", 'success)
-    )
-  }
-
   def toWF(value:RefactorEffect):SExp = {
     SExp.propList(
       (":procedure-id", value.procedureId),
@@ -625,7 +612,9 @@ trait SwankProtocol extends Protocol{
   private def changeToWF(ch:Change):SExp = {
     SExp.propList(
       (":file", ch.file.path),
-      (":text", ch.text)
+      (":text", ch.text),
+      (":from", ch.from + 1),
+      (":to", ch.to + 1)
     )
   }
 
