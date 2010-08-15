@@ -1,11 +1,8 @@
 package org.ensime.model
-
+import scala.collection.mutable.{ HashMap }
 import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.util.{SourceFile, Position, OffsetPosition}
-import scala.tools.nsc.util.NoPosition
-import scala.tools.nsc.symtab.Types
-import scala.tools.nsc.symtab.Symbols
-import scala.collection.mutable.{ HashMap, HashEntry, HashSet }
+import scala.tools.nsc.symtab.{Symbols, Types}
+import scala.tools.nsc.util.{NoPosition, Position}
 
 
 
