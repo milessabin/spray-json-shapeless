@@ -92,11 +92,13 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
     log.info("Converting manual to html..")
     val target = "/tmp/ensime_manual.html"
     val cwd = Some(new File("etc"))
-    doSh("tth -u -Lmanual < manual.ltx > " + target, cwd)!!(log)
+    doSh("cat manual_head.html > " + target, cwd)!!log
+    doSh("tth -r -u -Lmanual < manual.ltx >> " + target, cwd)!!(log)
+    doSh("cat manual_tail.html >> " + target, cwd)!!log
     log.info("Publishing manual to web...")
     doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     None     
-  } dependsOn(stage) describedAs("Publish the manual.")
+  } describedAs("Publish the manual.")
 
 
   private def doSh(str:String, cwd:Option[File]) = Process("sh" :: "-c" :: str :: Nil, cwd)
