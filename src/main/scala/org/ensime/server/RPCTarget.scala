@@ -7,10 +7,6 @@ import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.immutable
-import scala.tools.nsc.{Settings}
-
-import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 
 
 trait RPCTarget{ self:Project =>

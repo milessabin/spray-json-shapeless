@@ -1,16 +1,12 @@
 package org.ensime.config
 import java.io.File
-import org.apache.ivy.{core, plugins, util, Ivy}
-import core.cache.ArtifactOrigin
-import core.IvyPatternHelper
-import core.cache.DefaultRepositoryCacheManager
-import org.ensime.util.FileUtils._
+import org.apache.ivy.{core, util}
 import org.apache.ivy.ant.IvyCacheTask
-import org.apache.ivy.core.report.ArtifactDownloadReport;
-import scala.collection.JavaConversions._
-import org.apache.tools.ant._
+import org.apache.ivy.core.report.ArtifactDownloadReport
 import org.apache.maven.artifact.ant._
+import org.apache.tools.ant._
 import org.ensime.util.FileUtils._
+import scala.collection.JavaConversions._
 
 
 case class ExternalConfig(

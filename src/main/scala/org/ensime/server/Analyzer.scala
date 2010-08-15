@@ -7,17 +7,10 @@ import org.ensime.util._
 import org.ensime.util.RichFile._
 import scala.actors._
 import scala.actors.Actor._
-import scala.collection.{Iterable, Map}
-import scala.collection.immutable.TreeSet
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap, LinkedHashMap, HashMap, HashEntry, HashSet }
-import scala.concurrent.SyncVar
+import scala.collection.{Iterable}
 import scala.tools.nsc.{Settings}
 import scala.tools.nsc.ast._
-
-import scala.tools.nsc.io.{AbstractFile}
-import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-import scala.tools.nsc.symtab.Types
-import scala.tools.nsc.util.{NoPosition, SourceFile, Position, OffsetPosition}
+import scala.tools.nsc.util.{OffsetPosition}
 
 
 case class FullTypeCheckCompleteEvent()

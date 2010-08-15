@@ -2,13 +2,11 @@ package org.ensime.server
 import java.io.{IOException, File}
 import org.ensime.util._
 import scala.collection.{immutable, mutable}
-import scala.tools.refactoring._
-import scala.tools.refactoring.common.{Selections, Change}
-import scala.tools.refactoring.analysis.GlobalIndexes
-import scala.tools.refactoring.implementations.OrganizeImports
-import scala.tools.refactoring.implementations.Rename
-import scala.tools.refactoring.implementations.ExtractMethod
 import scala.tools.nsc.io.AbstractFile
+import scala.tools.refactoring._
+import scala.tools.refactoring.analysis.GlobalIndexes
+import scala.tools.refactoring.common.{Selections, Change}
+import scala.tools.refactoring.implementations._
 
 
 case class RefactorFailure(val procedureId:Int, val message:String)
@@ -128,9 +126,7 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
       val cuIndexes = this.global.unitOfFile.values.map{u => CompilationUnitIndex(u.body)}
       val index = GlobalIndex(cuIndexes.toList)
     }
-    val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters{
-	def newName = name
-      })
+    val result = performRefactoring(procId, tpe, name)
   }.result
 
   protected def doExtractMethod(procId:Int, tpe:scala.Symbol, name:String, file:String, start:Int, end:Int) = 
@@ -140,9 +136,27 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
       val cuIndexes = this.global.unitOfFile.values.map{u => CompilationUnitIndex(u.body)}
       val index = GlobalIndex(cuIndexes.toList)
     }
-    val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters{
-	def methodName = name
-      })
+    val result = performRefactoring(procId, tpe, name)
+  }.result
+
+  protected def doExtractLocal(procId:Int, tpe:scala.Symbol, name:String, file:String, start:Int, end:Int) = 
+  new RefactoringEnvironment(file, start, end){
+    val refactoring = new ExtractLocal with GlobalIndexes {
+      val global = RefactoringImpl.this
+      val cuIndexes = this.global.unitOfFile.values.map{u => CompilationUnitIndex(u.body)}
+      val index = GlobalIndex(cuIndexes.toList)
+    }
+    val result = performRefactoring(procId, tpe, name)
+  }.result
+
+  protected def doInlineLocal(procId:Int, tpe:scala.Symbol, file:String, start:Int, end:Int) = 
+  new RefactoringEnvironment(file, start, end){
+    val refactoring = new InlineLocal with GlobalIndexes {
+      val global = RefactoringImpl.this
+      val cuIndexes = this.global.unitOfFile.values.map{u => CompilationUnitIndex(u.body)}
+      val index = GlobalIndex(cuIndexes.toList)
+    }
+    val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
   }.result
 
   protected def doOrganizeImports(procId:Int, tpe:scala.Symbol, file:String, start:Int, end:Int) = 
@@ -176,6 +190,22 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
 	  (params.get('methodName), params.get('file), params.get('start), params.get('end)) match{
 	    case (Some(n:String), Some(f:String), Some(s:Int), Some(e:Int)) => {
 	      doExtractMethod(procId,tpe,n,f,s,e)
+	    }
+	    case _ => badArgs
+	  }
+	}
+	case 'extractLocal => {
+	  (params.get('name), params.get('file), params.get('start), params.get('end)) match{
+	    case (Some(n:String), Some(f:String), Some(s:Int), Some(e:Int)) => {
+	      doExtractLocal(procId,tpe,n,f,s,e)
+	    }
+	    case _ => badArgs
+	  }
+	}
+	case 'inlineLocal => {
+	  (params.get('file), params.get('start), params.get('end)) match{
+	    case (Some(f:String), Some(s:Int), Some(e:Int)) => {
+	      doInlineLocal(procId,tpe,f,s,e)
 	    }
 	    case _ => badArgs
 	  }

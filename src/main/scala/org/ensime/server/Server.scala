@@ -1,13 +1,11 @@
 package org.ensime.server
 
 import java.io._
-import java.net.{InetAddress,ServerSocket,Socket,SocketException}
-import java.util.Random
+import java.net.{ServerSocket, Socket}
 import org.ensime.protocol._
 import org.ensime.util.WireFormat
 import scala.actors._
 import scala.actors.Actor._
-import scala.util.parsing.input.{CharArrayReader, StreamReader}
 
 object Server {
   def main(args: Array[String]): Unit = {
