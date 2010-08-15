@@ -37,7 +37,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
 
     // Copy all the runtime dependencies over to dist
-    copyFile(jarPath, "dist" / "lib" / "ensime.jar", log)
+    copyFlat(List(jarPath), "dist" / "lib", log)
     copyFlat(mainDependencies.scalaJars.get, "dist" / "lib", log)
     val deps = fullClasspath(Runtime).get.filter(f => !(f.isDirectory))
     copyFlat(deps, "dist" / "lib", log)
