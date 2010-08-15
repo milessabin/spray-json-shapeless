@@ -32,7 +32,7 @@ __1) Install scala-mode__
 
 ENSIME is designed to compliment scala-mode (or any other scala language mode). scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/
 
-__2) ensime-mode__
+__2) Install ensime-mode__
 
 Download the ENSIME distribution from the github [downloads page](http://github.com/aemoncannon/ensime/downloads). Unpack the ENSIME distribution into a directory of your choosing. 
 
@@ -45,16 +45,16 @@ Add the following lines to your .emacs file:
     ;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
 
 
-__3) Permissions__
+__3) Verify Permissions__
 
 Verify that the startup script (usually bin/server.sh) has executable permissions.
 
 
-__4) Project Configuration__
+__4) Create Project__
 
 In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to create a .ensime file for your project.. 
 
 
-__5) Starting ENSIME__
+__5) Start ENSIME__
 
 Execute M-x ensime
