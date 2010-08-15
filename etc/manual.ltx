@@ -258,7 +258,7 @@ Manually specify the target of the project build process. Should be the director
 To start ensime type \emph{M-x ensime}. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the \emph{*inferior-ensime-server*} buffer.
 
 \subsection{Symbol and Member Completion}
-ENSIME completion is initiated by pressing the \emph{TAB}. To complete a symbol, type the first couple characters, then press \emph{TAB}. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or \emph{SPACE} followed by \emph{TAB}.\\
+ENSIME completion is initiated by pressing the \emph{TAB} key. To complete a symbol, type the first couple characters, then press \emph{TAB}. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or \emph{SPACE} followed by \emph{TAB}.\\
 
 \noindent
 \textbf{Completion menu key commands}:\\
@@ -292,7 +292,7 @@ First, ensure that you've set the :target directive in your config file. The REP
 
 Incremental building allows for fast turn-around in the running/testing of your application. The building/rebuilding support in ENSIME is intended for those who are not already using the sbt build system, as sbt users will probably wish to continue using the sbt shell's support for incremental building (it may still be worth a try though, as the build-manager included in ENSIME uses a finer grained check for modifications).
 
-First, ensure that you've set the :target directive in your config file. The :target directory is where the classes will be written by the incremental builder. Then, type \emph{M-x ensime-builder-build} to start building your project. When the build is finished, a window will appear listing the result of the build. After subsequent source changes, you may type \emph{M-x ensime-builder-rebuild} to rebuild only those parts of the project that depend on things you've changed. 
+First, ensure that you've set the :target directive in your config file. The :target directory is where the classes will be written by the incremental builder. Then, type \emph{C-c b b} to start building your project. When the build is finished, a window will appear listing the result of the build. After subsequent source changes, you may type \emph{C-c b r} to rebuild only those parts of the project that depend on things you've changed. 
 
 \subsection{Debugging}
 
@@ -300,7 +300,7 @@ Debugging support in ENSIME is provided by running an instance of jdb under Emac
 
 \noindent
 \textbf{Launching the Debugger}:\\
-First, ensure that you've set the :target directive in your config file. The debugger needs these classes to run your application. Then, type \emph{C-c C-d} to launch the embedded Scala Debugger. \\
+First, ensure that you've set the :target directive in your config file. The debugger needs these classes to run your application. Then, type \emph{C-c d d} to launch the embedded Scala Debugger. \\
 
 \noindent
 \textbf{Break Points}:\\
