@@ -8,9 +8,6 @@ import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
 import scala.tools.nsc.{Settings}
-import scala.tools.nsc.interactive.{Global, CompilerControl}
-import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
-
 
 
 case class SendBackgroundMessageEvent(msg:String)
@@ -40,7 +37,7 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
 	  {
 	    protocol.handleIncomingMessage(msg)
 	  }
-	  case msg:CompilerReadyEvent =>
+	  case msg:AnalyzerReadyEvent =>
 	  {
 	    protocol.sendCompilerReady
 	  }
@@ -78,8 +75,8 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
   }
 
   protected def restartCompiler() {
-    compiler ! CompilerShutdownEvent
-    compiler = new Compiler(this, protocol, this.config)
+    compiler ! AnalyzerShutdownEvent
+    compiler = new Analyzer(this, protocol, this.config)
     compiler.start
   }
 

@@ -56,7 +56,7 @@ abstract class RefactoringEnvironment(file:String, start:Int, end:Int) {
 
 
 
-trait RefactoringController{ self: Compiler =>
+trait RefactoringController{ self: Analyzer =>
 
   import protocol._
 

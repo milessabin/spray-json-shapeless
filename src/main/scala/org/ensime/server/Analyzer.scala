@@ -14,7 +14,6 @@ import scala.concurrent.SyncVar
 import scala.tools.nsc.{Settings}
 import scala.tools.nsc.ast._
 
-import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.io.{AbstractFile}
 import scala.tools.nsc.reporters.{Reporter, ConsoleReporter}
 import scala.tools.nsc.symtab.Types
@@ -24,8 +23,8 @@ import scala.tools.nsc.util.{NoPosition, SourceFile, Position, OffsetPosition}
 case class FullTypeCheckCompleteEvent()
 case class FullTypeCheckResultEvent(notes:NoteList)
 case class QuickTypeCheckResultEvent(notes:NoteList)
-case class CompilerReadyEvent()
-case class CompilerShutdownEvent()
+case class AnalyzerReadyEvent()
+case class AnalyzerShutdownEvent()
 
 case class ReloadFileReq(file:File)
 case class ReloadAllReq()
@@ -42,7 +41,7 @@ case class CallCompletionReq(id:Int)
 case class TypeAtPointReq(file:File, point:Int)
 
 
-class Compiler(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor with RefactoringController{
+class Analyzer(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor with RefactoringController{
   protected val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   protected val reporter = new PresentationReporter()
@@ -54,12 +53,12 @@ class Compiler(val project:Project, val protocol:ProtocolConversions, config:Pro
 
   def act(){
     cc.askNewRunnerThread
-    project ! SendBackgroundMessageEvent("Compiler is loading sources. Please wait...")
+    project ! SendBackgroundMessageEvent("Analyzer is loading sources. Please wait...")
     cc.askReloadAllFiles
     loop {
       try{
 	receive {
-	  case CompilerShutdownEvent =>
+	  case AnalyzerShutdownEvent() =>
 	  {
 	    cc.askClearTypeCache
 	    cc.askShutdown()
@@ -69,7 +68,7 @@ class Compiler(val project:Project, val protocol:ProtocolConversions, config:Pro
 	  case FullTypeCheckCompleteEvent() =>
 	  {
 	    if(awaitingInitialCompile){
-	      project ! CompilerReadyEvent()
+	      project ! AnalyzerReadyEvent()
 	      awaitingInitialCompile = false
 	    }
 	    project ! FullTypeCheckResultEvent(reporter.allNotes)
