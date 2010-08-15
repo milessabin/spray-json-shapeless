@@ -6,7 +6,7 @@
 
 \newenvironment{mylisting}
 {\begin{list}{}{\setlength{\leftmargin}{1em}}\item\scriptsize\bfseries}
-{\end{list}}
+  {\end{list}}
 
 \title{ENSIME: User Manual}
 
@@ -46,12 +46,12 @@ The compiler version that ENSIME uses to analyze sources is the same as that whi
 
 \subsection{Standard Installation}
 
-\subsubsection{scala-mode}
+\noindent
+\textbf{scala-mode}:\\
+ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under misc/scala-tool-support/emacs/\\
 
-ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/
-
-\subsubsection{ensime-mode}
-
+\noindent
+\textbf{ensime-mode}:\\
 Download the latest ENSIME distribution from github.com at \begin{verbatim}http://github.com/aemoncannon/ensime/downloads\end{verbatim} Unpack the ENSIME distribution into a directory of your choosing, and add the following lines to your .emacs file:
 
 \begin{mylisting}
@@ -67,31 +67,80 @@ Download the latest ENSIME distribution from github.com at \begin{verbatim}http:
 
 
 
-\subsection{Installation from Git Repository}
+\subsection{Installation from Git Clone}
 
-ENSIME is an sbt project and we have a custom sbt task, 'stage', that generates the distributable directory structure. When hacking ENSIME, you don't want to run the ensime server directly from the git clone. First, run 'sbt stage'. Then, follow the install instructions in section 2.2 above, substituting \begin{verbatim}CLONE_DIRECTORY/dist\end{verbatim} as the root of your ENSIME distribution.
+Note: This section is for people who want to hack on ENSIME itself.\\
+
+\noindent
+After cloning, and before you can run ENSIME, you must create the distribution directory structure. The sbt task 'stage' will create the directory 'dist' underneath the root clone directory. Then, follow the install instructions in section 2.2 above, substituting CLONE/dist as the root of your ENSIME distribution.\\
+
+\noindent
+A common work-flow when hacking ENSIME:
+\begin{itemize}
+\item Edit source files
+\item 'sbt dist'
+\item Stop ENSIME server by killing \emph{*inferior-ensime-server*} buffer
+\item Restart ENSIME with M-x ensime
+\end{itemize}
+
 
 
 \section{Defining a Project}
 
 \subsection{Generating a Config File}
 
-ENSIME includes a wizard for automatically generating configuration files. In Emacs, execute M-x ensime-config-gen. Then simply follow the directions in the mini-buffer to create a .ensime file for your project.  ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
+ENSIME includes a wizard for automatically generating configuration files. In Emacs, execute \emph{M-x ensime-config-gen}. Then simply follow the directions in the mini-buffer to create a .ensime file for your project.  ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
 
 \subsection{Notes on Specific Project Types}
 
 \subsubsection{SBT}
 
+\noindent
+\textbf{Dependencies}:\\
+For sbt projects, ENSIME uses the build.properties file to determine the Scala version to compile with. It then builds classpaths using the jars in the \emph{lib} and \emph{lib\_managed} directories (selecting subdirectories based on Scala version and build configuration). \\
+
+\noindent
+\textbf{Inferior SBT}:\\
+The keystrokes C-c C-a will launch (or switch to an existing) inferior sbt session.\\
+
+\noindent
+\textbf{Compile-on-Save}:\\
+If the configuration directive sbt-compile-on-save is set to 't', ENSIME will invoke the 'compile' task in the inferior sbt process whenever you save a Scala buffer. Warning: This can eat up a lot of CPU.\\
+
+\noindent
+\textbf{Subprojects}:\\
+Each sbt subproject must have it's own .ensime file. The server is smart enough to notice that the project is a subproject, and will find dependencies that are shared between all subprojects.
+
 \subsubsection{Maven}
+
+\noindent
+\textbf{Known limitations}:\\
+Currently ENSIME expects to find pom.xml in the root of the project. There is no built-in support for sub-projects.\\
+
+\noindent
+\textbf{Dependencies}:\\
+Dependencies are discovered using the maven ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer.
 
 \subsubsection{Ant + Ivy}
 
+\noindent
+\textbf{Known limitations}:\\
+Currently ENSIME expects to find ivy.xml in the root of the project.\\
+
+\noindent
+\textbf{Dependencies}:\\
+Dependencies are discovered using the ivy ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer.
+
 \subsubsection{Other}
+
+\noindent
+\textbf{Setup}:\\
+See the complete listing of configuration directives below for how to specify dependency, source, and class-file locations.
 
 
 \subsection{The Config File Format}
 
-The .ensime file must be placed in the root directory of your project(or sub-project if you have a multi-module sbt build). The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values.
+Each project \emph{must} have a .ensime file. The .ensime file contains the configuration for your project, and must be located in your project's root directory.The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values.
 
 \vspace{1 cm}
 
@@ -107,14 +156,13 @@ The .ensime file must be placed in the root directory of your project(or sub-pro
 
 \vspace{1 cm}
 
-
 What follows is a description of all available configuration options. Required options are marked as 'Required'.
 
 \vspace{5 mm}
 
 \noindent
 {\bf :server-root "...."}\\
-Required. The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
+\emph{Required} The absolute path to the root of your ENSIME distribution. Note, this is not your project directory.
 \vspace{5 mm}
 
 
@@ -207,16 +255,69 @@ Manually specify the target of the project build process. Should be the director
 \section{Usage}
 
 \subsection{Startup}
-To enable ensime type M-x ensime. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the {\bf *inferior-ensime-server*} buffer.
+To start ensime type \emph{M-x ensime}. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the \emph{*inferior-ensime-server*} buffer.
 
 \subsection{Symbol and Member Completion}
-ENSIME completion is initiated by pressing the TAB key. To complete a symbol, type the first couple characters, then press TAB. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or SPACE followed by TAB. Completion options can be scrolled with M-n and M-p or UP and DOWN. Completion options can be searched by typing C-s. Press TAB again to complete a common prefix. To cancel completion, type C-g. Finally, if you've selected the completion you want, press ENTER. If the selected completion was a method name, the minibuffer will display help for the method parameters.
+ENSIME completion is initiated by pressing the TAB key. To complete a symbol, type the first couple characters, then press TAB. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or SPACE followed by TAB.\\
+
+\noindent
+\textbf{Completion menu key commands}:\\
+Candidates can be scrolled with M-n and M-p or UP and DOWN. Candidates can be searched by typing C-s. Press TAB again to complete a common prefix. To cancel completion, type C-g. Finally, if you've selected the completion you want, press ENTER. If the selected completion was a method name, the minibuffer will display help for the method parameters.
 
 \subsection{The Inspector}
-\subsection{Package Browsing}
+
+\noindent
+\textbf{Package Inspector}:\\
+Displays a hiearchical view of a package, including all top-level types.\\
+
+\noindent
+\textbf{Type Inspector}:\\
+Lists the interfaces that contribute members to the inspected type. List each interface's methods, with full type signatures.\\
+
+\noindent
+\textbf{Invocation}:\\
+Double-clicking on a symbol in a Scala buffer, or typing C-c t while the point is over a symbol will launch the type inspector. Typing C-c o will open the inspector on the current project's main package. C-c p will inspect the package of the current source file. Use the command M-x ensime-inspect-package-by-path to inspect an arbitrary package.\\
+
+\noindent
+\textbf{Navigation}:\\
+Most things in the inspector are hyper-linked. You can click these links with the mouse or position your cursor over them and press ENTER.
+
+
 \subsection{The Scala REPL}
+
+First, ensure that you've set the :target directive in your config file. Then, type \emph{C-c C-z} to launch the embedded Scala REPL. The REPL should be launched with all your project classes loaded and available. Please note that the Scala 2.8.0 REPL tab-completion does not currently work under ENSIME.
+
 \subsection{Debugging}
-\subsection{SBT Integration}
+
+First, ensure that you've set the :target directive in your config file. Then, type \emph{C-c C-d} to launch the embedded Scala Debugger. \\
+
+\noindent
+\textbf{Break Points}:\\
+With your cursor on a line of Scala source, type \emph{C-c d b} to set break point. Type \emph{C-c d u} to remove the breakpoint.\\
+
+\noindent
+\textbf{Run Control}:\\
+Once you've set your breakpoints type \emph{C-c d r} to run the program. Type \emph{C-c d c} to continue after hitting a breakpoint, or \emph{C-c d s} to step into the current line, or \emph{C-c d n} to step to the next line.\\
+
+\noindent
+\textbf{Value Inspection}:\\
+When stopped at a breakpoint, switch to the debug buffer \emph{*ensime-db*}. Type 'locals' ENTER to see a list of all the local variables in the current runtime context. Use 'dump X'' to dump the fields of an object X. Or 'print X' to print the value of an arbitrary expression X. To get help on more jdb commands, type 'help'.
+
+\subsection{Refactoring}
+
+\noindent
+\textbf{Rename}:\\
+Place your cursor over the symbol you'd like to rename. Type \emph{M-x ensime-refactor-rename} and follow the minibuffer instructions.\\
+
+\noindent
+\textbf{Organize Imports}:\\
+Type \emph{M-x ensime-refactor-organize-imports} in a Scala source buffer, and follow the minibuffer instructions.\\
+
+\noindent
+\textbf{Extract Method}:\\
+Select a region by setting the mark using C-SPACE and then placing the point at the end of the region. All selected code will be extracted into a helper method. Type \emph{M-x ensime-refactor-extract-method} and follow the minibuffer instructions.\\
+
+
 
 \subsection{Quick Command Reference}
 
@@ -320,9 +421,9 @@ Reload the config file from the disk, Start the automatic configuration file gen
 
 \section{Troubleshooting}
 
-You may want to examine the contents of the {\bf *inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload-config. Otherwise, if things are irreperably b0rked, you can always kill the {\bf *inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
+You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload-config. Otherwise, if things are irreperably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
 
-If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of {\bf *inferior-ensime-server*}.
+If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of \emph{*inferior-ensime-server*}.
 
 
 \end{document}
