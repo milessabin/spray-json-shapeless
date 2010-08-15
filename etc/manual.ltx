@@ -258,46 +258,57 @@ Manually specify the target of the project build process. Should be the director
 To start ensime type \emph{M-x ensime}. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the \emph{*inferior-ensime-server*} buffer.
 
 \subsection{Symbol and Member Completion}
-ENSIME completion is initiated by pressing the TAB key. To complete a symbol, type the first couple characters, then press TAB. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or SPACE followed by TAB.\\
+ENSIME completion is initiated by pressing the \emph{TAB}. To complete a symbol, type the first couple characters, then press \emph{TAB}. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or \emph{SPACE} followed by \emph{TAB}.\\
 
 \noindent
 \textbf{Completion menu key commands}:\\
-Candidates can be scrolled with M-n and M-p or UP and DOWN. Candidates can be searched by typing C-s. Press TAB again to complete a common prefix. To cancel completion, type C-g. Finally, if you've selected the completion you want, press ENTER. If the selected completion was a method name, the minibuffer will display help for the method parameters.
+Candidates can be scrolled with \emph{M-n} and \emph{M-p} or \emph{UP} and \emph{DOWN}. Candidates can be searched by typing \emph{C-s}. Press \emph{TAB} again to complete a common prefix. To cancel completion, type \emph{C-g}. Finally, if you've selected the completion you want, press \emph{ENTER}. If the selected completion was a method name, the minibuffer will display help for the method parameters.
 
-\subsection{The Inspector}
+\subsection{Type/Package Inspector}
 
-\noindent
-\textbf{Package Inspector}:\\
-Displays a hiearchical view of a package, including all top-level types.\\
-
-\noindent
-\textbf{Type Inspector}:\\
-Lists the interfaces that contribute members to the inspected type. List each interface's methods, with full type signatures.\\
 
 \noindent
 \textbf{Invocation}:\\
-Double-clicking on a symbol in a Scala buffer, or typing C-c t while the point is over a symbol will launch the type inspector. Typing C-c o will open the inspector on the current project's main package. C-c p will inspect the package of the current source file. Use the command M-x ensime-inspect-package-by-path to inspect an arbitrary package.\\
+Double-clicking on a symbol in a Scala buffer, or typing \emph{C-c t} while the point is over a symbol will launch the type inspector. Typing \emph{C-c o} will open the inspector on the current project's main package. \emph{C-c p} will inspect the package of the current source file. Use the command \emph{M-x ensime-inspect-package-by-path} to inspect an arbitrary package.\\
+
+\noindent
+\textbf{Package Inspector}:\\
+Displays a hierarchical view of a package, including all top-level types. Select a type to open the Type Inspector.\\
+
+\noindent
+\textbf{Type Inspector}:\\
+Lists the interfaces that contribute members to the inspected type. List each interface's methods, with full type signatures. If the type has a companion object/class, a link to the companion will appear under the heading.\\
 
 \noindent
 \textbf{Navigation}:\\
-Most things in the inspector are hyper-linked. You can click these links with the mouse or position your cursor over them and press ENTER.
+Most things in the inspector are hyper-linked. You can click these links with the mouse or position your cursor over them and press ENTER. A history is kept of all the pages you view in the inspector. Go back in this history by typing '\emph{,}' and forward by typing '\emph{.}'.
 
 
 \subsection{The Scala REPL}
 
-First, ensure that you've set the :target directive in your config file. Then, type \emph{C-c C-z} to launch the embedded Scala REPL. The REPL should be launched with all your project classes loaded and available. Please note that the Scala 2.8.0 REPL tab-completion does not currently work under ENSIME.
+First, ensure that you've set the :target directive in your config file. The REPL will load your project classes from the :target directory. Then, type \emph{C-c C-z} to launch the embedded Scala REPL. The REPL should be launched with all your project classes loaded and available. Please note that the Scala 2.8 REPL tab-completion does not currently work under ENSIME.
+
+\subsection{Incremental Building}
+
+Incremental building allows for fast turn-around in the running/testing of your application. The building/rebuilding support in ENSIME is intended for those who are not already using the sbt build system, as sbt users will probably wish to continue using the sbt shell's support for incremental building (it may still be worth a try though, as the build-manager included in ENSIME uses a finer grained check for modifications).
+
+First, ensure that you've set the :target directive in your config file. The :target directory is where the classes will be written by the incremental builder. Then, type \emph{M-x ensime-builder-build} to start building your project. When the build is finished, a window will appear listing the result of the build. After subsequent source changes, you may type \emph{M-x ensime-builder-rebuild} to rebuild only those parts of the project that depend on things you've changed. 
 
 \subsection{Debugging}
 
-First, ensure that you've set the :target directive in your config file. Then, type \emph{C-c C-d} to launch the embedded Scala Debugger. \\
+Debugging support in ENSIME is provided by running an instance of jdb under Emacs, sending it commands, and parsing its output. As such, in addition to the graphical tools provided by ENSIME, you also have full access to the jdb command line.\\
+
+\noindent
+\textbf{Launching the Debugger}:\\
+First, ensure that you've set the :target directive in your config file. The debugger needs these classes to run your application. Then, type \emph{C-c C-d} to launch the embedded Scala Debugger. \\
 
 \noindent
 \textbf{Break Points}:\\
-With your cursor on a line of Scala source, type \emph{C-c d b} to set break point. Type \emph{C-c d u} to remove the breakpoint.\\
+With your cursor on a line of Scala source, type \emph{C-c d b} to set a breakpoint. Type \emph{C-c d u} to remove the breakpoint.\\
 
 \noindent
 \textbf{Run Control}:\\
-Once you've set your breakpoints type \emph{C-c d r} to run the program. Type \emph{C-c d c} to continue after hitting a breakpoint, or \emph{C-c d s} to step into the current line, or \emph{C-c d n} to step to the next line.\\
+Once you've set your breakpoints, type \emph{C-c d r} to run the program. Type \emph{C-c d c} to continue after hitting a breakpoint, or \emph{C-c d s} to step into the current line, or \emph{C-c d n} to step to the next line.\\
 
 \noindent
 \textbf{Value Inspection}:\\
@@ -315,7 +326,7 @@ Type \emph{M-x ensime-refactor-organize-imports} in a Scala source buffer. Follo
 
 \noindent
 \textbf{Extract Method}:\\
-Select a region by setting the mark using C-SPACE and then placing the point at the end of the region. All selected code will be extracted into a helper method. Type \emph{M-x ensime-refactor-extract-method} and follow the minibuffer instructions.\\
+Select a region by setting the mark using \emph{C-SPACE} and then placing the point at the end of the region. All selected code will be extracted into a helper method. Type \emph{M-x ensime-refactor-extract-method} and follow the minibuffer instructions.\\
 
 
 
@@ -421,7 +432,7 @@ Reload the config file from the disk, Start the automatic configuration file gen
 
 \section{Troubleshooting}
 
-You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload-config. Otherwise, if things are irreperably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
+You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload-config. Otherwise, if things are irreparably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
 
 If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of \emph{*inferior-ensime-server*}.
 
