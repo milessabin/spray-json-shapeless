@@ -88,5 +88,19 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   } dependsOn(stage) describedAs("Compress the deployment directory.")
 
 
+  lazy val publish_manual = task {
+    log.info("Converting manual to html..")
+    val target = "/tmp/ensime_manual.html"
+    val cwd = Some(new File("etc"))
+    doSh("tth -u -Lmanual < manual.ltx > " + target, cwd)!!(log)
+    log.info("Publishing manual to web...")
+    doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
+    None     
+  } dependsOn(stage) describedAs("Publish the manual.")
+
+
+  private def doSh(str:String, cwd:Option[File]) = Process("sh" :: "-c" :: str :: Nil, cwd)
+
+
 }
 

@@ -23,7 +23,7 @@ the ENhanced Scala Interaction Mode for Emacs
 
 
 ## Documentation
-- [The ENSIME User Manual](http://aemon.com/file_dump/ensime_manual)
+- [The ENSIME User Manual](http://aemon.com/file_dump/ensime_manual.html)
 
 
 ## Quick Start
