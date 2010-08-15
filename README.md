@@ -58,8 +58,3 @@ In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to
 __5) Starting ENSIME__
 
 Execute M-x ensime
-
-
-__5.1 Troubleshooting
-
-You may want to examine the contents of the \*inferior-ensime-server\* buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging.
