@@ -15,3 +15,4 @@ project/build/target
 test_data
 dist
 .ensime
+.ensime.bak
