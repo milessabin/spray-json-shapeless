@@ -20,12 +20,14 @@ case class ExternalConfig(
 object ExternalConfigInterface {
 
   def getMavenConfig(baseDir:File):ExternalConfig = {
-    val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val srcDirs = maybeDirs(List("src/main/scala", "src/main/java"), baseDir)
     val runtimeDeps = resolveMavenDeps(baseDir, "runtime")
     val compileDeps = resolveMavenDeps(baseDir, "compile")
     val testDeps = resolveMavenDeps(baseDir, "test")
+
     val f = new File(baseDir, "target/classes")
     val buildTarget = if(f.exists){Some(f)}else{None}
+
     ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
@@ -56,7 +58,16 @@ object ExternalConfigInterface {
     target.addTask(task)
 
     project.addTarget("ResolveDependencies", target)
-    project.executeTarget("ResolveDependencies")
+
+    try{
+      project.executeTarget("ResolveDependencies")
+    }
+    catch{
+      case e => {
+	System.err.println("Failed to resolve Maven dependencies.")
+	e.printStackTrace(System.err)
+      }
+    }
 
     task.deps
   }
@@ -64,26 +75,23 @@ object ExternalConfigInterface {
 
 
   def getIvyConfig(baseDir:File, 
+    ivyFile:Option[File],
     runtimeConf:Option[String], 
     compileConf:Option[String], 
     testConf:Option[String]):ExternalConfig = {
-    val srcDirs = makeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val srcDirs = maybeDirs(List("src/main/scala", "src/main/java"), baseDir)
 
-    val resolve = { c:String => resolveIvyDeps(baseDir, c)}
+    val resolve = { c:String => resolveIvyDeps(baseDir, ivyFile, c)}
 
     val defaultDeps = resolve("default")
     val runtimeDeps = runtimeConf.map(resolve(_)).getOrElse(defaultDeps)
     val compileDeps = compileConf.map(resolve(_)).getOrElse(defaultDeps)
     val testDeps = testConf.map(resolve(_)).getOrElse(defaultDeps)
 
-    val f = new File(baseDir, "target/classes")
-    val buildTarget = if(f.exists){Some(f)}else{None}
-    System.out.println("Using build target: " + buildTarget)
-
-    ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
+    ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, None)
   }
 
-  def resolveIvyDeps(baseDir:File, conf:String):Iterable[File] = {
+  def resolveIvyDeps(baseDir:File, ivyFile:Option[File], conf:String):Iterable[File] = {
     System.out.println("Resolving Ivy dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
@@ -96,17 +104,31 @@ object ExternalConfigInterface {
     val task = new IvyDepsTask()
     task.setOwningTarget(target)
     task.setProject(project)
-    System.out.println("Using config '" + conf + "'.")
+    for(f <- ivyFile){
+      task.setFile(f)
+      println("Using ivy file '" + f + "'.")
+    }
+    println("Using config '" + conf + "'.")
     target.addTask(task)
 
     project.addTarget("ResolveDependencies", target)
-    project.executeTarget("ResolveDependencies")
+
+    try{
+      project.executeTarget("ResolveDependencies")
+    }
+    catch{
+      case e => {
+	System.err.println("Failed to resolve Maven dependencies.")
+	e.printStackTrace(System.err)
+      }
+    }
+
     task.deps
   }
 
 
   def getSbtConfig(baseDir:File):ExternalConfig = {
-    val srcDirs = makeDirs(List("src"), baseDir)
+    val srcDirs = maybeDirs(List("src"), baseDir)
     val projectProps = new File(baseDir, "project/build.properties")
     val parentProjectProps = new File(baseDir, "../project/build.properties")
 
@@ -125,7 +147,6 @@ object ExternalConfigInterface {
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if(f.exists){Some(f)}else{None}
-      System.out.println("Using build target: " + target)
       ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, target)
     }
     else {
@@ -146,7 +167,7 @@ object ExternalConfigInterface {
     System.out.println("Searching for dependencies in " + unmanagedLibDir)
     System.out.println("Searching for dependencies in " + managedLibDir)
     System.out.println("Searching for dependencies in " + scalaLibDir)
-    var jarRoots = makeDirs(List(unmanagedLibDir, managedLibDir, defaultManagedLibDir, scalaLibDir), baseDir)
+    var jarRoots = maybeDirs(List(unmanagedLibDir, managedLibDir, defaultManagedLibDir, scalaLibDir), baseDir)
     val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
     jars
   }

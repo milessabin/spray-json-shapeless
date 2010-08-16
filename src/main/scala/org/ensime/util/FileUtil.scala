@@ -50,20 +50,22 @@ object FileUtils {
       }).toSet
   }
 
-  def makeDirs(names:Iterable[String], baseDir:File):Iterable[File] = {
-    names.map{ s =>
-      val f = new File(s)
-      if(f.isAbsolute && f.isDirectory) f
-      else new File(baseDir, s)
-    }.filter( f => f.exists)
+  def maybeDirs(names:Iterable[String], baseDir:File):Iterable[File] = {
+    names.map{s => maybeDir(s,baseDir)}.flatten
   }
 
-  def makeFiles(names:Iterable[String], baseDir:File):Iterable[File] = {
-    names.map{ s =>
-      val f = new File(s)
-      if(f.isAbsolute) f
-      else new File(baseDir, s)
-    }.filter( f => f.exists)
+  def maybeFiles(names:Iterable[String], baseDir:File):Iterable[File] = {
+    names.map{s => maybeFile(s,baseDir)}.flatten
+  }
+
+  def maybeFile(s:String, baseDir:File):Option[File] = { 
+    val f = new File(s)
+    if(f.isAbsolute) Some(f)
+    else Some(new File(baseDir, s))
+  }.filter( f => f.exists)
+
+  def maybeDir(s:String, baseDir:File):Option[File] = { 
+    maybeFile(s, baseDir).filter(_.isDirectory)
   }
 
 

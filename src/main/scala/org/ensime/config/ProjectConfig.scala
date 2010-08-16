@@ -61,7 +61,8 @@ object ProjectConfig{
 	val rConf = m.get(key(":ivy-runtime-conf")).map(_.toString)
 	val cConf = m.get(key(":ivy-compile-conf")).map(_.toString)
 	val tConf = m.get(key(":ivy-test-conf")).map(_.toString)
-	val ext = getIvyConfig(rootDir, rConf, cConf, tConf)
+	val file = m.get(key(":ivy-file")).map(s => new File(s.toString))
+	val ext = getIvyConfig(rootDir, file, rConf, cConf, tConf)
 	sourceRoots ++= ext.sourceRoots
 	runtimeDeps ++= ext.runtimeDepJars
 	compileDeps ++= ext.compileDepJars
@@ -73,7 +74,7 @@ object ProjectConfig{
     
     m.get(key(":dependency-jars")) match{
       case Some(SExpList(items)) => {
-	val jars = makeFiles(items.map(_.toString), rootDir)
+	val jars = maybeFiles(items.map(_.toString), rootDir)
 	compileDeps ++= expandRecursively(rootDir, jars, isValidJar _)
 	runtimeDeps ++= expandRecursively(rootDir, jars, isValidJar _)
       }
@@ -82,7 +83,7 @@ object ProjectConfig{
 
     m.get(key(":runtime-dependency-jars")) match{
       case Some(SExpList(items)) => {
-	val jars = makeFiles(items.map(_.toString), rootDir)
+	val jars = maybeFiles(items.map(_.toString), rootDir)
 	runtimeDeps ++= expandRecursively(rootDir, jars, isValidJar _)
       }
       case _ => 
@@ -90,7 +91,7 @@ object ProjectConfig{
 
     m.get(key(":compile-dependency-jars")) match{
       case Some(SExpList(items)) => {
-	val jars = makeFiles(items.map(_.toString), rootDir)
+	val jars = maybeFiles(items.map(_.toString), rootDir)
 	compileDeps ++= expandRecursively(rootDir, jars, isValidJar _)
       }
       case _ => 
@@ -98,7 +99,7 @@ object ProjectConfig{
 
     m.get(key(":dependency-dirs")) match{
       case Some(SExpList(items)) => {
-	val dirs = makeDirs(items.map(_.toString), rootDir)
+	val dirs = maybeDirs(items.map(_.toString), rootDir)
 	classDirs ++= expand(rootDir,dirs,isValidClassDir _)
       }
       case _ => 
@@ -106,30 +107,56 @@ object ProjectConfig{
 
     m.get(key(":sources")) match{
       case Some(SExpList(items)) => {
-	val dirs = makeDirs(items.map(_.toString), rootDir)
+	val dirs = maybeDirs(items.map(_.toString), rootDir)
 	sourceRoots ++= dirs
       }
       case _ => 
     }
     val sourceFiles = expandRecursively(rootDir,sourceRoots,isValidSourceFile _)
 
-    val debugClass = m.get(key(":debug-class")).map(_.toString)
-    val debugArgs = m.get(key(":debug-args")) match{
-      case Some(SExpList(items)) => {
-	items.map(_.toString)
+
+    m.get(key(":target")) match{
+      case Some(StringAtom(targetDir)) => {
+	target = target.orElse(maybeDir(targetDir, rootDir))
       }
-      case _ => List()
+      case _ => 
     }
+
+    target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
+    println("Using target directory: " + target.getOrElse("ERROR"))
 
     new ProjectConfig(rootDir, sourceFiles, 
       sourceRoots, runtimeDeps, compileDeps, 
-      classDirs, target, debugClass, debugArgs)
+      classDirs, target)
     
+  }
+
+  // If given target directory is not valid, use the default,
+  // creating if necessary.
+  def verifyTargetDir(rootDir:File, target:Option[File], defaultTarget:File):Option[File] = {
+    val targetDir = target match{
+      case Some(f:File) => {
+	if(f.exists && f.isDirectory) { f } else{ defaultTarget }
+      }
+      case None => defaultTarget
+    }
+    if(targetDir.exists){
+      Some(targetDir)
+    }
+    else{
+      try{
+	if(targetDir.mkdirs) Some(targetDir)
+	else None
+      }
+      catch{
+	case e => None
+      }
+    }
   }
 
 
   def nullConfig = new ProjectConfig(new File("."), List(), List(), 
-    List(), List(), List(), None, None, List())
+    List(), List(), List(), None)
 
 }
 
@@ -145,9 +172,7 @@ class ProjectConfig(
   val runtimeDeps:Iterable[File],
   val compileDeps:Iterable[File],
   val classDirs:Iterable[File],
-  val target:Option[File],
-  val debugClass:Option[String],
-  val debugArgs:Iterable[String]){
+  val target:Option[File]){
 
   def compilerClasspathFilenames:Set[String] = {
     val allFiles = compileDeps ++ classDirs
@@ -181,8 +206,6 @@ class ProjectConfig(
   def replClasspath = runtimeClasspath
 
   def debugClasspath = runtimeClasspath
-
-  def debugArgString = debugArgs.map(_.toString).mkString(" ")
 
   def debugSourcepath = {
     sourceRoots.map(_.getAbsolutePath).toSet.mkString(File.pathSeparator)

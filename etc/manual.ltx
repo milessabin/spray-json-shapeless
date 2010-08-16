@@ -66,13 +66,15 @@ Download the latest ENSIME distribution from github.com at \begin{verbatim}http:
 \end{mylisting}
 
 
+Now you need to define a .ensime file for your project. See section \ref{sec:config}.
+
 
 \subsection{Installation from Git Clone}
 
 Note: This section is for people who want to hack on ENSIME itself.\\
 
 \noindent
-After cloning, and before you can run ENSIME, you must create the distribution directory structure. The sbt task 'stage' will create the directory 'dist' underneath the root clone directory. Then, follow the install instructions in section 2.2 above, substituting CLONE/dist as the root of your ENSIME distribution.\\
+After cloning, and before you can run ENSIME, you must create the distribution directory structure. The sbt task 'stage' will create the directory 'dist' underneath the root clone directory. Then, follow the install instructions in section 2.2 above, substituting CLONE\_DIR/dist as the root of your ENSIME distribution.\\
 
 \noindent
 A common work-flow when hacking ENSIME:
@@ -88,6 +90,7 @@ A common work-flow when hacking ENSIME:
 \section{Defining a Project}
 
 \subsection{Generating a Config File}
+\label{sec:config}
 
 ENSIME includes a wizard for automatically generating configuration files. In Emacs, execute \emph{M-x ensime-config-gen}. Then simply follow the directions in the mini-buffer to create a .ensime file for your project.  ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
 
@@ -105,7 +108,7 @@ The keystrokes C-c C-a will launch (or switch to an existing) inferior sbt sessi
 
 \noindent
 \textbf{Compile-on-Save}:\\
-If the configuration directive sbt-compile-on-save is set to 't', ENSIME will invoke the 'compile' task in the inferior sbt process whenever you save a Scala buffer. Warning: This can eat up a lot of CPU.\\
+If the configuration directive :sbt-compile-on-save is set to 't', ENSIME will invoke the 'compile' task in the inferior sbt process whenever you save a Scala buffer. Warning: This can eat up a lot of CPU.\\
 
 \noindent
 \textbf{Subprojects}:\\
@@ -115,30 +118,25 @@ Each sbt subproject must have it's own .ensime file. The server is smart enough 
 
 \noindent
 \textbf{Known limitations}:\\
-Currently ENSIME expects to find pom.xml in the root of the project. There is no built-in support for sub-projects.\\
+Currently ENSIME expects to find pom.xml in the root of the project.\\
 
 \noindent
 \textbf{Dependencies}:\\
 Dependencies are discovered using the maven ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer.
 
-\subsubsection{Ant + Ivy}
-
-\noindent
-\textbf{Known limitations}:\\
-Currently ENSIME expects to find ivy.xml in the root of the project.\\
+\subsubsection{Other + Ivy}
 
 \noindent
 \textbf{Dependencies}:\\
-Dependencies are discovered using the ivy ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer.
+Dependencies are discovered using the ivy ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer. If you've defined ivy configurations that you'd like to map to the compile and runtime modes in ENSIME, see the :ivy-*-conf directives in section \ref{sec:configformat}. If your ivy.xml file is in a non-standard location, see the :ivy-file directive .
 
 \subsubsection{Other}
 
-\noindent
-\textbf{Setup}:\\
-See the complete listing of configuration directives below for how to specify dependency, source, and class-file locations.
+Your project doesn't fit into one of the given categories? No problem. See section \ref{sec:configformat} for how to specify dependency, source, and class-output locations.
 
 
-\subsection{The Config File Format}
+\subsection{Config File Format}
+\label{sec:configformat}
 
 Each project \emph{must} have a .ensime file. The .ensime file contains the configuration for your project, and must be located in your project's root directory.The contents of the file must be a valid Emacs-Lisp S-Expression. Here's a quick primer on ELisp values.
 
@@ -156,7 +154,7 @@ Each project \emph{must} have a .ensime file. The .ensime file contains the conf
 
 \vspace{1 cm}
 
-What follows is a description of all available configuration options. Required options are marked as 'Required'.
+What follows is a description of all available configuration options. Required options are marked as 'Required'. Any filename or directory paths may be relative to the project root.
 
 \vspace{5 mm}
 

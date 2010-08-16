@@ -37,9 +37,11 @@ case class TypeAtPointReq(file:File, point:Int)
 class Analyzer(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor with RefactoringController{
   protected val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
+  settings.usejavacp.value = false
   protected val reporter = new PresentationReporter()
   protected val cc:RichCompilerControl = new RichPresentationCompiler(settings, reporter, this, config)
   protected var awaitingInitialCompile = true
+
 
   import cc._
   import protocol._
