@@ -76,24 +76,45 @@ object FileUtils {
   }
 
   def readFile(file:File):Either[IOException, String] = {
-    try {
-      val stream = new FileInputStream(file);
-      val fc = stream.getChannel();
-      val bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-      /* Instead of using default, pass in a decoder. */
-      Right(Charset.defaultCharset().decode(bb).toString())
+    val cs = Charset.defaultCharset()
+    try{
+      val stream = new FileInputStream(file)
+      try {
+	val reader = new BufferedReader(new InputStreamReader(stream, cs))
+	val builder = new StringBuilder()
+	val buffer = new Array[Char](8192)
+	var read = reader.read(buffer, 0, buffer.length)
+	while(read > 0) {
+          builder.appendAll(buffer, 0, read)
+	  read = reader.read(buffer, 0, buffer.length)
+	}
+	Right(builder.toString())
+      } 
+      catch{
+	case e:IOException => Left(e)
+      }
+      finally {
+	stream.close()
+      }
     }
     catch{
-      case e:IOException => Left(e)
+      case e:FileNotFoundException => Left(e)
     }
   }
 
-  def replaceFileContents(file:File, newContents:String):Either[IOException, Boolean] = {
-    try {
+  def replaceFileContents(file:File, newContents:String):Either[IOException, Unit] = {
+    try{
       val writer = new FileWriter(file, false)
-      writer.write(newContents)
-      writer.close()
-      Right(true)
+      try {
+	writer.write(newContents)
+	Right(())
+      }
+      catch{
+	case e:IOException => Left(e)
+      }
+      finally{
+	writer.close()
+      }
     }
     catch{
       case e:IOException => Left(e)

@@ -16,7 +16,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
 
 
-  //  override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
+  //override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.

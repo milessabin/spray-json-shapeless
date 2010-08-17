@@ -8,7 +8,6 @@ import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.common.{Selections, Change}
 import scala.tools.refactoring.implementations._
 
-
 case class RefactorFailure(val procedureId:Int, val message:String)
 case class RefactorPerformReq(procedureId:Int, refactorType:Symbol, params:immutable.Map[Symbol, Any])
 case class RefactorExecReq(procedureId:Int, refactorType:Symbol)
