@@ -253,7 +253,7 @@ trait RefactoringImpl{ self: RichPresentationCompiler =>
 	  {
 	    val changed = Change.applyChanges(pair._2.toList, contents)
 	    replaceFileContents(file, changed) match{
-	      case Right(s) => {
+	      case Right(_) => {
 		touchedFiles += file
 	      }
 	      case Left(e) => throw e
