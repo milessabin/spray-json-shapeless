@@ -195,7 +195,7 @@ class ProjectConfig(
     expandRecursively(root,sourceRoots,isValidSourceFile _)
   }
 
-  def sourceFilenames:Set[String] = {q
+  def sourceFilenames:Set[String] = {
     sources.map(_.getAbsolutePath).toSet
   }
 
