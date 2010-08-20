@@ -20,7 +20,7 @@ case class ExternalConfig(
 object ExternalConfigInterface {
 
   def getMavenConfig(baseDir:File):ExternalConfig = {
-    val srcDirs = maybeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val srcDirs = maybeDirs(List("src"), baseDir)
     val runtimeDeps = resolveMavenDeps(baseDir, "runtime")
     val compileDeps = resolveMavenDeps(baseDir, "compile")
     val testDeps = resolveMavenDeps(baseDir, "test")
@@ -33,7 +33,7 @@ object ExternalConfigInterface {
 
 
   def resolveMavenDeps(baseDir:File, scopes:String):Iterable[File] = {
-    System.out.println("Resolving Maven dependencies...")
+    println("Resolving Maven dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
     project.setBaseDir(baseDir)
@@ -53,7 +53,7 @@ object ExternalConfigInterface {
     task.setOwningTarget(target)
     task.setProject(project)
     task.addPom(pom)
-    System.out.println("Using scopes: " + scopes)
+    println("Using scopes: " + scopes)
     task.setScopes(scopes)
     target.addTask(task)
 
@@ -79,7 +79,7 @@ object ExternalConfigInterface {
     runtimeConf:Option[String], 
     compileConf:Option[String], 
     testConf:Option[String]):ExternalConfig = {
-    val srcDirs = maybeDirs(List("src/main/scala", "src/main/java"), baseDir)
+    val srcDirs = maybeDirs(List("src"), baseDir)
 
     val resolve = { c:String => resolveIvyDeps(baseDir, ivyFile, c)}
 
@@ -92,7 +92,7 @@ object ExternalConfigInterface {
   }
 
   def resolveIvyDeps(baseDir:File, ivyFile:Option[File], conf:String):Iterable[File] = {
-    System.out.println("Resolving Ivy dependencies...")
+    println("Resolving Ivy dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
     project.setBaseDir(baseDir)
@@ -137,7 +137,7 @@ object ExternalConfigInterface {
 
     if(isMain || isSubProject){
       val propFile = if(isSubProject){ parentProjectProps } else { projectProps }
-      System.out.println("Loading sbt build.properties from " + propFile + ".")
+      println("Loading sbt build.properties from " + propFile + ".")
       val sbtConfig = SbtConfigParser(propFile)
       val v = sbtConfig.buildScalaVersion
 
@@ -156,17 +156,18 @@ object ExternalConfigInterface {
   }
 
   def resolveSbtDeps(baseDir:File, scalaVersion:String, conf:String, isSubProject:Boolean):Iterable[File] = {
-    System.out.println("Using build config '" + conf + "'")
+    println("Resolving sbt dependencies...")
+    println("Using build config '" + conf + "'")
     val v = scalaVersion
     val unmanagedLibDir = "lib"
     val managedLibDir = "lib_managed/scala_" + v + "/" + conf
     val defaultManagedLibDir = "lib_managed/scala_" + v + "/default"
     val scalaLibDir = if(isSubProject){"../project/boot/scala-" + v + "/lib"}
     else {"project/boot/scala-" + v + "/lib"}
-    System.out.println("Using base directory " + baseDir)
-    System.out.println("Searching for dependencies in " + unmanagedLibDir)
-    System.out.println("Searching for dependencies in " + managedLibDir)
-    System.out.println("Searching for dependencies in " + scalaLibDir)
+    println("Using base directory " + baseDir)
+    println("Searching for dependencies in " + unmanagedLibDir)
+    println("Searching for dependencies in " + managedLibDir)
+    println("Searching for dependencies in " + scalaLibDir)
     var jarRoots = maybeDirs(List(unmanagedLibDir, managedLibDir, defaultManagedLibDir, scalaLibDir), baseDir)
     val jars = expandRecursively(baseDir,jarRoots,isValidJar _)
     jars

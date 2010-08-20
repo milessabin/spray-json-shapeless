@@ -112,7 +112,6 @@ object ProjectConfig{
       }
       case _ => 
     }
-    val sourceFiles = expandRecursively(rootDir,sourceRoots,isValidSourceFile _)
 
 
     m.get(key(":target")) match{
@@ -122,12 +121,26 @@ object ProjectConfig{
       case _ => 
     }
 
+
+
+
+    // Provide some reasonable defaults..
+
     target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
     println("Using target directory: " + target.getOrElse("ERROR"))
 
-    new ProjectConfig(rootDir, sourceFiles, 
-      sourceRoots, runtimeDeps, compileDeps, 
-      classDirs, target)
+    if(sourceRoots.isEmpty){
+      val f = new File("src")
+      if(f.exists && f.isDirectory){
+	println("Using default source root, 'src'.")
+	sourceRoots += f
+      }
+    }
+
+
+    new ProjectConfig(
+      rootDir,sourceRoots,runtimeDeps, 
+      compileDeps,classDirs,target)
     
   }
 
@@ -155,7 +168,7 @@ object ProjectConfig{
   }
 
 
-  def nullConfig = new ProjectConfig(new File("."), List(), List(), 
+  def nullConfig = new ProjectConfig(new File("."), List(), 
     List(), List(), List(), None)
 
 }
@@ -167,7 +180,6 @@ class DebugConfig(val classpath:String, val sourcepath:String){}
 
 class ProjectConfig(
   val root:File,
-  val sources:Iterable[File],
   val sourceRoots:Iterable[File],
   val runtimeDeps:Iterable[File],
   val compileDeps:Iterable[File],
@@ -179,7 +191,11 @@ class ProjectConfig(
     allFiles.map(_.getAbsolutePath).toSet
   }
 
-  def sourceFilenames:Set[String] = {
+  def sources:Set[File] = {
+    expandRecursively(root,sourceRoots,isValidSourceFile _)
+  }
+
+  def sourceFilenames:Set[String] = {q
     sources.map(_.getAbsolutePath).toSet
   }
 
