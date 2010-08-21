@@ -1,5 +1,5 @@
 package org.ensime.model
-import scala.collection.mutable.{ HashMap }
+import scala.collection.mutable.{ HashMap, ArrayBuffer }
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.symtab.{Symbols, Types}
 import scala.tools.nsc.util.{NoPosition, Position}
@@ -108,8 +108,11 @@ trait ModelBuilders {  self: Global =>
       'class
       else if(sym.isPackageClass)
       'class
-      else if(sym.isAbstractClass)
-      'abstractclass
+
+      // check this last so objects are not
+      // classified as fields
+      else if(sym.isValue || sym.isVariable)
+      'field
       else 'nil
     }
 
@@ -154,15 +157,15 @@ trait ModelBuilders {  self: Global =>
     def typeShortNameWithArgs(tpe:Type): String = {
       if(isArrowType(tpe)){
 	("(" + 
-	    tpe.paramTypes.map(typeShortNameWithArgs).mkString(", ") + 
-	    ") => " + 
+	  tpe.paramTypes.map(typeShortNameWithArgs).mkString(", ") + 
+	  ") => " + 
 	  typeShortNameWithArgs(tpe.resultType))
       }
       else{
 	(typeShortName(tpe) + (if(tpe.typeArgs.length > 0){
 	      "[" + 
-		tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") + 
-		"]"
+	      tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") + 
+	      "]"
 	    }
 	    else{""}
 	  ))
@@ -207,6 +210,101 @@ trait ModelBuilders {  self: Global =>
 	// TODO accessing outerClass sometimes throws java.lang.Error
 	// Notably, when tpe = scala.Predef$Class
 	case e:java.lang.Error => None
+      }
+    }
+
+    def companionTypeOf(tpe:Type):Option[Type] = {
+      val sym = tpe.typeSymbol
+      if(sym != NoSymbol){
+	if(sym.isModule || sym.isModuleClass){
+	  val comp = sym.companionClass
+	  if(comp != NoSymbol && comp.tpe != tpe){ 
+	    Some(comp.tpe)
+	  }
+	  else None
+	}
+	else if(sym.isTrait || sym.isClass || sym.isPackageClass){
+	  val comp = sym.companionModule
+	  if(comp != NoSymbol && comp.tpe != tpe){ 
+	    Some(comp.tpe)
+	  }
+	  else None
+	}
+	else None
+      } else None
+    }
+
+
+    // When inspecting a type, transform a raw list of TypeMembers to a sorted
+    // list of InterfaceInfo objects, each with its own list of sorted member infos.
+    def prepareSortedInterfaceInfo(members:Iterable[Member]):Iterable[InterfaceInfo] = {
+      // ...filtering out non-visible and non-type members
+      val visMembers:Iterable[TypeMember] = members.flatMap {
+	case m@TypeMember(sym, tpe, true, _, _) => List(m)
+	case _ => List()
+      }
+
+
+      // Create a list of pairs [(typeSym, membersOfSym)]
+      val membersByOwner = visMembers.groupBy{
+	case TypeMember(sym, _, _, _, _) => {
+	  sym.owner
+	}
+      }.toList.sortWith{
+	// Sort the pairs on the subtype relation
+	case ((s1,_),(s2,_)) => s1.tpe <:< s2.tpe
+      }
+
+      membersByOwner.map{
+	case (ownerSym, members) => {
+
+	  // If all the members in this interface were
+	  // provided by the same view, remember that 
+	  // view for later display to user.
+	  val byView = members.groupBy(_.viaView)
+	  val viaView = if(byView.size == 1){
+	    byView.keys.headOption.filter(_ != NoSymbol)
+	  } else {None}
+
+	  // Do one top level sort by name on members, before
+	  // subdividing into kinds of members.
+	  val sortedMembers = members.toList.sortWith{(a,b) => 
+	    a.sym.nameString <= b.sym.nameString}
+	  
+
+	  // Convert type members into NamedTypeMemberInfos
+	  // and divided into different kinds..
+
+	  val nestedTypes = new ArrayBuffer[NamedTypeMemberInfo]()
+	  val constructors = new ArrayBuffer[NamedTypeMemberInfo]()
+	  val fields = new ArrayBuffer[NamedTypeMemberInfo]()
+	  val methods = new ArrayBuffer[NamedTypeMemberInfo]()
+
+	  for(tm <- sortedMembers){
+	    val info = NamedTypeMemberInfo(tm)
+	    val decl = info.declaredAs
+	    if(decl == 'method){
+	      if(info.name == "this") {
+		constructors += info
+	      }
+	      else {
+		methods += info
+	      }
+	    }
+	    else if(decl == 'field){
+	      fields += info
+	    }
+	    else if(decl == 'class || decl == 'trait || 
+	      decl == 'interface || decl == 'object){
+	      nestedTypes += info
+	    }
+	  }
+
+	  val sortedInfos = nestedTypes ++ fields ++ constructors ++ methods
+
+	  new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
+	    viaView.map(_.name.toString))
+	}
       }
     }
 
@@ -304,7 +402,7 @@ trait ModelBuilders {  self: Global =>
   object TypeInfo{
 
 
-    def apply(t:Type, members:List[EntityInfo] = List()):TypeInfo = {
+    def apply(t:Type, members:Iterable[EntityInfo] = List()):TypeInfo = {
       val tpe = t match{
 	// TODO: Instead of throwing away this information, would be better to 
 	// alert the user that the type is existentially quantified.
@@ -437,12 +535,7 @@ trait ModelBuilders {  self: Global =>
 
   object NamedTypeMemberInfo{
     def apply(m:TypeMember):NamedTypeMemberInfo = {
-      val decl = if(m.sym.isMethod){
-	'method
-      } 
-      else{
-	declaredAs(m.sym)
-      }
+      val decl = declaredAs(m.sym)
       new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), m.sym.pos, decl)
     }
   }

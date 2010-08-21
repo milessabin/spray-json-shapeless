@@ -12,7 +12,6 @@ import scala.tools.nsc.symtab.{Flags, Types}
 import scala.tools.nsc.util.{SourceFile, Position}
 
 
-
 trait RichCompilerControl extends CompilerControl with RefactoringInterface{ self: RichPresentationCompiler =>
 
 
@@ -124,7 +123,7 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl{
 
   import analyzer.{SearchResult, ImplicitSearch}
 
-  private def typePublicMembers(tpe:Type):List[TypeMember] = {
+  private def typePublicMembers(tpe:Type):Iterable[TypeMember] = {
     val scope = new Scope
     val members = new LinkedHashMap[Symbol, TypeMember]
     def addTypeMember(sym:Symbol, pre:Type, inherited:Boolean, viaView:Symbol) {
@@ -145,11 +144,11 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl{
     for (sym <- tpe.members){
       addTypeMember(sym, tpe, true, NoSymbol)
     }
-    members.values.toList
+    members.values
   }
 
 
-  private def getMembersForTypeAt(p:Position):List[Member] = {
+  private def getMembersForTypeAt(p:Position):Iterable[Member] = {
     typeAt(p) match{
       case Left(tpe) => {
 	if(isNoParamArrowType(tpe)){
@@ -166,7 +165,11 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl{
 	      List()
 	    }
 	  }
-	  (members ++ typePublicMembers(tpe)).toSet.toList
+	  val bySym = new LinkedHashMap[Symbol, TypeMember]
+	  for(m <- (members ++ typePublicMembers(tpe))){
+	    bySym(m.sym) = m
+	  }
+	  bySym.values
 	}
       }
       case Right(e) => {
@@ -174,76 +177,6 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl{
 	List()
       }
     }
-  }
-
-  private def prepareSortedInterfaceInfo(members:List[Member]):Iterable[InterfaceInfo] = {
-    // ...filtering out non-visible and non-type members
-    val visMembers:List[TypeMember] = members.flatMap {
-      case m@TypeMember(sym, tpe, true, _, _) => List(m)
-      case _ => List()
-    }
-
-
-    // Create a list of pairs [(typeSym, membersOfSym)]
-    val membersByOwner = visMembers.groupBy{
-      case TypeMember(sym, _, _, _, _) => {
-	sym.owner
-      }
-    }.toList.sortWith{
-      // Sort the pairs on the subtype relation
-      case ((s1,_),(s2,_)) => s1.tpe <:< s2.tpe
-    }
-
-    membersByOwner.map{
-      case (ownerSym, members) => {
-
-	// If all the members in this interface were
-	// provided by the same view, remember that 
-	// view for later display to user.
-	val byView = members.groupBy(_.viaView)
-	val viaView = if(byView.size == 1){
-	  byView.keys.headOption.filter(_ != NoSymbol)
-	} else {None}
-
-	// Transform to [typeInfo]*
-	val memberInfos = members.map{ m =>
-	  NamedTypeMemberInfo(m)
-	}
-
-	val nestedTypes = (memberInfos.filter(_.declaredAs != 'method)
-	  .sortWith((a,b) => a.name <= b.name))	
-	val constructors = memberInfos.filter(_.name == "this")
-	val others = (memberInfos.filter(m => 
-	    m.declaredAs == 'method && m.name != "this")
-	  .sortWith((a,b) => a.name <= b.name))
-
-	val sortedInfos = nestedTypes ++ constructors ++ others
-
-	new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
-	  viaView.map(_.name.toString))
-      }
-    }
-  }
-
-  protected def companionTypeOf(tpe:Type):Option[Type] = {
-    val sym = tpe.typeSymbol
-    if(sym != NoSymbol){
-      if(sym.isModule || sym.isModuleClass){
-	val comp = sym.companionClass
-	if(comp != NoSymbol && comp.tpe != tpe){ 
-	  Some(comp.tpe)
-	}
-	else None
-      }
-      else if(sym.isTrait || sym.isClass || sym.isPackageClass){
-	val comp = sym.companionModule
-	if(comp != NoSymbol && comp.tpe != tpe){ 
-	  Some(comp.tpe)
-	}
-	else None
-      }
-      else None
-    } else None
   }
 
   protected def inspectType(tpe:Type):TypeInspectInfo = {
@@ -398,7 +331,7 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl{
 	}
       }
       case _ => List()
-    }.sortWith((a,b) => a.name.length <= b.name.length)
+    }.toList.sortWith((a,b) => a.name.length <= b.name.length)
     visibleMembers
   }
 
