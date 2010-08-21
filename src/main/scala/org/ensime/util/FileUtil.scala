@@ -23,6 +23,8 @@ class RichFile(file: File) {
 
 }
 
+class CanonFile(path:String) extends File(path){}
+
 /** implicitely enrich java.io.File with methods of RichFile */
 object RichFile {
   implicit def toRichFile(file: File) = new RichFile(file)
@@ -32,42 +34,50 @@ object FileUtils {
   
   implicit def toRichFile(file: File) = new RichFile(file)
 
-  def expandRecursively(rootDir:File, fileList:Iterable[File], isValid:(File => Boolean)):Set[File] = {
+  implicit def toCanonFile(file: File):CanonFile = {
+    try{
+      new CanonFile(file.getCanonicalPath)
+    }
+    catch{
+      case e:Exception => new CanonFile(file.getAbsolutePath)
+    }
+  }
+
+  def expandRecursively(rootDir:File, fileList:Iterable[File], isValid:(File => Boolean)):Set[CanonFile] = {
     (for(f <- fileList;
 	val files = if(f.isAbsolute) f.andTree else (new File(rootDir, f.getPath)).andTree;
 	file <- files if isValid(file)
       )
-      yield{ file }).toSet
+      yield{ toCanonFile(file) }).toSet
   }
 
-  def expand(rootDir:File, fileList:Iterable[File], isValid:(File => Boolean)):Set[File] = {
+  def expand(rootDir:File, fileList:Iterable[File], isValid:(File => Boolean)):Set[CanonFile] = {
     (for(f <- fileList;
 	val files = List(if(f.isAbsolute) f else (new File(rootDir, f.getPath)));
 	file <- files if isValid(file)
       )
       yield{
-	file
+	toCanonFile(file)
       }).toSet
   }
 
-  def maybeDirs(names:Iterable[String], baseDir:File):Iterable[File] = {
+  def maybeDirs(names:Iterable[String], baseDir:File):Iterable[CanonFile] = {
     names.map{s => maybeDir(s,baseDir)}.flatten
   }
 
-  def maybeFiles(names:Iterable[String], baseDir:File):Iterable[File] = {
+  def maybeFiles(names:Iterable[String], baseDir:File):Iterable[CanonFile] = {
     names.map{s => maybeFile(s,baseDir)}.flatten
   }
 
-  def maybeFile(s:String, baseDir:File):Option[File] = { 
+  def maybeFile(s:String, baseDir:File):Option[CanonFile] = { 
     val f = new File(s)
-    if(f.isAbsolute) Some(f)
-    else Some(new File(baseDir, s))
+    if(f.isAbsolute) Some(toCanonFile(f))
+    else Some(toCanonFile(new File(baseDir, s)))
   }.filter( f => f.exists)
 
-  def maybeDir(s:String, baseDir:File):Option[File] = { 
+  def maybeDir(s:String, baseDir:File):Option[CanonFile] = { 
     maybeFile(s, baseDir).filter(_.isDirectory)
   }
-
 
   def isValidJar(f:File):Boolean = f.exists && f.getName.endsWith(".jar")
   def isValidClassDir(f:File):Boolean = f.exists && f.isDirectory

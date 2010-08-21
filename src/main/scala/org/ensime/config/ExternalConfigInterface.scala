@@ -6,18 +6,20 @@ import org.apache.ivy.core.report.ArtifactDownloadReport
 import org.apache.maven.artifact.ant._
 import org.apache.tools.ant._
 import org.ensime.util.FileUtils._
+import org.ensime.util._
 import scala.collection.JavaConversions._
 
 
 case class ExternalConfig(
-  val sourceRoots:Iterable[File],
-  val runtimeDepJars:Iterable[File],
-  val compileDepJars:Iterable[File],
-  val testDepJars:Iterable[File],
-  val target:Option[File]){
+  val sourceRoots:Iterable[CanonFile],
+  val runtimeDepJars:Iterable[CanonFile],
+  val compileDepJars:Iterable[CanonFile],
+  val testDepJars:Iterable[CanonFile],
+  val target:Option[CanonFile]){
 }
 
 object ExternalConfigInterface {
+
 
   def getMavenConfig(baseDir:File):ExternalConfig = {
     val srcDirs = maybeDirs(List("src"), baseDir)
@@ -26,13 +28,13 @@ object ExternalConfigInterface {
     val testDeps = resolveMavenDeps(baseDir, "test")
 
     val f = new File(baseDir, "target/classes")
-    val buildTarget = if(f.exists){Some(f)}else{None}
+    val buildTarget = if(f.exists){Some(toCanonFile(f))}else{None}
 
     ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
 
-  def resolveMavenDeps(baseDir:File, scopes:String):Iterable[File] = {
+  def resolveMavenDeps(baseDir:File, scopes:String):Iterable[CanonFile] = {
     println("Resolving Maven dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
@@ -69,7 +71,7 @@ object ExternalConfigInterface {
       }
     }
 
-    task.deps
+    task.deps.map(toCanonFile)
   }
 
 
@@ -91,7 +93,7 @@ object ExternalConfigInterface {
     ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, None)
   }
 
-  def resolveIvyDeps(baseDir:File, ivyFile:Option[File], conf:String):Iterable[File] = {
+  def resolveIvyDeps(baseDir:File, ivyFile:Option[File], conf:String):Iterable[CanonFile] = {
     println("Resolving Ivy dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
@@ -123,7 +125,7 @@ object ExternalConfigInterface {
       }
     }
 
-    task.deps
+    task.deps.map(toCanonFile)
   }
 
 
@@ -146,7 +148,7 @@ object ExternalConfigInterface {
       val testDeps = resolveSbtDeps(baseDir, v, "test", isSubProject)
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
-      val target = if(f.exists){Some(f)}else{None}
+      val target = if(f.exists){Some(toCanonFile(f))}else{None}
       ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, target)
     }
     else {
@@ -155,7 +157,7 @@ object ExternalConfigInterface {
     }
   }
 
-  def resolveSbtDeps(baseDir:File, scalaVersion:String, conf:String, isSubProject:Boolean):Iterable[File] = {
+  def resolveSbtDeps(baseDir:File, scalaVersion:String, conf:String, isSubProject:Boolean):Iterable[CanonFile] = {
     println("Resolving sbt dependencies...")
     println("Using build config '" + conf + "'")
     val v = scalaVersion

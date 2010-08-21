@@ -226,32 +226,34 @@ Manually include source files by directory(recursively) or by filename. If direc
 
 
 \noindent
-{\bf :dependency-jars ([directory or filename]*)}\\
-Manually include jars by directory(recursively) or by filename.
+{\bf :compile-jars ([directory or filename]*)}\\
+Manually include jars by directory(recursively) or by filename, to be included on the compile and runtime classpaths.
+\vspace{5 mm}
+
+\noindent
+{\bf :exclude-compile-jars ([directory or filename]*)}\\
+Manually exclude jars by directory(recursively) or by filename. These jars will be excluded from any classpath.
 \vspace{5 mm}
 
 
 \noindent
-{\bf :compile-dependency-jars ([directory or filename]*)}\\
-Manually include jars by directory(recursively) or by filename, to be included only at compile time.
+{\bf :runtime-jars ([directory or filename]*)}\\
+Manually include jars by directory(recursively) or by filename, to be included only on the runtime classpath.
 \vspace{5 mm}
 
-
 \noindent
-{\bf :runtime-dependency-jars ([directory or filename]*)}\\
-Manually include jars by directory(recursively) or by filename, to be included only at run time.
+{\bf :exclude-runtime-jars ([directory or filename]*)}\\
+Manually exclude jars by directory(recursively) or by filename. These jars will be excluded the runtime classpath.
 \vspace{5 mm}
 
-
 \noindent
-{\bf :dependency-dirs ([directory or filename]*)}\\
-Manually include directories of .class files.
+{\bf :class-dirs ([directory]*)}\\
+Manually include directories of .class files, to be included on the compile and runtime classpaths.
 \vspace{5 mm}
 
-
 \noindent
-{\bf :target dir}\\
-Manually specify the target of the project build process. Should be the directory where .class files are written. The target is used to populate the classpath when launching the inferior scala repl and the debugger.
+{\bf :target directory}\\
+Manually specify the target of the project build process. This directory will be included on the runtime classpath when debugging or using the repl, and will be pupulated by the incremental compiler. Will be created if it doesn't exist.
 \vspace{5 mm}
 
 
