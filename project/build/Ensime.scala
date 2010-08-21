@@ -84,10 +84,17 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
 
   lazy val dist = task {
-    val archiveName = "ensime-" + version + ".tar.gz"
-    log.info("Compressing to " + archiveName + "...")
-    Process("tar -pcvzf " + archiveName + " ./dist")!!(log)
-    None     
+    val initialDir = new File(".")
+    val archiveFile = new File(initialDir, artifactBaseName + ".tar.gz").getCanonicalPath
+    withTemporaryDirectory(log){ f =>
+      val releaseDir = new File(f.getAbsolutePath + "/" + artifactBaseName)
+      log.info("Copying ./dist to temp directory: " + f)
+      doSh("cp -r ./dist " + releaseDir)!!(log)
+      log.info("Compressing temp directory to " + archiveFile + "...")
+      doSh("tar -pcvzf " + archiveFile + " " + artifactBaseName, Some(f))!!(log)
+      None
+    }
+    None
   } dependsOn(stage) describedAs("Compress the deployment directory.")
 
 
@@ -105,6 +112,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
 
   private def doSh(str:String, cwd:Option[File]) = Process("sh" :: "-c" :: str :: Nil, cwd)
+  private def doSh(str:String) = Process("sh" :: "-c" :: str :: Nil, None)
 
 
 }
