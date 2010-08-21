@@ -71,105 +71,113 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 
 	  case RPCRequestEvent(req:Any, callId:Int) => {
 	    try{
-	      req match {
 
-		case req:RefactorPerformReq =>
-		{
-		  handleRefactorRequest(req, callId)
-		}
+	      if(awaitingInitialCompile){
+		project ! RPCErrorEvent(
+		  "Analyzer is not ready! Please wait.", callId)
+	      }
+	      else{
 
-		case req:RefactorExecReq =>
-		{
-		  handleRefactorExec(req, callId)
-		}
+		req match {
 
-		case req:RefactorCancelReq =>
-		{
-		  handleRefactorCancel(req, callId)
-		}
+		  case req:RefactorPerformReq =>
+		  {
+		    handleRefactorRequest(req, callId)
+		  }
 
-		case ReloadAllReq() =>
-		{
-		  cc.askReloadAllFiles()
-		  project ! RPCResultEvent(toWF(true), callId)
-		}
+		  case req:RefactorExecReq =>
+		  {
+		    handleRefactorExec(req, callId)
+		  }
 
-		case ReloadFileReq(file:File) =>
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  cc.askReloadFile(f)
-		  project ! RPCResultEvent(toWF(true), callId)
-		  project ! QuickTypeCheckResultEvent(reporter.allNotes)
-		}
+		  case req:RefactorCancelReq =>
+		  {
+		    handleRefactorCancel(req, callId)
+		  }
 
-		case RemoveFileReq(file:File) => 
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  cc.removeUnitOf(f)
-		}
+		  case ReloadAllReq() =>
+		  {
+		    cc.askReloadAllFiles()
+		    project ! RPCResultEvent(toWF(true), callId)
+		  }
 
-		case ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean) => 
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  val p = new OffsetPosition(f, point)
-		  val syms = cc.askCompleteSymbolAt(p, prefix, constructor)
-		  project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
-		}
+		  case ReloadFileReq(file:File) =>
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    cc.askReloadFile(f)
+		    project ! RPCResultEvent(toWF(true), callId)
+		    project ! QuickTypeCheckResultEvent(reporter.allNotes)
+		  }
 
-		case TypeCompletionReq(file:File, point:Int, prefix:String) => 
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  val p = new OffsetPosition(f, point)
-		  val members = cc.askCompleteMemberAt(p, prefix)
-		  project ! RPCResultEvent(toWF(members.map(toWF)), callId)
-		}
+		  case RemoveFileReq(file:File) => 
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    cc.removeUnitOf(f)
+		  }
 
-		case InspectTypeReq(file:File, point:Int) =>
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  val p = new OffsetPosition(f, point)
-		  val inspectInfo = cc.askInspectTypeAt(p)
-		  project ! RPCResultEvent(toWF(inspectInfo), callId)
-		}
+		  case ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean) => 
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val p = new OffsetPosition(f, point)
+		    val syms = cc.askCompleteSymbolAt(p, prefix, constructor)
+		    project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
+		  }
 
-		case InspectTypeByIdReq(id:Int) =>
-		{
-		  val inspectInfo = cc.askInspectTypeById(id)
-		  project ! RPCResultEvent(toWF(inspectInfo), callId)
-		}
+		  case TypeCompletionReq(file:File, point:Int, prefix:String) => 
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val p = new OffsetPosition(f, point)
+		    val members = cc.askCompleteMemberAt(p, prefix)
+		    project ! RPCResultEvent(toWF(members.map(toWF)), callId)
+		  }
 
-		case SymbolAtPointReq(file:File, point:Int) =>
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  val p = new OffsetPosition(f, point)
-		  val info = cc.askSymbolInfoAt(p)
-		  project ! RPCResultEvent(toWF(info), callId)
-		}
+		  case InspectTypeReq(file:File, point:Int) =>
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val p = new OffsetPosition(f, point)
+		    val inspectInfo = cc.askInspectTypeAt(p)
+		    project ! RPCResultEvent(toWF(inspectInfo), callId)
+		  }
 
-		case InspectPackageByPathReq(path:String) =>
-		{
-		  val packageInfo = cc.askPackageByPath(path)
-		  project ! RPCResultEvent(toWF(packageInfo), callId)
-		}
+		  case InspectTypeByIdReq(id:Int) =>
+		  {
+		    val inspectInfo = cc.askInspectTypeById(id)
+		    project ! RPCResultEvent(toWF(inspectInfo), callId)
+		  }
 
-		case TypeAtPointReq(file:File, point:Int) =>
-		{
-		  val f = cc.sourceFileForPath(file.getAbsolutePath())
-		  val p = new OffsetPosition(f, point)
-		  val typeInfo = cc.askTypeInfoAt(p)
-		  project ! RPCResultEvent(toWF(typeInfo), callId)
-		}
+		  case SymbolAtPointReq(file:File, point:Int) =>
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val p = new OffsetPosition(f, point)
+		    val info = cc.askSymbolInfoAt(p)
+		    project ! RPCResultEvent(toWF(info), callId)
+		  }
 
-		case TypeByIdReq(id:Int) =>
-		{
-		  val tpeInfo = cc.askTypeInfoById(id)
-		  project ! RPCResultEvent(toWF(tpeInfo), callId)
-		}
+		  case InspectPackageByPathReq(path:String) =>
+		  {
+		    val packageInfo = cc.askPackageByPath(path)
+		    project ! RPCResultEvent(toWF(packageInfo), callId)
+		  }
 
-		case CallCompletionReq(id:Int) =>
-		{
-		  val callInfo = cc.askCallCompletionInfoById(id)
-		  project ! RPCResultEvent(toWF(callInfo), callId)
+		  case TypeAtPointReq(file:File, point:Int) =>
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val p = new OffsetPosition(f, point)
+		    val typeInfo = cc.askTypeInfoAt(p)
+		    project ! RPCResultEvent(toWF(typeInfo), callId)
+		  }
+
+		  case TypeByIdReq(id:Int) =>
+		  {
+		    val tpeInfo = cc.askTypeInfoById(id)
+		    project ! RPCResultEvent(toWF(tpeInfo), callId)
+		  }
+
+		  case CallCompletionReq(id:Int) =>
+		  {
+		    val callInfo = cc.askCallCompletionInfoById(id)
+		    project ! RPCResultEvent(toWF(callInfo), callId)
+		  }
 		}
 	      }
 	    }

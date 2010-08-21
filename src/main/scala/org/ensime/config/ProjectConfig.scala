@@ -26,6 +26,8 @@ object ProjectConfig{
       case _ => new File(".")
     }
 
+    println("Using project root: " + rootDir)
+
     val sourceRoots = new mutable.HashSet[CanonFile]
     val runtimeDeps = new mutable.HashSet[CanonFile]
     val compileDeps = new mutable.HashSet[CanonFile]
@@ -34,6 +36,7 @@ object ProjectConfig{
 
     m.get(key(":use-sbt")) match{
       case Some(TruthAtom()) => {
+	println("Using sbt configuration..")
 	val ext = getSbtConfig(rootDir)
 	sourceRoots ++= ext.sourceRoots
 	runtimeDeps ++= ext.runtimeDepJars
@@ -46,6 +49,7 @@ object ProjectConfig{
 
     m.get(key(":use-maven")) match{
       case Some(TruthAtom()) => {
+	println("Using maven configuration..")
 	val ext = getMavenConfig(rootDir)
 	sourceRoots ++= ext.sourceRoots
 	runtimeDeps ++= ext.runtimeDepJars
@@ -58,6 +62,7 @@ object ProjectConfig{
 
     m.get(key(":use-ivy")) match{
       case Some(TruthAtom()) => {
+	println("Using ivy configuration..")
 	val rConf = m.get(key(":ivy-runtime-conf")).map(_.toString)
 	val cConf = m.get(key(":ivy-compile-conf")).map(_.toString)
 	val tConf = m.get(key(":ivy-test-conf")).map(_.toString)
@@ -75,7 +80,9 @@ object ProjectConfig{
     m.get(key(":runtime-jars")) match{
       case Some(SExpList(items)) => {
 	val jarsAndDirs = maybeFiles(items.map(_.toString), rootDir)
-	runtimeDeps ++= expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	val toInclude = expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	println("Manually including " + toInclude.size + " run-time jars.")
+	runtimeDeps ++= toInclude
       }
       case _ => 
     }
@@ -83,7 +90,9 @@ object ProjectConfig{
     m.get(key(":exclude-runtime-jars")) match{
       case Some(SExpList(items)) => {
 	val jarsAndDirs = maybeFiles(items.map(_.toString), rootDir)
-	runtimeDeps --= expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	val toExclude = expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	println("Manually excluding " + toExclude.size + " run-time jars.")
+	runtimeDeps --= toExclude
       }
       case _ => 
     }
@@ -91,7 +100,9 @@ object ProjectConfig{
     m.get(key(":compile-jars")) match{
       case Some(SExpList(items)) => {
 	val jarsAndDirs = maybeFiles(items.map(_.toString), rootDir)
-	compileDeps ++= expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	val toInclude = expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	println("Manually including " + toInclude.size + " compile-time jars.")
+	compileDeps ++= toInclude
       }
       case _ => 
     }
@@ -99,7 +110,9 @@ object ProjectConfig{
     m.get(key(":exclude-compile-jars")) match{
       case Some(SExpList(items)) => {
 	val jarsAndDirs = maybeFiles(items.map(_.toString), rootDir)
-	compileDeps --= expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	val toExclude = expandRecursively(rootDir, jarsAndDirs, isValidJar _)
+	println("Manually excluding " + toExclude.size + " compile-time jars.")
+	compileDeps --= toExclude
       }
       case _ => 
     }
@@ -107,6 +120,7 @@ object ProjectConfig{
     m.get(key(":class-dirs")) match{
       case Some(SExpList(items)) => {
 	val dirs = maybeDirs(items.map(_.toString), rootDir)
+	println("Manually including " + dirs.size + " class directories.")
 	classDirs ++= expand(rootDir,dirs,isValidClassDir _)
       }
       case _ => 
@@ -115,6 +129,7 @@ object ProjectConfig{
     m.get(key(":sources")) match{
       case Some(SExpList(items)) => {
 	val dirs = maybeDirs(items.map(_.toString), rootDir)
+	println("Using source roots: " + dirs.mkString(", "))
 	sourceRoots ++= dirs
       }
       case _ => 
@@ -126,7 +141,6 @@ object ProjectConfig{
       }
       case _ => 
     }
-
 
 
 
