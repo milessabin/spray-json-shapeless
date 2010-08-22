@@ -179,9 +179,9 @@ trait ModelBuilders {  self: Global =>
       def nestedClassName(sym:Symbol):String = {
 	outerClass(sym) match{
 	  case Some(outerSym) => {
-	    nestedClassName(outerSym) + "$" + sym.nameString
+	    nestedClassName(outerSym) + "$" + typeShortName(sym)
 	  }
-	  case None => sym.nameString
+	  case None => typeShortName(sym)
 	}
       }
       val typeSym = tpe.typeSymbol
@@ -189,13 +189,18 @@ trait ModelBuilders {  self: Global =>
 	typeSym.enclosingPackage.fullName + "." + nestedClassName(typeSym)
       }
       else{
-	typeSym.enclosingPackage.fullName + "." + typeSym.nameString
+	typeSym.enclosingPackage.fullName + "." + typeShortName(typeSym)
       }
     }
 
     def typeShortName(tpe:Type):String = {
-      if(tpe.typeSymbol != NoSymbol) tpe.typeSymbol.nameString
+      if(tpe.typeSymbol != NoSymbol) typeShortName(tpe.typeSymbol)
       else tpe.toString
+    }
+
+    def typeShortName(sym:Symbol):String = {
+      if(sym.isModule || sym.isModuleClass) sym.nameString + "$"
+      else sym.nameString
     }
 
     /* Give the outerClass of a symbol representing a nested type */

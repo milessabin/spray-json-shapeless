@@ -338,6 +338,27 @@ Select a region by setting the mark using \emph{C-SPACE} and then placing the po
 Place your cursor over the local val who's value you'd like to inline. Type \emph{M-x ensime-refactor-inline-local} and follow the minibuffer instructions.\\
 
 
+\subsection{Scaladoc and Javadoc Browsing (customizing)}
+
+If ENSIME cannot find the source for a type or member, it will instead try to browse to the www documentation. Support is included for the java and scala standard libraries, as well as the android class library. To add your own doc library, you need to add a handler to the \emph{ensime-doc-lookup-map}. This handler list is made up of (regex . handler) pairs, where regex is a regular expression string that will be matched against the fully qualified type name, and handler is a function that will be applied to the requested type and member and should return a url. Here's an example of how you might add new java docs for classes in com.example:
+
+\begin{mylisting}
+\begin{verbatim}
+
+(defun make-example-doc-url (type &optional member)
+  (ensime-make-java-doc-url-helper 
+    "http://developer.example.com/apidocs/" type member))
+
+(add-to-list 'ensime-doc-lookup-map '("^com\\.example\\." . make-example-doc-url))
+
+\end{verbatim}
+\end{mylisting}
+
+\noindent
+Note that \emph{ensime-make-java-doc-url-helper}, and its Scala equivalent \emph{ensime-make-scala-doc-url-helper}, are provided for doing the harder work of building the url paths.
+
+
+
 \subsection{Quick Command Reference}
 
 \vspace{5 mm}
