@@ -143,7 +143,6 @@ object ProjectConfig{
     }
 
 
-
     // Provide some reasonable defaults..
 
     target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
@@ -191,6 +190,33 @@ object ProjectConfig{
   def nullConfig = new ProjectConfig(new File("."), List(), 
     List(), List(), List(), None)
 
+
+  def getJavaHome():Option[File] = {
+    val javaHome:String = System.getProperty("java.home");
+    if(javaHome == null) None
+    else Some(new File(javaHome))
+  }
+
+  def javaBootJars():Set[CanonFile] = {
+    val javaHome = getJavaHome();
+    javaHome match {
+      case Some(javaHome) => {
+	if (System.getProperty("os.name").startsWith("Mac")) {
+	  expandRecursively(
+	    new File("."), 
+	    List(new File(javaHome, "../Classes")), 
+	    isValidJar)
+	} 
+	else {
+	  expandRecursively(
+	    new File("."), 
+	    List(new File(javaHome, "lib")), 
+	    isValidJar)
+	}
+      }
+      case None => Set()
+    }
+  }
 }
 
 

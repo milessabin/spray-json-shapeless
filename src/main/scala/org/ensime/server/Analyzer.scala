@@ -22,7 +22,6 @@ case class AnalyzerShutdownEvent()
 case class ReloadFileReq(file:File)
 case class ReloadAllReq()
 case class RemoveFileReq(file:File)
-case class RPCRequestEvent(req:Any, callId:Int)
 case class ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean)
 case class TypeCompletionReq(file:File, point:Int, prefix:String)
 case class SymbolAtPointReq(file:File, point:Int)
@@ -69,6 +68,34 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 	    project ! FullTypeCheckResultEvent(reporter.allNotes)
 	  }
 
+	  case RPCCommandEvent(req:Any) => {
+	    try{
+	      if(awaitingInitialCompile){
+		project ! RPCCommandErrorEvent("Analyzer is not ready! Please wait.")
+	      }
+	      else{
+		req match {
+		  case ReloadAllReq() =>
+		  {
+		    cc.askReloadAllFiles()
+		  }
+		  case ReloadFileReq(file:File) =>
+		  {
+		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    cc.askReloadFile(f)
+		    project ! QuickTypeCheckResultEvent(reporter.allNotes)
+		  }
+		}
+	      }
+	    }
+	    catch{
+	      case e:Exception =>
+	      {
+		System.err.println("Error handling RPC Command: " + e + " :\n" + e.getStackTraceString)
+		project ! RPCCommandErrorEvent("Error occurred in Scala Analyzer. Check the server log.")
+	      }
+	    }
+	  }
 	  case RPCRequestEvent(req:Any, callId:Int) => {
 	    try{
 
@@ -93,20 +120,6 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 		  case req:RefactorCancelReq =>
 		  {
 		    handleRefactorCancel(req, callId)
-		  }
-
-		  case ReloadAllReq() =>
-		  {
-		    cc.askReloadAllFiles()
-		    project ! RPCResultEvent(toWF(true), callId)
-		  }
-
-		  case ReloadFileReq(file:File) =>
-		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
-		    cc.askReloadFile(f)
-		    project ! RPCResultEvent(toWF(true), callId)
-		    project ! QuickTypeCheckResultEvent(reporter.allNotes)
 		  }
 
 		  case RemoveFileReq(file:File) => 
@@ -185,13 +198,13 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 	      case e:Exception =>
 	      {
 		System.err.println("Error handling RPC: " + e + " :\n" + e.getStackTraceString)
-		project ! RPCErrorEvent("Error occurred in compiler. Check the server log.", callId)
+		project ! RPCErrorEvent("Error occurred in Scala Analyzer. Check the server log.", callId)
 	      }
 	    }
 	  }
 	  case other => 
 	  {
-	    println("Compiler: WTF, what's " + other)
+	    println("Scala Analyzer: WTF, what's " + other)
 	  }
 	}
 

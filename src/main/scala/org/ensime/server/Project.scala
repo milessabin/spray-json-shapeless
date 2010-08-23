@@ -13,12 +13,17 @@ import scala.tools.nsc.{Settings}
 case class SendBackgroundMessageEvent(msg:String)
 case class RPCResultEvent(value:WireFormat, callId:Int)
 case class RPCErrorEvent(value:String, callId:Int)
+case class RPCRequestEvent(req:Any, callId:Int)
+case class RPCCommandEvent(req:Any)
+case class RPCCommandErrorEvent(value:String)
+
 
 class Project(val protocol:Protocol) extends Actor with RPCTarget{
 
   protocol.setRPCTarget(this)
 
-  protected var compiler:Actor = actor{}
+  protected var scalaAnalyzer:Actor = actor{}
+  protected var javaAnalyzer:Actor = actor{}
   protected var builder:Option[Actor] = None
   protected var config:ProjectConfig = ProjectConfig.nullConfig
   protected var debugInfo:Option[ProjectDebugInfo] = None
@@ -57,6 +62,10 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
 	  {
 	    protocol.sendRPCReturnError(msg, callId)
 	  }
+	  case RPCCommandErrorEvent(msg) =>
+	  {
+	    protocol.sendRPCCommandError(msg)
+	  }
 	}
       }
       catch{
@@ -75,9 +84,13 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
   }
 
   protected def restartCompiler() {
-    compiler ! AnalyzerShutdownEvent
-    compiler = new Analyzer(this, protocol, this.config)
-    compiler.start
+    scalaAnalyzer ! AnalyzerShutdownEvent
+    scalaAnalyzer = new Analyzer(this, protocol, this.config)
+    scalaAnalyzer.start
+
+    javaAnalyzer ! AnalyzerShutdownEvent
+    javaAnalyzer = new JavaAnalyzer(this, protocol, this.config)
+    javaAnalyzer.start
   }
 
   protected def getOrStartBuilder():Actor = {

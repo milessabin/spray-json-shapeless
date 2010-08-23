@@ -7,12 +7,14 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   import Configurations.{Compile, CompilerPlugin, Default, Provided, Runtime, Test}
 
   val scalaToolsSnapshots = "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
+  val jbossRepo = "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2"
 
   val ant = "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test"
   val ivy = "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test"
   val maven = "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test"
   val bcel = "org.apache.bcel" % "bcel" % "5.2" % "compile;runtime;test"
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
+  val jdt = "org.eclipse.jdt" % "core" % "3.4.2.v_883_R34x" % "compile;runtime;test"
 
 
 

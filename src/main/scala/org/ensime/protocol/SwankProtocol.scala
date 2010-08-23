@@ -344,6 +344,12 @@ trait SwankProtocol extends Protocol{
       ))
   }
 
+  def sendRPCCommandError(value:String){
+    sendMessage(SExp(
+	key(":command-abort"),value
+      ))
+  }
+
   def sendRPCError(msg:String, callId:Int){
     sendMessage(SExp(
 	key(":invalid-rpc"),

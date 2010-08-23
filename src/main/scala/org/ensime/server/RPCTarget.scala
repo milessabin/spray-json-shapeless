@@ -75,59 +75,63 @@ trait RPCTarget{ self:Project =>
 
   def rpcTypecheckFile(f:String, callId:Int){
     val file:File = new File(f)
-    compiler ! RPCRequestEvent(ReloadFileReq(file), callId)
+    scalaAnalyzer ! RPCCommandEvent(ReloadFileReq(file))
+    javaAnalyzer ! RPCCommandEvent(ReloadFileReq(file))
+    sendRPCReturn(toWF(true),callId)
   }
 
   def rpcTypecheckAll(callId:Int){
-    compiler ! RPCRequestEvent(ReloadAllReq(), callId)
+    scalaAnalyzer ! RPCCommandEvent(ReloadAllReq())
+    javaAnalyzer ! RPCCommandEvent(ReloadAllReq())
+    sendRPCReturn(toWF(true),callId)
   }
 
   def rpcScopeCompletion(f:String, point:Int, prefix:String, constructor:Boolean, callId:Int){
-    compiler ! RPCRequestEvent(ScopeCompletionReq(new File(f), point, prefix, constructor), callId)
+    scalaAnalyzer ! RPCRequestEvent(ScopeCompletionReq(new File(f), point, prefix, constructor), callId)
   }
 
   def rpcTypeCompletion(f:String, point:Int, prefix:String, callId:Int){
-    compiler ! RPCRequestEvent(TypeCompletionReq(new File(f), point, prefix), callId)
+    scalaAnalyzer ! RPCRequestEvent(TypeCompletionReq(new File(f), point, prefix), callId)
   }
 
   def rpcInspectTypeAtPoint(f:String, point:Int, callId:Int){
-    compiler ! RPCRequestEvent(InspectTypeReq(new File(f), point), callId)
+    scalaAnalyzer ! RPCRequestEvent(InspectTypeReq(new File(f), point), callId)
   }
 
   def rpcInspectTypeById(id:Int, callId:Int){
-    compiler ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
+    scalaAnalyzer ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
   }
 
   def rpcSymbolAtPoint(f:String, point:Int, callId:Int){
-    compiler ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
+    scalaAnalyzer ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
   }
 
   def rpcTypeById(id:Int, callId:Int){
-    compiler ! RPCRequestEvent(TypeByIdReq(id), callId)
+    scalaAnalyzer ! RPCRequestEvent(TypeByIdReq(id), callId)
   }
 
   def rpcCallCompletion(id:Int, callId:Int){
-    compiler ! RPCRequestEvent(CallCompletionReq(id), callId)
+    scalaAnalyzer ! RPCRequestEvent(CallCompletionReq(id), callId)
   }
 
   def rpcTypeAtPoint(f:String, point:Int, callId:Int){
-    compiler ! RPCRequestEvent(TypeAtPointReq(new File(f), point), callId)
+    scalaAnalyzer ! RPCRequestEvent(TypeAtPointReq(new File(f), point), callId)
   }
 
   def rpcInspectPackageByPath(path:String, callId:Int){
-    compiler ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
+    scalaAnalyzer ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
   }
 
   def rpcPerformRefactor(refactorType:Symbol, procId:Int, params:immutable.Map[Symbol, Any], callId:Int){
-    compiler ! RPCRequestEvent(RefactorPerformReq(procId, refactorType, params), callId)
+    scalaAnalyzer ! RPCRequestEvent(RefactorPerformReq(procId, refactorType, params), callId)
   }
 
   def rpcExecRefactor(refactorType:Symbol, procId:Int, callId:Int){
-    compiler ! RPCRequestEvent(RefactorExecReq(procId, refactorType), callId)
+    scalaAnalyzer ! RPCRequestEvent(RefactorExecReq(procId, refactorType), callId)
   }
 
   def rpcCancelRefactor(procId:Int, callId:Int){
-    compiler ! RPCRequestEvent(RefactorCancelReq(procId), callId)
+    scalaAnalyzer ! RPCRequestEvent(RefactorCancelReq(procId), callId)
   }
 
 

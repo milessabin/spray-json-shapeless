@@ -28,19 +28,20 @@ object RichFile {
   implicit def toRichFile(file: File) = new RichFile(file)
 }
 
-object FileUtils {
+class CanonFile private (path:String) extends File(path){}
 
-  class CanonFile private (path:String) extends File(path){}
-  object CanonFile {
-    def apply(file:File) = {
-      try{
-	new CanonFile(file.getCanonicalPath)
-      }
-      catch{
-	case e:Exception => new CanonFile(file.getAbsolutePath)
-      }
+object CanonFile {
+  def apply(file:File) = {
+    try{
+      new CanonFile(file.getCanonicalPath)
+    }
+    catch{
+      case e:Exception => new CanonFile(file.getAbsolutePath)
     }
   }
+}
+
+object FileUtils {
 
   implicit def toRichFile(file: File) = new RichFile(file)
 

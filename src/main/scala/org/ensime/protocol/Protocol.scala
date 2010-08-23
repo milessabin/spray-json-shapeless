@@ -132,6 +132,15 @@ trait Protocol extends ProtocolConversions{
   def sendRPCError(msg:String, callId:Int)
 
   /**
+  * Notify the client that the RPC command could not
+  * be processed.
+  *
+  * @param  value  A message describing the error.
+  * @return        Void
+  */ 
+  def sendRPCCommandError(value:String)
+
+  /**
   * Notify the client that a message was received
   * that does not conform to the protocol.
   *
