@@ -1,5 +1,6 @@
 package org.ensime.server
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 import org.eclipse.jdt.internal.compiler.{Compiler, ClassFile, CompilationResult, ICompilerRequestor, IErrorHandlingPolicy}
@@ -27,14 +28,31 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
   protected val classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath)
   println("Java Classpath: " + classpath)
 
+
+
   protected val nameProvider = new FileSystem(classpath.toArray, Array(), "UTF-8"){
 
     private val compiledClasses = new mutable.HashMap[String, ClassFileReader]()
+    private val knownPackages = new mutable.HashSet[String]()
 
     def addClassFiles(classFiles:Iterable[ClassFile]) {
       for(cf <- classFiles){
-	val reader = new ClassFileReader(cf.contents, cf.fileName)
-	compiledClasses(cf.getCompoundName.mkString) = reader
+	val byteStream = new ByteArrayOutputStream()
+	byteStream.write(cf.header, 0, cf.headerOffset)
+	byteStream.write(cf.contents, 0, cf.contentsOffset)
+	val bytes = byteStream.toByteArray
+	val reader = new ClassFileReader(bytes, cf.fileName)
+	val key = CharOperation.toString(cf.getCompoundName)
+	println("JAVA: Saving type " + key)
+	compiledClasses(key) = reader
+
+	// Remember package name
+	val i = key.lastIndexOf(".")
+	if(i > -1){
+	  val packName = key.substring(0, i)
+	  println("JAVA: Remembering package " + packName)
+	  knownPackages += packName
+	}
       }
     }
 
@@ -43,15 +61,36 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
     }
 
     override def findType(compoundTypeName:Array[Array[Char]]) = {
-      val key = compoundTypeName.mkString
+      val key = CharOperation.toString(compoundTypeName)
+      println("JAVA: Looking for type " + key)
       compiledClasses.get(key) match{
 	case Some(binType) => {
+	  println("  Found it!")	  
 	  new NameEnvironmentAnswer(binType, null)
 	}
-	case None => super.findType(compoundTypeName)
+	case None => {
+	  val result = super.findType(compoundTypeName)
+	  if(result != null){
+	    println("  Super found it!")
+	  }
+	  else{
+	    println("  Super failed")
+	  }
+	  result
+	}
       }
     }
 
+    override def isPackage(parentPackageName:Array[Array[Char]], packageName:Array[Char]):Boolean = {
+      if(super.isPackage(parentPackageName, packageName)){
+	true
+      }
+      else{
+	val key = CharOperation.toString(parentPackageName) + "." + CharOperation.charToString(packageName)
+	println("JAVA: Looking for package " + key)
+	knownPackages.contains(key)
+      }
+    }
 
   }
 
@@ -111,6 +150,7 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
     nameProvider, errorPolicy, 
     options, requestor, 
     problemFactory)
+
 
   import protocol._
 
