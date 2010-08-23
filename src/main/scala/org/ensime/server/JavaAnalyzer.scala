@@ -2,11 +2,13 @@ package org.ensime.server
 import java.io.File
 import java.util.Locale
 
-import org.eclipse.jdt.internal.compiler.{Compiler, CompilationResult, ICompilerRequestor, IErrorHandlingPolicy}
+import org.eclipse.jdt.internal.compiler.{Compiler, ClassFile, CompilationResult, ICompilerRequestor, IErrorHandlingPolicy}
 import org.eclipse.jdt.internal.compiler.batch.{CompilationUnit, FileSystem}
-import org.eclipse.jdt.internal.compiler.env.ICompilationUnit
+import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
+import org.eclipse.jdt.internal.compiler.env.{NameEnvironmentAnswer, ICompilationUnit}
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory
+import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.core.compiler.IProblem
 
 import org.ensime.config.ProjectConfig
@@ -25,9 +27,35 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
   protected val classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath)
   println("Java Classpath: " + classpath)
 
-  protected val nameProvider = new FileSystem(classpath.toArray, Array(), "UTF-8")
+  protected val nameProvider = new FileSystem(classpath.toArray, Array(), "UTF-8"){
 
-  protected val errorPolicy = new IErrorHandlingPolicy{ 
+    private val compiledClasses = new mutable.HashMap[String, ClassFileReader]()
+
+    def addClassFiles(classFiles:Iterable[ClassFile]) {
+      for(cf <- classFiles){
+	val reader = new ClassFileReader(cf.contents, cf.fileName)
+	compiledClasses(cf.getCompoundName.mkString) = reader
+      }
+    }
+
+    override def findType(tpe:Array[Char], pkg:Array[Array[Char]]) = {
+      findType(CharOperation.arrayConcat(pkg, tpe))
+    }
+
+    override def findType(compoundTypeName:Array[Array[Char]]) = {
+      val key = compoundTypeName.mkString
+      compiledClasses.get(key) match{
+	case Some(binType) => {
+	  new NameEnvironmentAnswer(binType, null)
+	}
+	case None => super.findType(compoundTypeName)
+      }
+    }
+
+
+  }
+
+  protected val errorPolicy = new IErrorHandlingPolicy{
     override def proceedOnErrors = true 
     override def stopOnFirstError = false 
   }
@@ -53,6 +81,7 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
       if(result.hasProblems){
 	problems = result.getProblems.toList
       }
+      nameProvider.addClassFiles(result.getClassFiles)
     }
 
   }
