@@ -14,29 +14,43 @@ import scala.tools.nsc.util.{OffsetPosition}
 
 case class FullTypeCheckCompleteEvent()
 
-class Analyzer(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor with RefactoringController{
-  protected val settings = new Settings(Console.println)
+class Analyzer(val project:Project, val protocol:ProtocolConversions, val config:ProjectConfig)
+extends Actor with RefactoringController with JavaCompiling{
+
+  private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   settings.usejavacp.value = false
-  protected val reporter = new PresentationReporter()
-  protected val cc:RichCompilerControl = new RichPresentationCompiler(settings, reporter, this, config)
+  private val reporter = new PresentationReporter()
+  protected val scalaCompiler:RichCompilerControl = new RichPresentationCompiler(
+    settings, reporter, this, config)
   protected var awaitingInitialCompile = true
 
 
-  import cc._
+  import scalaCompiler._
   import protocol._
 
   def act(){
-    cc.askNewRunnerThread
-    project ! SendBackgroundMessageEvent("Initializing Scala Analyzer...")
-    cc.askReloadAllFiles
+
+    project ! SendBackgroundMessageEvent("Initializing Analyzer. Please wait...")
+
+    println("Building Java sources...")
+    rebuildJavaUnits
+    javaCompiler.compile(javaUnitForFile.values.toArray)
+
+    println("Building Scala sources...")
+    scalaCompiler.askNewRunnerThread
+    scalaCompiler.askReloadAllFiles
+
     loop {
       try{
 	receive {
 	  case AnalyzerShutdownEvent() =>
 	  {
-	    cc.askClearTypeCache
-	    cc.askShutdown()
+	    javaCompiler.reset
+	    javaUnitForFile.clear
+
+	    scalaCompiler.askClearTypeCache
+	    scalaCompiler.askShutdown()
 	    exit('stop)
 	  }
 
@@ -53,18 +67,30 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 	  case RPCCommandEvent(req:Any) => {
 	    try{
 	      if(awaitingInitialCompile){
-		project ! RPCCommandErrorEvent("Scala Analyzer is not ready! Please wait.")
+		project ! RPCCommandErrorEvent("Analyzer is not ready! Please wait.")
 	      }
 	      else{
 		req match {
 		  case ReloadAllReq() =>
 		  {
-		    cc.askReloadAllFiles()
+		    javaCompiler.reset
+		    javaCompiler.compile(javaUnitForFile.values.toArray)
+		    val result = NoteList('java, true, javaNotes)
+		    project ! TypeCheckResultEvent(result)
+
+		    scalaCompiler.askReloadAllFiles()
 		  }
 		  case ReloadFileReq(file:File) =>
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
-		    cc.askReloadFile(f)
+
+		    for( u <- javaUnitForFile.get(file.getCanonicalPath)){
+		      javaCompiler.compile(Array(u))
+		      val result = NoteList('java, false, javaNotes)
+		      project ! TypeCheckResultEvent(result)
+		    }
+
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+		    scalaCompiler.askReloadFile(f)
 		    val result = NoteList('scala, false, reporter.allNotes)
 		    project ! TypeCheckResultEvent(result)
 		  }
@@ -75,7 +101,7 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 	      case e:Exception =>
 	      {
 		System.err.println("Error handling RPC Command: " + e + " :\n" + e.getStackTraceString)
-		project ! RPCCommandErrorEvent("Error occurred in Scala Analyzer. Check the server log.")
+		project ! RPCCommandErrorEvent("Error occurred in Analyzer. Check the server log.")
 	      }
 	    }
 	  }
@@ -84,7 +110,7 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 
 	      if(awaitingInitialCompile){
 		project ! RPCErrorEvent(
-		  "Scala Analyzer is not ready! Please wait.", callId)
+		  "Analyzer is not ready! Please wait.", callId)
 	      }
 	      else{
 
@@ -107,71 +133,71 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 
 		  case RemoveFileReq(file:File) => 
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
-		    cc.removeUnitOf(f)
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+		    scalaCompiler.removeUnitOf(f)
 		  }
 
 		  case ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean) => 
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
 		    val p = new OffsetPosition(f, point)
-		    val syms = cc.askCompleteSymbolAt(p, prefix, constructor)
+		    val syms = scalaCompiler.askCompleteSymbolAt(p, prefix, constructor)
 		    project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
 		  }
 
 		  case TypeCompletionReq(file:File, point:Int, prefix:String) => 
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
 		    val p = new OffsetPosition(f, point)
-		    val members = cc.askCompleteMemberAt(p, prefix)
+		    val members = scalaCompiler.askCompleteMemberAt(p, prefix)
 		    project ! RPCResultEvent(toWF(members.map(toWF)), callId)
 		  }
 
 		  case InspectTypeReq(file:File, point:Int) =>
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
 		    val p = new OffsetPosition(f, point)
-		    val inspectInfo = cc.askInspectTypeAt(p)
+		    val inspectInfo = scalaCompiler.askInspectTypeAt(p)
 		    project ! RPCResultEvent(toWF(inspectInfo), callId)
 		  }
 
 		  case InspectTypeByIdReq(id:Int) =>
 		  {
-		    val inspectInfo = cc.askInspectTypeById(id)
+		    val inspectInfo = scalaCompiler.askInspectTypeById(id)
 		    project ! RPCResultEvent(toWF(inspectInfo), callId)
 		  }
 
 		  case SymbolAtPointReq(file:File, point:Int) =>
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
 		    val p = new OffsetPosition(f, point)
-		    val info = cc.askSymbolInfoAt(p)
+		    val info = scalaCompiler.askSymbolInfoAt(p)
 		    project ! RPCResultEvent(toWF(info), callId)
 		  }
 
 		  case InspectPackageByPathReq(path:String) =>
 		  {
-		    val packageInfo = cc.askPackageByPath(path)
+		    val packageInfo = scalaCompiler.askPackageByPath(path)
 		    project ! RPCResultEvent(toWF(packageInfo), callId)
 		  }
 
 		  case TypeAtPointReq(file:File, point:Int) =>
 		  {
-		    val f = cc.sourceFileForPath(file.getAbsolutePath())
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
 		    val p = new OffsetPosition(f, point)
-		    val typeInfo = cc.askTypeInfoAt(p)
+		    val typeInfo = scalaCompiler.askTypeInfoAt(p)
 		    project ! RPCResultEvent(toWF(typeInfo), callId)
 		  }
 
 		  case TypeByIdReq(id:Int) =>
 		  {
-		    val tpeInfo = cc.askTypeInfoById(id)
+		    val tpeInfo = scalaCompiler.askTypeInfoById(id)
 		    project ! RPCResultEvent(toWF(tpeInfo), callId)
 		  }
 
 		  case CallCompletionReq(id:Int) =>
 		  {
-		    val callInfo = cc.askCallCompletionInfoById(id)
+		    val callInfo = scalaCompiler.askCallCompletionInfoById(id)
 		    project ! RPCResultEvent(toWF(callInfo), callId)
 		  }
 		}
@@ -181,13 +207,13 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 	      case e:Exception =>
 	      {
 		System.err.println("Error handling RPC: " + e + " :\n" + e.getStackTraceString)
-		project ! RPCErrorEvent("Error occurred in Scala Analyzer. Check the server log.", callId)
+		project ! RPCErrorEvent("Error occurred in Analyzer. Check the server log.", callId)
 	      }
 	    }
 	  }
 	  case other => 
 	  {
-	    println("Scala Analyzer: WTF, what's " + other)
+	    println("Analyzer: WTF, what's " + other)
 	  }
 	}
 

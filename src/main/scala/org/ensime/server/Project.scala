@@ -40,8 +40,7 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
 
   protocol.setRPCTarget(this)
 
-  protected var scalaAnalyzer:Actor = actor{}
-  protected var javaAnalyzer:Actor = actor{}
+  protected var analyzer:Actor = actor{}
   protected var builder:Option[Actor] = None
   protected var config:ProjectConfig = ProjectConfig.nullConfig
   protected var debugInfo:Option[ProjectDebugInfo] = None
@@ -98,13 +97,9 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
   }
 
   protected def restartCompiler() {
-    scalaAnalyzer ! AnalyzerShutdownEvent
-    scalaAnalyzer = new Analyzer(this, protocol, this.config)
-    scalaAnalyzer.start
-
-    javaAnalyzer ! AnalyzerShutdownEvent
-    javaAnalyzer = new JavaAnalyzer(this, protocol, this.config)
-    javaAnalyzer.start
+    analyzer ! AnalyzerShutdownEvent
+    analyzer = new Analyzer(this, protocol, this.config)
+    analyzer.start
   }
 
   protected def getOrStartBuilder():Actor = {
