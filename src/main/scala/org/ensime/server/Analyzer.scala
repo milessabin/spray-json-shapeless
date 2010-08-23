@@ -12,26 +12,7 @@ import scala.tools.nsc.{Settings}
 import scala.tools.nsc.ast._
 import scala.tools.nsc.util.{OffsetPosition}
 
-
 case class FullTypeCheckCompleteEvent()
-case class FullTypeCheckResultEvent(notes:NoteList)
-case class QuickTypeCheckResultEvent(notes:NoteList)
-case class AnalyzerReadyEvent()
-case class AnalyzerShutdownEvent()
-
-case class ReloadFileReq(file:File)
-case class ReloadAllReq()
-case class RemoveFileReq(file:File)
-case class ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean)
-case class TypeCompletionReq(file:File, point:Int, prefix:String)
-case class SymbolAtPointReq(file:File, point:Int)
-case class InspectTypeReq(file:File, point:Int)
-case class InspectTypeByIdReq(id:Int)
-case class InspectPackageByPathReq(path:String)
-case class TypeByIdReq(id:Int)
-case class CallCompletionReq(id:Int)
-case class TypeAtPointReq(file:File, point:Int)
-
 
 class Analyzer(val project:Project, val protocol:ProtocolConversions, config:ProjectConfig) extends Actor with RefactoringController{
   protected val settings = new Settings(Console.println)
@@ -47,7 +28,7 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 
   def act(){
     cc.askNewRunnerThread
-    project ! SendBackgroundMessageEvent("Analyzer is loading sources. Please wait...")
+    project ! SendBackgroundMessageEvent("Initializing Scala Analyzer...")
     cc.askReloadAllFiles
     loop {
       try{
@@ -65,13 +46,14 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 	      project ! AnalyzerReadyEvent()
 	      awaitingInitialCompile = false
 	    }
-	    project ! FullTypeCheckResultEvent(reporter.allNotes)
+	    val result = NoteList('scala, true, reporter.allNotes)
+	    project ! TypeCheckResultEvent(result)
 	  }
 
 	  case RPCCommandEvent(req:Any) => {
 	    try{
 	      if(awaitingInitialCompile){
-		project ! RPCCommandErrorEvent("Analyzer is not ready! Please wait.")
+		project ! RPCCommandErrorEvent("Scala Analyzer is not ready! Please wait.")
 	      }
 	      else{
 		req match {
@@ -83,7 +65,8 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 		  {
 		    val f = cc.sourceFileForPath(file.getAbsolutePath())
 		    cc.askReloadFile(f)
-		    project ! QuickTypeCheckResultEvent(reporter.allNotes)
+		    val result = NoteList('scala, false, reporter.allNotes)
+		    project ! TypeCheckResultEvent(result)
 		  }
 		}
 	      }
@@ -101,7 +84,7 @@ class Analyzer(val project:Project, val protocol:ProtocolConversions, config:Pro
 
 	      if(awaitingInitialCompile){
 		project ! RPCErrorEvent(
-		  "Analyzer is not ready! Please wait.", callId)
+		  "Scala Analyzer is not ready! Please wait.", callId)
 	      }
 	      else{
 

@@ -1,9 +1,6 @@
 package org.apache.maven.artifact.ant;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ant.util.AntBuildWriter;
-import org.apache.maven.artifact.ant.util.AntTaskModified;
-import org.apache.maven.artifact.ant.util.AntUtil;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -14,16 +11,12 @@ import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.resolver.filter.AndArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.resolver.filter.ScopeArtifactFilter;
-import org.apache.maven.model.Dependency;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.apache.maven.project.artifact.MavenMetadataSource;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Project;
-import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.Path;
-
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -36,7 +29,6 @@ import java.util.Set;
 public class MavenDepsTask extends AbstractArtifactWithRepositoryTask{
 
 	public List<File> deps = new ArrayList<File>();
-  
 
 	private List dependencies = new ArrayList();
   
@@ -168,9 +160,9 @@ public class MavenDepsTask extends AbstractArtifactWithRepositoryTask{
 			}
     
 		Path dependencyPath = new Path(getProject());
-		Set versions = new HashSet();
+		Set<String> versions = new HashSet<String>();
     
-		for ( Iterator i = result.getArtifacts().iterator(); i.hasNext(); ){
+		for (Iterator i = result.getArtifacts().iterator(); i.hasNext(); ){
 			Artifact artifact = (Artifact) i.next();
 			addArtifactToResult( localRepo, artifact, dependencyPath );
 			versions.add( artifact.getVersion() );

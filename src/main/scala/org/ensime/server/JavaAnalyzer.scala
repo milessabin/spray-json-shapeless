@@ -7,6 +7,7 @@ import org.eclipse.jdt.internal.compiler.batch.{CompilationUnit, FileSystem}
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory
+import org.eclipse.jdt.core.compiler.IProblem
 
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
@@ -40,28 +41,23 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
   protected val options = new CompilerOptions(settings)
 
   protected val requestor = new ICompilerRequestor{
-    override def acceptResult(result:CompilationResult) = { println("Java Compiler Result: " + result) }
-  }
 
-  protected val problemFactory = new DefaultProblemFactory(Locale.ENGLISH){
+    def allNotes():Iterable[Note] = {
+      problems.map(Note.apply)
+    }
+    
+    private var problems:Iterable[IProblem] = List()
 
-    private val notes = new mutable.HashMap[String, mutable.HashSet[Note]] {
-      override def default(k : String) = { 
-	val v = new mutable.HashSet[Note] ; put(k, v); v 
+    override def acceptResult(result:CompilationResult) = { 
+      problems = List()
+      if(result.hasProblems){
+	problems = result.getProblems.toList
       }
     }
 
-    def notesFor(file:String):NoteList = {
-      NoteList(notes(file).toList)
-    }
+  }
 
-    def allNotes():NoteList = {
-      NoteList(notes.flatMap{ e => e._2 }.toList)
-    }
-    
-    def reset{
-      notes.clear
-    }
+  protected val problemFactory = new DefaultProblemFactory(Locale.ENGLISH){
 
     override def createProblem(
       originatingFileName:Array[Char], 
@@ -78,8 +74,6 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
 	originatingFileName, problemId, problemArguments, 
 	messageArguments, severity, startPosition, endPosition, 
 	lineNumber, colNumber)
-
-      notes(originatingFileName.mkString) += Note(prob)
       prob
     }
   }
@@ -104,9 +98,8 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
 
   def act(){
     rebuildUnits
-    println("Adding java units: " + unitForFile.values.toList)
     compiler.compile(unitForFile.values.toArray)
-    project ! SendBackgroundMessageEvent("Java Analyzer is working. Please wait...")
+    project ! SendBackgroundMessageEvent("Initializing Java Analyzer...")
     loop {
       try{
 	receive {
@@ -120,21 +113,18 @@ class JavaAnalyzer(val project:Project, val protocol:ProtocolConversions, config
 	      req match {
 		case ReloadAllReq() =>
 		{
-		  problemFactory.reset
 		  compiler.reset
-		  println("JAVA: is it sync?")
 		  compiler.compile(unitForFile.values.toArray)
-		  println("JAVA: done compiling")
-		  project ! FullTypeCheckResultEvent(problemFactory.allNotes)
+		  val result = NoteList('java, true, requestor.allNotes)
+		  project ! TypeCheckResultEvent(result)
 		}
 		case ReloadFileReq(file:File) =>
 		{
-		  problemFactory.reset
-		  val units = Array(unitForFile(file.getCanonicalPath))
-		  println("JAVA: is it sync?")
-		  compiler.compile(units)
-		  println("JAVA: done compiling")
-		  project ! QuickTypeCheckResultEvent(problemFactory.allNotes)
+		  for( u <- unitForFile.get(file.getCanonicalPath)){
+		    compiler.compile(Array(u))
+		    val result = NoteList('java, false, requestor.allNotes)
+		    project ! TypeCheckResultEvent(result)
+		  }
 		}
 	      }
 	    }

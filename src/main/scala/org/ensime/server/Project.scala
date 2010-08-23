@@ -17,6 +17,24 @@ case class RPCRequestEvent(req:Any, callId:Int)
 case class RPCCommandEvent(req:Any)
 case class RPCCommandErrorEvent(value:String)
 
+case class TypeCheckResultEvent(notes:NoteList)
+case class AnalyzerReadyEvent()
+case class AnalyzerShutdownEvent()
+
+case class ReloadFileReq(file:File)
+case class ReloadAllReq()
+case class RemoveFileReq(file:File)
+case class ScopeCompletionReq(file:File, point:Int, prefix:String, constructor:Boolean)
+case class TypeCompletionReq(file:File, point:Int, prefix:String)
+case class SymbolAtPointReq(file:File, point:Int)
+case class InspectTypeReq(file:File, point:Int)
+case class InspectTypeByIdReq(id:Int)
+case class InspectPackageByPathReq(path:String)
+case class TypeByIdReq(id:Int)
+case class CallCompletionReq(id:Int)
+case class TypeAtPointReq(file:File, point:Int)
+
+
 
 class Project(val protocol:Protocol) extends Actor with RPCTarget{
 
@@ -46,13 +64,9 @@ class Project(val protocol:Protocol) extends Actor with RPCTarget{
 	  {
 	    protocol.sendCompilerReady
 	  }
-	  case result:FullTypeCheckResultEvent =>
+	  case result:TypeCheckResultEvent =>
 	  {
-	    protocol.sendFullTypeCheckResult(result)
-	  }
-	  case result:QuickTypeCheckResultEvent =>
-	  {
-	    protocol.sendQuickTypeCheckResult(result)
+	    protocol.sendTypeCheckResult(result.notes)
 	  }
 	  case RPCResultEvent(value, callId) =>
 	  {

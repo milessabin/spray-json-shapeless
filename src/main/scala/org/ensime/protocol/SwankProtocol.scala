@@ -386,26 +386,20 @@ trait SwankProtocol extends Protocol{
 
   def sendCompilerReady() = sendMessage(SExp(key(":compiler-ready"),true))
 
-  def sendFullTypeCheckResult(result:FullTypeCheckResultEvent) = {
+  def sendTypeCheckResult(notelist:NoteList) = {
+    val NoteList(lang,isFull,notes) = notelist
     sendMessage(SExp(
-	key(":full-typecheck-result"),
+	key(":typecheck-result"),
 	SExp(
+	  key(":lang"),
+	  if(lang == 'scala) {key(":scala")} else { key(":java")},
+	  key(":is-full"),
+	  toWF(isFull),
 	  key(":notes"),
-	  toWF(result.notes)
+	  SExpList(notes.map(toWF))
 	)
       ))
   }
-
-  def sendQuickTypeCheckResult(result:QuickTypeCheckResultEvent) = {
-    sendMessage(SExp(
-	key(":quick-typecheck-result"),
-	SExp(
-	  key(":notes"),
-	  toWF(result.notes)
-	)
-      ))
-  }
-
 
   object SExpConversion{
 
@@ -459,10 +453,6 @@ trait SwankProtocol extends Protocol{
     SExpList(value.pairs.map{ p => SExp(p._1, p._2)})
   }
 
-  def toWF(value:NoteList):SExp = {
-    SExpList(value.notes.map(toWF))
-  }
-  
   def toWF(note:Note):SExp = {
     SExp(
       key(":severity"), note.friendlySeverity,

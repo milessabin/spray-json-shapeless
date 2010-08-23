@@ -75,8 +75,12 @@ trait RPCTarget{ self:Project =>
 
   def rpcTypecheckFile(f:String, callId:Int){
     val file:File = new File(f)
-    scalaAnalyzer ! RPCCommandEvent(ReloadFileReq(file))
-    javaAnalyzer ! RPCCommandEvent(ReloadFileReq(file))
+    if(f.endsWith(".scala")){
+      scalaAnalyzer ! RPCCommandEvent(ReloadFileReq(file))
+    }
+    else if(f.endsWith("java")){
+      javaAnalyzer ! RPCCommandEvent(ReloadFileReq(file))
+    }
     sendRPCReturn(toWF(true),callId)
   }
 

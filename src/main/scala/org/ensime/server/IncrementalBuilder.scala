@@ -2,7 +2,7 @@ package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.protocol.ProtocolConversions
-import org.ensime.util.PresentationReporter
+import org.ensime.util.{ Note, PresentationReporter}
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.{Iterable, Map}
@@ -64,13 +64,15 @@ class IncrementalBuilder(project:Project, protocol:ProtocolConversions, config:P
 		  bm.addSourceFiles(files)
 		  bm.update(files, Set())
 		  project ! SendBackgroundMessageEvent("Build complete.")
-		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
+		  val result = toWF(reporter.allNotes.map(toWF))
+		  project ! RPCResultEvent(result, callId)
 		}
 		case AddSourceFilesReq(files:Iterable[File]) =>
 		{
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
 		  bm.addSourceFiles(fileSet)
-		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
+		  val result = toWF(reporter.allNotes.map(toWF))
+		  project ! RPCResultEvent(result, callId)
 		}
 		case RemoveSourceFilesReq(files:Iterable[File]) =>
 		{
@@ -78,14 +80,16 @@ class IncrementalBuilder(project:Project, protocol:ProtocolConversions, config:P
 		  project ! RPCResultEvent(toWF(true), callId)
 		  reporter.reset
 		  bm.removeFiles(fileSet)
-		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
+		  val result = toWF(reporter.allNotes.map(toWF))
+		  project ! RPCResultEvent(result, callId)
 		}
 		case UpdateSourceFilesReq(files:Iterable[File]) => 
 		{
 		  val fileSet = files.map(AbstractFile.getFile(_)).toSet
 		  reporter.reset
 		  bm.update(fileSet, Set())
-		  project ! RPCResultEvent(toWF(reporter.allNotes), callId)
+		  val result = toWF(reporter.allNotes.map(toWF))
+		  project ! RPCResultEvent(result, callId)
 		}
 
 	      }

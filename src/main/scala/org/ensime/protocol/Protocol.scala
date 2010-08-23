@@ -173,20 +173,11 @@ trait Protocol extends ProtocolConversions{
   * generates. These results are generated asynchronously,
   * and not in response to any single RPC call.
   *
-  * @param result  The notes
+  * @param notes  The notes
   * @return        Void
   */ 
-  def sendFullTypeCheckResult(result:FullTypeCheckResultEvent)
+  def sendTypeCheckResult(notes:NoteList)
 
-  /**
-  * Send notes describing errors, warnings that the compiler
-  * generates.These results are generated asynchronously,
-  * and not in response to any single RPC call.
-  *
-  * @param  result  The notes
-  * @return        Void
-  */ 
-  def sendQuickTypeCheckResult(result:QuickTypeCheckResultEvent)
 
 }
 
@@ -196,7 +187,7 @@ trait ProtocolConversions{
   def toWF(unit:DebugUnit):WireFormat
   def toWF(value:Boolean):WireFormat
   def toWF(value:DebugSourceLinePairs):WireFormat
-  def toWF(value:NoteList):WireFormat
+  def toWF(value:Note):WireFormat
   def toWF(values:Iterable[WireFormat]):WireFormat
   def toWF(value:SymbolInfoLight):WireFormat
   def toWF(value:SymbolInfo):WireFormat
