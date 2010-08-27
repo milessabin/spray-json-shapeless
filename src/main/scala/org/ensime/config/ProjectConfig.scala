@@ -254,7 +254,6 @@ class ProjectConfig(
     "-classpath", compilerClasspath,
     "-verbose",
     "-d", target.getOrElse(new File(root,"classes")).getPath,
-    "-Ybuildmanagerdebug",
     sourceFilenames.mkString(" ")
   )
 
