@@ -17,7 +17,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Embedded sbt shell
 
 
-Check out this [video](http://www.youtube.com/watch?v=A2Lai8IjLoY) or this [one](http://www.youtube.com/watch?v=v7-G6vD42z8) showcasing debugger support
+Check out this (rather old)[video](http://www.youtube.com/watch?v=A2Lai8IjLoY) or this [one](http://www.youtube.com/watch?v=v7-G6vD42z8) showcasing debugger support
 
 
 ## System Requirements
