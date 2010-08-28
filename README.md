@@ -7,12 +7,14 @@ the ENhanced Scala Interaction Mode for Emacs
 - Highlight errors and warnings in your code buffers.
 - Inspect the type of any expression.
 - Browse packages
-- Completion-on-demand for variables, methods, constructores, etc.
+- Completion-on-demand for variables, methods, constructors, etc.
 - Jump to symbol definitions.
 - Automated Refactorings (rename, organize imports, extract method...)
+- Source Formatting
+- Finds sbt,Maven,Ivy dependencies
 - Scala REPL
 - Scala Debugger
-- sbt support
+- Embedded sbt shell
 
 
 Check out this [video](http://www.youtube.com/watch?v=A2Lai8IjLoY) or this [one](http://www.youtube.com/watch?v=v7-G6vD42z8) showcasing debugger support
