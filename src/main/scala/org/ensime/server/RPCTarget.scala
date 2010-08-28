@@ -8,6 +8,7 @@ import scala.actors._
 import scala.actors.Actor._
 import scala.collection.immutable
 import scalariform.formatter.ScalaFormatter
+import scalariform.parser.ScalaParserException
 
 trait RPCTarget { self: Project =>
 
@@ -131,24 +132,26 @@ trait RPCTarget { self: Project =>
 
   def rpcFormatFiles(filenames: Iterable[String], callId: Int) {
     val files = filenames.map { new File(_) }
-    if (files.forall { _.exists }) {
-      for (file <- files) {
-        FileUtils.readFile(file) match {
+    try {
+      val rewriteList = files.map { f =>
+        FileUtils.readFile(f) match {
           case Right(contents) => {
             val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
-            FileUtils.replaceFileContents(file, formatted) match {
-              case Right(_) => {}
-              case Left(e) => throw e
-            }
+            (f, formatted)
           }
           case Left(e) => throw e
         }
       }
-      sendRPCAckOK(callId)
-    } else {
-      sendRPCError("Formatting failed. Some of the requested files do not exist.",
-        callId)
+      FileUtils.rewriteFiles(rewriteList) match {
+        case Right(Right(())) => sendRPCAckOK(callId)
+        case Right(Left(e)) =>
+          sendRPCError("ATTENTION! Possibly incomplete write of change-set caused by: " + e, callId)
+        case Left(e) => sendRPCError("Could not write any formatting changes: " + e, callId)
+      }
+    } catch {
+      case e: ScalaParserException => sendRPCError("Cannot format broken syntax: " + e, callId)
     }
+
   }
 
 }

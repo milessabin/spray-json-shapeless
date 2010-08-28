@@ -7,6 +7,7 @@ import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.common.{ Selections, Change }
 import scala.tools.refactoring.implementations._
+import scala.tools.nsc.interactive.{ Global }
 
 case class RefactorFailure(val procedureId: Int, val message: String)
 case class RefactorPerformReq(procedureId: Int, refactorType: Symbol, params: immutable.Map[Symbol, Any])
@@ -85,7 +86,7 @@ trait RefactoringController { self: Analyzer =>
 
 }
 
-trait RefactoringInterface { self: RichPresentationCompiler =>
+trait RefactoringInterface { self: RichCompilerControl with RefactoringImpl =>
 
   def askPerformRefactor(
     procId: Int,
@@ -105,7 +106,7 @@ trait RefactoringInterface { self: RichPresentationCompiler =>
 
 }
 
-trait RefactoringImpl { self: RichPresentationCompiler =>
+trait RefactoringImpl { self: Global =>
 
   import FileUtils._
 
@@ -230,29 +231,29 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     }
   }
 
-  private def writeChanges(changes: Iterable[Change]): Either[IOException, Iterable[File]] = {
+  private def writeChanges(changes: Iterable[Change]): Either[Exception, Iterable[File]] = {
     val changesByFile = changes.groupBy(_.file)
-    val touchedFiles = new mutable.ListBuffer[File]
     try {
-      changesByFile.foreach { pair =>
-        val file = pair._1.file
-        readFile(file) match {
-          case Right(contents) =>
-            {
-              val changed = Change.applyChanges(pair._2.toList, contents)
-              replaceFileContents(file, changed) match {
-                case Right(_) => {
-                  touchedFiles += file
-                }
-                case Left(e) => throw e
-              }
+      val rewriteList = changesByFile.map {
+        case (afile, changes) => {
+          val file = afile.file
+          readFile(file) match {
+            case Right(contents) => {
+              val changed = Change.applyChanges(changes.toList, contents)
+              (file, changed)
             }
-          case Left(e) => throw e
+            case Left(e) => throw e
+          }
         }
       }
-      Right(touchedFiles.toList)
+      rewriteFiles(rewriteList) match {
+        case Right(Right(())) => Right(changesByFile.keys.map(_.file))
+        case Right(Left(e)) => Left(new IllegalStateException(
+          "Possibly incomplete write of change-set caused by: " + e))
+        case Left(e) => Left(e)
+      }
     } catch {
-      case e: IOException => Left(e)
+      case e: Exception => Left(e)
     }
   }
 

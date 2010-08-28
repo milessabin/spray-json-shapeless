@@ -84,6 +84,7 @@ trait JavaCompiling { self: Analyzer =>
     CompilerOptions.OPTION_TargetPlatform -> "1.6"
     )
 
+
   private val options = new CompilerOptions(settings)
 
   private val requestor = new ICompilerRequestor {

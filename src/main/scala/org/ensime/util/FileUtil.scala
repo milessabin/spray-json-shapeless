@@ -4,6 +4,7 @@ import java.io._
 import java.nio.channels.FileChannel
 import java.nio.charset.Charset
 import scala.collection.Seq
+import scala.collection.mutable
 
 // This routine stolen from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
@@ -108,7 +109,7 @@ object FileUtils {
     }
   }
 
-  def replaceFileContents(file: File, newContents: String): Either[IOException, Unit] = {
+  def replaceFileContents(file: File, newContents: String): Either[Exception, Unit] = {
     try {
       val writer = new FileWriter(file, false)
       try {
@@ -121,7 +122,43 @@ object FileUtils {
         writer.close()
       }
     } catch {
-      case e: IOException => Left(e)
+      case e: Exception => Left(e)
+    }
+  }
+
+  /**
+   * For each (f,s) pair, replace the contents of f with s. If any errors occurs
+   * before any disk writes, return Left(exception). If  an error occurs DURING
+   * disk writes, return Right(Left(exception)). Otherwise, return Right(Right(()))
+   */
+  def rewriteFiles(changes: Iterable[(File, String)]): Either[Exception, Either[Exception, Unit]] = {
+    val touchedFiles = new mutable.ListBuffer[File]
+    try {
+
+      // Try to fail fast, before writing anything to disk.
+      changes.foreach {
+        case (f: File, s: String) => if (!(f.exists) || f.isDirectory || !(f.canWrite)) {
+          throw new IllegalArgumentException(f + " is not a writable file.")
+        }
+        case _ => {
+          throw new IllegalArgumentException("Invalid (File,String) pair.")
+        }
+      }
+
+      // Apply the changes. An error here may result in a corrupt disk state :(
+      changes.foreach {
+        case (file, newContents) => {
+          replaceFileContents(file, newContents) match {
+            case Right(_) => {}
+            case Left(e) => Right(Left(e))
+          }
+        }
+      }
+
+      Right(Right(()))
+
+    } catch {
+      case e: Exception => Left(e)
     }
   }
 
