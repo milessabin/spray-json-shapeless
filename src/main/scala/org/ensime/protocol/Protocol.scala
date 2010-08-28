@@ -112,33 +112,14 @@ trait Protocol extends ProtocolConversions{
   def sendRPCReturn(value:WireFormat, callId:Int)
 
   /**
-  * Notify the client that an error occurred in 
-  * processing the RPC call.
-  *
-  * @param  value  A message describing the error.
-  * @param  callId The id of the failed RPC call.
-  * @return        Void
-  */ 
-  def sendRPCReturnError(value:String, callId:Int)
-
-  /**
   * Notify the client that the RPC call could not
-  * be processed.
+  * be handled.
   *
   * @param  value  A message describing the error.
   * @param  callId The id of the failed RPC call.
   * @return        Void
   */ 
   def sendRPCError(msg:String, callId:Int)
-
-  /**
-  * Notify the client that the RPC command could not
-  * be processed.
-  *
-  * @param  value  A message describing the error.
-  * @return        Void
-  */ 
-  def sendRPCCommandError(value:String)
 
   /**
   * Notify the client that a message was received

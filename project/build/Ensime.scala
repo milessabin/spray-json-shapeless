@@ -15,6 +15,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   val bcel = "org.apache.bcel" % "bcel" % "5.2" % "compile;runtime;test"
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
   val jdt = "org.eclipse.jdt" % "core" % "3.4.2.v_883_R34x" % "compile;runtime;test"
+  val scalariform = "org.scalariform" %% "scalariform" % "0.0.5-SNAPSHOT"%"compile;runtime;test"
 
 
 

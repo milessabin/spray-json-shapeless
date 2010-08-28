@@ -102,11 +102,20 @@ trait SwankProtocol extends Protocol{
   private def handleEmacsRex(form:SExp, callId:Int){
     form match{
       case SExpList(SymbolAtom(name)::rest) => {
-	handleRPCRequest(name, form, callId)
+	try{
+	  handleRPCRequest(name, form, callId)
+	}
+	catch{
+	  case e:Throwable => 
+	  {
+	    sendRPCError("Exception raised in RPC " + form + " : " + 
+	      e.getMessage, callId)
+	  }
+	}
       }
       case _ => {
 	sendRPCError(
-	  "Unknown :emacs-rex call. Expecting leading symbol. " + form,
+	  "Malformed RPC call. Expecting leading symbol: " + form,
 	  callId)
       }
     }	
@@ -301,6 +310,15 @@ trait SwankProtocol extends Protocol{
 	}
       }
 
+      case "swank:format-source" => {
+	form match{
+	  case SExpList(head::SExpList(filenames)::body) => {
+	    val files = filenames.map(_.toString)
+	    rpcTarget.rpcFormatFiles(files, callId)
+	  }
+	  case _ => oops
+	}
+      }
 
       case other => {
 	sendRPCError(
@@ -336,25 +354,11 @@ trait SwankProtocol extends Protocol{
     }
   }
 
-  def sendRPCReturnError(value:String, callId:Int){
+  def sendRPCError(value:String, callId:Int){
     sendMessage(SExp(
 	key(":return"),
 	SExp(key(":abort"),value),
 	callId
-      ))
-  }
-
-  def sendRPCCommandError(value:String){
-    sendMessage(SExp(
-	key(":command-abort"),value
-      ))
-  }
-
-  def sendRPCError(msg:String, callId:Int){
-    sendMessage(SExp(
-	key(":invalid-rpc"),
-	callId,
-	msg
       ))
   }
 
