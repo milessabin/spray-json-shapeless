@@ -501,7 +501,7 @@ The ENSIME server is intentionally editor agnostic. It is our hope that it may b
 
 \subsection{Starting the Server}
 
-Emacs start the ENSIME server using the server.sh script in the \emph{bin} folder of the ENSIME distribution. Rather than tell the server explicitely what tcp port it should bind to,we instead pass the filename of a temporary file to the script. The first thing the server does on startup is choose a random, open port, and write the number to the given file. Emacs then reads this file and connects to the server. 
+Emacs starts the ENSIME server using the server.sh script in the \emph{bin} folder of the ENSIME distribution. Rather than tell the server explicitely what tcp port it should bind to,we instead pass the filename of a temporary file to the script. The first thing the server does on startup is choose a random, open port, and write the number to the given file. Emacs then reads this file and connects to the server. 
 
 
 \subsection{The Swank Protocol}
