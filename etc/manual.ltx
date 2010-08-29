@@ -490,6 +490,65 @@ You may want to examine the contents of the \emph{*inferior-ensime-server*} buff
 
 If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of \emph{*inferior-ensime-server*}.
 
+\newpage
+
+\appendix
+
+
+\section{Using ENSIME Server with Other Editors}
+
+The ENSIME server is intentionally editor agnostic. It is our hope that it may be used to provide semantic information to Scala modes in other text editors. In order to interact with the ENSIME server, you're editor's extension mechanism should ideally be able to open a persistent socket connection and respond to asynchronous events on that socket. Otherwise it may be difficult to interact with some of the long-running calls.
+
+
+\subsection{The Swank Protocol}
+The Emacs ENSIME client comminicates with the server using the Swank protocol. This protocol was originally developed for the SLIME lisp environment for Emacs and is therefore very 'lispy'. A socket connection is maintained for the duration of the session. The client and server exchange messages encoded as S-Expressions, separated by hex-encoded message lengths. See the E-Lisp function \emph{ensime-net-send} in ensime.el for details on how messages are sent from Emacs, and the functions readMessage and writeMessage in org.ensime.protocol.SwankProtocol for the Scala side of the conversation. What follows is a commented excerpt from the initialization of an ENSIME session. These SExps were copied from the \emph{*ensime-events*} buffer in Emacs which logs all protocol events (useful for learning the protocol!). Server messages are indented. Comments prefixed with \#.
+
+\begin{mylisting}
+\begin{verbatim}
+
+
+# The client requests information about the server
+(:emacs-rex (swank:connection-info) 1)
+
+
+     # Server responds. Note the numbering scheme for RPC calls: call & response have the same id.
+     (:return
+      (:ok
+       (:pid nil :server-implementation
+     	(:name "ENSIMEserver")
+     	:machine nil :features nil :version "0.0.1"))
+      1)
+
+
+# The client initializes the session by sending the configuration. This is read from the .ensime file.
+(:emacs-rex
+ (swank:init-project
+  (:server-root "/home/aemon/src/misc/ensime/dist/" :project-package "org.ensime" :use-sbt t :root-dir "/home/aemon/src/misc/ensime/"))
+ 2)
+
+     # Server simply acknowledges receipt.
+     (:return
+      (:ok t)
+      2)
+
+     # Server asks client to display a user message. Note: this is not part of any RPC call - it's just an event.
+
+     (:background-message "Initializing Analyzer. Please wait...")
+
+     # Server alerts client that the analyzer is ready for requests.
+     (:compiler-ready t)
+
+     # Server tells client the result of the last full compilation (nil means 0 notes (errors or warnings))
+     (:typecheck-result (:lang :scala :is-full t :notes nil))
+
+\end{verbatim}
+\end{mylisting}
+
+Rather than try to document all the calls and events available in ENSIME, which will inevitably drift out of sync over time, we refer you to the method handleRPCRequest in org.ensime.protocol.SwankProtocol, and the function ensime-dispatch-event in ensime.el for further details on the Swank protocol.
+
+\subsection{Other Protocols}
+
+The ENSIME server is designed to support pluggable protocols. org.ensime.protocol.SwankProtocol is just one implementation of the org.ensime.protocol.Protocol interface. Adding a new protocol (JSON-based, or binary or Java marshalled objects...) should only require adding a new implementation of org.ensime.protocol.Protocol. Please contact the ENSIME maintainer if this is your plan, however, since we still need to add a command-line switch to control the protocol that ENSIME uses.
 
 \end{document}
 

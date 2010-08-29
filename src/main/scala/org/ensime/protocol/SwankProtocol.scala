@@ -87,7 +87,7 @@ trait SwankProtocol extends Protocol {
 
   private def handleMessageForm(sexp: SExp) {
     sexp match {
-      case SExpList(KeywordAtom(":emacs-rex") :: form :: IntAtom(callId) :: rest) => {
+      case SExpList(KeywordAtom(":swank-rpc") :: form :: IntAtom(callId) :: rest) => {
         handleEmacsRex(form, callId)
       }
       case _ => {
@@ -317,7 +317,7 @@ trait SwankProtocol extends Protocol {
 
       case other => {
         sendRPCError(
-          "Unknown :emacs-rex call: " + other,
+          "Unknown :swank-rpc call: " + other,
           callId)
       }
     }
