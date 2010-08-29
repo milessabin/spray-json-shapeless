@@ -181,22 +181,18 @@ class RichPresentationCompiler(
   private def typeOfTree(t: Tree): Either[Type, Throwable] = {
     var tree = t
     tree = tree match {
-      case Select(qual, name) if tree.tpe == ErrorType =>
-        {
-          qual
-        }
-      case t: ImplDef if t.impl != null =>
-        {
-          t.impl
-        }
-      case t: ValOrDefDef if t.tpt != null =>
-        {
-          t.tpt
-        }
-      case t: ValOrDefDef if t.rhs != null =>
-        {
-          t.rhs
-        }
+      case Select(qual, name) if tree.tpe == ErrorType => {
+        qual
+      }
+      case t: ImplDef if t.impl != null => {
+        t.impl
+      }
+      case t: ValOrDefDef if t.tpt != null => {
+        t.tpt
+      }
+      case t: ValOrDefDef if t.rhs != null => {
+        t.rhs
+      }
       case t => t
     }
     if (tree.tpe != null) {
