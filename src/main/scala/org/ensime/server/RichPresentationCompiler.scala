@@ -88,7 +88,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
 
   def askClearTypeCache() = clearTypeCache
 
-  def askNewRunnerThread() = newRunnerThread
+  def askNewRunnerThread() = newRunnerThread.
 
   def sourceFileForPath(path: String) = getSourceFile(path)
 
