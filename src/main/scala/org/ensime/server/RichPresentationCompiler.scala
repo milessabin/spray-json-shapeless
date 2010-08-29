@@ -292,7 +292,9 @@ class RichPresentationCompiler(
     val members = getMembersForTypeAt(p)
     val visibleMembers = members.flatMap {
       case tm@TypeMember(sym, tpe, true, _, _) => {
-        if (sym.nameString.startsWith(prefix)) {
+        if (sym.nameString.startsWith(prefix) &&
+          !(sym.nameString == "this") &&
+          !(sym.nameString == "→")) {
           List(NamedTypeMemberInfoLight(tm))
         } else {
           List()
