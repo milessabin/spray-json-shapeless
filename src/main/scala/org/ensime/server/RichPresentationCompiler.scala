@@ -204,26 +204,14 @@ class RichPresentationCompiler(
     }
   }
 
-  def persistentTypedTreeAt(p: Position): Tree = {
-    try {
-      typedTreeAt(p)
-    } catch {
-      case e: FatalError => {
-        println("typeTreeAt threw FatalError, typing full source. ")
-        typedTree(p.source, true)
-        locateTree(p)
-      }
-    }
-  }
-
   protected def typeAt(p: Position): Either[Type, Throwable] = {
-    val tree = persistentTypedTreeAt(p)
+    val tree = typedTreeAt(p)
     typeOfTree(tree)
   }
 
   protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
     p.source.file
-    val tree = persistentTypedTreeAt(p)
+    val tree = typedTreeAt(p)
     if (tree.symbol != null) {
       Left(tree.symbol)
     } else {
@@ -237,7 +225,7 @@ class RichPresentationCompiler(
    * get these changes into Scala.
    */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
-    persistentTypedTreeAt(pos) // to make sure context is entered
+    typedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
     val locals = new LinkedHashMap[Name, ScopeMember]
     def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
