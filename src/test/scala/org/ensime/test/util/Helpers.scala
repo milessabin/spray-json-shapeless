@@ -25,7 +25,6 @@ object Helpers{
     val reporter = new StoreReporter()
     val cc:RichCompilerControl = new RichPresentationCompiler(
       settings, reporter, actor{}, ProjectConfig.nullConfig)
-    cc.askNewRunnerThread
     action(cc)
     cc.askShutdown()
   }

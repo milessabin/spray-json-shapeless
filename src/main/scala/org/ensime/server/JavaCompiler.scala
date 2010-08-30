@@ -2,7 +2,7 @@ package org.ensime.server
 import java.io.{ ByteArrayOutputStream, File }
 import java.util.Locale
 import org.eclipse.jdt.core.compiler.{ IProblem, CharOperation }
-import org.eclipse.jdt.internal.compiler.{ Compiler, ClassFile, CompilationResult, ICompilerRequestor, IErrorHandlingPolicy }
+import org.eclipse.jdt.internal.compiler.{ Compiler, ClassFile, CompilationResult, ICompilerRequestor, DefaultErrorHandlingPolicies }
 import org.eclipse.jdt.internal.compiler.batch.{ CompilationUnit, FileSystem }
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
 import org.eclipse.jdt.internal.compiler.env.{ NameEnvironmentAnswer, ICompilationUnit }
@@ -18,11 +18,18 @@ import scala.collection.{ mutable, Iterable }
 import scala.collection.JavaConversions._
 import scala.tools.nsc.ast._
 
-trait JavaCompiling { self: Analyzer =>
+class JavaCompiler(config: ProjectConfig) {
 
-  private def classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath)
+  private val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
 
-  private val nameProvider = new FileSystem(classpath.toArray, Array(), "UTF-8") {
+  val defaultEncoding = "UTF-8"
+  for (f <- config.sourceFilenames) {
+    if (f.endsWith(".java")) {
+      javaUnitForFile(f) = new CompilationUnit(null, f, defaultEncoding)
+    }
+  }
+
+  class NameProvider(classpath: Array[String]) extends FileSystem(classpath.toArray, Array(), "UTF-8") {
 
     private val compiledClasses = new mutable.HashMap[String, ClassFileReader]()
     private val knownPackages = new mutable.HashSet[String]()
@@ -73,28 +80,23 @@ trait JavaCompiling { self: Analyzer =>
 
   }
 
-  private def errorPolicy = new IErrorHandlingPolicy {
-    override def proceedOnErrors = true
-    override def stopOnFirstError = false
-  }
+  private def classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath)
 
-  private val settings: Map[String, Any] = Map(
+  private val nameProvider = new NameProvider(classpath.toArray)
+
+  private val errorPolicy = DefaultErrorHandlingPolicies.proceedWithAllProblems()
+
+  private val options = new CompilerOptions(Map(
     CompilerOptions.OPTION_Compliance -> "1.6",
     CompilerOptions.OPTION_Source -> "1.6",
     CompilerOptions.OPTION_TargetPlatform -> "1.6"
-    )
+    ))
 
-
-  private val options = new CompilerOptions(settings)
-
-  private val requestor = new ICompilerRequestor {
-
+  class Requester(nameProvider: NameProvider) extends ICompilerRequestor {
     def allNotes(): Iterable[Note] = {
       problems.map(Note.apply)
     }
-
     private var problems: Iterable[IProblem] = List()
-
     override def acceptResult(result: CompilationResult) = {
       problems = List()
       if (result.hasProblems) {
@@ -102,29 +104,47 @@ trait JavaCompiling { self: Analyzer =>
       }
       nameProvider.addClassFiles(result.getClassFiles)
     }
-
   }
+
+  private val requestor = new Requester(nameProvider)
 
   private val problemFactory = new DefaultProblemFactory(Locale.ENGLISH)
 
-  protected val javaCompiler = new Compiler(
+  protected val compiler = new Compiler(
     nameProvider, errorPolicy,
     options, requestor,
-    problemFactory)
+    problemFactory) {
 
-  protected val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
+    override def finalize() {
+      System.out.println("Finalizing Java Compiler.")
+    }
 
-  protected def javaNotes(): Iterable[Note] = {
+  }
+
+  def compileAll = {
+    val units = javaUnitForFile.values
+    if (!(units.isEmpty)) {
+      compiler.compile(units.toArray)
+    }
+  }
+
+  def compileFile(f: File) = {
+    for (u <- javaUnitForFile.get(f.getCanonicalPath)) {
+      compiler.compile(Array(u))
+    }
+  }
+
+  def allNotes(): Iterable[Note] = {
     requestor.allNotes
   }
 
-  protected def rebuildJavaUnits(): Unit = {
-    val defaultEncoding = "UTF-8"
-    for (f <- config.sourceFilenames) {
-      if (f.endsWith(".java")) {
-        javaUnitForFile(f) = new CompilationUnit(null, f, defaultEncoding)
-      }
-    }
+  def reset() {
+    compiler.reset
+  }
+
+  def shutdown() {
+    compiler.reset
+    javaUnitForFile.clear
   }
 
 }

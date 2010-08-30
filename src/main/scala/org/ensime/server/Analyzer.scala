@@ -15,7 +15,7 @@ import scala.tools.nsc.util.{ OffsetPosition }
 case class FullTypeCheckCompleteEvent()
 
 class Analyzer(val project: Project, val protocol: ProtocolConversions, val config: ProjectConfig)
-  extends Actor with RefactoringController with JavaCompiling {
+  extends Actor with RefactoringController {
 
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
@@ -23,6 +23,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   private val reporter = new PresentationReporter()
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, config)
+  protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
   protected var awaitingInitialCompile = true
 
   import scalaCompiler._
@@ -33,23 +34,16 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     project ! SendBackgroundMessageEvent("Initializing Analyzer. Please wait...")
 
     println("Building Java sources...")
-    rebuildJavaUnits
-    val units = javaUnitForFile.values
-    if (!(units.isEmpty)) {
-      javaCompiler.compile(units.toArray)
-    }
+    javaCompiler.compileAll
 
     println("Building Scala sources...")
-    scalaCompiler.askNewRunnerThread
     scalaCompiler.askReloadAllFiles
 
     loop {
       try {
         receive {
           case AnalyzerShutdownEvent() => {
-            javaCompiler.reset
-            javaUnitForFile.clear
-
+            javaCompiler.shutdown
             scalaCompiler.askClearTypeCache
             scalaCompiler.askShutdown()
             exit('stop)
@@ -73,19 +67,19 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                 req match {
                   case ReloadAllReq() => {
                     javaCompiler.reset
-                    javaCompiler.compile(javaUnitForFile.values.toArray)
-                    val result = NoteList('java, true, javaNotes)
-                    project ! TypeCheckResultEvent(result)
+                    javaCompiler.compileAll
+                    val notes = javaCompiler.allNotes
+                    project ! TypeCheckResultEvent(NoteList('java, true, notes))
+
                     scalaCompiler.askReloadAllFiles()
                     project ! RPCResultEvent(toWF(true), callId)
                   }
 
                   case ReloadFileReq(file: File) => {
-                    for (u <- javaUnitForFile.get(file.getCanonicalPath)) {
-                      javaCompiler.compile(Array(u))
-                      val result = NoteList('java, false, javaNotes)
-                      project ! TypeCheckResultEvent(result)
-                    }
+                    javaCompiler.compileFile(file)
+                    val notes = javaCompiler.allNotes
+                    project ! TypeCheckResultEvent(NoteList('java, false, notes))
+
                     val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     scalaCompiler.askReloadFile(f)
                     val result = NoteList('scala, false, reporter.allNotes)
@@ -189,7 +183,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   }
 
   override def finalize() {
-    System.out.println("Finalizing compilation actor.")
+    System.out.println("Finalizing Analyzer actor.")
   }
 
 }

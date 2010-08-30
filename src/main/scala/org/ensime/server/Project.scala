@@ -79,7 +79,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def restartCompiler() {
-    analyzer ! AnalyzerShutdownEvent
+    analyzer ! AnalyzerShutdownEvent()
     analyzer = new Analyzer(this, protocol, this.config)
     analyzer.start
   }
