@@ -1,10 +1,11 @@
 package org.ensime.server
+import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.mutable.{ LinkedHashMap }
-import scala.tools.nsc.{ Settings }
+import scala.tools.nsc.{ Settings, FatalError }
 
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.reporters.{ Reporter }
@@ -73,12 +74,12 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     inspectTypeAt(p), t => TypeInspectInfo.nullInfo)
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
-    reloadAndTypeFiles(List(p.source))
+    reloadSources(List(p.source))
     completeSymbolAt(p, prefix, constructor)
   }, t => List())
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
-    reloadAndTypeFiles(List(p.source))
+    reloadSources(List(p.source))
     completeMemberAt(p, prefix)
   }, t => List())
 
@@ -180,6 +181,7 @@ class RichPresentationCompiler(
 
   private def typeOfTree(t: Tree): Either[Type, Throwable] = {
     var tree = t
+    println("TREE CLASS: " + tree.getClass)
     tree = tree match {
       case Select(qual, name) if tree.tpe == ErrorType => {
         qual
@@ -202,14 +204,26 @@ class RichPresentationCompiler(
     }
   }
 
+  def persistentTypedTreeAt(p: Position): Tree = {
+    try {
+      typedTreeAt(p)
+    } catch {
+      case e: FatalError => {
+        println("typeTreeAt threw FatalError, typing full source. ")
+        typedTree(p.source, true)
+        locateTree(p)
+      }
+    }
+  }
+
   protected def typeAt(p: Position): Either[Type, Throwable] = {
-    val tree = typedTreeAt(p)
+    val tree = persistentTypedTreeAt(p)
     typeOfTree(tree)
   }
 
   protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
     p.source.file
-    val tree = typedTreeAt(p)
+    val tree = persistentTypedTreeAt(p)
     if (tree.symbol != null) {
       Left(tree.symbol)
     } else {
@@ -223,6 +237,7 @@ class RichPresentationCompiler(
    * get these changes into Scala.
    */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
+    persistentTypedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
     val locals = new LinkedHashMap[Name, ScopeMember]
     def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
