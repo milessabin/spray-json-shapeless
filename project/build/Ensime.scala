@@ -12,14 +12,14 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   val ant = "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test"
   val ivy = "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test"
   val maven = "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test"
-  val bcel = "org.apache.bcel" % "bcel" % "5.2" % "compile;runtime;test"
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
   val jdt = "org.eclipse.jdt" % "core" % "3.4.2.v_883_R34x" % "compile;runtime;test"
   val scalariform = "org.scalariform" %% "scalariform" % "0.0.5-SNAPSHOT"%"compile;runtime;test"
+  val asm = "asm" % "asm" % "3.2"
+  val asmCommons = "asm" % "asm-commons" % "3.2"
 
 
-
-  //override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
+  override def compileOptions = compileOptions("-g") ++ super.compileOptions.toList
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.

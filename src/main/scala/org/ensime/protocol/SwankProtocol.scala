@@ -104,6 +104,7 @@ trait SwankProtocol extends Protocol {
         } catch {
           case e: Throwable =>
             {
+	      e.printStackTrace(System.err)
               sendRPCError("Exception raised in RPC " + form + " : " +
                 e.getMessage, callId)
             }
