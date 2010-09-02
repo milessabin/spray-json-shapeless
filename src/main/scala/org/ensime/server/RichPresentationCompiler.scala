@@ -18,85 +18,85 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     val result = new Response[A]()
     scheduler postWorkItem new WorkItem {
       def apply() = respond(result)(try { op }
-      catch {
-        case e: Throwable => {
+	catch {
+          case e: Throwable => {
           System.err.println("INTERNAL ERROR: " + e)
           e.printStackTrace(System.err)
           handle(e)
         }
       })
-    }
-    result.get.fold(o => o, handle)
   }
+  result.get.fold(o => o, handle)
+}
 
-  def askSymbolInfoAt(p: Position): SymbolInfo = askOr(
-    symbolAt(p).fold(s => SymbolInfo(s), t => SymbolInfo.nullInfo), t => SymbolInfo.nullInfo)
+def askSymbolInfoAt(p: Position): SymbolInfo = askOr(
+  symbolAt(p).fold(s => SymbolInfo(s), t => SymbolInfo.nullInfo), t => SymbolInfo.nullInfo)
 
-  def askTypeInfoAt(p: Position): TypeInfo = askOr(
-    typeAt(p).fold(s => TypeInfo(s), t => TypeInfo.nullInfo), t => TypeInfo.nullInfo)
+def askTypeInfoAt(p: Position): TypeInfo = askOr(
+  typeAt(p).fold(s => TypeInfo(s), t => TypeInfo.nullInfo), t => TypeInfo.nullInfo)
 
-  def askTypeInfoById(id: Int): TypeInfo = askOr(
-    typeById(id) match {
-      case Some(t) => TypeInfo(t)
-      case None => TypeInfo.nullInfo
-    }, t => TypeInfo.nullInfo)
+def askTypeInfoById(id: Int): TypeInfo = askOr(
+  typeById(id) match {
+    case Some(t) => TypeInfo(t)
+    case None => TypeInfo.nullInfo
+  }, t => TypeInfo.nullInfo)
 
-  def askCallCompletionInfoById(id: Int): CallCompletionInfo = askOr(
-    typeById(id) match {
-      case Some(t: Type) => CallCompletionInfo(t)
-      case _ => CallCompletionInfo.nullInfo
-    }, t => CallCompletionInfo.nullInfo)
+def askCallCompletionInfoById(id: Int): CallCompletionInfo = askOr(
+  typeById(id) match {
+    case Some(t: Type) => CallCompletionInfo(t)
+    case _ => CallCompletionInfo.nullInfo
+  }, t => CallCompletionInfo.nullInfo)
 
-  def askPackageByPath(path: String): PackageInfo = askOr(
-    PackageInfo.fromPath(path), t => PackageInfo.nullInfo)
+def askPackageByPath(path: String): PackageInfo = askOr(
+  PackageInfo.fromPath(path), t => PackageInfo.nullInfo)
 
-  def askQuickReloadFile(f: SourceFile) {
-    askOr(reloadSources(List(f)), t => ())
-  }
+def askQuickReloadFile(f: SourceFile) {
+  askOr(reloadSources(List(f)), t => ())
+}
 
-  def askReloadFile(f: SourceFile) {
-    askReloadFiles(List(f))
-  }
+def askReloadFile(f: SourceFile) {
+  askReloadFiles(List(f))
+}
 
-  def askReloadFiles(files: Iterable[SourceFile]) {
-    val x = new Response[Unit]()
-    askReload(files.toList, x)
-    x.get
-  }
+def askReloadFiles(files: Iterable[SourceFile]) {
+  val x = new Response[Unit]()
+  askReload(files.toList, x)
+  x.get
+}
 
-  def askReloadAllFiles() {
-    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
-    val x = new Response[Unit]()
-    askReload(all, x)
-    x.get
-  }
+def askReloadAllFiles() {
+  val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
+  val x = new Response[Unit]()
+  askReload(all, x)
+  x.get
+}
 
-  def askInspectTypeById(id: Int): TypeInspectInfo = askOr(
-    typeById(id) match {
-      case Some(t: Type) => inspectType(t)
-      case _ => TypeInspectInfo.nullInfo
-    }, t => TypeInspectInfo.nullInfo)
+def askInspectTypeById(id: Int): TypeInspectInfo = askOr(
+  typeById(id) match {
+    case Some(t: Type) => inspectType(t)
+    case _ => TypeInspectInfo.nullInfo
+  }, t => TypeInspectInfo.nullInfo)
 
-  def askInspectTypeAt(p: Position): TypeInspectInfo = askOr(
-    inspectTypeAt(p), t => TypeInspectInfo.nullInfo)
+def askInspectTypeAt(p: Position): TypeInspectInfo = askOr(
+  inspectTypeAt(p), t => TypeInspectInfo.nullInfo)
 
-  def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
+def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
     reloadSources(List(p.source))
     completeSymbolAt(p, prefix, constructor)
   }, t => List())
 
-  def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
+def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
     reloadSources(List(p.source))
     completeMemberAt(p, prefix)
   }, t => List())
 
-  def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
+def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
     reloadAndTypeFiles(files)
   }, t => ())
 
-  def askClearTypeCache() = clearTypeCache
+def askClearTypeCache() = clearTypeCache
 
-  def sourceFileForPath(path: String) = getSourceFile(path)
+def sourceFileForPath(path: String) = getSourceFile(path)
 
 }
 
@@ -105,7 +105,7 @@ class RichPresentationCompiler(
   reporter: Reporter,
   var parent: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-  with ModelBuilders with RichCompilerControl with RefactoringImpl {
+with ModelBuilders with RichCompilerControl with RefactoringImpl {
 
   import Helpers._
 
@@ -169,7 +169,7 @@ class RichPresentationCompiler(
       TypeInfo(tpe),
       companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
-      )
+    )
   }
 
   protected def inspectTypeAt(p: Position): TypeInspectInfo = {
@@ -241,10 +241,10 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override scopeMembers to fix issues with finding method params
-   * and occasional exception in pre.memberType. Hopefully we can
-   * get these changes into Scala.
-   */
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
@@ -330,27 +330,41 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override so we send a notification to compiler actor when finished..
-   */
+  * Override so we send a notification to compiler actor when finished..
+  */
   override def recompile(units: List[RichCompilationUnit]) {
-    super.recompile(units)
-    parent ! FullTypeCheckCompleteEvent()
-  }
-
-  protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
-    sources.foreach { s =>
-      typedTree(s, true)
+    try{
+      super.recompile(units)
+      parent ! FullTypeCheckCompleteEvent()
+    }
+    catch{ 
+      case e:FatalError => {
+      // Cheesy hack to inform user that compiler 
+      // thread crapped out. A new compiler thread
+      // has already been created to replace it,
+      // but will likely crap out again next time
+      // a bg compiler runs.
+      parent ! CompilerFatalError(e)
+      throw e;
     }
   }
+  
+}
 
-  override def askShutdown() {
-    super.askShutdown()
-    parent = null
+protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
+  sources.foreach { s =>
+    typedTree(s, true)
   }
+}
 
-  override def finalize() {
-    System.out.println("Finalizing Global instance.")
-  }
+override def askShutdown() {
+  super.askShutdown()
+  parent = null
+}
+
+override def finalize() {
+  System.out.println("Finalizing Global instance.")
+}
 
 }
 
