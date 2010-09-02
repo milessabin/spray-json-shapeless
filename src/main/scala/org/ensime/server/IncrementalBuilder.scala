@@ -64,7 +64,6 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
                   val files = config.sourceFilenames.map(s => AbstractFile.getFile(s))
                   reporter.reset
                   bm.addSourceFiles(files)
-                  bm.update(files, Set())
                   project ! SendBackgroundMessageEvent("Build complete.")
                   val result = toWF(reporter.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
