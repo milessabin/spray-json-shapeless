@@ -17,7 +17,14 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
   def askOr[A](op: => A, handle: Throwable => A): A = {
     val result = new Response[A]()
     scheduler postWorkItem new WorkItem {
-      def apply() = respond(result)(op)
+      def apply() = respond(result)(try { op }
+      catch {
+        case e: Throwable => {
+          System.err.println("INTERNAL ERROR: " + e)
+          e.printStackTrace(System.err)
+          handle(e)
+        }
+      })
     }
     result.get.fold(o => o, handle)
   }
@@ -88,8 +95,6 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
   }, t => ())
 
   def askClearTypeCache() = clearTypeCache
-
-  def askNewRunnerThread() = newRunnerThread
 
   def sourceFileForPath(path: String) = getSourceFile(path)
 
