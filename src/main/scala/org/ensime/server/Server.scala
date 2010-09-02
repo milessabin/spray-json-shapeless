@@ -70,7 +70,6 @@ object Server {
 
 }
 
-case class NewSocket(socket: Socket)
 
 class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
 
