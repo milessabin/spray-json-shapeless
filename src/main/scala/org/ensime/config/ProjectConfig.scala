@@ -9,6 +9,7 @@ import scala.actors.Actor._
 import scala.collection.mutable
 import scalariform.formatter.preferences._
 
+
 object ProjectConfig {
 
   /**
