@@ -218,7 +218,7 @@ class RichPresentationCompiler(
     } catch {
       case e: FatalError =>
         {
-          println("typeTreeAt threw FatalError, typing full source. ")
+          println("typedTreeAt threw FatalError, falling back to typedTree... ")
           typedTree(p.source, true)
           locateTree(p)
         }
