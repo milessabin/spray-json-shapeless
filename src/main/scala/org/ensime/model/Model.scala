@@ -349,7 +349,6 @@ trait ModelBuilders { self: Global =>
     }
 
     def fromSymbol(aSym: Symbol): PackageInfo = {
-      println("fromSymbol: " + aSym)
       val bSym = normalizeSym(aSym)
       if (bSym == RootPackage) {
         new PackageInfo(
