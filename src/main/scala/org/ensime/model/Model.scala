@@ -263,7 +263,7 @@ trait ModelBuilders { self: Global =>
           val constructors = new ArrayBuffer[NamedTypeMemberInfo]()
           val fields = new ArrayBuffer[NamedTypeMemberInfo]()
           val methods = new ArrayBuffer[NamedTypeMemberInfo]()
-
+	  
           for (tm <- sortedMembers) {
             val info = NamedTypeMemberInfo(tm)
             val decl = info.declaredAs

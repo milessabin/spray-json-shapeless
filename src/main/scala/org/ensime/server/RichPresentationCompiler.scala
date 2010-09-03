@@ -10,7 +10,6 @@ import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
 import scala.tools.nsc.util.{ SourceFile, Position }
 
-
 trait RichCompilerControl extends CompilerControl with RefactoringInterface { self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
@@ -150,7 +149,7 @@ class RichPresentationCompiler(
           // Filter out synthetic things
           val bySym = new LinkedHashMap[Symbol, TypeMember]
           for (m <- (members ++ typePublicMembers(tpe))) {
-            if (!m.sym.name.decode.containsName(Dollar)) {
+            if (!(m.sym.nameString.contains("$"))) {
               bySym(m.sym) = m
             }
           }
@@ -341,8 +340,7 @@ class RichPresentationCompiler(
         val s = sym.nameString
         if (s.startsWith(prefix) &&
           !(s == "this") &&
-          !(s == "→") &&
-          !(s.contains("$anonfun$"))) {
+          !(s == "→")) {
           List(NamedTypeMemberInfoLight(tm))
         } else {
           List()
