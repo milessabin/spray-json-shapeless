@@ -10,6 +10,7 @@ import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
 import scala.tools.nsc.util.{ SourceFile, Position }
 
+
 trait RichCompilerControl extends CompilerControl with RefactoringInterface { self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
