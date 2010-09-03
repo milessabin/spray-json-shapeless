@@ -313,8 +313,9 @@ trait ModelBuilders { self: Global =>
 
       def filterAndSort(symbols: Iterable[Symbol]) = {
         val validSyms = symbols.filter { s =>
-          s != EmptyPackage && s != RootPackage && (bSym == RootPackage ||
-            s.owner.fullName == bSymFullName)
+          s != EmptyPackage && s != RootPackage && 
+	  // This check is necessary to prevent infinite looping..
+	  (s.owner.fullName == bSymFullName)
         }
         validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
       }
@@ -348,6 +349,7 @@ trait ModelBuilders { self: Global =>
     }
 
     def fromSymbol(aSym: Symbol): PackageInfo = {
+      println("fromSymbol: " + aSym)
       val bSym = normalizeSym(aSym)
       if (bSym == RootPackage) {
         new PackageInfo(
