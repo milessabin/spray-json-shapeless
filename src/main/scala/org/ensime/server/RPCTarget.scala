@@ -90,6 +90,10 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(TypeCompletionReq(new File(f), point, prefix), callId)
   }
 
+  def rpcPackageMemberCompletion(path:String, prefix: String, callId: Int) {
+    analyzer ! RPCRequestEvent(PackageMemberCompletionReq(path, prefix), callId)
+  }
+
   def rpcInspectTypeAtPoint(f: String, point: Int, callId: Int) {
     analyzer ! RPCRequestEvent(InspectTypeReq(new File(f), point), callId)
   }

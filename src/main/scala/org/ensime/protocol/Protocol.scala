@@ -171,6 +171,7 @@ trait ProtocolConversions{
   def toWF(value:Note):WireFormat
   def toWF(values:Iterable[WireFormat]):WireFormat
   def toWF(value:SymbolInfoLight):WireFormat
+  def toWF(value:PackageMemberInfoLight):WireFormat
   def toWF(value:SymbolInfo):WireFormat
   def toWF(value:NamedTypeMemberInfoLight):WireFormat
   def toWF(value:NamedTypeMemberInfo):WireFormat
