@@ -17,9 +17,9 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   val scalariform = "org.scalariform" %% "scalariform" % "0.0.5-SNAPSHOT"%"compile;runtime;test"
   val asm = "asm" % "asm" % "3.2"
   val asmCommons = "asm" % "asm-commons" % "3.2"
-9
 
-  override def compileOptions = compileOptions("-g:vars") ++ super.compileOptions.toList
+
+  //override def compileOptions = compileOptions("-g:vars") ++ super.compileOptions.toList
 
   // Copy the ensime.jar, scala-library.jar and scala-compiler.jar to 
   // the bin directory, for conveniant running.

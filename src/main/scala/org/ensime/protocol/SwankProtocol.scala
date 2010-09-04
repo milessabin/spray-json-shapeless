@@ -261,6 +261,14 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+      case "swank:type-by-name" => {
+        form match {
+          case SExpList(head :: StringAtom(name) :: body) => {
+            rpcTarget.rpcTypeByName(name, callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:call-completion" => {
         form match {
           case SExpList(head :: IntAtom(id) :: body) => {
@@ -437,6 +445,10 @@ trait SwankProtocol extends Protocol {
   def toWF(value: Boolean): SExp = {
     if (value) TruthAtom()
     else NilAtom()
+  }
+
+  def toWF(value: Null): SExp = {
+    NilAtom()
   }
 
   def toWF(value: String): SExp = {

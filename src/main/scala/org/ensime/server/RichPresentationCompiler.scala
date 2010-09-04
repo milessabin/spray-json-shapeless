@@ -10,7 +10,6 @@ import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
 import scala.tools.nsc.util.{ SourceFile, Position }
 
-
 trait RichCompilerControl extends CompilerControl with RefactoringInterface { self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
@@ -21,26 +20,32 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     result.get.fold(o => o, handle)
   }
 
-  def askSymbolInfoAt(p: Position): SymbolInfo = askOr(
-    symbolAt(p).fold(s => SymbolInfo(s), t => SymbolInfo.nullInfo), t => SymbolInfo.nullInfo)
+  def askSymbolInfoAt(p: Position): Option[SymbolInfo] = askOr(
+    symbolAt(p).fold(s => Some(SymbolInfo(s)), t => None), t => None)
 
-  def askTypeInfoAt(p: Position): TypeInfo = askOr(
-    typeAt(p).fold(s => TypeInfo(s), t => TypeInfo.nullInfo), t => TypeInfo.nullInfo)
+  def askTypeInfoAt(p: Position): Option[TypeInfo] = askOr(
+    typeAt(p).fold(s => Some(TypeInfo(s)), t => None), t => None)
 
-  def askTypeInfoById(id: Int): TypeInfo = askOr(
+  def askTypeInfoById(id: Int): Option[TypeInfo] = askOr(
     typeById(id) match {
-      case Some(t) => TypeInfo(t)
-      case None => TypeInfo.nullInfo
-    }, t => TypeInfo.nullInfo)
+      case Some(t) => Some(TypeInfo(t))
+      case None => None
+    }, t => None)
 
-  def askCallCompletionInfoById(id: Int): CallCompletionInfo = askOr(
+  def askTypeInfoByName(name: String): Option[TypeInfo] = askOr(
+    typeByName(name) match {
+      case Some(t) => Some(TypeInfo(t))
+      case None => None
+    }, t => None)
+
+  def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] = askOr(
     typeById(id) match {
-      case Some(t: Type) => CallCompletionInfo(t)
-      case _ => CallCompletionInfo.nullInfo
-    }, t => CallCompletionInfo.nullInfo)
+      case Some(t: Type) => Some(CallCompletionInfo(t))
+      case _ => None
+    }, t => None)
 
-  def askPackageByPath(path: String): PackageInfo = askOr(
-    PackageInfo.fromPath(path), t => PackageInfo.nullInfo)
+  def askPackageByPath(path: String): Option[PackageInfo] = askOr(
+    Some(PackageInfo.fromPath(path)), t => None)
 
   def askQuickReloadFile(f: SourceFile) {
     askOr(reloadSources(List(f)), t => ())
@@ -51,42 +56,42 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
   }
 
   def askReloadFiles(files: Iterable[SourceFile]) = askOr({
-    val x = new Response[Unit]()
-    reload(files.toList, x)
-    x.get
-  }, t => ())
+      val x = new Response[Unit]()
+      reload(files.toList, x)
+      x.get
+    }, t => ())
 
   def askReloadAllFiles() = {
     val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
     askReloadFiles(all)
   }
 
-  def askInspectTypeById(id: Int): TypeInspectInfo = askOr(
+  def askInspectTypeById(id: Int): Option[TypeInspectInfo] = askOr(
     typeById(id) match {
-      case Some(t: Type) => inspectType(t)
-      case _ => TypeInspectInfo.nullInfo
-    }, t => TypeInspectInfo.nullInfo)
+      case Some(t: Type) => Some(inspectType(t))
+      case _ => None
+    }, t => None)
 
-  def askInspectTypeAt(p: Position): TypeInspectInfo = askOr(
-    inspectTypeAt(p), t => TypeInspectInfo.nullInfo)
+  def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr(
+    Some(inspectTypeAt(p)), t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-    completePackageMember(path, prefix)
-  }, t => List())
+      completePackageMember(path, prefix)
+    }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
-    reloadSources(List(p.source))
-    completeSymbolAt(p, prefix, constructor)
-  }, t => List())
+      reloadSources(List(p.source))
+      completeSymbolAt(p, prefix, constructor)
+    }, t => List())
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
-    reloadSources(List(p.source))
-    completeMemberAt(p, prefix)
-  }, t => List())
+      reloadSources(List(p.source))
+      completeMemberAt(p, prefix)
+    }, t => List())
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-    reloadAndTypeFiles(files)
-  }, t => ())
+      reloadAndTypeFiles(files)
+    }, t => ())
 
   def askClearTypeCache() = clearTypeCache
 
@@ -99,7 +104,7 @@ class RichPresentationCompiler(
   reporter: Reporter,
   var parent: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-  with ModelBuilders with RichCompilerControl with RefactoringImpl {
+with ModelBuilders with RichCompilerControl with RefactoringImpl {
 
   import Helpers._
 
@@ -118,8 +123,8 @@ class RichPresentationCompiler(
         members(sym) = m
       } catch {
         case e =>
-          System.err.println("Error: Omitting member " + sym
-            + ": " + e)
+        System.err.println("Error: Omitting member " + sym
+          + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -169,7 +174,7 @@ class RichPresentationCompiler(
       TypeInfo(tpe),
       companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
-      )
+    )
   }
 
   protected def inspectTypeAt(p: Position): TypeInspectInfo = {
@@ -218,17 +223,36 @@ class RichPresentationCompiler(
       typedTreeAt(p)
     } catch {
       case e: FatalError =>
-        {
-          println("typedTreeAt threw FatalError, falling back to typedTree... ")
-          typedTree(p.source, true)
-          locateTree(p)
-        }
+      {
+        println("typedTreeAt threw FatalError, falling back to typedTree... ")
+        typedTree(p.source, true)
+        locateTree(p)
+      }
     }
   }
 
   protected def typeAt(p: Position): Either[Type, Throwable] = {
     val tree = persistentTypedTreeAt(p)
     typeOfTree(tree)
+  }
+
+  protected def typeByName(name: String): Option[Type] = {
+    def maybeType(sym:Symbol) = sym match{
+      case NoSymbol => None
+      case sym: Symbol => Some(sym.tpe)
+      case _ => None
+    }
+    try{
+      if(name.endsWith("$")){
+	maybeType(definitions.getModule(name.substring(0,name.length - 1)))
+      }
+      else{
+	maybeType(definitions.getClass(name))
+      }
+    }
+    catch{
+      case e => None
+    }
   }
 
   protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
@@ -242,10 +266,10 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override scopeMembers to fix issues with finding method params
-   * and occasional exception in pre.memberType. Hopefully we can
-   * get these changes into Scala.
-   */
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
@@ -294,7 +318,7 @@ class RichPresentationCompiler(
       case Some(sym) => {
         val memberSyms = packageMembers(sym)
         memberSyms.flatMap { s =>
-          val name = s.nameString
+          val name = if(s.isPackage){ s.nameString }else{ typeShortName(s) }
           if (name.startsWith(prefix)) {
             Some(new PackageMemberInfoLight(name))
           } else None
@@ -353,8 +377,8 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override so we send a notification to compiler actor when finished..
-   */
+  * Override so we send a notification to compiler actor when finished..
+  */
   override def recompile(units: List[RichCompilationUnit]) {
     try {
       super.recompile(units)

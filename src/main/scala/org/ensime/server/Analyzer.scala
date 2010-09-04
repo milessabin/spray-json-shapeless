@@ -35,10 +35,9 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
     println("Building Java sources...")
     javaCompiler.compileAll
-    
+
     println("Building Scala sources...")
     scalaCompiler.askReloadAllFiles
-
 
     loop {
       try {
@@ -126,7 +125,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
                   }
 
-                  case PackageMemberCompletionReq(path:String, prefix: String) => {
+                  case PackageMemberCompletionReq(path: String, prefix: String) => {
                     val members = scalaCompiler.askCompletePackageMember(path, prefix)
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
                   }
@@ -134,42 +133,71 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   case InspectTypeReq(file: File, point: Int) => {
                     val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     val p = new OffsetPosition(f, point)
-                    val inspectInfo = scalaCompiler.askInspectTypeAt(p)
-                    project ! RPCResultEvent(toWF(inspectInfo), callId)
+                    val result = scalaCompiler.askInspectTypeAt(p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
 
                   case InspectTypeByIdReq(id: Int) => {
-                    val inspectInfo = scalaCompiler.askInspectTypeById(id)
-                    project ! RPCResultEvent(toWF(inspectInfo), callId)
+                    val result = scalaCompiler.askInspectTypeById(id) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
 
                   case SymbolAtPointReq(file: File, point: Int) => {
                     val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     val p = new OffsetPosition(f, point)
-                    val info = scalaCompiler.askSymbolInfoAt(p)
-                    project ! RPCResultEvent(toWF(info), callId)
+                    val result = scalaCompiler.askSymbolInfoAt(p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
 
                   case InspectPackageByPathReq(path: String) => {
-                    val packageInfo = scalaCompiler.askPackageByPath(path)
-                    project ! RPCResultEvent(toWF(packageInfo), callId)
+                    val result = scalaCompiler.askPackageByPath(path) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
 
                   case TypeAtPointReq(file: File, point: Int) => {
                     val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     val p = new OffsetPosition(f, point)
-                    val typeInfo = scalaCompiler.askTypeInfoAt(p)
-                    project ! RPCResultEvent(toWF(typeInfo), callId)
+                    val result = scalaCompiler.askTypeInfoAt(p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
 
                   case TypeByIdReq(id: Int) => {
-                    val tpeInfo = scalaCompiler.askTypeInfoById(id)
-                    project ! RPCResultEvent(toWF(tpeInfo), callId)
+                    val result = scalaCompiler.askTypeInfoById(id) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
+                  }
+
+                  case TypeByNameReq(name: String) => {
+                    val result = scalaCompiler.askTypeInfoByName(name) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
 
                   case CallCompletionReq(id: Int) => {
-                    val callInfo = scalaCompiler.askCallCompletionInfoById(id)
-                    project ! RPCResultEvent(toWF(callInfo), callId)
+                    val result = scalaCompiler.askCallCompletionInfoById(id) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
                   }
                 }
               }

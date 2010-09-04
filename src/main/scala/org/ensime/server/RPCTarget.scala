@@ -102,12 +102,17 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
   }
 
+
   def rpcSymbolAtPoint(f: String, point: Int, callId: Int) {
     analyzer ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
   }
 
   def rpcTypeById(id: Int, callId: Int) {
     analyzer ! RPCRequestEvent(TypeByIdReq(id), callId)
+  }
+
+  def rpcTypeByName(name: String, callId: Int) {
+    analyzer ! RPCRequestEvent(TypeByNameReq(name), callId)
   }
 
   def rpcCallCompletion(id: Int, callId: Int) {
