@@ -155,7 +155,7 @@ class RichPresentationCompiler(
           // Filter out synthetic things
           val bySym = new LinkedHashMap[Symbol, TypeMember]
           for (m <- (members ++ typePublicMembers(tpe))) {
-            if (!(m.sym.nameString.contains("$"))) {
+            if(!m.sym.nameString.contains("$")) {
               bySym(m.sym) = m
             }
           }
@@ -273,8 +273,7 @@ class RichPresentationCompiler(
     val context = doLocateContext(pos)
     val locals = new LinkedHashMap[Name, ScopeMember]
     def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
-      if (!sym.name.decode.containsName(Dollar) &&
-        !sym.hasFlag(Flags.SYNTHETIC) &&
+      if(!sym.nameString.contains("$") && 
         !locals.contains(sym.name)) {
         try {
           val member = new ScopeMember(
