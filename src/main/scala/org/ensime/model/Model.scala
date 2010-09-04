@@ -132,13 +132,6 @@ trait ModelBuilders { self: Global =>
       }
     }
 
-    def normalizeSym(aSym: Symbol): Symbol = aSym match {
-      case null | EmptyPackage | NoSymbol => normalizeSym(RootPackage)
-      case ScalaObjectClass | ObjectClass => normalizeSym(AnyRefClass)
-      case _ if aSym.isModuleClass || aSym.isPackageObject => normalizeSym(aSym.sourceModule)
-      case _ => aSym
-    }
-
     /**
      * Conveniance method to generate a String describing the type. Omit
      * the package name. Include the arguments postfix.
@@ -263,7 +256,7 @@ trait ModelBuilders { self: Global =>
           val constructors = new ArrayBuffer[NamedTypeMemberInfo]()
           val fields = new ArrayBuffer[NamedTypeMemberInfo]()
           val methods = new ArrayBuffer[NamedTypeMemberInfo]()
-	  
+
           for (tm <- sortedMembers) {
             val info = NamedTypeMemberInfo(tm)
             val decl = info.declaredAs
@@ -307,24 +300,23 @@ trait ModelBuilders { self: Global =>
     /*
     * Get the valid member symbols of the package denoted by aSym.
     */
-    def packageMembers(aSym: Symbol): Iterable[Symbol] = {
-      val bSym = normalizeSym(aSym)
-      val bSymFullName = bSym.fullName
+    def packageMembers(parent: Symbol): Iterable[Symbol] = {
+
+      def isRoot(s: Symbol) = s.isRoot || s.isRootPackage
 
       def filterAndSort(symbols: Iterable[Symbol]) = {
         val validSyms = symbols.filter { s =>
-          s != EmptyPackage && s != RootPackage && 
-	  // This check is necessary to prevent infinite looping..
-	  (s.owner.fullName == bSymFullName)
+          s != EmptyPackage && !isRoot(s) &&
+            // This check is necessary to prevent infinite looping..
+            ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
         }
         validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
       }
 
-      if (bSym == RootPackage) {
-        filterAndSort(bSym.info.members ++ EmptyPackage.info.members)
+      if (isRoot(parent)) {
+        filterAndSort(parent.info.members ++ EmptyPackage.info.members)
       } else {
-        val memberSyms = bSym.info.members
-        filterAndSort(memberSyms)
+        filterAndSort(parent.info.members)
       }
     }
 
@@ -348,34 +340,33 @@ trait ModelBuilders { self: Global =>
       new PackageInfo("NA", "NA", List())
     }
 
-    def fromSymbol(aSym: Symbol): PackageInfo = {
-      val bSym = normalizeSym(aSym)
-      if (bSym == RootPackage) {
+    def fromSymbol(sym: Symbol): PackageInfo = {
+      if (sym.isRoot || sym.isRootPackage) {
         new PackageInfo(
           "root",
           "_root_",
-          packageMembers(bSym).flatMap(packageMemberInfoFromSym)
+          packageMembers(sym).flatMap(packageMemberInfoFromSym)
           )
       } else {
         new PackageInfo(
-          bSym.name.toString,
-          bSym.fullName,
-          packageMembers(bSym).flatMap(packageMemberInfoFromSym)
+          sym.name.toString,
+          sym.fullName,
+          packageMembers(sym).flatMap(packageMemberInfoFromSym)
           )
       }
     }
 
-    def packageMemberInfoFromSym(aSym: Symbol): Option[EntityInfo] = {
+    def packageMemberInfoFromSym(sym: Symbol): Option[EntityInfo] = {
       try {
-        val bSym = normalizeSym(aSym)
-        if (bSym == RootPackage) {
+        if (sym == RootPackage) {
           Some(root)
-        } else if (bSym.isPackage) {
-          Some(fromSymbol(bSym))
-        } else if (!(bSym.nameString.contains("$")) && (bSym != NoSymbol) && (bSym.tpe != NoType)) {
-          if (bSym.isClass || bSym.isTrait || bSym.isModule ||
-            bSym.isModuleClass || bSym.isPackageClass) {
-            Some(TypeInfo(bSym.tpe))
+        } else if (sym.isPackage) {
+          Some(fromSymbol(sym))
+        } else if (!(sym.nameString.contains("$")) && 
+	  (sym != NoSymbol) && (sym.tpe != NoType)) {
+          if (sym.isClass || sym.isTrait || sym.isModule ||
+            sym.isModuleClass || sym.isPackageClass) {
+            Some(TypeInfo(sym.tpe))
           } else {
             None
           }

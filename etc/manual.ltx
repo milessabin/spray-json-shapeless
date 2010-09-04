@@ -469,7 +469,7 @@ Format the current Scala source file
 \vspace{5 mm}
 
 \noindent
-{\bf M-x ensime-reload-config}\\
+{\bf M-x ensime-reload}\\
 Reload the .ensime file and recompile the project. Useful if you hit a server bug.
 \vspace{5 mm}
 
@@ -478,15 +478,10 @@ Reload the .ensime file and recompile the project. Useful if you hit a server bu
 Start the automatic configuration file generator.
 \vspace{5 mm}
 
-\noindent
-{\bf M-x ensime-reload-config}\\
-Reload the config file from the disk, Start the automatic configuration file generator.
-\vspace{5 mm}
-
 
 \section{Troubleshooting}
 
-You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload-config. Otherwise, if things are irreparably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
+You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload. Otherwise, if things are irreparably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
 
 If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of \emph{*inferior-ensime-server*}.
 
