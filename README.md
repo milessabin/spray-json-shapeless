@@ -36,19 +36,25 @@ Check out this (rather old)[video](http://www.youtube.com/watch?v=A2Lai8IjLoY) o
 
 __1) Install scala-mode__
 
-ENSIME is designed to compliment scala-mode (or any other scala language mode). scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/
+ENSIME is designed to compliment scala-mode (or any other scala language mode). scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/. The rest of the steps assume your scala-mode is installed and working correctly.
 
 __2) Install ensime-mode__
 
 Download the ENSIME distribution from the github [downloads page](http://github.com/aemoncannon/ensime/downloads). Unpack the ENSIME distribution into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
-    (require 'scala-mode)
-    (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
+
+    ;; Load the ensime lisp code...
     (add-to-list 'load-path "ENSIME_ROOT/elisp/")
     (require 'ensime)
+
+    ;; This step causes the ensime-mode to be started whenever
+    ;; scala-mode is started for a buffer. You may have to customize this step
+    ;; if you're not using the standard scala mode.
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
-    ;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
+
+    ;; MINI HOWTO: 
+    ;; Open .scala file. M-x ensime (once per project)
 
 
 __3) Verify Permissions__
@@ -64,3 +70,4 @@ In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to
 __5) Start ENSIME__
 
 Execute M-x ensime
+You only need to do this once per project.

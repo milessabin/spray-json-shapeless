@@ -56,12 +56,17 @@ Download the latest ENSIME distribution from github.com at \begin{verbatim}http:
 
 \begin{mylisting}
 \begin{verbatim}
-(require 'scala-mode)
-(add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
+;; Load the ensime lisp code...
 (add-to-list 'load-path "ENSIME_ROOT/elisp/")
 (require 'ensime)
+
+;; This step causes the ensime-mode to be started whenever
+;; scala-mode is started for a buffer. You may have to customize this step
+;; if you're not using the standard scala mode.
 (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
-;; MINI HOWTO: open .scala file. Ensure bin/server.sh is executable. M-x ensime
+
+;; MINI HOWTO: 
+;; Open .scala file. M-x ensime (once per project)
 \end{verbatim}
 \end{mylisting}
 
@@ -276,7 +281,7 @@ Customize the behavior of the source formatter. All Scalariform preferences are 
 \section{Usage}
 
 \subsection{Startup}
-To start ensime type \emph{M-x ensime}. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the \emph{*inferior-ensime-server*} buffer.
+To start ensime type \emph{M-x ensime}. You only need to do this once per project session. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the \emph{*inferior-ensime-server*} buffer.
 
 \subsection{Symbol and Member Completion}
 ENSIME completion is initiated by pressing the \emph{TAB} key. To complete a symbol, type the first couple characters, then press \emph{TAB}. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or \emph{SPACE} followed by \emph{TAB}.\\
