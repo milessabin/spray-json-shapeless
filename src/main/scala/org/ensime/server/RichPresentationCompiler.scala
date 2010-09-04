@@ -56,10 +56,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
   }
 
   def askReloadFiles(files: Iterable[SourceFile]) = askOr({
-      val x = new Response[Unit]()
-      reload(files.toList, x)
-      x.get
-    }, t => ())
+    val x = new Response[Unit]()
+    reload(files.toList, x)
+    x.get
+  }, t => ())
 
   def askReloadAllFiles() = {
     val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
@@ -76,22 +76,22 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     Some(inspectTypeAt(p)), t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-      completePackageMember(path, prefix)
-    }, t => List())
+    completePackageMember(path, prefix)
+  }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
-      reloadSources(List(p.source))
-      completeSymbolAt(p, prefix, constructor)
-    }, t => List())
+    reloadSources(List(p.source))
+    completeSymbolAt(p, prefix, constructor)
+  }, t => List())
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
-      reloadSources(List(p.source))
-      completeMemberAt(p, prefix)
-    }, t => List())
+    reloadSources(List(p.source))
+    completeMemberAt(p, prefix)
+  }, t => List())
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-      reloadAndTypeFiles(files)
-    }, t => ())
+    reloadAndTypeFiles(files)
+  }, t => ())
 
   def askClearTypeCache() = clearTypeCache
 
@@ -104,7 +104,7 @@ class RichPresentationCompiler(
   reporter: Reporter,
   var parent: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-with ModelBuilders with RichCompilerControl with RefactoringImpl {
+  with ModelBuilders with RichCompilerControl with RefactoringImpl {
 
   import Helpers._
 
@@ -123,8 +123,8 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
         members(sym) = m
       } catch {
         case e =>
-        System.err.println("Error: Omitting member " + sym
-          + ": " + e)
+          System.err.println("Error: Omitting member " + sym
+            + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -174,7 +174,7 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
       TypeInfo(tpe),
       companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
-    )
+      )
   }
 
   protected def inspectTypeAt(p: Position): TypeInspectInfo = {
@@ -223,11 +223,11 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
       typedTreeAt(p)
     } catch {
       case e: FatalError =>
-      {
-        println("typedTreeAt threw FatalError, falling back to typedTree... ")
-        typedTree(p.source, true)
-        locateTree(p)
-      }
+        {
+          println("typedTreeAt threw FatalError, falling back to typedTree... ")
+          typedTree(p.source, true)
+          locateTree(p)
+        }
     }
   }
 
@@ -237,20 +237,18 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
   }
 
   protected def typeByName(name: String): Option[Type] = {
-    def maybeType(sym:Symbol) = sym match{
+    def maybeType(sym: Symbol) = sym match {
       case NoSymbol => None
       case sym: Symbol => Some(sym.tpe)
       case _ => None
     }
-    try{
-      if(name.endsWith("$")){
-	maybeType(definitions.getModule(name.substring(0,name.length - 1)))
+    try {
+      if (name.endsWith("$")) {
+        maybeType(definitions.getModule(name.substring(0, name.length - 1)))
+      } else {
+        maybeType(definitions.getClass(name))
       }
-      else{
-	maybeType(definitions.getClass(name))
-      }
-    }
-    catch{
+    } catch {
       case e => None
     }
   }
@@ -266,10 +264,10 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
   }
 
   /**
-  * Override scopeMembers to fix issues with finding method params
-  * and occasional exception in pre.memberType. Hopefully we can
-  * get these changes into Scala.
-  */
+   * Override scopeMembers to fix issues with finding method params
+   * and occasional exception in pre.memberType. Hopefully we can
+   * get these changes into Scala.
+   */
   override def scopeMembers(pos: Position): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
@@ -316,9 +314,11 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
   protected def completePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = {
     packageSymFromPath(path) match {
       case Some(sym) => {
-        val memberSyms = packageMembers(sym)
+        val memberSyms = packageMembers(sym).filterNot { s =>
+          s == NoSymbol || s.nameString.contains("$")
+        }
         memberSyms.flatMap { s =>
-          val name = if(s.isPackage){ s.nameString }else{ typeShortName(s) }
+          val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
           if (name.startsWith(prefix)) {
             Some(new PackageMemberInfoLight(name))
           } else None
@@ -377,8 +377,8 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
   }
 
   /**
-  * Override so we send a notification to compiler actor when finished..
-  */
+   * Override so we send a notification to compiler actor when finished..
+   */
   override def recompile(units: List[RichCompilationUnit]) {
     try {
       super.recompile(units)
