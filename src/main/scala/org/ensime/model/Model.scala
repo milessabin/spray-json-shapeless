@@ -40,12 +40,11 @@ class ArrowTypeInfo(
   override val name: String,
   override val id: Int,
   val resultType: TypeInfo,
-  val paramTypes: Iterable[TypeInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition, None) {}
+  val paramSections: Iterable[Iterable[TypeInfo]]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition, None) {}
 
 class CallCompletionInfo(
   val resultType: TypeInfo,
-  val paramTypes: Iterable[TypeInfo],
-  val paramNames: Iterable[String]) {}
+  val paramSections: Iterable[Iterable[(String,TypeInfo)]]) {}
 
 class InterfaceInfo(val tpe: TypeInfo, val viaView: Option[String]) {}
 
@@ -118,32 +117,35 @@ trait ModelBuilders { self: Global =>
 
     def isNoParamArrowType(tpe: Type) = {
       tpe match {
-        case t: MethodType => t.params.isEmpty
-        case t: PolyType => t.params.isEmpty
+        case t: MethodType => t.paramss.isEmpty
+        case t: PolyType => t.paramss.isEmpty
         case t: Type => false
       }
     }
 
     def typeOrArrowTypeResult(tpe: Type) = {
       tpe match {
-        case t: MethodType => t.resultType
-        case t: PolyType => t.resultType
+        case t: MethodType => t.finalResultType
+        case t: PolyType => t.finalResultType
         case t: Type => t
       }
     }
 
     /**
-     * Conveniance method to generate a String describing the type. Omit
+     * Convenience method to generate a String describing the type. Omit
      * the package name. Include the arguments postfix.
      * 
      * Used for type-names of symbol and member completions
      */
     def typeShortNameWithArgs(tpe: Type): String = {
       if (isArrowType(tpe)) {
-        ("(" +
-          tpe.paramTypes.map(typeShortNameWithArgs).mkString(", ") +
-          ") => " +
-          typeShortNameWithArgs(tpe.resultType))
+        ( tpe.paramss.map{ sect =>
+	    "(" + 
+	    sect.map{ p => typeShortNameWithArgs(p.tpe) }.mkString(", ") + 
+	    ")"
+	  }.mkString(" => ")
+	  + " => " + 
+          typeShortNameWithArgs(tpe.finalResultType))
       } else {
         (typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
           "[" +
@@ -393,7 +395,6 @@ trait ModelBuilders { self: Global =>
         case tpe: PolyType => ArrowTypeInfo(tpe)
         case tpe: Type =>
           {
-            val params = tpe.typeParams.map(_.toString)
             val args = tpe.typeArgs.map(TypeInfo(_))
             val typeSym = tpe.typeSymbol
             val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
@@ -421,22 +422,21 @@ trait ModelBuilders { self: Global =>
 
     def apply(tpe: Type): CallCompletionInfo = {
       tpe match {
-        case tpe: MethodType => apply(tpe.paramTypes, tpe.params, tpe.resultType)
-        case tpe: PolyType => apply(tpe.paramTypes, tpe.params, tpe.resultType)
+        case tpe: MethodType => apply(tpe.paramss, tpe.finalResultType)
+        case tpe: PolyType => apply(tpe.paramss, tpe.finalResultType)
         case _ => nullInfo
       }
     }
 
-    def apply(paramTypes: Iterable[Type], paramNames: Iterable[Symbol], resultType: Type): CallCompletionInfo = {
+    def apply(paramSections: List[List[Symbol]], finalResultType: Type): CallCompletionInfo = {
       new CallCompletionInfo(
-        TypeInfo(resultType),
-        paramTypes.map(t => TypeInfo(t)),
-        paramNames.map(s => s.nameString)
+        TypeInfo(finalResultType),
+	paramSections.map{sect => sect.map{ s => (s.nameString, TypeInfo(s.tpe)) }}
         )
     }
 
     def nullInfo() = {
-      new CallCompletionInfo(TypeInfo.nullInfo, List(), List())
+      new CallCompletionInfo(TypeInfo.nullInfo, List())
     }
   }
 
@@ -528,18 +528,18 @@ trait ModelBuilders { self: Global =>
 
     def apply(tpe: Type): ArrowTypeInfo = {
       tpe match {
-        case tpe: MethodType => apply(tpe, tpe.paramTypes, tpe.params, tpe.resultType)
-        case tpe: PolyType => apply(tpe, tpe.paramTypes, tpe.params, tpe.resultType)
+        case tpe: MethodType => apply(tpe, tpe.paramss, tpe.finalResultType)
+        case tpe: PolyType => apply(tpe, tpe.paramss, tpe.finalResultType)
         case _ => nullInfo
       }
     }
 
-    def apply(tpe: Type, paramTypes: Iterable[Type], paramNames: Iterable[Symbol], resultType: Type): ArrowTypeInfo = {
+    def apply(tpe: Type, paramSections: List[List[Symbol]], finalResultType: Type): ArrowTypeInfo = {
       new ArrowTypeInfo(
         tpe.toString,
         cacheType(tpe),
-        TypeInfo(tpe.resultType),
-        tpe.paramTypes.map(t => TypeInfo(t)))
+        TypeInfo(tpe.finalResultType),
+	paramSections.map{ sect => sect.map{ s => TypeInfo(s.tpe) }})
     }
 
     def nullInfo() = {
