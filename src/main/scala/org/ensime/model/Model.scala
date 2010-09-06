@@ -117,8 +117,8 @@ trait ModelBuilders { self: Global =>
 
     def isNoParamArrowType(tpe: Type) = {
       tpe match {
-        case t: MethodType => t.paramss.isEmpty
-        case t: PolyType => t.paramss.isEmpty
+        case t: MethodType => t.paramss.flatten.isEmpty
+        case t: PolyType => t.paramss.flatten.isEmpty
         case t: Type => false
       }
     }
