@@ -72,8 +72,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               } else {
                 req match {
                   case ReloadAllReq() => {
-                    javaCompiler.reset
-                    javaCompiler.compileAll
+                    javaCompiler.reset()
+                    javaCompiler.compileAll()
                     val notes = javaCompiler.allNotes
                     project ! TypeCheckResultEvent(NoteList('java, true, notes))
 
