@@ -73,6 +73,7 @@ trait RefactoringController { self: Analyzer =>
     val procedureId = req.procedureId
     val effect = effects(procedureId)
     val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
+    scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
     result match {
       case Right(result) => project ! RPCResultEvent(toWF(result), callId)
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
