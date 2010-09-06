@@ -121,7 +121,7 @@ class JavaCompiler(config: ProjectConfig) {
 
   }
 
-  def compileAll = {
+  def compileAll() = {
     val units = javaUnitForFile.values
     if (!(units.isEmpty)) {
       compiler.compile(units.toArray)
@@ -134,7 +134,7 @@ class JavaCompiler(config: ProjectConfig) {
     }
   }
 
-  def allNotes(): Iterable[Note] = {
+  def allNotes: Iterable[Note] = {
     requestor.allNotes
   }
 

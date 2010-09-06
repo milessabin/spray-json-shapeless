@@ -124,8 +124,8 @@ class RichPresentationCompiler(
           inherited,
           viaView)
         members(sym) = m
-      } catch {
-        case e =>
+      } catch { 
+        case e => 
           System.err.println("Error: Omitting member " + sym
             + ": " + e)
       }
@@ -223,9 +223,11 @@ class RichPresentationCompiler(
     */
   def persistentTypedTreeAt(p: Position): Tree = {
     try {
+
+      // typedTree may throw Fatal Error...
       val t = typedTreeAt(p)
 
-      // Don't return this tree unless it has a type..
+      // don't return this tree unless it has a type..
       typeOfTree(t) match {
         case Left(_) => t
         case Right(e) => throw new FatalError(e.getMessage)

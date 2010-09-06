@@ -34,17 +34,17 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     project ! SendBackgroundMessageEvent("Initializing Analyzer. Please wait...")
 
     println("Building Java sources...")
-    javaCompiler.compileAll
+    javaCompiler.compileAll()
 
     println("Building Scala sources...")
-    scalaCompiler.askReloadAllFiles
+    scalaCompiler.askReloadAllFiles()
     
     loop {
       try {
         receive {
           case AnalyzerShutdownEvent() => {
-            javaCompiler.shutdown
-            scalaCompiler.askClearTypeCache
+            javaCompiler.shutdown()
+            scalaCompiler.askClearTypeCache()
             scalaCompiler.askShutdown()
             exit('stop)
           }
