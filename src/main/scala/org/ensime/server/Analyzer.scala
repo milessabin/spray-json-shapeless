@@ -192,6 +192,16 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     project ! RPCResultEvent(result, callId)
                   }
 
+                  case TypeByNameAtPointReq(name: String, file: File, point: Int) => {
+		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+                    val p = new OffsetPosition(f, point)
+                    val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+                    }
+                    project ! RPCResultEvent(result, callId)
+                  }
+
                   case CallCompletionReq(id: Int) => {
                     val result = scalaCompiler.askCallCompletionInfoById(id) match {
                       case Some(info) => toWF(info)

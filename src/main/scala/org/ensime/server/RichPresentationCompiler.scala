@@ -39,6 +39,12 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
       case None => None
     }, t => None)
 
+  def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = askOr(
+    typeByNameAt(name, p) match {
+      case Some(t) => Some(TypeInfo(t))
+      case None => None
+    }, t => None)
+
   def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] = askOr(
     typeById(id) match {
       case Some(t: Type) => Some(CallCompletionInfo(t))
@@ -124,8 +130,8 @@ class RichPresentationCompiler(
           inherited,
           viaView)
         members(sym) = m
-      } catch { 
-        case e => 
+      } catch {
+        case e =>
           System.err.println("Error: Omitting member " + sym
             + ": " + e)
       }
@@ -218,9 +224,9 @@ class RichPresentationCompiler(
   }
 
   /*
-    * Fall back to full typecheck if targeted fails
-    * Removing this wrapper causes completion test failures.
-    */
+  * Fall back to full typecheck if targeted fails
+  * Removing this wrapper causes completion test failures.
+  */
   def persistentTypedTreeAt(p: Position): Tree = {
     try {
 
@@ -265,6 +271,19 @@ class RichPresentationCompiler(
     }
   }
 
+  protected def typeByNameAt(name: String, p: Position): Option[Type] = {
+    locateContext(p) match {
+      case Some(cx) => {
+        cx.scope.lookup(name) match {
+          case NoSymbol => None
+          case sym: Symbol => Some(sym.tpe)
+          case _ => None
+        }
+      }
+      case None => None
+    }
+  }
+
   protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
     p.source.file
     val tree = persistentTypedTreeAt(p)
@@ -283,17 +302,17 @@ class RichPresentationCompiler(
   override def scopeMembers(pos: Position): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     val context = doLocateContext(pos)
-    val locals = new LinkedHashMap[Name, ScopeMember]
+    val locals = new LinkedHashMap[Symbol, ScopeMember]
     def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
       if (!sym.nameString.contains("$") &&
-        !locals.contains(sym.name)) {
+        !locals.contains(sym)) {
         try {
           val member = new ScopeMember(
             sym,
             sym.tpe,
             context.isAccessible(sym, pre, false),
             viaImport)
-          locals(sym.name) = member
+          locals(sym) = member
         } catch {
           case e => System.err.println("Error: Omitting scope member "
             + sym + ": " + e)

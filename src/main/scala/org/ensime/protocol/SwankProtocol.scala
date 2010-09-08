@@ -269,6 +269,14 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+      case "swank:type-by-name-at-point" => {
+        form match {
+          case SExpList(head :: StringAtom(name) :: StringAtom(file) :: IntAtom(point) :: body) => {
+            rpcTarget.rpcTypeByNameAtPoint(name, file, point, callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:call-completion" => {
         form match {
           case SExpList(head :: IntAtom(id) :: body) => {

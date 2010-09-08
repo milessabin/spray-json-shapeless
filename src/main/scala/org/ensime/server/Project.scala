@@ -30,6 +30,7 @@ case class InspectTypeByIdReq(id: Int)
 case class InspectPackageByPathReq(path: String)
 case class TypeByIdReq(id: Int)
 case class TypeByNameReq(name: String)
+case class TypeByNameAtPointReq(name: String, file: File, point: Int)
 case class CallCompletionReq(id: Int)
 case class TypeAtPointReq(file: File, point: Int)
 

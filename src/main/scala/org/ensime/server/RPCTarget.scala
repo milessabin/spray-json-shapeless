@@ -115,6 +115,10 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(TypeByNameReq(name), callId)
   }
 
+  def rpcTypeByNameAtPoint(name: String, f:String, point:Int, callId: Int) {
+    analyzer ! RPCRequestEvent(TypeByNameAtPointReq(name, new File(f), point), callId)
+  }
+
   def rpcCallCompletion(id: Int, callId: Int) {
     analyzer ! RPCRequestEvent(CallCompletionReq(id), callId)
   }
