@@ -200,7 +200,6 @@ class RichPresentationCompiler(
 
   private def typeOfTree(t: Tree): Either[Type, Throwable] = {
     var tree = t
-    println("TREE CLASS: " + tree.getClass)
     tree = tree match {
       case Select(qual, name) if tree.tpe == ErrorType => {
         qual
@@ -271,22 +270,46 @@ class RichPresentationCompiler(
     }
   }
 
-  protected def typeByNameAt(name: String, p: Position): Option[Type] = {
-    locateContext(p) match {
-      case Some(cx) => {
-        cx.scope.lookup(name) match {
-          case NoSymbol => None
-          case sym: Symbol => Some(sym.tpe)
-          case _ => None
+  protected def lookupSymbolByNameAt(nameStr: String, p: Position): Option[Symbol] = {
+    val name: Name = nameStr
+
+    def findInContext(context: Context): Option[Symbol] = {
+      var ctx: Context = context
+      var res: Symbol = NoSymbol
+      while (res == NoSymbol && ctx.outer != ctx) {
+        val s = ctx.scope.lookup(name)
+        if (s != NoSymbol) {
+          res = s
+        } else {
+          ctx = ctx.outer
         }
       }
-      case None => None
+      if (res == NoSymbol) None
+      else Some(res)
     }
+
+    def findInImports(context: Context): Option[Symbol] = {
+      (for (
+        imp <- context.imports;
+        sym <- imp.allImportedSymbols if sym.name == name
+      ) yield { sym }).headOption
+    }
+
+    locateContext(p) match {
+      case Some(context) => {
+        findInImports(context).orElse(findInContext(context))
+      }
+      case _ => None
+    }
+  }
+
+  protected def typeByNameAt(nameStr: String, p: Position): Option[Type] = {
+    lookupSymbolByNameAt(nameStr, p).map(_.tpe)
   }
 
   protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
     p.source.file
-    val tree = persistentTypedTreeAt(p)
+    val tree = typedTreeAt(p)
     if (tree.symbol != null) {
       Left(tree.symbol)
     } else {
@@ -299,46 +322,51 @@ class RichPresentationCompiler(
    * and occasional exception in pre.memberType. Hopefully we can
    * get these changes into Scala.
    */
-  override def scopeMembers(pos: Position): List[ScopeMember] = {
+  def scopeMembers(pos: Position, prefix: String): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
-    val context = doLocateContext(pos)
-    val locals = new LinkedHashMap[Symbol, ScopeMember]
-    def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
-      if (!sym.nameString.contains("$") &&
-        !locals.contains(sym)) {
-        try {
-          val member = new ScopeMember(
-            sym,
-            sym.tpe,
-            context.isAccessible(sym, pre, false),
-            viaImport)
-          locals(sym) = member
-        } catch {
-          case e => System.err.println("Error: Omitting scope member "
-            + sym + ": " + e)
+    locateContext(pos) match {
+      case Some(context) => {
+        val locals = new LinkedHashMap[Symbol, ScopeMember]
+        def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
+          if (sym.nameString.startsWith(prefix) &&
+            !sym.nameString.contains("$") &&
+            !locals.contains(sym)) {
+            try {
+              val member = new ScopeMember(
+                sym,
+                sym.tpe,
+                context.isAccessible(sym, pre, false),
+                viaImport)
+              locals(sym) = member
+            } catch {
+              case e => System.err.println("Error: Omitting scope member "
+                + sym + ": " + e)
+            }
+          }
         }
-      }
-    }
-    var cx = context
-    while (cx != NoContext) {
-      for (sym <- cx.scope) {
-        addSymbol(sym, NoPrefix, EmptyTree)
-      }
-      if (cx.prefix != null) {
-        for (sym <- cx.prefix.members) {
-          addSymbol(sym, cx.prefix, EmptyTree)
+        var cx = context
+        while (cx != NoContext) {
+          for (sym <- cx.scope) {
+            addSymbol(sym, NoPrefix, EmptyTree)
+          }
+          if (cx.prefix != null) {
+            for (sym <- cx.prefix.members) {
+              addSymbol(sym, cx.prefix, EmptyTree)
+            }
+          }
+          cx = cx.outer
         }
+        for (imp <- context.imports) {
+          val pre = imp.qual.tpe
+          for (sym <- imp.allImportedSymbols) {
+            addSymbol(sym, pre, imp.qual)
+          }
+        }
+        val result = locals.values.toList
+        result
       }
-      cx = cx.outer
+      case _ => List()
     }
-    for (imp <- context.imports) {
-      val pre = imp.qual.tpe
-      for (sym <- imp.allImportedSymbols) {
-        addSymbol(sym, pre, imp.qual)
-      }
-    }
-    val result = locals.values.toList
-    result
   }
 
   protected def completePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = {
@@ -360,7 +388,7 @@ class RichPresentationCompiler(
 
   protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     val names = try {
-      scopeMembers(p)
+      scopeMembers(p, prefix)
     } catch {
       case e => {
         System.err.println("Error retrieving scope members:")
@@ -371,15 +399,11 @@ class RichPresentationCompiler(
     val visibleNames = names.flatMap { m =>
       m match {
         case ScopeMember(sym, tpe, true, _) => {
-          if (sym.nameString.startsWith(prefix)) {
-            if (constructor) {
-              SymbolInfoLight.constructorSynonyms(sym)
-            } else {
-              val synonyms = SymbolInfoLight.applySynonyms(sym)
-              List(SymbolInfoLight(sym, tpe)) ++ synonyms
-            }
+          if (constructor) {
+            SymbolInfoLight.constructorSynonyms(sym)
           } else {
-            List()
+            val synonyms = SymbolInfoLight.applySynonyms(sym)
+            List(SymbolInfoLight(sym, tpe)) ++ synonyms
           }
         }
         case _ => List()

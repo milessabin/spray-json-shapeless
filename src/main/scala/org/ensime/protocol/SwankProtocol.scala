@@ -120,6 +120,8 @@ trait SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
+    println("\nHandling RPC: " + form)
+
     def oops = sendRPCError("Malformed " + callType + " call: " + form, callId)
 
     callType match {
