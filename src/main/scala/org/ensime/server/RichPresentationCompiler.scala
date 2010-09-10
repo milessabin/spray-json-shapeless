@@ -3,7 +3,7 @@ import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import scala.actors._
 import scala.actors.Actor._
-import scala.collection.mutable.{ LinkedHashMap }
+import scala.collection.mutable.{ LinkedHashMap, ListBuffer }
 import scala.tools.nsc.{ Settings, FatalError }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.reporters.{ Reporter }
@@ -81,7 +81,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
     reloadSources(List(p.source))
-    Some(inspectTypeAt(p))
+    inspectTypeAt(p)
   }, t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
@@ -116,8 +116,6 @@ class RichPresentationCompiler(
   with ModelBuilders with RichCompilerControl with RefactoringImpl {
 
   import Helpers._
-
-  import analyzer.{ SearchResult, ImplicitSearch }
 
   private def typePublicMembers(tpe: Type): Iterable[TypeMember] = {
     val members = new LinkedHashMap[Symbol, TypeMember]
@@ -186,15 +184,17 @@ class RichPresentationCompiler(
       )
   }
 
-  protected def inspectTypeAt(p: Position): TypeInspectInfo = {
+  protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
     val members = getMembersForTypeAt(p)
     val preparedMembers = prepareSortedInterfaceInfo(members)
     typeAt(p) match {
-      case Left(t) => new TypeInspectInfo(
-        TypeInfo(t),
-        companionTypeOf(t).map(cacheType),
-        preparedMembers)
-      case Right(_) => TypeInspectInfo.nullInfo
+      case Left(t) => {
+        Some(new TypeInspectInfo(
+          TypeInfo(t),
+          companionTypeOf(t).map(cacheType),
+          preparedMembers))
+      }
+      case Right(_) => None
     }
   }
 
@@ -223,9 +223,9 @@ class RichPresentationCompiler(
   }
 
   /*
-  * Fall back to full typecheck if targeted fails
-  * Removing this wrapper causes completion test failures.
-  */
+    * Fall back to full typecheck if targeted fails
+    * Removing this wrapper causes completion test failures.
+    */
   def persistentTypedTreeAt(p: Position): Tree = {
     try {
 
@@ -270,41 +270,26 @@ class RichPresentationCompiler(
     }
   }
 
-  protected def lookupSymbolByNameAt(nameStr: String, p: Position): Option[Symbol] = {
-    val name: Name = nameStr
-
-    def findInContext(context: Context): Option[Symbol] = {
-      var ctx: Context = context
-      var res: Symbol = NoSymbol
-      while (res == NoSymbol && ctx.outer != ctx) {
-        val s = ctx.scope.lookup(name)
-        if (s != NoSymbol) {
-          res = s
-        } else {
-          ctx = ctx.outer
-        }
-      }
-      if (res == NoSymbol) None
-      else Some(res)
-    }
-
-    def findInImports(context: Context): Option[Symbol] = {
-      (for (
-        imp <- context.imports;
-        sym <- imp.allImportedSymbols if sym.name == name
-      ) yield { sym }).headOption
-    }
-
-    locateContext(p) match {
-      case Some(context) => {
-        findInImports(context).orElse(findInContext(context))
-      }
-      case _ => None
-    }
+  protected def typeByNameAt(nameStr: String, p: Position): Option[Type] = {
+    val matchingSyms = lookupSymbolByNameAt(nameStr, p)
+    println("Matching syms: " + matchingSyms)
+    matchingSyms.filter { _.tpe != NoType }.headOption.map { _.tpe }
   }
 
-  protected def typeByNameAt(nameStr: String, p: Position): Option[Type] = {
-    lookupSymbolByNameAt(nameStr, p).map(_.tpe)
+  protected def lookupSymbolByNameAt(nameStr: String, p: Position): List[Symbol] = {
+    val nameSegs = nameStr.split("\\.")
+    val firstName: String = nameSegs.head
+
+    val roots = scopeMembers(p, firstName, true).map { _.sym }
+    println("found roots: " + roots)
+
+    if (nameSegs.length > 1) {
+      val restOfPath: String = nameSegs.drop(1).mkString(".")
+      println("restOfPath: " + restOfPath)
+      roots.flatMap { r => symsAtQualifiedPath(restOfPath, r) }
+    } else {
+      roots
+    }
   }
 
   protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
@@ -317,25 +302,28 @@ class RichPresentationCompiler(
     }
   }
 
-  /**
+  /**C-c followed by {, }, <, >, : or ;
    * Override scopeMembers to fix issues with finding method params
    * and occasional exception in pre.memberType. Hopefully we can
    * get these changes into Scala.
    */
-  def scopeMembers(pos: Position, prefix: String): List[ScopeMember] = {
+  def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     locateContext(pos) match {
       case Some(context) => {
         val locals = new LinkedHashMap[Symbol, ScopeMember]
         def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
-          if (sym.nameString.startsWith(prefix) &&
+          val ns = sym.nameString
+          val accessible = context.isAccessible(sym, pre, false)
+          if (accessible && ((exactMatch && ns == prefix)
+            || (!exactMatch && ns.startsWith(prefix))) &&
             !sym.nameString.contains("$") &&
             !locals.contains(sym)) {
             try {
               val member = new ScopeMember(
                 sym,
                 sym.tpe,
-                context.isAccessible(sym, pre, false),
+                accessible,
                 viaImport)
               locals(sym) = member
             } catch {
@@ -387,16 +375,8 @@ class RichPresentationCompiler(
   }
 
   protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
-    val names = try {
-      scopeMembers(p, prefix)
-    } catch {
-      case e => {
-        System.err.println("Error retrieving scope members:")
-        e.printStackTrace(System.err)
-        List[ScopeMember]()
-      }
-    }
-    val visibleNames = names.flatMap { m =>
+    val names = scopeMembers(p, prefix, false)
+    val withSynonyms = names.flatMap { m =>
       m match {
         case ScopeMember(sym, tpe, true, _) => {
           if (constructor) {
@@ -409,7 +389,7 @@ class RichPresentationCompiler(
         case _ => List()
       }
     }.sortWith((a, b) => a.name.length <= b.name.length)
-    visibleNames
+    withSynonyms
   }
 
   protected def completeMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
@@ -434,21 +414,8 @@ class RichPresentationCompiler(
    * Override so we send a notification to compiler actor when finished..
    */
   override def recompile(units: List[RichCompilationUnit]) {
-    try {
-      super.recompile(units)
-      parent ! FullTypeCheckCompleteEvent()
-    } catch {
-      case e: FatalError => {
-        // Cheesy hack to inform user that compiler 
-        // thread crapped out. A new compiler thread
-        // has already been created to replace it,
-        // but will likely crap out again next time
-        // a bg compiler runs.
-        parent ! CompilerFatalError(e)
-        throw e;
-      }
-    }
-
+    super.recompile(units)
+    parent ! FullTypeCheckCompleteEvent()
   }
 
   protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {

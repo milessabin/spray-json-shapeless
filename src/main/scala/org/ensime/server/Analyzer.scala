@@ -17,7 +17,7 @@ case class CompilerFatalError(e: Throwable)
 
 class Analyzer(val project: Project, val protocol: ProtocolConversions, val config: ProjectConfig)
   extends Actor with RefactoringController {
-
+    
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   settings.usejavacp.value = false
@@ -27,7 +27,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
   protected var awaitingInitialCompile = true
 
-  import scalaCompiler._
+  import scalaCompiler._ 
   import protocol._
 
   def act() {
@@ -38,7 +38,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
     println("Building Scala sources...")
     scalaCompiler.askReloadAllFiles()
-    
+
     loop {
       try {
         receive {
