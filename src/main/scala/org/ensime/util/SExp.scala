@@ -65,7 +65,7 @@ case class NilAtom() extends BooleanAtom {
 case class TruthAtom() extends BooleanAtom {
   override def toString = "t"
   override def toBool: Boolean = true
-  override def toScala: Boolean = false
+  override def toScala: Boolean = true
 }
 case class StringAtom(value: String) extends SExp {
   override def toString = value
