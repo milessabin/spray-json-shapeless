@@ -19,7 +19,7 @@ class PackageInspectionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src))
-	val info = cc.askPackageByPath("java.util")
+	val info = cc.askPackageByPath("java.util").get
 	info.members.exists(m => m.name == "Vector") should be(true)
 	info.members.exists(m => m.name == "List") should be(true)
       }

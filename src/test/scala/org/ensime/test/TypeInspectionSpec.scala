@@ -19,7 +19,7 @@ class TypeInspectionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src))
-	val info = cc.askTypeInfoAt(src.position(2,5))
+	val info = cc.askTypeInfoAt(src.position(2,5)).get
 	info.name should equal("Int")
       }
     }
@@ -37,7 +37,7 @@ class TypeInspectionSpec extends Spec with ShouldMatchers{
     	    "}"
     	  ))
     	cc.askReloadAndTypeFiles(List(src))
-    	val info = cc.askTypeInfoAt(src.position(5,12))
+    	val info = cc.askTypeInfoAt(src.position(5,12)).get
 	info.name should equal("Int")
       }
     }

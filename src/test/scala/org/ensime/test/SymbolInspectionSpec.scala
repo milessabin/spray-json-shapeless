@@ -19,7 +19,7 @@ class SymbolInspectionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src))
-	val info = cc.askSymbolInfoAt(src.position(2,5))
+	val info = cc.askSymbolInfoAt(src.position(2,5)).get
 	info.name should equal("dude")
       }
     }
@@ -37,7 +37,7 @@ class SymbolInspectionSpec extends Spec with ShouldMatchers{
     	    "}"
     	  ))
     	cc.askReloadAndTypeFiles(List(src))
-    	val info = cc.askSymbolInfoAt(src.position(5,12))
+    	val info = cc.askSymbolInfoAt(src.position(5,12)).get
     	info.declPos.line should equal(3)
       }
     }
