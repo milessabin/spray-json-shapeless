@@ -130,7 +130,8 @@ class JavaCompiler(config: ProjectConfig) {
 
   def addFile(f: File) = {
     val path = f.getCanonicalPath()
-    if(!javaUnitForFile.contains(path)){
+    if(path.endsWith(".java") && 
+      !javaUnitForFile.contains(path)){
       javaUnitForFile(path) = new CompilationUnit(null, path, defaultEncoding)
     }
   }
