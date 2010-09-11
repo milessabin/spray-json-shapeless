@@ -93,7 +93,6 @@ trait RefactoringInterface { self: RichCompilerControl with RefactoringImpl =>
     procId: Int,
     tpe: scala.Symbol,
     params: immutable.Map[scala.Symbol, Any]): Either[RefactorFailure, RefactorEffect] = {
-
     askOr(performRefactor(procId, tpe, params), t => Left(RefactorFailure(procId, t.toString)))
   }
 
@@ -107,7 +106,7 @@ trait RefactoringInterface { self: RichCompilerControl with RefactoringImpl =>
 
 }
 
-trait RefactoringImpl { self: Global =>
+trait RefactoringImpl { self: RichPresentationCompiler =>
 
   import FileUtils._
 
@@ -159,6 +158,8 @@ trait RefactoringImpl { self: Global =>
       val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
     }.result
 
+  protected def reloadAndType(f: String) = reloadAndTypeFiles(List(getSourceFile(f)))
+
   protected def performRefactor(
     procId: Int,
     tpe: scala.Symbol,
@@ -172,6 +173,7 @@ trait RefactoringImpl { self: Global =>
         case 'rename => {
           (params.get('newName), params.get('file), params.get('start), params.get('end)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+	      reloadAndType(f)
               doRename(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
@@ -180,6 +182,7 @@ trait RefactoringImpl { self: Global =>
         case 'extractMethod => {
           (params.get('methodName), params.get('file), params.get('start), params.get('end)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+	      reloadAndType(f)
               doExtractMethod(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
@@ -188,6 +191,7 @@ trait RefactoringImpl { self: Global =>
         case 'extractLocal => {
           (params.get('name), params.get('file), params.get('start), params.get('end)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+	      reloadAndType(f)
               doExtractLocal(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
@@ -196,6 +200,7 @@ trait RefactoringImpl { self: Global =>
         case 'inlineLocal => {
           (params.get('file), params.get('start), params.get('end)) match {
             case (Some(f: String), Some(s: Int), Some(e: Int)) => {
+	      reloadAndType(f)
               doInlineLocal(procId, tpe, f, s, e)
             }
             case _ => badArgs
@@ -204,6 +209,7 @@ trait RefactoringImpl { self: Global =>
         case 'organizeImports => {
           (params.get('file), params.get('start), params.get('end)) match {
             case (Some(f: String), Some(s: Int), Some(e: Int)) => {
+	      reloadAndType(f)
               doOrganizeImports(procId, tpe, f, s, e)
             }
             case _ => badArgs
