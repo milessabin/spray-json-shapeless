@@ -60,7 +60,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
 
   def askReloadFiles(files: Iterable[SourceFile]) {
     val x = new Response[Unit]()
-    reload(files.toList, x)
+    askReload(files.toList, x)
     x.get
   }
 
@@ -268,7 +268,6 @@ class RichPresentationCompiler(
 
   protected def typeByNameAt(nameStr: String, p: Position): Option[Type] = {
     val matchingSyms = lookupSymbolByNameAt(nameStr, p)
-    println("Matching syms: " + matchingSyms)
     matchingSyms.filter { _.tpe != NoType }.headOption.map { _.tpe }
   }
 
@@ -277,11 +276,9 @@ class RichPresentationCompiler(
     val firstName: String = nameSegs.head
 
     val roots = scopeMembers(p, firstName, true).map { _.sym }
-    println("found roots: " + roots)
 
     if (nameSegs.length > 1) {
       val restOfPath: String = nameSegs.drop(1).mkString(".")
-      println("restOfPath: " + restOfPath)
       roots.flatMap { r => symsAtQualifiedPath(restOfPath, r) }
     } else {
       roots
@@ -418,8 +415,8 @@ class RichPresentationCompiler(
    * Overriding for debug purposes..
    */
   override def parse(unit: RichCompilationUnit): Unit = {
-    System.err.println("DEBUG PARSE TRACE\n---------------------\n")
-    (new RuntimeException()).printStackTrace(System.err);
+    // System.err.println("DEBUG PARSE TRACE\n---------------------\n")
+    // (new RuntimeException()).printStackTrace(System.err);
     super.parse(unit);
   }
 
