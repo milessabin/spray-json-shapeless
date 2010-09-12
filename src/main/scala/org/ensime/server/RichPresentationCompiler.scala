@@ -145,8 +145,11 @@ class RichPresentationCompiler(
         if (isNoParamArrowType(tpe)) {
           typePublicMembers(typeOrArrowTypeResult(tpe))
         } else {
-          val members = try {
-            typeMembers(p)
+          val members: Iterable[TypeMember] = try {
+
+            // TODO: We throw away the Stream here...
+            typeMembers(p).flatten
+
           } catch {
             case e => {
               System.err.println("Error retrieving type members:")
@@ -245,7 +248,7 @@ class RichPresentationCompiler(
   }
 
   protected def typeAt(p: Position): Either[Type, Throwable] = {
-    val tree = persistentTypedTreeAt(p) 
+    val tree = persistentTypedTreeAt(p)
     typeOfTree(tree)
   }
 
