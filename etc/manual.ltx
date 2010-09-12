@@ -110,7 +110,7 @@ For sbt projects, ENSIME uses the build.properties file to determine the Scala v
 
 \noindent
 \textbf{Inferior SBT}:\\
-The keystrokes \emph{C-c C-a} will launch (or switch to an existing) inferior sbt session.\\
+The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior sbt session.\\
 
 \noindent
 \textbf{Compile-on-Save}:\\
@@ -300,7 +300,7 @@ Candidates can be scrolled with \emph{M-n} and \emph{M-p} or \emph{UP} and \emph
 
 \noindent
 \textbf{Invocation}:\\
-Double-clicking on a symbol in a Scala buffer, or typing \emph{C-c t} while the point is over a symbol will launch the type inspector. Typing \emph{C-c o} will open the inspector on the current project's main package. \emph{C-c p} will inspect the package of the current source file. Use the command \emph{M-x ensime-inspect-package-by-path} to inspect an arbitrary package.\\
+Double-clicking on a symbol in a Scala buffer, or typing \emph{C-c C-v i} while the point is over a symbol will launch the type inspector. Typing \emph{C-c C-v o} will open the inspector on the current project's main package. \emph{C-c C-v p} will inspect the package of the current source file. Use the command \emph{M-x ensime-inspect-by-path} to inspect an arbitrary type or package.\\
 
 \noindent
 \textbf{Package Inspector}:\\
@@ -317,13 +317,13 @@ Most things in the inspector are hyper-linked. You can click these links with th
 
 \subsection{The Scala REPL}
 
-First, ensure that you've set the :target directive in your config file. The REPL will load your project classes from the :target directory. Then, type \emph{C-c C-z} to launch the embedded Scala REPL. The REPL should be launched with all your project classes loaded and available. Please note that the Scala 2.8 REPL tab-completion does not currently work under ENSIME.
+First, ensure that you've set the :target directive in your config file. The REPL will load your project classes from the :target directory. Then, type \emph{C-c C-v z} to launch the embedded Scala REPL. The REPL should be launched with all your project classes loaded and available. Please note that the Scala 2.8 REPL tab-completion does not currently work under ENSIME.
 
 \subsection{Incremental Building}
 
 Incremental building allows for fast turn-around in the running/testing of your application. The building/rebuilding support in ENSIME is intended for those who are not already using the sbt build system, as sbt users will probably wish to continue using the sbt shell's support for incremental building (it may still be worth a try though, as the build-manager included in ENSIME uses a finer grained check for modifications).
 
-First, ensure that you've set the :target directive in your config file. The :target directory is where the classes will be written by the incremental builder. Then, type \emph{C-c b b} to start building your project. When the build is finished, a window will appear listing the result of the build. After subsequent source changes, you may type \emph{C-c b r} to rebuild only those parts of the project that depend on things you've changed. 
+First, ensure that you've set the :target directive in your config file. The :target directory is where the classes will be written by the incremental builder. Then, type \emph{C-c C-b b} to start building your project. When the build is finished, a window will appear listing the result of the build. After subsequent source changes, you may type \emph{C-c C-b r} to rebuild only those parts of the project that depend on things you've changed. 
 
 \subsection{Debugging}
 
@@ -331,15 +331,15 @@ Debugging support in ENSIME is provided by running an instance of jdb under Emac
 
 \noindent
 \textbf{Launching the Debugger}:\\
-First, ensure that you've set the :target directive in your config file. The debugger needs these classes to run your application. Then, type \emph{C-c d d} to launch the embedded Scala Debugger. \\
+First, ensure that you've set the :target directive in your config file. The debugger needs these classes to run your application. Then, type \emph{C-c C-d d} to launch the embedded Scala Debugger. \\
 
 \noindent
 \textbf{Break Points}:\\
-With your cursor on a line of Scala source, type \emph{C-c d b} to set a breakpoint. Type \emph{C-c d u} to remove the breakpoint.\\
+With your cursor on a line of Scala source, type \emph{C-c C-d b} to set a breakpoint. Type \emph{C-c C-d u} to remove the breakpoint.\\
 
 \noindent
 \textbf{Run Control}:\\
-Once you've set your breakpoints, type \emph{C-c d r} to run the program. Type \emph{C-c d c} to continue after hitting a breakpoint, or \emph{C-c d s} to step into the current line, or \emph{C-c d n} to step to the next line.\\
+Once you've set your breakpoints, type \emph{C-c C-d r} to run the program. Type \emph{C-c C-d c} to continue after hitting a breakpoint, or \emph{C-c C-d s} to step into the current line, or \emph{C-c C-d n} to step to the next line.\\
 
 \noindent
 \textbf{Value Inspection}:\\
@@ -365,7 +365,7 @@ Place your cursor over the local val who's value you'd like to inline. Type \emp
 
 \subsection{Source Formatting}
 
-ENSIME uses the Scalariform library to format Scala sources. Type \emph{C-c f} to format the current buffer. See section \ref{sec:configformat} for instructions on how to customize the formatting preferences.
+ENSIME uses the Scalariform library to format Scala sources. Type \emph{C-c C-v f} to format the current buffer. See section \ref{sec:configformat} for instructions on how to customize the formatting preferences.
 
 
 \subsection{Scaladoc and Javadoc Browsing (customizing)}
@@ -399,7 +399,7 @@ Start completing a method/variable.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c t  or  Double-Click}\\
+{\bf C-c C-v i  or  Double-Click}\\
 Inspect the type of the expression under the cursor.
 \vspace{5 mm}
 
@@ -414,7 +414,7 @@ Pop back to previously visited position.
 \vspace{5 mm}
 
 \noindent
-{\bf Double-Click(on an import statement)}\\
+{\bf Double-Click(on an imported package)}\\
 Inspect the package under cursor.
 \vspace{5 mm}
 
@@ -424,12 +424,12 @@ Echo the type of the expression under the cursor.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c p}\\
+{\bf C-c C-v p}\\
 Inspect the package of the current source file.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c o}\\
+{\bf C-c C-v o}\\
 Inspect the package specified in .ensime as :project-package.
 \vspace{5 mm}
 
@@ -444,7 +444,7 @@ Backward one page in the inspector history.
 \vspace{5 mm}
 
 \noindent
-{\bf C-n  or  TAB}\\
+{\bf C-n or TAB}\\
 Forward one link in the inspector.
 \vspace{5 mm}
 
@@ -454,28 +454,65 @@ Backward one link in the inspector.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c C-a}\\
+{\bf C-c C-v s}\\
 Switch to the sbt command-line (works for sbt projects only)
 \vspace{5 mm}
 
 \noindent
-{\bf C-c C-z}\\
+{\bf C-c C-v z}\\
 Switch to the scala interpreter, with project classes in the classpath.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c c}\\
+{\bf C-c C-v c}\\
 Type-check the current file.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c a}\\
+{\bf C-c C-v a}\\
 Type-check all files in the project.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c f}\\
-Format the current Scala source file
+{\bf C-c C-v f}\\
+Format the current Scala source file.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c C-d \emph{x}}\\
+Where \emph{x} is one of:
+\begin{itemize}
+\item {\bf d}  Start the debugger. 
+\item {\bf b}  Set a breakpoint.
+\item {\bf u}  Clear a breakpoint.
+\item {\bf r}  Run the debugged class.
+\item {\bf s}  Step.
+\item {\bf n}  Step over.
+\item {\bf c}  Continue from a breakpoint.
+\item {\bf q}  Kill the debug session.
+\item {\bf l}  List the local variables at current line.
+\end{itemize}
+\vspace{5 mm}
+
+\noindent
+{\bf C-c C-r \emph{x}}\\
+Where \emph{x} is one of:
+\begin{itemize}
+\item {\bf r}  Rename the symbol at point. 
+\item {\bf o}  Organize imports. 
+\item {\bf l}  Extract local. 
+\item {\bf m}  Extract method. 
+\item {\bf i}  Inline local. 
+\end{itemize}
+\vspace{5 mm}
+
+\noindent
+{\bf C-c C-b \emph{x}}\\
+Where \emph{x} is one of:
+\begin{itemize}
+\item {\bf b}  Build the entire project. 
+\item {\bf r}  Rebuild the project, incrementally. 
+\end{itemize}
 \vspace{5 mm}
 
 \noindent
