@@ -14,11 +14,13 @@ class SymbolInfo(
   val tpe: TypeInfo,
   val isCallable: Boolean) {}
 
-class SymbolInfoLight(
+case class SymbolInfoLight(
   val name: String,
   val tpeSig: String,
   val tpeId: Int,
-  val isCallable: Boolean) {}
+  val isCallable: Boolean) {
+
+}
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 

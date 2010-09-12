@@ -3,7 +3,7 @@ import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import scala.actors._
 import scala.actors.Actor._
-import scala.collection.mutable.{ LinkedHashMap, ListBuffer }
+import scala.collection.mutable.{ LinkedHashMap, ListBuffer, LinkedHashSet }
 import scala.tools.nsc.{ Settings, FatalError }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.reporters.{ Reporter }
@@ -369,20 +369,21 @@ class RichPresentationCompiler(
 
   protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     val names = scopeMembers(p, prefix, false)
-    val withSynonyms = names.flatMap { m =>
+    val result = new LinkedHashSet[SymbolInfoLight]
+    names.foreach { m =>
       m match {
         case ScopeMember(sym, tpe, true, _) => {
           if (constructor) {
-            SymbolInfoLight.constructorSynonyms(sym)
+            result ++= SymbolInfoLight.constructorSynonyms(sym)
           } else {
-            val synonyms = SymbolInfoLight.applySynonyms(sym)
-            List(SymbolInfoLight(sym, tpe)) ++ synonyms
+            result += SymbolInfoLight(sym, tpe)
+            result ++= SymbolInfoLight.applySynonyms(sym)
           }
         }
-        case _ => List()
+        case _ => {}
       }
-    }.sortWith((a, b) => a.name.length <= b.name.length)
-    withSynonyms
+    }
+    result.toList.sortWith((a, b) => a.name.length <= b.name.length)
   }
 
   protected def completeMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
