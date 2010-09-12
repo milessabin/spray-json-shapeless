@@ -17,7 +17,7 @@ case class CompilerFatalError(e: Throwable)
 
 class Analyzer(val project: Project, val protocol: ProtocolConversions, val config: ProjectConfig)
   extends Actor with RefactoringController {
-    
+
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   settings.usejavacp.value = false
@@ -27,7 +27,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
   protected var awaitingInitialCompile = true
 
-  import scalaCompiler._ 
+  import scalaCompiler._
   import protocol._
 
   def act() {
@@ -82,9 +82,12 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case ReloadFileReq(file: File) => {
-                    javaCompiler.compileFile(file)
-                    val notes = javaCompiler.allNotes
-                    project ! TypeCheckResultEvent(NoteList('java, false, notes))
+
+                    if (file.getAbsolutePath().endsWith(".java")) {
+                      javaCompiler.compileFile(file)
+                      val notes = javaCompiler.allNotes
+                      project ! TypeCheckResultEvent(NoteList('java, false, notes))
+                    }
 
                     val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     scalaCompiler.askReloadFile(f)
@@ -193,7 +196,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case TypeByNameAtPointReq(name: String, file: File, point: Int) => {
-		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     val p = new OffsetPosition(f, point)
                     val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
                       case Some(info) => toWF(info)
