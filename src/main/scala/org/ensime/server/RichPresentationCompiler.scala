@@ -54,19 +54,15 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
   def askPackageByPath(path: String): Option[PackageInfo] = askOr(
     Some(PackageInfo.fromPath(path)), t => None)
 
-  def askQuickReloadFile(f: SourceFile) {
-    askOr(reloadSources(List(f)), t => ())
-  }
-
   def askReloadFile(f: SourceFile) {
     askReloadFiles(List(f))
   }
 
-  def askReloadFiles(files: Iterable[SourceFile]) = askOr({
+  def askReloadFiles(files: Iterable[SourceFile]) {
     val x = new Response[Unit]()
     reload(files.toList, x)
     x.get
-  }, t => ())
+  }
 
   def askReloadAllFiles() = {
     val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
