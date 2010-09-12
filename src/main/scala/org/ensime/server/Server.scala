@@ -71,7 +71,6 @@ object Server {
 }
 
 class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
-
   protocol.setOutputActor(this)
 
   class SocketReader(socket: Socket, handler: SocketHandler) extends Actor {
