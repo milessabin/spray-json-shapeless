@@ -10,7 +10,6 @@ import scala.actors.Actor._
 object Server {
   def main(args: Array[String]): Unit = {
     try {
-
       System.setProperty("actors.corePoolSize", "5")
       System.setProperty("actors.maxPoolSize", "10")
 
