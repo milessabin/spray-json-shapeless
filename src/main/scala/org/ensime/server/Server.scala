@@ -64,7 +64,7 @@ object Server {
         }
     }
     finally {
-      out.close
+      out.close()
     }
   }
 
@@ -111,7 +111,7 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
   def act() {
     val reader: SocketReader = new SocketReader(socket, this)
     this.link(reader)
-    reader.start
+    reader.start()
     loop {
       receive {
         case IncomingMessageEvent(value: WireFormat) => {

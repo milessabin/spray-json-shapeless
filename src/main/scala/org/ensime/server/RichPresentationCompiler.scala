@@ -245,7 +245,7 @@ class RichPresentationCompiler(
   }
 
   protected def typeAt(p: Position): Either[Type, Throwable] = {
-    val tree = persistentTypedTreeAt(p) 
+    val tree = persistentTypedTreeAt(p)
     typeOfTree(tree)
   }
 
