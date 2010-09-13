@@ -145,8 +145,11 @@ class RichPresentationCompiler(
         if (isNoParamArrowType(tpe)) {
           typePublicMembers(typeOrArrowTypeResult(tpe))
         } else {
-          val members = try {
-            typeMembers(p)
+          val members: Iterable[TypeMember] = try {
+
+            // TODO: We throw away the Stream here...
+            typeMembers(p).flatten
+
           } catch {
             case e => {
               System.err.println("Error retrieving type members:")
@@ -295,7 +298,7 @@ class RichPresentationCompiler(
     }
   }
 
-  /**C-c followed by {, }, <, >, : or ;
+  /**
    * Override scopeMembers to fix issues with finding method params
    * and occasional exception in pre.memberType. Hopefully we can
    * get these changes into Scala.
@@ -339,7 +342,9 @@ class RichPresentationCompiler(
         }
         for (imp <- context.imports) {
           val pre = imp.qual.tpe
-          for (sym <- imp.allImportedSymbols) {
+          val importedSyms = pre.members.flatMap(transformImport(
+            imp.tree.selectors, _))
+          for (sym <- importedSyms) {
             addSymbol(sym, pre, imp.qual)
           }
         }
@@ -348,6 +353,19 @@ class RichPresentationCompiler(
       }
       case _ => List()
     }
+  }
+
+  // TODO: 
+  // This hides the core implementation is Contexts.scala, which
+  // has been patched. Once this bug is fixed, we can get rid of 
+  // this workaround.
+  private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
+    case List() => List()
+    case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
+    case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
+      if (to == nme.WILDCARD) List()
+      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+    case _ :: rest => transformImport(rest, sym)
   }
 
   protected def completePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = {

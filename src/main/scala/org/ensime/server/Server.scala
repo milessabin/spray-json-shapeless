@@ -19,7 +19,7 @@ object Server {
       // TODO use a real cmdline parser here
       val portfile = args(0)
       val project: Project = new Project(protocol)
-      project.start
+      project.start()
 
       // 0 will cause socket to bind to first available port
       val requestedPort = 0
@@ -32,7 +32,7 @@ object Server {
           val socket = listener.accept()
           println("Got connection, creating handler...")
           val handler = new SocketHandler(socket, protocol, project)
-          handler.start
+          handler.start()
         } catch {
           case e: IOException =>
             {
@@ -70,9 +70,7 @@ object Server {
 
 }
 
-
 class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
-
   protocol.setOutputActor(this)
 
   class SocketReader(socket: Socket, handler: SocketHandler) extends Actor {

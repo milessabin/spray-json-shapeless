@@ -14,7 +14,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   val maven = "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test"
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
   val jdt = "org.eclipse.jdt" % "core" % "3.4.2.v_883_R34x" % "compile;runtime;test"
-  val scalariform = "org.scalariform" %% "scalariform" % "0.0.5-SNAPSHOT"%"compile;runtime;test"
+  val scalariform = "org.scalariform" % "scalariform_2.8.0" % "0.0.5-SNAPSHOT"%"compile;runtime;test"
   val asm = "asm" % "asm" % "3.2"
   val asmCommons = "asm" % "asm-commons" % "3.2"
 
