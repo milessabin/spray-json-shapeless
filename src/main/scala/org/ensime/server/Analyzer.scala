@@ -76,7 +76,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     javaCompiler.compileAll()
                     val notes = javaCompiler.allNotes
                     project ! TypeCheckResultEvent(NoteList('java, true, notes))
-
                     scalaCompiler.askReloadAllFiles()
                     project ! RPCResultEvent(toWF(true), callId)
                   }
