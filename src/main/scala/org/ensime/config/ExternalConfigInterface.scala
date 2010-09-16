@@ -8,6 +8,8 @@ import org.apache.tools.ant._
 import org.ensime.util._
 import org.ensime.util.FileUtils._
 import scala.collection.JavaConversions._
+import java.util.Properties;
+
 
 case class ExternalConfig(
   val sourceRoots: Iterable[CanonFile],

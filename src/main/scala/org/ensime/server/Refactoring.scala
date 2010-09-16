@@ -73,7 +73,6 @@ trait RefactoringController { self: Analyzer =>
     val procedureId = req.procedureId
     val effect = effects(procedureId)
     val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
-    scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
     result match {
       case Right(result) => project ! RPCResultEvent(toWF(result), callId)
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
@@ -239,11 +238,10 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
   }
 
   private def writeChanges(changes: Iterable[Change]): Either[Exception, Iterable[File]] = {
-    val changesByFile = changes.groupBy(_.file)
+    val changesByFile = changes.groupBy(_.file.file)
     try {
       val rewriteList = changesByFile.map {
-        case (afile, changes) => {
-          val file = afile.file
+        case (file, changes) => {
           readFile(file) match {
             case Right(contents) => {
               val changed = Change.applyChanges(changes.toList, contents)
@@ -254,7 +252,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
         }
       }
       rewriteFiles(rewriteList) match {
-        case Right(Right(())) => Right(changesByFile.keys.map(_.file))
+        case Right(Right(())) => Right(changesByFile.keys)
         case Right(Left(e)) => Left(new IllegalStateException(
           "Possibly incomplete write of change-set caused by: " + e))
         case Left(e) => Left(e)

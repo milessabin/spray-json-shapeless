@@ -15,6 +15,7 @@ class ProjectDebugInfo(projectConfig: ProjectConfig) {
 
   private val target: File = projectConfig.target.getOrElse(new File("."))
 
+
   /**
    * For each (classname,line) pair, return the corresponding
    * (sourcefile,line) pair.
@@ -91,6 +92,7 @@ class ProjectDebugInfo(projectConfig: ProjectConfig) {
           override def visit(version: Int, access: Int,
             name: String, signature: String, superName: String,
             interfaces: Array[String]) {
+
             if (name != null) {
               qualName = name.replace("/", ".")
               packageName = qualName.split(".").lastOption.getOrElse("")
