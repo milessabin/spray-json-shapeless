@@ -14,9 +14,15 @@ trait RPCTarget { self: Project =>
 
   import protocol._
 
-  def rpcInitProject(conf: ProjectConfig, callId: Int) {
-    initProject(conf)
-    protocol.sendRPCAckOK(callId)
+  def rpcInitProject(f: File, callId: Int) {
+    val config = protocol.loadConfig(f)
+    config match{
+      case Right(conf) => {
+	initProject(conf)
+	sendRPCReturn(toWF(conf), callId)
+     }
+      case Left(e) => throw e
+    }
   }
 
   def rpcReplConfig(callId: Int) {

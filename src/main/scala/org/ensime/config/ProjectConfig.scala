@@ -16,7 +16,7 @@ object ProjectConfig {
    * Create a ProjectConfig instance from the given
    * SExp property list.
    */
-  def apply(config: SExpList) = {
+  def fromSExp(config: SExpList) = {
     import ExternalConfigInterface._
 
     val m = config.toKeywordMap
@@ -33,11 +33,13 @@ object ProjectConfig {
     val compileDeps = new mutable.HashSet[CanonFile]
     val classDirs = new mutable.HashSet[CanonFile]
     var target: Option[CanonFile] = None
+    var projectName: Option[String] = None
 
     m.get(key(":use-sbt")) match {
       case Some(TruthAtom()) => {
         println("Using sbt configuration..")
         val ext = getSbtConfig(rootDir)
+        projectName = ext.projectName
         sourceRoots ++= ext.sourceRoots
         runtimeDeps ++= ext.runtimeDepJars
         compileDeps ++= ext.compileDepJars
@@ -51,6 +53,7 @@ object ProjectConfig {
       case Some(TruthAtom()) => {
         println("Using maven configuration..")
         val ext = getMavenConfig(rootDir)
+        projectName = ext.projectName
         sourceRoots ++= ext.sourceRoots
         runtimeDeps ++= ext.runtimeDepJars
         compileDeps ++= ext.compileDepJars
@@ -166,6 +169,7 @@ object ProjectConfig {
     }
 
     new ProjectConfig(
+      projectName,
       rootDir, sourceRoots, runtimeDeps,
       compileDeps, classDirs, target,
       formatPrefs)
@@ -193,7 +197,7 @@ object ProjectConfig {
     }
   }
 
-  def nullConfig = new ProjectConfig(new File("."), List(),
+  def nullConfig = new ProjectConfig(None, new File("."), List(),
     List(), List(), List(), None, Map())
 
   def getJavaHome(): Option[File] = {
@@ -228,6 +232,7 @@ class ReplConfig(val classpath: String) {}
 class DebugConfig(val classpath: String, val sourcepath: String) {}
 
 class ProjectConfig(
+  val name: Option[String],
   val root: CanonFile,
   val sourceRoots: Iterable[CanonFile],
   val runtimeDeps: Iterable[CanonFile],

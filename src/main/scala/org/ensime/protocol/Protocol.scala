@@ -60,6 +60,15 @@ trait Protocol extends ProtocolConversions{
 
 
   /**
+  * Load an ENSIME config file.
+  * 
+  * @param  f  File to load from.
+  * @return        Void
+  */   
+  def loadConfig(f: File): Either[Exception, ProjectConfig]
+
+
+  /**
   * Send a string to the client editor, to be displayed 
   * to the user. This is to be used for non-critical messaging
   * that the user may choose to ignore.
@@ -140,6 +149,7 @@ trait Protocol extends ProtocolConversions{
   */ 
   def sendConnectionInfo(callId:Int)
 
+
   /**
   * Send a notification that the interactive compiler is ready
   * to process queries. Editor should not allow commands until
@@ -163,6 +173,7 @@ trait Protocol extends ProtocolConversions{
 }
 
 trait ProtocolConversions{
+  def toWF(config: ProjectConfig):WireFormat
   def toWF(config:ReplConfig):WireFormat
   def toWF(config:DebugConfig):WireFormat
   def toWF(unit:DebugUnit):WireFormat

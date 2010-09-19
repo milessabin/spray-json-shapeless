@@ -8,10 +8,11 @@ import org.apache.tools.ant._
 import org.ensime.util._
 import org.ensime.util.FileUtils._
 import scala.collection.JavaConversions._
-import java.util.Properties;
+import java.util.Properties
 
 
 case class ExternalConfig(
+  val projectName: Option[String],
   val sourceRoots: Iterable[CanonFile],
   val runtimeDepJars: Iterable[CanonFile],
   val compileDepJars: Iterable[CanonFile],
@@ -29,7 +30,7 @@ object ExternalConfigInterface {
     val f = new File(baseDir, "target/classes")
     val buildTarget = if (f.exists) { Some(toCanonFile(f)) } else { None }
 
-    ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
+    ExternalConfig(None, srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
   def resolveMavenDeps(baseDir: File, scopes: String): Iterable[CanonFile] = {
@@ -85,7 +86,7 @@ object ExternalConfigInterface {
     val compileDeps = compileConf.map(resolve(_)).getOrElse(defaultDeps)
     val testDeps = testConf.map(resolve(_)).getOrElse(defaultDeps)
 
-    ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, None)
+    ExternalConfig(None,srcDirs, runtimeDeps, compileDeps, testDeps, None)
   }
 
   def resolveIvyDeps(baseDir: File, ivyFile: Option[File], conf: String): Iterable[CanonFile] = {
@@ -132,9 +133,12 @@ object ExternalConfigInterface {
 
     if (isMain || isSubProject) {
       val propFile = if (isSubProject) { parentProjectProps } else { projectProps }
+
       println("Loading sbt build.properties from " + propFile + ".")
-      val sbtConfig = SbtConfigParser(propFile)
-      val v = sbtConfig.buildScalaVersion
+      val props = JavaProperties.load(propFile)
+
+      val v = props.get("build.scala.versions").map(_.toString).getOrElse("2.8.0")
+      val projName = props.get("project.name").map(_.toString)
 
       val runtimeDeps = resolveSbtDeps(baseDir, v, "runtime", isSubProject)
       val compileDeps = resolveSbtDeps(baseDir, v, "compile", isSubProject)
@@ -142,10 +146,10 @@ object ExternalConfigInterface {
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if (f.exists) { Some(toCanonFile(f)) } else { None }
-      ExternalConfig(srcDirs, runtimeDeps, compileDeps, testDeps, target)
+      ExternalConfig(projName,srcDirs, runtimeDeps, compileDeps, testDeps, target)
     } else {
       System.err.println("Could not locate build.properties file!")
-      ExternalConfig(srcDirs, List(), List(), List(), None)
+      ExternalConfig(None,srcDirs, List(), List(), List(), None)
     }
   }
 
