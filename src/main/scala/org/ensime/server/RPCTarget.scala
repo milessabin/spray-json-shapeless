@@ -14,15 +14,9 @@ trait RPCTarget { self: Project =>
 
   import protocol._
 
-  def rpcInitProject(f: File, callId: Int) {
-    val config = protocol.loadConfig(f)
-    config match{
-      case Right(conf) => {
-	initProject(conf)
-	sendRPCReturn(toWF(conf), callId)
-     }
-      case Left(e) => throw e
-    }
+  def rpcInitProject(conf: ProjectConfig, callId: Int) {
+    initProject(conf)
+    sendRPCReturn(toWF(conf), callId)
   }
 
   def rpcReplConfig(callId: Int) {
@@ -164,7 +158,7 @@ trait RPCTarget { self: Project =>
       FileUtils.rewriteFiles(rewriteList) match {
         case Right(Right(())) => sendRPCAckOK(callId)
         case Right(Left(e)) =>
-          sendRPCError("ATTENTION! Possibly incomplete write of change-set caused by: " + e, callId)
+        sendRPCError("ATTENTION! Possibly incomplete write of change-set caused by: " + e, callId)
         case Left(e) => sendRPCError("Could not write any formatting changes: " + e, callId)
       }
     } catch {

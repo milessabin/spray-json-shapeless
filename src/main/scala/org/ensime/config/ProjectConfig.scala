@@ -145,6 +145,8 @@ object ProjectConfig {
       case _ =>
     }
 
+    projectName = projectName.orElse(m.get(key(":project-name")).map(_.toString))
+
     val formatPrefs: Map[Symbol, Any] = m.get(key(":formatting-prefs")) match {
       case Some(list: SExpList) => {
         list.toKeywordMap.map {

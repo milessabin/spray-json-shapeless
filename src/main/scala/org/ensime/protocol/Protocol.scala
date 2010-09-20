@@ -60,15 +60,6 @@ trait Protocol extends ProtocolConversions{
 
 
   /**
-  * Load an ENSIME config file.
-  * 
-  * @param  f  File to load from.
-  * @return        Void
-  */   
-  def loadConfig(f: File): Either[Exception, ProjectConfig]
-
-
-  /**
   * Send a string to the client editor, to be displayed 
   * to the user. This is to be used for non-critical messaging
   * that the user may choose to ignore.

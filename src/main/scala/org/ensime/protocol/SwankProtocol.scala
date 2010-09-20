@@ -71,23 +71,6 @@ trait SwankProtocol extends Protocol {
     }
   }
 
-  def loadConfig(f: File): Either[Exception, ProjectConfig] = {
-    try {
-      val fis = new FileInputStream(f)
-      try {
-        val reader = input.StreamReader(new InputStreamReader(fis))
-        SExp.read(reader) match {
-          case s: SExpList => Right(ProjectConfig.fromSExp(s))
-          case _ => Left(new RuntimeException("Could not read valid SExp from config file, " + f))
-        }
-      } finally {
-        fis.close();
-      }
-    } catch {
-      case e => Left(new RuntimeException("Unable to load config file, " + f + ". " + e))
-    }
-  }
-
   def sendBackgroundMessage(msg: String) {
     sendMessage(SExp(
 	key(":background-message"),
@@ -147,8 +130,9 @@ trait SwankProtocol extends Protocol {
       }
       case "swank:init-project" => {
         form match {
-          case SExpList(head ::(file: StringAtom) :: body) => {
-            rpcTarget.rpcInitProject(new File(file.value), callId)
+          case SExpList(head ::(conf: SExpList) :: body) => {
+	    val config = ProjectConfig.fromSExp(conf)
+            rpcTarget.rpcInitProject(config, callId)
           }
           case _ => oops
         }
@@ -458,7 +442,7 @@ trait SwankProtocol extends Protocol {
 
   def toWF(config: ProjectConfig): SExp = {
     SExp(
-      key(":name"), config.name.map(StringAtom).getOrElse('nil))
+      key(":project-name"), config.name.map(StringAtom).getOrElse('nil))
   }
 
   def toWF(config: ReplConfig): SExp = {
