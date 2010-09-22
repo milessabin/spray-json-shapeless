@@ -67,8 +67,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
               if (awaitingInitialCompile) {
-                project ! RPCErrorEvent(
-                  "Analyzer is not ready! Please wait.", callId)
+                project ! RPCErrorEvent("Analyzer is not ready! Please wait.", callId)
               } else {
                 req match {
                   case ReloadAllReq() => {
