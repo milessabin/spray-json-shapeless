@@ -158,9 +158,10 @@ object ExternalConfigInterface {
     println("Resolving sbt dependencies...")
     println("Using build config '" + conf + "'")
 
-    // Recreate the default sbt classpaths
+    // Recreate the default sbt classpaths.
+    // Except we include 'test' in the compile configuration, since ENSIME needs to analyze test sources..
     val confs = conf match {
-      case "compile" => List("compile", "default", "provided", "optional")
+      case "compile" => List("compile", "default", "provided", "optional", "test")
       case "runtime" => List("compile", "default", "provided", "optional", "runtime")
       case "test" => List("compile", "default", "provided", "optional", "runtime", "test")
     }

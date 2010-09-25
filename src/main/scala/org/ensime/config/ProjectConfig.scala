@@ -43,7 +43,6 @@ object ProjectConfig {
         sourceRoots ++= ext.sourceRoots
         runtimeDeps ++= ext.runtimeDepJars
         compileDeps ++= ext.compileDepJars
-        compileDeps ++= ext.testDepJars
         target = ext.target
       }
       case _ =>
@@ -299,8 +298,8 @@ class ProjectConfig(
   }
 
   def runtimeClasspath: String = {
-    val allFiles = compileDeps ++ runtimeDeps ++ classDirs ++ target
-    val paths = allFiles.map(_.getPath).toSet
+    val deps = runtimeDeps ++ classDirs ++ target
+    val paths = deps.map(_.getPath).toSet
     paths.mkString(File.pathSeparator)
   }
 
