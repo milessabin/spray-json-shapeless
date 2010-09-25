@@ -140,8 +140,8 @@ object ExternalConfigInterface {
       val v = props.get("build.scala.versions").map(_.toString).getOrElse("2.8.0")
       val projName = props.get("project.name").map(_.toString)
 
-      val runtimeDeps = resolveSbtDeps(baseDir, v, "runtime", isSubProject)
       val compileDeps = resolveSbtDeps(baseDir, v, "compile", isSubProject)
+      val runtimeDeps = resolveSbtDeps(baseDir, v, "runtime", isSubProject)
       val testDeps = resolveSbtDeps(baseDir, v, "test", isSubProject)
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
@@ -154,19 +154,25 @@ object ExternalConfigInterface {
   }
 
   def resolveSbtDeps(baseDir: File, scalaVersion: String, conf: String, isSubProject: Boolean): Iterable[CanonFile] = {
+
     println("Resolving sbt dependencies...")
     println("Using build config '" + conf + "'")
+
+    // Recreate the default sbt classpaths
+    val confs = conf match {
+      case "compile" => List("compile", "default", "provided", "optional")
+      case "runtime" => List("compile", "default", "provided", "optional", "runtime")
+      case "test" => List("compile", "default", "provided", "optional", "runtime", "test")
+    }
+
     val v = scalaVersion
     val unmanagedLibDir = "lib"
-    val managedLibDir = "lib_managed/scala_" + v + "/" + conf
-    val defaultManagedLibDir = "lib_managed/scala_" + v + "/default"
+    val managedDirs = confs.map{ c => "lib_managed/scala_" + v + "/" + c }
     val scalaLibDir = if (isSubProject) { "../project/boot/scala-" + v + "/lib" }
     else { "project/boot/scala-" + v + "/lib" }
-    println("Using base directory " + baseDir)
-    println("Searching for dependencies in " + unmanagedLibDir)
-    println("Searching for dependencies in " + managedLibDir)
-    println("Searching for dependencies in " + scalaLibDir)
-    var jarRoots = maybeDirs(List(unmanagedLibDir, managedLibDir, defaultManagedLibDir, scalaLibDir), baseDir)
+    val jarDirs = unmanagedLibDir :: scalaLibDir :: managedDirs
+    println("Searching for dependencies in " + jarDirs)
+    var jarRoots = maybeDirs(jarDirs, baseDir)
     val jars = expandRecursively(baseDir, jarRoots, isValidJar _)
     jars
   }
