@@ -8,6 +8,8 @@ import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
 import scala.tools.nsc.{ Settings }
+import scala.tools.refactoring.common.Change
+import scala.collection.mutable.{LinkedHashMap}
 
 case class SendBackgroundMessageEvent(msg: String)
 case class RPCResultEvent(value: WireFormat, callId: Int)
@@ -34,6 +36,10 @@ case class TypeByNameAtPointReq(name: String, file: File, point: Int)
 case class CallCompletionReq(id: Int)
 case class TypeAtPointReq(file: File, point: Int)
 
+case class PushUndo(summary: String, changes: List[Change])
+case class Undo(id: Int, summary: String, changes: Iterable[Change])
+case class UndoResult(id: Int, touched: Iterable[File])
+
 class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protocol.setRPCTarget(this)
@@ -42,6 +48,9 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   protected var builder: Option[Actor] = None
   protected var config: ProjectConfig = ProjectConfig.nullConfig
   protected var debugInfo: Option[ProjectDebugInfo] = None
+
+  private var undoCounter = 0
+  private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]
 
   def act() {
     println("Project waiting for init...")
@@ -60,6 +69,9 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           case result: TypeCheckResultEvent => {
             protocol.sendTypeCheckResult(result.notes)
           }
+          case PushUndo(sum, changes) => {
+	    pushUndo(sum, changes)
+          }
           case RPCResultEvent(value, callId) => {
             protocol.sendRPCReturn(value, callId)
           }
@@ -75,10 +87,34 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
   }
 
+  protected def pushUndo(sum: String, changes: Iterable[Change]) {
+    undoCounter += 1
+    undos(undoCounter) = Undo(undoCounter, sum, changes)
+  }
+
+  protected def peekUndo():Option[Undo] = {
+    undos.lastOption.map{_._2}
+  }
+
+  protected def popUndo(undoId: Int):Either[String,UndoResult] = {
+    undos.get(undoId) match {
+      case Some(u) => {
+	undos.remove(u.id)
+	FileUtils.writeChanges(u.changes) match{
+	  case Right(touched) => Right(UndoResult(undoId, touched))
+	  case Left(e) => Left(e.getMessage())
+	}
+      }
+      case _ => Left("No such undo.")
+    }
+  }
+
   protected def initProject(conf: ProjectConfig) {
     this.config = conf;
     restartCompiler
     shutdownBuilder
+    undos.clear
+    undoCounter = 0
   }
 
   protected def restartCompiler() {

@@ -19,6 +19,20 @@ trait RPCTarget { self: Project =>
     sendRPCReturn(toWF(conf), callId)
   }
 
+  def rpcPeekUndo(callId: Int) {
+    peekUndo match{
+      case Some(u) => sendRPCReturn(toWF(u), callId)
+      case None => sendRPCReturn(toWF(null), callId)
+    }
+  }
+
+  def rpcPopUndo(undoId: Int, callId: Int) {
+    popUndo(undoId) match{
+      case Right(result) => sendRPCReturn(toWF(result), callId)
+      case Left(msg) => sendRPCError(msg, callId)
+    }
+  }
+
   def rpcReplConfig(callId: Int) {
     sendRPCReturn(toWF(this.config.replConfig), callId)
   }

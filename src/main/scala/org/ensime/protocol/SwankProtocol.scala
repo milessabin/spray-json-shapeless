@@ -136,6 +136,17 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+      case "swank:peek-undo" => {
+        rpcTarget.rpcPeekUndo(callId)
+      }
+      case "swank:pop-undo" => {
+        form match {
+          case SExpList(head ::(IntAtom(id)) :: body) => {
+            rpcTarget.rpcPopUndo(id, callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:repl-config" => {
         rpcTarget.rpcReplConfig(callId)
       }
@@ -610,6 +621,19 @@ trait SwankProtocol extends Protocol {
     SExp.propList(
       (":procedure-id", value.procedureId),
       (":refactor-type", value.refactorType),
+      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
+  }
+
+  def toWF(value: Undo): SExp = {
+    SExp.propList(
+      (":id", value.id),
+      (":changes", SExpList(value.changes.map(changeToWF))),
+      (":summary", value.summary))
+  }
+
+  def toWF(value: UndoResult): SExp = {
+    SExp.propList(
+      (":id", value.id),
       (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
   }
 
