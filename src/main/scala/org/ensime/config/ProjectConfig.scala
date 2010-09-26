@@ -282,12 +282,13 @@ class ProjectConfig(
 
   def compilerArgs = List(
     "-classpath", compilerClasspath,
-    "-verbose",
-    sourceFilenames.mkString(" ")
+    "-sourcepath", sourcepath,
+    "-verbose"
     )
 
   def builderArgs = List(
     "-classpath", compilerClasspath,
+    "-sourcepath", sourcepath,
     "-verbose",
     "-d", target.getOrElse(new File(root, "classes")).getPath,
     sourceFilenames.mkString(" ")
@@ -303,17 +304,17 @@ class ProjectConfig(
     paths.mkString(File.pathSeparator)
   }
 
+  def sourcepath = {
+    sourceRoots.map(_.getPath).toSet.mkString(File.pathSeparator)
+  }
+
   def replClasspath = runtimeClasspath
 
   def debugClasspath = runtimeClasspath
 
-  def debugSourcepath = {
-    sourceRoots.map(_.getPath).toSet.mkString(File.pathSeparator)
-  }
-
   def replConfig = new ReplConfig(replClasspath)
 
-  def debugConfig = new DebugConfig(debugClasspath, debugSourcepath)
+  def debugConfig = new DebugConfig(debugClasspath, sourcepath)
 
 }
 

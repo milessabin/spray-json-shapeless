@@ -21,3 +21,4 @@ dist
 .emacs_clean.el
 etc/pres_compiler.txt
 etc/_region_.tex
+scratch

@@ -22,7 +22,12 @@ case class ExternalConfig(
 object ExternalConfigInterface {
 
   def getMavenConfig(baseDir: File): ExternalConfig = {
-    val srcDirs = maybeDirs(List("src"), baseDir)
+    val srcPaths = maybeDirs(List(
+	"src/main/scala",
+	"src/main/java",
+	"src/test/scala",
+	"src/test/java"
+      ), baseDir)
     val runtimeDeps = resolveMavenDeps(baseDir, "runtime")
     val compileDeps = resolveMavenDeps(baseDir, "compile")
     val testDeps = resolveMavenDeps(baseDir, "test")
@@ -30,7 +35,7 @@ object ExternalConfigInterface {
     val f = new File(baseDir, "target/classes")
     val buildTarget = if (f.exists) { Some(toCanonFile(f)) } else { None }
 
-    ExternalConfig(None, srcDirs, runtimeDeps, compileDeps, testDeps, buildTarget)
+    ExternalConfig(None, srcPaths, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
   def resolveMavenDeps(baseDir: File, scopes: String): Iterable[CanonFile] = {
@@ -77,7 +82,13 @@ object ExternalConfigInterface {
     runtimeConf: Option[String],
     compileConf: Option[String],
     testConf: Option[String]): ExternalConfig = {
-    val srcDirs = maybeDirs(List("src"), baseDir)
+
+    val srcPaths = maybeDirs(List(
+	"src/main/scala",
+	"src/main/java",
+	"src/test/scala",
+	"src/test/java"
+      ), baseDir)
 
     val resolve = { c: String => resolveIvyDeps(baseDir, ivyFile, c) }
 
@@ -86,7 +97,7 @@ object ExternalConfigInterface {
     val compileDeps = compileConf.map(resolve(_)).getOrElse(defaultDeps)
     val testDeps = testConf.map(resolve(_)).getOrElse(defaultDeps)
 
-    ExternalConfig(None,srcDirs, runtimeDeps, compileDeps, testDeps, None)
+    ExternalConfig(None,srcPaths, runtimeDeps, compileDeps, testDeps, None)
   }
 
   def resolveIvyDeps(baseDir: File, ivyFile: Option[File], conf: String): Iterable[CanonFile] = {
@@ -124,7 +135,14 @@ object ExternalConfigInterface {
   }
 
   def getSbtConfig(baseDir: File): ExternalConfig = {
-    val srcDirs = maybeDirs(List("src"), baseDir)
+
+    val srcPaths = maybeDirs(List(
+	"src/main/scala",
+	"src/main/java",
+	"src/test/scala",
+	"src/test/java"
+      ), baseDir)
+
     val projectProps = new File(baseDir, "project/build.properties")
     val parentProjectProps = new File(baseDir, "../project/build.properties")
 
@@ -146,10 +164,10 @@ object ExternalConfigInterface {
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if (f.exists) { Some(toCanonFile(f)) } else { None }
-      ExternalConfig(projName,srcDirs, runtimeDeps, compileDeps, testDeps, target)
+      ExternalConfig(projName,srcPaths, runtimeDeps, compileDeps, testDeps, target)
     } else {
       System.err.println("Could not locate build.properties file!")
-      ExternalConfig(None,srcDirs, List(), List(), List(), None)
+      ExternalConfig(None,srcPaths, List(), List(), List(), None)
     }
   }
 
