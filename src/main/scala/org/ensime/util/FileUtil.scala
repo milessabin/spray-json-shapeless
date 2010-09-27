@@ -45,20 +45,20 @@ object FileUtils {
 
   def expandRecursively(rootDir: File, fileList: Iterable[File], isValid: (File => Boolean)): Set[CanonFile] = {
     (for (
-      f <- fileList;
-      val files = if (f.isAbsolute) f.andTree else (new File(rootDir, f.getPath)).andTree;
-      file <- files if isValid(file)
-    ) yield { toCanonFile(file) }).toSet
+	f <- fileList;
+	val files = if (f.isAbsolute) f.andTree else (new File(rootDir, f.getPath)).andTree;
+	file <- files if isValid(file)
+      ) yield { toCanonFile(file) }).toSet
   }
 
   def expand(rootDir: File, fileList: Iterable[File], isValid: (File => Boolean)): Set[CanonFile] = {
     (for (
-      f <- fileList;
-      val files = List(if (f.isAbsolute) f else (new File(rootDir, f.getPath)));
-      file <- files if isValid(file)
-    ) yield {
-      toCanonFile(file)
-    }).toSet
+	f <- fileList;
+	val files = List(if (f.isAbsolute) f else (new File(rootDir, f.getPath)));
+	file <- files if isValid(file)
+      ) yield {
+	toCanonFile(file)
+      }).toSet
   }
 
   def maybeDirs(names: Iterable[String], baseDir: File): Iterable[CanonFile] = {
@@ -127,6 +127,30 @@ object FileUtils {
     }
   }
 
+  // Note: we assume changes do not overlap
+  def inverseChanges(changes: Iterable[Change]): List[Change] = {
+    val result = new mutable.ListBuffer[Change]
+    val changesByFile = changes.groupBy(_.file.file)
+    val rewriteList = changesByFile.map {
+      case (file, changes) => {
+        readFile(file) match {
+          case Right(contents) => {
+	    var dy = 0
+            for(ch <- changes){
+	      val original = contents.substring(ch.from, ch.to)
+	      val from = ch.from + dy
+	      val to = from + ch.text.length
+	      result += Change(ch.file, from, to, original)
+	      dy += ch.text.length - original.length
+	    }
+          }
+          case Left(e) => 
+        }
+      }
+    }
+    result.toList
+  }
+
   def writeChanges(changes: Iterable[Change]): Either[Exception, Iterable[File]] = {
     val changesByFile = changes.groupBy(_.file.file)
     try {
@@ -144,7 +168,7 @@ object FileUtils {
       rewriteFiles(rewriteList) match {
         case Right(Right(())) => Right(changesByFile.keys)
         case Right(Left(e)) => Left(new IllegalStateException(
-          "Possibly incomplete write of change-set caused by: " + e))
+            "Possibly incomplete write of change-set caused by: " + e))
         case Left(e) => Left(e)
       }
     } catch {
@@ -153,10 +177,10 @@ object FileUtils {
   }
 
   /**
-   * For each (f,s) pair, replace the contents of f with s. If any errors occurs
-   * before any disk writes, return Left(exception). If  an error occurs DURING
-   * disk writes, return Right(Left(exception)). Otherwise, return Right(Right(()))
-   */
+  * For each (f,s) pair, replace the contents of f with s. If any errors occurs
+  * before any disk writes, return Left(exception). If  an error occurs DURING
+  * disk writes, return Right(Left(exception)). Otherwise, return Right(Right(()))
+  */
   def rewriteFiles(changes: Iterable[(File, String)]): Either[Exception, Either[Exception, Unit]] = {
     val touchedFiles = new mutable.ListBuffer[File]
     try {
@@ -172,21 +196,21 @@ object FileUtils {
       }
 
       // Apply the changes. An error here may result in a corrupt disk state :(
-      changes.foreach {
-        case (file, newContents) => {
-          replaceFileContents(file, newContents) match {
-            case Right(_) => {}
-            case Left(e) => Right(Left(e))
+	changes.foreach {
+          case (file, newContents) => {
+            replaceFileContents(file, newContents) match {
+              case Right(_) => {}
+              case Left(e) => Right(Left(e))
+            }
           }
-        }
+	}
+
+	Right(Right(()))
+
+      } catch {
+	case e: Exception => Left(e)
       }
-
-      Right(Right(()))
-
-    } catch {
-      case e: Exception => Left(e)
     }
-  }
 
-}
+  }
 

@@ -36,9 +36,10 @@ case class TypeByNameAtPointReq(name: String, file: File, point: Int)
 case class CallCompletionReq(id: Int)
 case class TypeAtPointReq(file: File, point: Int)
 
-case class PushUndo(summary: String, changes: List[Change])
+case class AddUndo(summary: String, changes: List[Change])
 case class Undo(id: Int, summary: String, changes: Iterable[Change])
 case class UndoResult(id: Int, touched: Iterable[File])
+case class UndoSummary(id: Int, summary: String, toBeTouched: Iterable[File])
 
 class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
@@ -69,8 +70,8 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           case result: TypeCheckResultEvent => {
             protocol.sendTypeCheckResult(result.notes)
           }
-          case PushUndo(sum, changes) => {
-	    pushUndo(sum, changes)
+          case AddUndo(sum, changes) => {
+	    addUndo(sum, changes)
           }
           case RPCResultEvent(value, callId) => {
             protocol.sendRPCReturn(value, callId)
@@ -87,16 +88,18 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
   }
 
-  protected def pushUndo(sum: String, changes: Iterable[Change]) {
+  protected def addUndo(sum: String, changes: Iterable[Change]) {
     undoCounter += 1
-    undos(undoCounter) = Undo(undoCounter, sum, changes)
+    undos(undoCounter) = Undo(undoCounter, sum, FileUtils.inverseChanges(changes))
   }
 
-  protected def peekUndo():Option[Undo] = {
-    undos.lastOption.map{_._2}
+  protected def undosSummary():Iterable[UndoSummary] = {
+    undos.values.map{ u => 
+      UndoSummary(u.id, u.summary, u.changes.groupBy{_.file.file}.keys.toList)
+    }
   }
 
-  protected def popUndo(undoId: Int):Either[String,UndoResult] = {
+  protected def execUndo(undoId: Int):Either[String,UndoResult] = {
     undos.get(undoId) match {
       case Some(u) => {
 	undos.remove(u.id)

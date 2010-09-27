@@ -9,6 +9,8 @@ import scala.actors.Actor._
 import scala.collection.immutable
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
+import scala.tools.refactoring.common.Change
+import scala.tools.nsc.io.AbstractFile
 
 trait RPCTarget { self: Project =>
 
@@ -20,14 +22,11 @@ trait RPCTarget { self: Project =>
   }
 
   def rpcPeekUndo(callId: Int) {
-    peekUndo match{
-      case Some(u) => sendRPCReturn(toWF(u), callId)
-      case None => sendRPCReturn(toWF(null), callId)
-    }
+    sendRPCReturn(toWF(undosSummary), callId)
   }
 
-  def rpcPopUndo(undoId: Int, callId: Int) {
-    popUndo(undoId) match{
+  def rpcExecUndo(undoId: Int, callId: Int) {
+    execUndo(undoId) match{
       case Right(result) => sendRPCReturn(toWF(result), callId)
       case Left(msg) => sendRPCError(msg, callId)
     }
@@ -160,19 +159,18 @@ trait RPCTarget { self: Project =>
   def rpcFormatFiles(filenames: Iterable[String], callId: Int) {
     val files = filenames.map { new File(_) }
     try {
-      val rewriteList = files.map { f =>
+      val changeList = files.map { f =>
         FileUtils.readFile(f) match {
           case Right(contents) => {
             val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
-            (f, formatted)
+	    Change(AbstractFile.getFile(f), 0, contents.length, formatted)
           }
           case Left(e) => throw e
         }
       }
-      FileUtils.rewriteFiles(rewriteList) match {
-        case Right(Right(())) => sendRPCAckOK(callId)
-        case Right(Left(e)) =>
-        sendRPCError("ATTENTION! Possibly incomplete write of change-set caused by: " + e, callId)
+      addUndo("Formatted source of " + filenames + ".", changeList)
+      FileUtils.writeChanges(changeList) match {
+        case Right(_) => sendRPCAckOK(callId)
         case Left(e) => sendRPCError("Could not write any formatting changes: " + e, callId)
       }
     } catch {

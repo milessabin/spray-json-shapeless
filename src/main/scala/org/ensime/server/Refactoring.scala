@@ -72,11 +72,10 @@ trait RefactoringController { self: Analyzer =>
   def handleRefactorExec(req: RefactorExecReq, callId: Int) {
     val procedureId = req.procedureId
     val effect = effects(procedureId)
+    project ! AddUndo("Refactoring of type: " + req.refactorType, effect.changes.toList)
     val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
     result match {
       case Right(result) => {
-	project ! PushUndo(
-	  "Refactoring of type: " + req.refactorType, effect.changes.toList)
 	project ! RPCResultEvent(toWF(result), callId)
       }
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
