@@ -7,10 +7,10 @@ import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.immutable
+import scala.tools.nsc.io.AbstractFile
+import scala.tools.refactoring.common.Change
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
-import scala.tools.refactoring.common.Change
-import scala.tools.nsc.io.AbstractFile
 
 trait RPCTarget { self: Project =>
 
@@ -22,11 +22,14 @@ trait RPCTarget { self: Project =>
   }
 
   def rpcPeekUndo(callId: Int) {
-    sendRPCReturn(toWF(undosSummary), callId)
+    peekUndo match {
+      case Right(result) => sendRPCReturn(toWF(result), callId)
+      case Left(msg) => sendRPCError(msg, callId)
+    }
   }
 
   def rpcExecUndo(undoId: Int, callId: Int) {
-    execUndo(undoId) match{
+    execUndo(undoId) match {
       case Right(result) => sendRPCReturn(toWF(result), callId)
       case Left(msg) => sendRPCError(msg, callId)
     }
@@ -103,7 +106,7 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(TypeCompletionReq(new File(f), point, prefix), callId)
   }
 
-  def rpcPackageMemberCompletion(path:String, prefix: String, callId: Int) {
+  def rpcPackageMemberCompletion(path: String, prefix: String, callId: Int) {
     analyzer ! RPCRequestEvent(PackageMemberCompletionReq(path, prefix), callId)
   }
 
@@ -114,7 +117,6 @@ trait RPCTarget { self: Project =>
   def rpcInspectTypeById(id: Int, callId: Int) {
     analyzer ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
   }
-
 
   def rpcSymbolAtPoint(f: String, point: Int, callId: Int) {
     analyzer ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
@@ -128,7 +130,7 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(TypeByNameReq(name), callId)
   }
 
-  def rpcTypeByNameAtPoint(name: String, f:String, point:Int, callId: Int) {
+  def rpcTypeByNameAtPoint(name: String, f: String, point: Int, callId: Int) {
     analyzer ! RPCRequestEvent(TypeByNameAtPointReq(name, new File(f), point), callId)
   }
 
@@ -163,18 +165,21 @@ trait RPCTarget { self: Project =>
         FileUtils.readFile(f) match {
           case Right(contents) => {
             val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
-	    Change(AbstractFile.getFile(f), 0, contents.length, formatted)
+            Change(AbstractFile.getFile(f), 0, contents.length, formatted)
           }
           case Left(e) => throw e
         }
       }
-      addUndo("Formatted source of " + filenames + ".", changeList)
+      addUndo("Formatted source of " + filenames.mkString(", ") + ".", 
+	FileUtils.inverseChanges(changeList))
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
-        case Left(e) => sendRPCError("Could not write any formatting changes: " + e, callId)
+        case Left(e) =>
+          sendRPCError("Could not write any formatting changes: " + e, callId)
       }
     } catch {
-      case e: ScalaParserException => sendRPCError("Cannot format broken syntax: " + e, callId)
+      case e: ScalaParserException =>
+        sendRPCError("Cannot format broken syntax: " + e, callId)
     }
 
   }

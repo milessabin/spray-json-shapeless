@@ -9,7 +9,7 @@ import scala.actors._
 import scala.actors.Actor._
 import scala.tools.nsc.{ Settings }
 import scala.tools.refactoring.common.Change
-import scala.collection.mutable.{LinkedHashMap}
+import scala.collection.mutable.{ LinkedHashMap }
 
 case class SendBackgroundMessageEvent(msg: String)
 case class RPCResultEvent(value: WireFormat, callId: Int)
@@ -39,7 +39,6 @@ case class TypeAtPointReq(file: File, point: Int)
 case class AddUndo(summary: String, changes: List[Change])
 case class Undo(id: Int, summary: String, changes: Iterable[Change])
 case class UndoResult(id: Int, touched: Iterable[File])
-case class UndoSummary(id: Int, summary: String, toBeTouched: Iterable[File])
 
 class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
@@ -71,7 +70,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
             protocol.sendTypeCheckResult(result.notes)
           }
           case AddUndo(sum, changes) => {
-	    addUndo(sum, changes)
+            addUndo(sum, changes)
           }
           case RPCResultEvent(value, callId) => {
             protocol.sendRPCReturn(value, callId)
@@ -90,23 +89,24 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected def addUndo(sum: String, changes: Iterable[Change]) {
     undoCounter += 1
-    undos(undoCounter) = Undo(undoCounter, sum, FileUtils.inverseChanges(changes))
+    undos(undoCounter) = Undo(undoCounter, sum, changes)
   }
 
-  protected def undosSummary():Iterable[UndoSummary] = {
-    undos.values.map{ u => 
-      UndoSummary(u.id, u.summary, u.changes.groupBy{_.file.file}.keys.toList)
+  protected def peekUndo(): Either[String, Undo] = {
+    undos.lastOption match {
+      case Some(u) => Right(u._2)
+      case _ => Left("No such undo.")
     }
   }
 
-  protected def execUndo(undoId: Int):Either[String,UndoResult] = {
+  protected def execUndo(undoId: Int): Either[String, UndoResult] = {
     undos.get(undoId) match {
       case Some(u) => {
-	undos.remove(u.id)
-	FileUtils.writeChanges(u.changes) match{
-	  case Right(touched) => Right(UndoResult(undoId, touched))
-	  case Left(e) => Left(e.getMessage())
-	}
+        undos.remove(u.id)
+        FileUtils.writeChanges(u.changes) match {
+          case Right(touched) => Right(UndoResult(undoId, touched))
+          case Left(e) => Left(e.getMessage())
+        }
       }
       case _ => Left("No such undo.")
     }

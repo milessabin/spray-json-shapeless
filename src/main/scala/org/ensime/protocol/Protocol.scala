@@ -190,6 +190,4 @@ trait ProtocolConversions{
   def toWF(value:Undo):WireFormat
   def toWF(value:UndoResult):WireFormat
   def toWF(value: Null): WireFormat
-  def toWF(values: Iterable[UndoSummary]): WireFormat
-  def toWF(value: UndoSummary): WireFormat
 }
