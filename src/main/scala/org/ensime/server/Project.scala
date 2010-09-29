@@ -113,7 +113,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def initProject(conf: ProjectConfig) {
-    this.config = conf;
+    this.config = conf
     restartCompiler
     shutdownBuilder
     undos.clear
