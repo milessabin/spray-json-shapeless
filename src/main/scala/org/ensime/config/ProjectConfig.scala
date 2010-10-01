@@ -56,7 +56,6 @@ object ProjectConfig {
         sourceRoots ++= ext.sourceRoots
         runtimeDeps ++= ext.runtimeDepJars
         compileDeps ++= ext.compileDepJars
-        compileDeps ++= ext.testDepJars
         target = ext.target
       }
       case _ =>

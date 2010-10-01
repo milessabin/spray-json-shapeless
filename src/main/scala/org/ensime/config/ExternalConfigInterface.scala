@@ -10,7 +10,6 @@ import org.ensime.util.FileUtils._
 import scala.collection.JavaConversions._
 import java.util.Properties
 
-
 case class ExternalConfig(
   val projectName: Option[String],
   val sourceRoots: Iterable[CanonFile],
@@ -23,11 +22,10 @@ object ExternalConfigInterface {
 
   def getMavenConfig(baseDir: File): ExternalConfig = {
     val srcPaths = maybeDirs(List(
-	"src/main/scala",
-	"src/main/java",
-	"src/test/scala",
-	"src/test/java"
-      ), baseDir)
+      "src/main/scala",
+      "src/main/java",
+      "src/test/scala",
+      "src/test/java"), baseDir)
     val runtimeDeps = resolveMavenDeps(baseDir, "runtime")
     val compileDeps = resolveMavenDeps(baseDir, "compile")
     val testDeps = resolveMavenDeps(baseDir, "test")
@@ -38,7 +36,15 @@ object ExternalConfigInterface {
     ExternalConfig(None, srcPaths, runtimeDeps, compileDeps, testDeps, buildTarget)
   }
 
-  def resolveMavenDeps(baseDir: File, scopes: String): Iterable[CanonFile] = {
+  def resolveMavenDeps(baseDir: File, conf: String): Iterable[CanonFile] = {
+
+    // Recreate the default maven classpaths.
+    val scopes = conf match {
+      case "compile" => "compile,provided,system,test"
+      case "runtime" => "compile,provided,system,runtime"
+      case "test" => "compile,provided,system,runtime,test"
+    }
+
     println("Resolving Maven dependencies...")
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
@@ -59,7 +65,7 @@ object ExternalConfigInterface {
     task.setOwningTarget(target)
     task.setProject(project)
     task.addPom(pom)
-    println("Using scopes: " + scopes)
+    println("Using conf: " + conf)
     task.setScopes(scopes)
     target.addTask(task)
 
@@ -84,11 +90,10 @@ object ExternalConfigInterface {
     testConf: Option[String]): ExternalConfig = {
 
     val srcPaths = maybeDirs(List(
-	"src/main/scala",
-	"src/main/java",
-	"src/test/scala",
-	"src/test/java"
-      ), baseDir)
+      "src/main/scala",
+      "src/main/java",
+      "src/test/scala",
+      "src/test/java"), baseDir)
 
     val resolve = { c: String => resolveIvyDeps(baseDir, ivyFile, c) }
 
@@ -97,7 +102,7 @@ object ExternalConfigInterface {
     val compileDeps = compileConf.map(resolve(_)).getOrElse(defaultDeps)
     val testDeps = testConf.map(resolve(_)).getOrElse(defaultDeps)
 
-    ExternalConfig(None,srcPaths, runtimeDeps, compileDeps, testDeps, None)
+    ExternalConfig(None, srcPaths, runtimeDeps, compileDeps, testDeps, None)
   }
 
   def resolveIvyDeps(baseDir: File, ivyFile: Option[File], conf: String): Iterable[CanonFile] = {
@@ -137,11 +142,10 @@ object ExternalConfigInterface {
   def getSbtConfig(baseDir: File): ExternalConfig = {
 
     val srcPaths = maybeDirs(List(
-	"src/main/scala",
-	"src/main/java",
-	"src/test/scala",
-	"src/test/java"
-      ), baseDir)
+      "src/main/scala",
+      "src/main/java",
+      "src/test/scala",
+      "src/test/java"), baseDir)
 
     val projectProps = new File(baseDir, "project/build.properties")
     val parentProjectProps = new File(baseDir, "../project/build.properties")
@@ -164,10 +168,10 @@ object ExternalConfigInterface {
 
       val f = new File(baseDir, "target/scala_" + v + "/classes")
       val target = if (f.exists) { Some(toCanonFile(f)) } else { None }
-      ExternalConfig(projName,srcPaths, runtimeDeps, compileDeps, testDeps, target)
+      ExternalConfig(projName, srcPaths, runtimeDeps, compileDeps, testDeps, target)
     } else {
       System.err.println("Could not locate build.properties file!")
-      ExternalConfig(None,srcPaths, List(), List(), List(), None)
+      ExternalConfig(None, srcPaths, List(), List(), List(), None)
     }
   }
 
@@ -186,7 +190,7 @@ object ExternalConfigInterface {
 
     val v = scalaVersion
     val unmanagedLibDir = "lib"
-    val managedDirs = confs.map{ c => "lib_managed/scala_" + v + "/" + c }
+    val managedDirs = confs.map { c => "lib_managed/scala_" + v + "/" + c }
     val scalaLibDir = if (isSubProject) { "../project/boot/scala-" + v + "/lib" }
     else { "project/boot/scala-" + v + "/lib" }
     val jarDirs = unmanagedLibDir :: scalaLibDir :: managedDirs
