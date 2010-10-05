@@ -45,7 +45,7 @@ object ExternalConfigInterface {
       case "test" => "compile,provided,system,runtime,test"
     }
 
-    println("Resolving Maven dependencies...")
+    println("\n\nResolving Maven dependencies for ensime config: " + conf)
     val project = new Project()
     project.addBuildListener(newConsoleLogger)
     project.setBaseDir(baseDir)
@@ -65,7 +65,7 @@ object ExternalConfigInterface {
     task.setOwningTarget(target)
     task.setProject(project)
     task.addPom(pom)
-    println("Using conf: " + conf)
+    println("Resolving with scopes: " + scopes)
     task.setScopes(scopes)
     target.addTask(task)
 
