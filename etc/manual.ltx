@@ -196,6 +196,7 @@ Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is
 \vspace{5 mm}
 
 
+
 \noindent
 {\bf :use-maven t}\\
 Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
@@ -297,7 +298,7 @@ Candidates can be scrolled with \emph{M-n} and \emph{M-p} or \emph{UP} and \emph
 
 \noindent
 \textbf{Invocation}:\\
-Double-clicking on a symbol in a Scala buffer, or typing \emph{C-c C-v i} while the point is over a symbol will launch the type inspector. Typing \emph{C-c C-v o} will open the inspector on the current project's main package. \emph{C-c C-v p} will inspect the package of the current source file. Use the command \emph{M-x ensime-inspect-by-path} to inspect an arbitrary type or package.\\
+Control+Right-Clicking on a symbol in a Scala buffer, or typing \emph{C-c C-v i} while the point is over a symbol will launch the type inspector. Typing \emph{C-c C-v o} will open the inspector on the current project's main package. \emph{C-c C-v p} will inspect the package of the current source file. Use the command \emph{M-x ensime-inspect-by-path} to inspect an arbitrary type or package.\\
 
 \noindent
 \textbf{Package Inspector}:\\
@@ -396,12 +397,12 @@ Start completing a method/variable.
 \vspace{5 mm}
 
 \noindent
-{\bf C-c C-v i  or  Double-Click}\\
+{\bf C-c C-v i  or  Control+Right-Click}\\
 Inspect the type of the expression under the cursor.
 \vspace{5 mm}
 
 \noindent
-{\bf M-.  or  Control-Click}\\
+{\bf M-.  or  Control+Left-Click}\\
 Jump to definition of symbol under cursor.
 \vspace{5 mm}
 
@@ -411,7 +412,7 @@ Pop back to previously visited position.
 \vspace{5 mm}
 
 \noindent
-{\bf Double-Click(on an imported package)}\\
+{\bf Control+Right-Click(on an imported package)}\\
 Inspect the package under cursor.
 \vspace{5 mm}
 
