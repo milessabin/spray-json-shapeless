@@ -20,6 +20,8 @@ case class SymbolInfoLight(
   val tpeId: Int,
   val isCallable: Boolean) {}
 
+case class ImportSuggestions(symLists: Iterable[Iterable[SymbolInfoLight]])
+
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
 class NamedTypeMemberInfoLight(override val name: String, val tpeSig: String, val tpeId: Int, val isCallable: Boolean) extends EntityInfo(name, List()) {}

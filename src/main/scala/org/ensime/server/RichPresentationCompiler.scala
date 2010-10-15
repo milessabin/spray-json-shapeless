@@ -9,6 +9,7 @@ import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
 import scala.tools.nsc.util.{ SourceFile, Position }
+import scala.tools.refactoring.analysis.GlobalIndexes
 import java.io.File
 
 trait RichCompilerControl extends CompilerControl with RefactoringInterface { self: RichPresentationCompiler =>
@@ -76,27 +77,31 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
-    reloadSources(List(p.source))
-    inspectTypeAt(p)
-  }, t => None)
+      reloadSources(List(p.source))
+      inspectTypeAt(p)
+    }, t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-    completePackageMember(path, prefix)
-  }, t => List())
+      completePackageMember(path, prefix)
+    }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
-    reloadSources(List(p.source))
-    completeSymbolAt(p, prefix, constructor)
-  }, t => List())
+      reloadSources(List(p.source))
+      completeSymbolAt(p, prefix, constructor)
+    }, t => List())
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
-    reloadSources(List(p.source))
-    completeMemberAt(p, prefix)
-  }, t => List())
+      reloadSources(List(p.source))
+      completeMemberAt(p, prefix)
+    }, t => List())
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-    reloadAndTypeFiles(files)
-  }, t => ())
+      reloadAndTypeFiles(files)
+    }, t => ())
+
+  def askImportSuggestions(p: Position, names: Iterable[String]): ImportSuggestions = askOr({
+      ImportSuggestions(symbolSuggestions(names))
+    }, t => ImportSuggestions(List()))
 
   def askClearTypeCache() = clearTypeCache
 
@@ -109,7 +114,8 @@ class RichPresentationCompiler(
   reporter: Reporter,
   var parent: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-  with ModelBuilders with RichCompilerControl with RefactoringImpl {
+with ModelBuilders with RichCompilerControl with RefactoringImpl {
+
 
   import Helpers._
 
@@ -126,8 +132,8 @@ class RichPresentationCompiler(
         members(sym) = m
       } catch {
         case e =>
-          System.err.println("Error: Omitting member " + sym
-            + ": " + e)
+        System.err.println("Error: Omitting member " + sym
+          + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -179,8 +185,7 @@ class RichPresentationCompiler(
     new TypeInspectInfo(
       TypeInfo(tpe),
       companionTypeOf(tpe).map(cacheType),
-      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]))
-      )
+      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
   }
 
   protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
@@ -189,9 +194,9 @@ class RichPresentationCompiler(
     typeAt(p) match {
       case Left(t) => {
         Some(new TypeInspectInfo(
-          TypeInfo(t),
-          companionTypeOf(t).map(cacheType),
-          preparedMembers))
+            TypeInfo(t),
+            companionTypeOf(t).map(cacheType),
+            preparedMembers))
       }
       case Right(_) => None
     }
@@ -222,9 +227,9 @@ class RichPresentationCompiler(
   }
 
   /*
-    * Fall back to full typecheck if targeted fails
-    * Removing this wrapper causes completion test failures.
-    */
+  * Fall back to full typecheck if targeted fails
+  * Removing this wrapper causes completion test failures.
+  */
   def persistentTypedTreeAt(p: Position): Tree = {
     try {
 
@@ -239,11 +244,11 @@ class RichPresentationCompiler(
 
     } catch {
       case e: FatalError =>
-        {
-          println("typedTreeAt threw FatalError: " + e + ", falling back to typedTree... ")
-          typedTree(p.source, true)
-          locateTree(p)
-        }
+      {
+        println("typedTreeAt threw FatalError: " + e + ", falling back to typedTree... ")
+        typedTree(p.source, true)
+        locateTree(p)
+      }
     }
   }
 
@@ -299,10 +304,10 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override scopeMembers to fix issues with finding method params
-   * and occasional exception in pre.memberType. Hopefully we can
-   * get these changes into Scala.
-   */
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     locateContext(pos) match {
@@ -312,7 +317,7 @@ class RichPresentationCompiler(
           val ns = sym.nameString
           val accessible = context.isAccessible(sym, pre, false)
           if (accessible && ((exactMatch && ns == prefix)
-            || (!exactMatch && ns.startsWith(prefix))) &&
+              || (!exactMatch && ns.startsWith(prefix))) &&
             !sym.nameString.contains("$") &&
             !locals.contains(sym)) {
             try {
@@ -343,7 +348,7 @@ class RichPresentationCompiler(
         for (imp <- context.imports) {
           val pre = imp.qual.tpe
           val importedSyms = pre.members.flatMap(transformImport(
-            imp.tree.selectors, _))
+              imp.tree.selectors, _))
           for (sym <- importedSyms) {
             addSymbol(sym, pre, imp.qual)
           }
@@ -363,8 +368,8 @@ class RichPresentationCompiler(
     case List() => List()
     case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
     case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
-      if (to == nme.WILDCARD) List()
-      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+    if (to == nme.WILDCARD) List()
+    else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
     case _ :: rest => transformImport(rest, sym)
   }
 
@@ -422,17 +427,35 @@ class RichPresentationCompiler(
     visibleMembers
   }
 
+  protected def symbolSuggestions(names: Iterable[String]): Iterable[Iterable[SymbolInfoLight]] = {
+    val gi = new GlobalIndexes{
+      val global = RichPresentationCompiler.this
+      val cuIndexes = this.global.unitOfFile.values.map { u => 
+	CompilationUnitIndex(u.body) }
+      val index = GlobalIndex(cuIndexes.toList)
+      val result = names.map{ n => 
+	index.allDeclarations.keys.flatMap{d => 
+	  if(d.nameString.contains(n)) Some(
+	    SymbolInfoLight(d.asInstanceOf[RichPresentationCompiler.this.Symbol]))
+	  else None
+	}
+      }
+    }
+    gi.result
+  }
+
+
   /**
-   * Override so we send a notification to compiler actor when finished..
-   */
+  * Override so we send a notification to compiler actor when finished..
+  */
   override def recompile(units: List[RichCompilationUnit]) {
     super.recompile(units)
     parent ! FullTypeCheckCompleteEvent()
   }
 
   /**
-   * Overriding for debug purposes..
-   */
+  * Overriding for debug purposes..
+  */
   override def parse(unit: RichCompilationUnit): Unit = {
     // System.err.println("DEBUG PARSE TRACE\n---------------------\n")
     // (new RuntimeException()).printStackTrace(System.err);

@@ -113,17 +113,21 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case ScopeCompletionReq(file: File, point: Int,
                     prefix: String, constructor: Boolean) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    val p = new OffsetPosition(f, point)
+                    val p = pos(file, point)
                     val syms = scalaCompiler.askCompleteSymbolAt(p, prefix, constructor)
                     project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
                   }
 
                   case TypeCompletionReq(file: File, point: Int, prefix: String) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    val p = new OffsetPosition(f, point)
+                    val p = pos(file, point)
                     val members = scalaCompiler.askCompleteMemberAt(p, prefix)
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
+                  }
+
+                  case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
+                    val p = pos(file, point)
+                    val suggestions = scalaCompiler.askImportSuggestions(p, names)
+                    project ! RPCResultEvent(toWF(suggestions), callId)
                   }
 
                   case PackageMemberCompletionReq(path: String, prefix: String) => {
@@ -132,8 +136,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case InspectTypeReq(file: File, point: Int) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    val p = new OffsetPosition(f, point)
+                    val p = pos(file, point)
                     val result = scalaCompiler.askInspectTypeAt(p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -150,8 +153,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case SymbolAtPointReq(file: File, point: Int) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    val p = new OffsetPosition(f, point)
+                    val p = pos(file, point)
                     val result = scalaCompiler.askSymbolInfoAt(p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -168,8 +170,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case TypeAtPointReq(file: File, point: Int) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    val p = new OffsetPosition(f, point)
+                    val p = pos(file, point)
                     val result = scalaCompiler.askTypeInfoAt(p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -194,8 +195,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case TypeByNameAtPointReq(name: String, file: File, point: Int) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    val p = new OffsetPosition(f, point)
+                    val p = pos(file, point)
                     val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -231,6 +231,11 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
         }
       }
     }
+  }
+
+  def pos(file: File, offset: Int) = {
+    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+    new OffsetPosition(f, offset)
   }
 
   override def finalize() {

@@ -233,6 +233,14 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+      case "swank:import-suggestions" => {
+        form match {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
+            rpcTarget.rpcImportSuggestions(file, point, names.map(_.toString).toList, callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:package-member-completion" => {
         form match {
           case SExpList(head :: StringAtom(path) :: StringAtom(prefix) :: body) => {
@@ -622,6 +630,10 @@ trait SwankProtocol extends Protocol {
       (":procedure-id", value.procedureId),
       (":refactor-type", value.refactorType),
       (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
+  }
+
+  def toWF(value: ImportSuggestions): SExp = {
+    SExpList(value.symLists.map { l => SExpList(l.map(toWF)) })
   }
 
   def toWF(value: Undo): SExp = {
