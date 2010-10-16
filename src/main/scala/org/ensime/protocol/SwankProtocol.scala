@@ -236,7 +236,8 @@ trait SwankProtocol extends Protocol {
       case "swank:import-suggestions" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
-            rpcTarget.rpcImportSuggestions(file, point, names.map(_.toString).toList, callId)
+            rpcTarget.rpcImportSuggestions(file, point, 
+	      names.map(_.toString).toList, callId)
           }
           case _ => oops
         }

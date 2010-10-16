@@ -427,7 +427,7 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
     visibleMembers
   }
 
-  protected def symbolSuggestions(names: Iterable[String]): Iterable[Iterable[SymbolInfoLight]] = {
+  protected def symbolSuggestions(names: Iterable[String]): Iterable[Iterable[SymbolInfo]] = {
     val gi = new GlobalIndexes{
       val global = RichPresentationCompiler.this
       val cuIndexes = this.global.unitOfFile.values.map { u => 
@@ -436,7 +436,7 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
       val result = names.map{ n => 
 	index.allDeclarations.keys.flatMap{d => 
 	  if(d.nameString.contains(n)) Some(
-	    SymbolInfoLight(d.asInstanceOf[RichPresentationCompiler.this.Symbol]))
+	    SymbolInfo(d.asInstanceOf[RichPresentationCompiler.this.Symbol]))
 	  else None
 	}
       }
