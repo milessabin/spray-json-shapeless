@@ -21,6 +21,11 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)
   settings.usejavacp.value = false
+
+  println("\nPresentation Compiler settings:")
+  System.out.println(settings.toString)
+  println("")
+
   private val reporter = new PresentationReporter()
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, config)

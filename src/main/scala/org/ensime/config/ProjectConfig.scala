@@ -9,7 +9,6 @@ import scala.actors.Actor._
 import scala.collection.mutable
 import scalariform.formatter.preferences._
 
-
 object ProjectConfig {
 
   /**
@@ -282,19 +281,22 @@ class ProjectConfig(
   def compilerArgs = List(
     "-classpath", compilerClasspath,
     "-sourcepath", sourcepath,
-    "-verbose"
-    )
+    "-verbose")
 
   def builderArgs = List(
     "-classpath", compilerClasspath,
     "-sourcepath", sourcepath,
     "-verbose",
     "-d", target.getOrElse(new File(root, "classes")).getPath,
-    sourceFilenames.mkString(" ")
-    )
+    sourceFilenames.mkString(" "))
 
   def compilerClasspath: String = {
-    compilerClasspathFilenames.mkString(File.pathSeparator)
+    val files = compilerClasspathFilenames
+    if (files.isEmpty) {
+      "."
+    } else {
+      compilerClasspathFilenames.mkString(File.pathSeparator)
+    }
   }
 
   def runtimeClasspath: String = {
