@@ -12,9 +12,9 @@ import scalariform.formatter.preferences._
 object ProjectConfig {
 
   /**
-   * Create a ProjectConfig instance from the given
-   * SExp property list.
-   */
+  * Create a ProjectConfig instance from the given
+  * SExp property list.
+  */
   def fromSExp(config: SExpList) = {
     import ExternalConfigInterface._
 
@@ -36,8 +36,12 @@ object ProjectConfig {
 
     m.get(key(":use-sbt")) match {
       case Some(TruthAtom()) => {
+	val depDirs = m.get(key(":sbt-subproject-dependencies")) match {
+	  case Some(SExpList(deps)) => deps.map(_.toString)
+	  case _ => List[String]()
+	}
         println("Using sbt configuration..")
-        val ext = getSbtConfig(rootDir)
+        val ext = getSbtConfig(rootDir, depDirs)
         projectName = ext.projectName
         sourceRoots ++= ext.sourceRoots
         runtimeDeps ++= ext.runtimeDepJars
@@ -241,30 +245,30 @@ class ProjectConfig(
   formattingPrefsMap: Map[Symbol, Any]) {
 
   val formattingPrefs = formattingPrefsMap.
-    foldLeft(FormattingPreferences()) { (fp, p) =>
-      p match {
-        case ('alignParameters, value: Boolean) =>
-          fp.setPreference(AlignParameters, value)
-        case ('compactStringConcatenation, value: Boolean) =>
-          fp.setPreference(CompactStringConcatenation, value)
-        case ('doubleIndentClassDeclaration, value: Boolean) =>
-          fp.setPreference(DoubleIndentClassDeclaration, value)
-        case ('formatXml, value: Boolean) =>
-          fp.setPreference(FormatXml, value)
-        case ('indentSpaces, value: Int) =>
-          fp.setPreference(IndentSpaces, value)
-        case ('preserveSpaceBeforeArguments, value: Boolean) =>
-          fp.setPreference(PreserveSpaceBeforeArguments, value)
-        case ('rewriteArrowSymbols, value: Boolean) =>
-          fp.setPreference(RewriteArrowSymbols, value)
-        case ('spaceBeforeColon, value: Boolean) =>
-          fp.setPreference(SpaceBeforeColon, value)
-        case (name, _) => {
-          System.err.println("Oops, unrecognized formatting option: " + name)
-          fp
-        }
+  foldLeft(FormattingPreferences()) { (fp, p) =>
+    p match {
+      case ('alignParameters, value: Boolean) =>
+      fp.setPreference(AlignParameters, value)
+      case ('compactStringConcatenation, value: Boolean) =>
+      fp.setPreference(CompactStringConcatenation, value)
+      case ('doubleIndentClassDeclaration, value: Boolean) =>
+      fp.setPreference(DoubleIndentClassDeclaration, value)
+      case ('formatXml, value: Boolean) =>
+      fp.setPreference(FormatXml, value)
+      case ('indentSpaces, value: Int) =>
+      fp.setPreference(IndentSpaces, value)
+      case ('preserveSpaceBeforeArguments, value: Boolean) =>
+      fp.setPreference(PreserveSpaceBeforeArguments, value)
+      case ('rewriteArrowSymbols, value: Boolean) =>
+      fp.setPreference(RewriteArrowSymbols, value)
+      case ('spaceBeforeColon, value: Boolean) =>
+      fp.setPreference(SpaceBeforeColon, value)
+      case (name, _) => {
+        System.err.println("Oops, unrecognized formatting option: " + name)
+        fp
       }
     }
+  }
 
   def compilerClasspathFilenames: Set[String] = {
     (compileDeps ++ classDirs).map(_.getPath).toSet
