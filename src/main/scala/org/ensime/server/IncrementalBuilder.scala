@@ -2,7 +2,7 @@ package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.protocol.ProtocolConversions
-import org.ensime.util.{ Note, PresentationReporter }
+import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.{ Iterable, Map }
@@ -27,9 +27,9 @@ case class UpdateSourceFilesReq(files: Iterable[File])
 class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor {
 
   class IncrementalBuildManager(settings: Settings, reporter: Reporter)
-    extends RefinedBuildManager(settings) {
+  extends RefinedBuildManager(settings) {
     class IncrementalGlobal(settings: Settings, reporter: Reporter)
-      extends scala.tools.nsc.Global(settings, reporter) {
+    extends scala.tools.nsc.Global(settings, reporter) {
       override def computeInternalPhases() {
         super.computeInternalPhases
         phasesSet += dependencyAnalysis
@@ -41,7 +41,11 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
 
   private val settings = new Settings(Console.println)
   settings.processArguments(config.builderArgs, false)
-  private val reporter = new PresentationReporter()
+  private val reporter = new PresentationReporter(new UserMessages{
+      override def showError(str:String){
+	project ! SendBackgroundMessageEvent(str)
+      }
+    })
   private val bm: BuildManager = new IncrementalBuildManager(settings, reporter)
 
   import bm._
@@ -93,25 +97,25 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
               }
             } catch {
               case e: Exception =>
-                {
-                  System.err.println("Error handling RPC: " +
-                    e + " :\n" +
-                    e.getStackTraceString)
-                  project ! RPCErrorEvent("Error occurred in incremental builder. Check the server log.", callId)
-                }
+              {
+                System.err.println("Error handling RPC: " +
+                  e + " :\n" +
+                  e.getStackTraceString)
+                project ! RPCErrorEvent("Error occurred in incremental builder. Check the server log.", callId)
+              }
             }
           }
           case other =>
-            {
-              println("Incremental Builder: WTF, what's " + other)
-            }
+          {
+            println("Incremental Builder: WTF, what's " + other)
+          }
         }
 
       } catch {
         case e: Exception =>
-          {
-            System.err.println("Error at Incremental Builder message loop: " + e + " :\n" + e.getStackTraceString)
-          }
+        {
+          System.err.println("Error at Incremental Builder message loop: " + e + " :\n" + e.getStackTraceString)
+        }
       }
     }
   }

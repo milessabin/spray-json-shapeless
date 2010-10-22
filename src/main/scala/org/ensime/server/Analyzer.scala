@@ -26,7 +26,12 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   System.out.println(settings.toString)
   println("")
 
-  private val reporter = new PresentationReporter()
+  private val reporter = new PresentationReporter(new UserMessages{
+      override def showError(str:String){
+	project ! SendBackgroundMessageEvent(str)
+      }
+    })
+
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
