@@ -195,6 +195,11 @@ Assume a standard sbt directory structure. Look in default sbt locations for dep
 Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is disabled by default as it consumes a lot of CPU.
 \vspace{5 mm}
 
+\noindent
+{\bf :sbt-subproject-dependencies ([directory name]*)}\\
+Declare sbt sub-project dependencies. List the directory names of the dependencies and ENSIME will include their sources and dependencies when analyzing the current project.
+\vspace{5 mm}
+
 
 
 \noindent
@@ -479,6 +484,16 @@ Format the current Scala source file.
 \noindent
 {\bf C-c C-v u}\\
 Undo a refactoring or formatting change.
+\vspace{5 mm}
+
+\noindent
+{\bf M-n}\\
+Go to the next compilation note in the current buffer.
+\vspace{5 mm}
+
+\noindent
+{\bf M-p}\\
+Go to the previous compilation note in the current buffer.
 \vspace{5 mm}
 
 \noindent

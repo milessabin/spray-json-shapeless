@@ -26,16 +26,17 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   System.out.println(settings.toString)
   println("")
 
-  private val reporter = new PresentationReporter(new UserMessages{
-      override def showError(str:String){
-	project ! SendBackgroundMessageEvent(str)
-      }
-    })
+  private val reporter = new PresentationReporter(new UserMessages {
+    override def showError(str: String) {
+      project ! SendBackgroundMessageEvent(str)
+    }
+  })
 
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
   protected var awaitingInitialCompile = true
+  protected var pendingFullTypeCheckRequest: Option[RPCRequestEvent] = None
 
   import scalaCompiler._
   import protocol._
@@ -66,27 +67,46 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
           }
 
           case FullTypeCheckCompleteEvent() => {
+
+            // Block requests while compiler is booting
             if (awaitingInitialCompile) {
               project ! AnalyzerReadyEvent()
               awaitingInitialCompile = false
             }
+
             val result = NoteList('scala, true, reporter.allNotes)
+
             project ! TypeCheckResultEvent(result)
+
+            // If this full compile was explicitely requested by client...
+            for (req <- pendingFullTypeCheckRequest) {
+              project ! RPCResultEvent(toWF(result), req.callId)
+              pendingFullTypeCheckRequest = None
+            }
+
           }
 
-          case RPCRequestEvent(req: Any, callId: Int) => {
+          case rpcReq@RPCRequestEvent(req: Any, callId: Int) => {
             try {
               if (awaitingInitialCompile) {
                 project ! RPCErrorEvent("Analyzer is not ready! Please wait.", callId)
               } else {
                 req match {
+
                   case ReloadAllReq() => {
                     javaCompiler.reset()
                     javaCompiler.compileAll()
                     val notes = javaCompiler.allNotes
                     project ! TypeCheckResultEvent(NoteList('java, true, notes))
+
+                    // Clean up any hanging request..
+                    for (existingReq <- pendingFullTypeCheckRequest) {
+                      project ! RPCResultEvent(toWF(null), existingReq.callId)
+                    }
+                    // Create a new req..
+                    pendingFullTypeCheckRequest = Some(rpcReq)
+
                     scalaCompiler.askReloadAllFiles()
-                    project ! RPCResultEvent(toWF(true), callId)
                   }
 
                   case ReloadFileReq(file: File) => {

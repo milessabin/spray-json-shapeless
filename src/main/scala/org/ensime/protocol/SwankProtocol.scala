@@ -236,8 +236,8 @@ trait SwankProtocol extends Protocol {
       case "swank:import-suggestions" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
-            rpcTarget.rpcImportSuggestions(file, point, 
-	      names.map(_.toString).toList, callId)
+            rpcTarget.rpcImportSuggestions(file, point,
+              names.map(_.toString).toList, callId)
           }
           case _ => oops
         }
@@ -426,15 +426,7 @@ trait SwankProtocol extends Protocol {
   def sendCompilerReady() = sendMessage(SExp(key(":compiler-ready"), true))
 
   def sendTypeCheckResult(notelist: NoteList) = {
-    val NoteList(lang, isFull, notes) = notelist
-    sendMessage(SExp(
-      key(":typecheck-result"),
-      SExp(
-        key(":lang"), if (lang == 'scala) { key(":scala") } else { key(":java") },
-        key(":is-full"),
-        toWF(isFull),
-        key(":notes"),
-        SExpList(notes.map(toWF)))))
+    sendMessage(SExp(key(":typecheck-result"), toWF(notelist)))
   }
 
   object SExpConversion {
@@ -454,8 +446,7 @@ trait SwankProtocol extends Protocol {
   def toWF(config: ProjectConfig): SExp = {
     SExp(
       key(":project-name"), config.name.map(StringAtom).getOrElse('nil),
-      key(":source-roots"), SExp(config.sourceRoots.map{ f => StringAtom(f.getPath) })
-    )
+      key(":source-roots"), SExp(config.sourceRoots.map { f => StringAtom(f.getPath) }))
   }
 
   def toWF(config: ReplConfig): SExp = {
@@ -502,6 +493,16 @@ trait SwankProtocol extends Protocol {
       key(":line"), note.line,
       key(":col"), note.col,
       key(":file"), note.file)
+  }
+
+  def toWF(notelist: NoteList): SExp = {
+    val NoteList(lang, isFull, notes) = notelist
+    SExp(
+      key(":lang"), if (lang == 'scala) { key(":scala") } else { key(":java") },
+      key(":is-full"),
+      toWF(isFull),
+      key(":notes"),
+      SExpList(notes.map(toWF)))
   }
 
   def toWF(values: Iterable[WireFormat]): SExp = {
