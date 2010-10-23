@@ -95,6 +95,8 @@ trait SwankProtocol extends Protocol {
     }
   }
 
+  val emacsCharOffset = 1
+
   private def handleEmacsRex(form: SExp, callId: Int) {
     form match {
       case SExpList(SymbolAtom(name) :: rest) => {
@@ -433,7 +435,8 @@ trait SwankProtocol extends Protocol {
 
     implicit def posToSExp(pos: Position): SExp = {
       if (pos.isDefined) {
-        SExp.propList((":file", pos.source.path), (":offset", pos.point + 1)) // <- Emacs point starts at 1
+        SExp.propList((":file", pos.source.path), (":offset", pos.point + 
+	    emacsCharOffset))
       } else {
         'nil
       }
@@ -488,8 +491,8 @@ trait SwankProtocol extends Protocol {
     SExp(
       key(":severity"), note.friendlySeverity,
       key(":msg"), note.msg,
-      key(":beg"), note.beg,
-      key(":end"), note.end,
+      key(":beg"), note.beg + emacsCharOffset,
+      key(":end"), note.end + emacsCharOffset,
       key(":line"), note.line,
       key(":col"), note.col,
       key(":file"), note.file)
@@ -657,8 +660,8 @@ trait SwankProtocol extends Protocol {
     SExp.propList(
       (":file", ch.file.path),
       (":text", ch.text),
-      (":from", ch.from + 1),
-      (":to", ch.to + 1))
+      (":from", ch.from + emacsCharOffset),
+      (":to", ch.to + emacsCharOffset))
   }
 
 }
