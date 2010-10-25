@@ -82,6 +82,9 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
     copyFile(path("README.md"), "dist" / "README.md", log)
     copyFile(path("LICENSE"), "dist" / "LICENSE", log)
+    
+    // Hack to make 2.8.1 ENSIME work for 2.8.0 projects
+    copyFile("etc" / "implicitNotFound.jar", "dist" / "lib" / "implicitNotFound.jar", log)
 
 
   } dependsOn(`package`) describedAs("Build the deployment directory structure.")
