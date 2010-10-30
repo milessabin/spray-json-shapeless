@@ -3,6 +3,7 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.debug.ProjectDebugInfo
 import org.ensime.model._
+import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
@@ -24,14 +25,14 @@ trait RPCTarget { self: Project =>
   def rpcPeekUndo(callId: Int) {
     peekUndo match {
       case Right(result) => sendRPCReturn(toWF(result), callId)
-      case Left(msg) => sendRPCError(msg, callId)
+      case Left(msg) => sendRPCError(ErrPeekUndoFailed, Some(msg), callId)
     }
   }
 
   def rpcExecUndo(undoId: Int, callId: Int) {
     execUndo(undoId) match {
       case Right(result) => sendRPCReturn(toWF(result), callId)
-      case Left(msg) => sendRPCError(msg, callId)
+      case Left(msg) => sendRPCError(ErrExecUndoFailed, Some(msg), callId)
     }
   }
 
@@ -179,11 +180,13 @@ trait RPCTarget { self: Project =>
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>
-          sendRPCError("Could not write any formatting changes: " + e, callId)
+          sendRPCError(ErrFormatFailed, 
+	    Some("Could not write any formatting changes: " + e), callId)
       }
     } catch {
       case e: ScalaParserException =>
-        sendRPCError("Cannot format broken syntax: " + e, callId)
+        sendRPCError(ErrFormatFailed, 
+	  Some("Cannot format broken syntax: " + e), callId)
     }
 
   }

@@ -2,6 +2,7 @@ package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.protocol.ProtocolConversions
+import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
@@ -39,17 +40,18 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
     override protected def newCompiler(settings: Settings) = new BuilderGlobal(settings, reporter)
   }
 
+  import protocol._
+
   private val settings = new Settings(Console.println)
   settings.processArguments(config.builderArgs, false)
   private val reporter = new PresentationReporter(new UserMessages{
       override def showError(str:String){
-	project ! SendBackgroundMessageEvent(str)
+	project ! SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))
       }
     })
   private val bm: BuildManager = new IncrementalBuildManager(settings, reporter)
 
   import bm._
-  import protocol._
 
   def act() {
 
@@ -64,11 +66,13 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
               req match {
 
                 case RebuildAllReq() => {
-                  project ! SendBackgroundMessageEvent("Building entire project. Please wait...")
+                  project ! SendBackgroundMessageEvent(
+		    MsgBuildingEntireProject, Some("Building entire project. Please wait..."))
                   val files = config.sourceFilenames.map(s => AbstractFile.getFile(s))
                   reporter.reset
                   bm.addSourceFiles(files)
-                  project ! SendBackgroundMessageEvent("Build complete.")
+                  project ! SendBackgroundMessageEvent(
+		    MsgBuildComplete, Some("Build complete."))
                   val result = toWF(reporter.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
                 }
@@ -101,7 +105,10 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
                 System.err.println("Error handling RPC: " +
                   e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent("Error occurred in incremental builder. Check the server log.", callId)
+
+                project ! RPCErrorEvent(ErrExceptionInBuilder, 
+		  Some("Error occurred in incremental builder. Check the server log."), 
+		  callId)
               }
             }
           }

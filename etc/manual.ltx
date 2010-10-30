@@ -570,39 +570,46 @@ The Emacs ENSIME client communicates with the server using the Swank protocol. T
 \begin{mylisting}
 \begin{verbatim}
 
-
 # The client requests information about the server
-(:swank-rpc (swank:connection-info) 1)
+(:swank-rpc
+ (swank:connection-info) 1)
 
+# Server responds. Note the numbering scheme for RPC calls: call & response 
+# have the same call id (1 in this case).
+(:return
+ (:ok
+  (:pid nil :server-implementation
+	(:name "ENSIMEserver")
+	:machine nil :features nil :version "0.0.1")) 1)
 
-     # Server responds. Note the numbering scheme for RPC calls: call & response have the same id.
-     (:return
-      (:ok
-       (:pid nil :server-implementation
-     	(:name "ENSIMEserver")
-     	:machine nil :features nil :version "0.0.1"))
-      1)
-
-
-# The client initializes the session by sending the configuration. This is read from the .ensime file.
+# The client initializes the session by sending the configuration. 
+# This is read from the .ensime file.
 (:swank-rpc
  (swank:init-project
-  (:server-root "/home/aemon/src/misc/ensime/dist/" :project-package "org.ensime" :use-sbt t :root-dir "/home/aemon/src/misc/ensime/"))
- 2)
+  (:project-package "org.ensime" :use-sbt t 
+   :root-dir "/home/aemon/src/misc/ensime/")) 2)
 
-     # Server simply acknowledges receipt.
-     (:return
-      (:ok t)
-      2)
+# The acknowledges the message and sends some useful project info 
+# back to the client.
+(:return
+ (:ok
+  (:project-name "ensime" :source-roots
+		 ("/home/aemon/src/misc/ensime/src/main/scala" 
+		 "/home/aemon/src/misc/ensime/src/main/java" 
+		 "/home/aemon/src/misc/ensime/src/test/scala"))) 2)
 
-     # Server asks client to display a user message. Note: this is not part of any RPC call - it's just an event.
-     (:background-message "Initializing Analyzer. Please wait...")
 
-     # Server alerts client that the analyzer is ready for requests.
-     (:compiler-ready t)
+# Server asks client to display a user message. 
+# Note: this is not part of any RPC call - it's just an event from the server.
+(:background-message "Initializing Analyzer. Please wait...")
 
-     # Server tells client the result of the last full compilation (nil means 0 notes (errors or warnings))
-     (:typecheck-result (:lang :scala :is-full t :notes nil))
+# Server alerts client that the analyzer is now ready for RPC requests.
+(:compiler-ready t)
+
+# Server tells client the result of the last full compilation 
+# (nil means 0 notes (errors or warnings))
+(:typecheck-result
+ (:lang :scala :is-full t :notes nil))
 
 \end{verbatim}
 \end{mylisting}

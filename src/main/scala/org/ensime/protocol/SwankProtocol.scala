@@ -17,6 +17,7 @@ object SwankProtocol extends SwankProtocol {}
 trait SwankProtocol extends Protocol {
 
   import SwankProtocol._
+  import ProtocolConst._
 
   val PROTOCOL_VERSION: String = "0.0.1"
 
@@ -71,10 +72,12 @@ trait SwankProtocol extends Protocol {
     }
   }
 
-  def sendBackgroundMessage(msg: String) {
+  def sendBackgroundMessage(code: Int, detail:Option[String]) {
     sendMessage(SExp(
       key(":background-message"),
-      msg))
+      code,
+      detail.map(strToSExp).getOrElse(NilAtom())
+    ))
   }
 
   def handleIncomingMessage(msg: Any) {
@@ -90,7 +93,7 @@ trait SwankProtocol extends Protocol {
         handleEmacsRex(form, callId)
       }
       case _ => {
-        sendProtocolError(sexp.toReadableString, "Unknown protocol form.")
+        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString))
       }
     }
   }
@@ -106,14 +109,14 @@ trait SwankProtocol extends Protocol {
           case e: Throwable =>
             {
               e.printStackTrace(System.err)
-              sendRPCError("Exception raised in RPC " + form + " : " +
-                e.getMessage, callId)
+              sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
             }
         }
       }
       case _ => {
         sendRPCError(
-          "Malformed RPC call. Expecting leading symbol: " + form,
+          ErrMalformedRPC, 
+	  Some("Expecting leading symbol in: " + form),
           callId)
       }
     }
@@ -123,7 +126,7 @@ trait SwankProtocol extends Protocol {
 
     println("\nHandling RPC: " + form)
 
-    def oops = sendRPCError("Malformed " + callType + " call: " + form, callId)
+    def oops = sendRPCError(ErrMalformedRPC, Some("Malformed " + callType + " call: " + form), callId)
 
     callType match {
       case "swank:connection-info" => {
@@ -365,7 +368,8 @@ trait SwankProtocol extends Protocol {
 
       case other => {
         sendRPCError(
-          "Unknown :swank-rpc call: " + other,
+	  ErrUnrecognizedRPC, 
+	  Some("Unknown :swank-rpc call: " + other),
           callId)
       }
     }
@@ -395,19 +399,23 @@ trait SwankProtocol extends Protocol {
     }
   }
 
-  def sendRPCError(value: String, callId: Int) {
+  def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     sendMessage(SExp(
       key(":return"),
-      SExp(key(":abort"), value),
+      SExp(key(":abort"), 
+	code, 
+	detail.map(strToSExp).getOrElse(NilAtom())
+      ),
       callId))
   }
 
-  def sendProtocolError(packet: String, condition: String) {
+  def sendProtocolError(code: Int, detail: Option[String]){
     sendMessage(
       SExp(
         key(":reader-error"),
-        packet,
-        condition))
+	code,
+        detail.map(strToSExp).getOrElse(NilAtom())
+      ))
   }
 
   /*

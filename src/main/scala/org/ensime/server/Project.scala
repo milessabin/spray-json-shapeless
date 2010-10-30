@@ -11,9 +11,9 @@ import scala.tools.nsc.{ Settings }
 import scala.tools.refactoring.common.Change
 import scala.collection.mutable.{ LinkedHashMap }
 
-case class SendBackgroundMessageEvent(msg: String)
+case class SendBackgroundMessageEvent(code: Int, detail: Option[String])
 case class RPCResultEvent(value: WireFormat, callId: Int)
-case class RPCErrorEvent(value: String, callId: Int)
+case class RPCErrorEvent(code: Int, detail: Option[String], callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
 
 case class TypeCheckResultEvent(notes: NoteList)
@@ -58,8 +58,8 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     loop {
       try {
         receive {
-          case SendBackgroundMessageEvent(msg: String) => {
-            protocol.sendBackgroundMessage(msg)
+          case SendBackgroundMessageEvent(code: Int, detail: Option[String]) => {
+            protocol.sendBackgroundMessage(code, detail)
           }
           case IncomingMessageEvent(msg: WireFormat) => {
             protocol.handleIncomingMessage(msg)
@@ -76,8 +76,8 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           case RPCResultEvent(value, callId) => {
             protocol.sendRPCReturn(value, callId)
           }
-          case RPCErrorEvent(msg, callId) => {
-            protocol.sendRPCError(msg, callId)
+          case RPCErrorEvent(code, detail, callId) => {
+            protocol.sendRPCError(code, detail, callId)
           }
         }
       } catch {

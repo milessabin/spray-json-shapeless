@@ -3,6 +3,7 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import org.ensime.protocol.ProtocolConversions
+import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import org.ensime.util.RichFile._
 import scala.actors._
@@ -28,7 +29,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
   private val reporter = new PresentationReporter(new UserMessages {
     override def showError(str: String) {
-      project ! SendBackgroundMessageEvent(str)
+      project ! SendBackgroundMessageEvent(
+	MsgCompilerUnexpectedError, Some(str))
     }
   })
 
@@ -38,11 +40,12 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   protected var awaitingInitialCompile = true
   protected var pendingFullTypeCheckRequest: Option[RPCRequestEvent] = None
 
-  import scalaCompiler._
   import protocol._
+  import scalaCompiler._
 
   def act() {
-    project ! SendBackgroundMessageEvent("Initializing Analyzer. Please wait...")
+    project ! SendBackgroundMessageEvent(
+      MsgInitializingAnalyzer, Some("Initializing Analyzer. Please wait..."))
 
     println("Building Java sources...")
     javaCompiler.compileAll()
@@ -58,12 +61,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
             scalaCompiler.askClearTypeCache()
             scalaCompiler.askShutdown()
             exit('stop)
-          }
-
-          // Sent from presentation compiler runner
-          // thread, before it dies.
-          case CompilerFatalError(e: Throwable) => {
-            project ! SendBackgroundMessageEvent("Error analyzing Scala: " + e + ".")
           }
 
           case FullTypeCheckCompleteEvent() => {
@@ -89,7 +86,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
           case rpcReq@RPCRequestEvent(req: Any, callId: Int) => {
             try {
               if (awaitingInitialCompile) {
-                project ! RPCErrorEvent("Analyzer is not ready! Please wait.", callId)
+                project ! RPCErrorEvent(ErrAnalyzerNotReady, 
+		  Some("Analyzer is not ready! Please wait."), callId)
               } else {
                 req match {
 
@@ -246,7 +244,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               case e: Exception => {
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent("Error occurred in Analyzer. Check the server log.", callId)
+                project ! RPCErrorEvent(ErrExceptionInAnalyzer, 
+		  Some("Error occurred in Analyzer. Check the server log."), callId)
               }
             }
           }

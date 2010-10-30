@@ -13,6 +13,30 @@ import org.ensime.server._
 case class IncomingMessageEvent(obj: Any)
 case class OutgoingMessageEvent(obj: Any)
 
+object ProtocolConst {
+
+  val MsgCompilerUnexpectedError = 101
+  val MsgInitializingAnalyzer = 102
+
+  val MsgBuildingEntireProject = 103
+  val MsgBuildComplete = 104
+
+  val ErrExceptionInRPC = 201
+  val ErrMalformedRPC = 202
+  val ErrUnrecognizedForm = 203
+  val ErrUnrecognizedRPC = 204
+  val ErrExceptionInBuilder = 205
+
+  val ErrPeekUndoFailed = 206
+  val ErrExecUndoFailed = 207
+
+  val ErrFormatFailed = 208
+
+  val ErrAnalyzerNotReady = 209
+  val ErrExceptionInAnalyzer = 210
+
+}
+
 trait Protocol extends ProtocolConversions {
 
   /**
@@ -59,10 +83,11 @@ trait Protocol extends ProtocolConversions {
    * to the user. This is to be used for non-critical messaging
    * that the user may choose to ignore.
    *
-   * @param  msg  The message to write.
+   * @param  code  The code of the message to write.
+   * @param  detail   Additional details if required.
    * @return        Void
    */
-  def sendBackgroundMessage(msg: String)
+  def sendBackgroundMessage(code: Int, detail: Option[String])
 
   /**
    * Designate an actor that should receive outgoing 
@@ -107,21 +132,22 @@ trait Protocol extends ProtocolConversions {
    * Notify the client that the RPC call could not
    * be handled.
    *
-   * @param  value  A message describing the error.
+   * @param  code  Integer code denoting error type.
+   * @param  detail  A message describing the error.
    * @param  callId The id of the failed RPC call.
    * @return        Void
    */
-  def sendRPCError(msg: String, callId: Int)
+  def sendRPCError(code: Int, detail: Option[String], callId: Int)
 
   /**
    * Notify the client that a message was received
    * that does not conform to the protocol.
    *
-   * @param  packet  The message that failed.
-   * @param  condition A string describing the problem.
+   * @param  code  Integer code denoting error type.
+   * @param  detail  A message describing the problem.
    * @return        Void
    */
-  def sendProtocolError(packet: String, condition: String)
+  def sendProtocolError(code: Int, detail: Option[String])
 
   /**
    * Send a structure describing the connection, protocol and
