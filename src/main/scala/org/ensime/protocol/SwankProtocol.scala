@@ -507,9 +507,8 @@ trait SwankProtocol extends Protocol {
   }
 
   def toWF(notelist: NoteList): SExp = {
-    val NoteList(lang, isFull, notes) = notelist
+    val NoteList(isFull, notes) = notelist
     SExp(
-      key(":lang"), if (lang == 'scala) { key(":scala") } else { key(":java") },
       key(":is-full"),
       toWF(isFull),
       key(":notes"),

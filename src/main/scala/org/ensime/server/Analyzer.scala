@@ -9,6 +9,7 @@ import org.ensime.util.RichFile._
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.{ Iterable }
+import scala.collection.mutable.{ ListBuffer }
 import scala.tools.nsc.{ Settings }
 import scala.tools.nsc.ast._
 import scala.tools.nsc.util.{ OffsetPosition }
@@ -30,7 +31,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   private val reporter = new PresentationReporter(new UserMessages {
     override def showError(str: String) {
       project ! SendBackgroundMessageEvent(
-	MsgCompilerUnexpectedError, Some(str))
+        MsgCompilerUnexpectedError, Some(str))
     }
   })
 
@@ -38,7 +39,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     settings, reporter, this, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
   protected var awaitingInitialCompile = true
-  protected var pendingFullTypeCheckRequest: Option[RPCRequestEvent] = None
 
   import protocol._
   import scalaCompiler._
@@ -71,14 +71,21 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               awaitingInitialCompile = false
             }
 
-            val result = NoteList('scala, true, reporter.allNotes)
+            val notes = reporter.allNotes
 
-            project ! TypeCheckResultEvent(result)
+            pendingTypeCheckRequest match {
 
-            // If this full compile was explicitely requested by client...
-            for (req <- pendingFullTypeCheckRequest) {
-              project ! RPCResultEvent(toWF(result), req.callId)
-              pendingFullTypeCheckRequest = None
+              // If this compilation was explicitely requested by client...
+              case Some((handler, failHandler)) => {
+                handler(notes)
+                pendingTypeCheckRequest = None
+              }
+
+              // Otherwise, use an out-of-band event to notify client
+              case None => {
+                val result = NoteList(true, notes)
+                project ! TypeCheckResultEvent(result)
+              }
             }
 
           }
@@ -86,40 +93,42 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
           case rpcReq@RPCRequestEvent(req: Any, callId: Int) => {
             try {
               if (awaitingInitialCompile) {
-                project ! RPCErrorEvent(ErrAnalyzerNotReady, 
-		  Some("Analyzer is not ready! Please wait."), callId)
+                project ! RPCErrorEvent(ErrAnalyzerNotReady,
+                  Some("Analyzer is not ready! Please wait."), callId)
               } else {
                 req match {
 
                   case ReloadAllReq() => {
                     javaCompiler.reset()
                     javaCompiler.compileAll()
-                    val notes = javaCompiler.allNotes
-                    project ! TypeCheckResultEvent(NoteList('java, true, notes))
-
-                    // Clean up any hanging request..
-                    for (existingReq <- pendingFullTypeCheckRequest) {
-                      project ! RPCResultEvent(toWF(null), existingReq.callId)
-                    }
-                    // Create a new req..
-                    pendingFullTypeCheckRequest = Some(rpcReq)
-
+                    val javaNotes = javaCompiler.allNotes
+                    waitForScalaTypeCheckResult({ notes =>
+                      val nl = NoteList(true, notes ++ javaNotes)
+                      project ! RPCResultEvent(toWF(nl), callId)
+                    }, { () =>
+                      project ! RPCResultEvent(toWF(null), callId)
+                    })
                     scalaCompiler.askReloadAllFiles()
                   }
 
                   case ReloadFileReq(file: File) => {
+                    val allNotes = new ListBuffer[Note]
 
                     if (file.getAbsolutePath().endsWith(".java")) {
                       javaCompiler.compileFile(file)
-                      val notes = javaCompiler.allNotes
-                      project ! TypeCheckResultEvent(NoteList('java, false, notes))
+                      allNotes ++= javaCompiler.allNotes
                     }
+
+                    waitForScalaTypeCheckResult({ notes =>
+                      allNotes ++= notes
+                      val nl = NoteList(true, allNotes)
+                      project ! RPCResultEvent(toWF(nl), callId)
+                    }, { () =>
+                      project ! RPCResultEvent(toWF(null), callId)
+                    })
 
                     val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
                     scalaCompiler.askReloadFile(f)
-                    val result = NoteList('scala, false, reporter.allNotes)
-                    project ! TypeCheckResultEvent(result)
-                    project ! RPCResultEvent(toWF(true), callId)
                   }
 
                   case req: RefactorPerformReq => {
@@ -244,8 +253,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               case e: Exception => {
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent(ErrExceptionInAnalyzer, 
-		  Some("Error occurred in Analyzer. Check the server log."), callId)
+                project ! RPCErrorEvent(ErrExceptionInAnalyzer,
+                  Some("Error occurred in Analyzer. Check the server log."), callId)
               }
             }
           }
@@ -260,6 +269,18 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
         }
       }
     }
+  }
+
+  type TypeCheckHandler = (Iterable[Note] => Unit)
+  type TypeCheckFailureHandler = (() => Unit)
+
+  private var pendingTypeCheckRequest: Option[(TypeCheckHandler, TypeCheckFailureHandler)] = None
+
+  private def waitForScalaTypeCheckResult(handler: TypeCheckHandler, failHandler: TypeCheckFailureHandler) {
+    for ((handler, failHandler) <- pendingTypeCheckRequest) {
+      failHandler()
+    }
+    pendingTypeCheckRequest = Some((handler, failHandler))
   }
 
   def pos(file: File, offset: Int) = {

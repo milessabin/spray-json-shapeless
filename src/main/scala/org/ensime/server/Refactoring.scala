@@ -44,9 +44,9 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
             val refactorType = tpe
             val changes = modifications
           })
-        case Left(error) => Left(RefactorFailure(procId, error.cause.toString))
+        case Left(error) => Left(RefactorFailure(procId, error.cause))
       }
-      case Left(error) => Left(RefactorFailure(procId, error.cause.toString))
+      case Left(error) => Left(RefactorFailure(procId, error.cause))
     }
   }
 }
@@ -71,16 +71,24 @@ trait RefactoringController { self: Analyzer =>
 
   def handleRefactorExec(req: RefactorExecReq, callId: Int) {
     val procedureId = req.procedureId
-    val effect = effects(procedureId)
-    project ! AddUndo(
-      "Refactoring of type: " + req.refactorType.toString, 
-      FileUtils.inverseChanges(effect.changes))
-    val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
-    result match {
-      case Right(result) => {
-	project ! RPCResultEvent(toWF(result), callId)
+    effects.get(procedureId) match{
+      case Some(effect) => {
+	project ! AddUndo(
+	  "Refactoring of type: " + req.refactorType.toString, 
+	  FileUtils.inverseChanges(effect.changes))
+	val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
+	result match {
+	  case Right(result) => {
+	    project ! RPCResultEvent(toWF(result), callId)
+	  }
+	  case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+	}
       }
-      case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+      case None => {
+	val f = RefactorFailure(procedureId, 
+	  "No effect found for procId " + procedureId)
+	project ! RPCResultEvent(toWF(f), callId)
+      }
     }
   }
 
@@ -178,7 +186,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           (params.get('newName), params.get('file), params.get('start), params.get('end)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
-              doRename(procId, tpe, n, f, s, e)
+	      doRename(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
           }
@@ -187,7 +195,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           (params.get('methodName), params.get('file), params.get('start), params.get('end)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
-              doExtractMethod(procId, tpe, n, f, s, e)
+	      doExtractMethod(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
           }
@@ -196,7 +204,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           (params.get('name), params.get('file), params.get('start), params.get('end)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
-              doExtractLocal(procId, tpe, n, f, s, e)
+	      doExtractLocal(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
           }
@@ -205,7 +213,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           (params.get('file), params.get('start), params.get('end)) match {
             case (Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
-              doInlineLocal(procId, tpe, f, s, e)
+	      doInlineLocal(procId, tpe, f, s, e)
             }
             case _ => badArgs
           }
@@ -214,7 +222,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           (params.get('file), params.get('start), params.get('end)) match {
             case (Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
-              doOrganizeImports(procId, tpe, f, s, e)
+	      doOrganizeImports(procId, tpe, f, s, e)
             }
             case _ => badArgs
           }

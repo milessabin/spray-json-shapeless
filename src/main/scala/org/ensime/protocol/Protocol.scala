@@ -1,14 +1,12 @@
 package org.ensime.protocol
 
 import java.io._
-
-import scala.actors._
-
-import org.ensime.model._
-import org.ensime.util._
-import org.ensime.config.{ ProjectConfig, DebugConfig, ReplConfig }
+import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
 import org.ensime.debug.{ DebugUnit, DebugSourceLinePairs }
+import org.ensime.model._
 import org.ensime.server._
+import org.ensime.util._
+import scala.actors._
 
 case class IncomingMessageEvent(obj: Any)
 case class OutgoingMessageEvent(obj: Any)
