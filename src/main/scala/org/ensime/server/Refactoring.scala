@@ -162,8 +162,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
   }.result
 
-  protected def doOrganizeImports(procId: Int, tpe: scala.Symbol, file: String, start: Int, end: Int) =
-  new RefactoringEnvironment(file, start, end) {
+  protected def doOrganizeImports(procId: Int, tpe: scala.Symbol, file: String) =
+  new RefactoringEnvironment(file, 0, 0) {
     val refactoring = new OrganizeImports {
       val global = RefactoringImpl.this
     }
@@ -219,10 +219,10 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           }
         }
         case 'organizeImports => {
-          (params.get('file), params.get('start), params.get('end)) match {
-            case (Some(f: String), Some(s: Int), Some(e: Int)) => {
+          params.get('file) match {
+            case Some(f: String) => {
 	      reloadAndType(f)
-	      doOrganizeImports(procId, tpe, f, s, e)
+	      doOrganizeImports(procId, tpe, f)
             }
             case _ => badArgs
           }
