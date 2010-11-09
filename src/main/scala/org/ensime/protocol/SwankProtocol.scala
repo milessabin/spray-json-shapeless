@@ -72,12 +72,11 @@ trait SwankProtocol extends Protocol {
     }
   }
 
-  def sendBackgroundMessage(code: Int, detail:Option[String]) {
+  def sendBackgroundMessage(code: Int, detail: Option[String]) {
     sendMessage(SExp(
       key(":background-message"),
       code,
-      detail.map(strToSExp).getOrElse(NilAtom())
-    ))
+      detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   def handleIncomingMessage(msg: Any) {
@@ -115,8 +114,8 @@ trait SwankProtocol extends Protocol {
       }
       case _ => {
         sendRPCError(
-          ErrMalformedRPC, 
-	  Some("Expecting leading symbol in: " + form),
+          ErrMalformedRPC,
+          Some("Expecting leading symbol in: " + form),
           callId)
       }
     }
@@ -368,8 +367,8 @@ trait SwankProtocol extends Protocol {
 
       case other => {
         sendRPCError(
-	  ErrUnrecognizedRPC, 
-	  Some("Unknown :swank-rpc call: " + other),
+          ErrUnrecognizedRPC,
+          Some("Unknown :swank-rpc call: " + other),
           callId)
       }
     }
@@ -402,20 +401,18 @@ trait SwankProtocol extends Protocol {
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     sendMessage(SExp(
       key(":return"),
-      SExp(key(":abort"), 
-	code, 
-	detail.map(strToSExp).getOrElse(NilAtom())
-      ),
+      SExp(key(":abort"),
+        code,
+        detail.map(strToSExp).getOrElse(NilAtom())),
       callId))
   }
 
-  def sendProtocolError(code: Int, detail: Option[String]){
+  def sendProtocolError(code: Int, detail: Option[String]) {
     sendMessage(
       SExp(
         key(":reader-error"),
-	code,
-        detail.map(strToSExp).getOrElse(NilAtom())
-      ))
+        code,
+        detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   /*
@@ -443,8 +440,8 @@ trait SwankProtocol extends Protocol {
 
     implicit def posToSExp(pos: Position): SExp = {
       if (pos.isDefined) {
-        SExp.propList((":file", pos.source.path), (":offset", pos.point + 
-	    emacsCharOffset))
+        SExp.propList((":file", pos.source.path), (":offset", pos.point +
+          emacsCharOffset))
       } else {
         'nil
       }
@@ -574,7 +571,7 @@ trait SwankProtocol extends Protocol {
             (":type-id", value.id),
             (":arrow-type", true),
             (":result-type", toWF(value.resultType)),
-            (":param-sections", SExp(value.paramSections.map { sect => SExp(sect.map { toWF(_) }) })))
+            (":param-sections", SExp(value.paramSections.map(toWF))))
         }
       case value: TypeInfo =>
         {
@@ -601,11 +598,16 @@ trait SwankProtocol extends Protocol {
   def toWF(value: CallCompletionInfo): SExp = {
     SExp.propList(
       (":result-type", toWF(value.resultType)),
-      (":param-sections", SExp(value.paramSections.map { sect =>
-        SExp(sect.map { pair =>
-          SExp(toWF(pair._1), toWF(pair._2))
-        })
-      })))
+      (":param-sections", SExp(value.paramSections.map(toWF))))
+  }
+
+  def toWF(value: ParamSectionInfo): SExp = {
+    SExp.propList(
+      (":params", SExp(value.params.map {
+        case (nm, tp) => SExp(nm, toWF(tp))
+      })),
+      (":is-implicit", value.isImplicit))
+
   }
 
   def toWF(value: InterfaceInfo): SExp = {
