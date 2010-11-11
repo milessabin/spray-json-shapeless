@@ -262,6 +262,8 @@ class ProjectConfig(
       fp.setPreference(DoubleIndentClassDeclaration, value)
       case ('formatXml, value: Boolean) =>
       fp.setPreference(FormatXml, value)
+      case ('indentPackageBlocks, value: Boolean) =>
+      fp.setPreference(IndentPackageBlocks, value)
       case ('indentSpaces, value: Int) =>
       fp.setPreference(IndentSpaces, value)
       case ('preserveSpaceBeforeArguments, value: Boolean) =>
