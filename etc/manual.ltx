@@ -547,9 +547,16 @@ Start the automatic configuration file generator.
 
 \section{Troubleshooting}
 
+\subsection{Diagnosing Issues}
 You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload. Otherwise, if things are irreparably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 
 
 If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of \emph{*inferior-ensime-server*}.
+
+\subsection{Custom JVM Options}
+If you're having problems with the default arguments (max heap, initial heap) that ENSI
+ME uses in its startup script, you can modify the environment variable ENSIME\_JVM\_ARGS to override the arguments that are passed to the ENSIME Server JVM.
+
+Note: This is currently only supported on unix systems.
 
 \newpage
 

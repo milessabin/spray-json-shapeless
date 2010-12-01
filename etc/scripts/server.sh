@@ -11,7 +11,13 @@ case "$1" in
   ;;
 esac
 
-INITIAL_HEAP=256M
-MAX_HEAP=1024M
+if [ "$ENSIME_JVM_ARGS" == "" ]
+then
+  ENSIME_JVM_ARGS="-Xms256M -Xmx1024M"
+fi
+
 CLASSPATH=<RUNTIME_CLASSPATH>
-java -classpath $CLASSPATH -Xms${INITIAL_HEAP} -Xmx${MAX_HEAP} org.ensime.server.Server $PORT_FILE
+CMD="java -classpath ${CLASSPATH} ${ENSIME_JVM_ARGS} org.ensime.server.Server ${PORT_FILE}"
+echo $CMD
+$CMD
+
