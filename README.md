@@ -80,6 +80,7 @@ After cloning, and before you can run ENSIME, you must create the distribution d
 
 
 The work-flow I use when hacking ENSIME:
+
 - Edit source files
 - 'sbt dist'
 - Stop existing ENSIME server by killing *inferior-ensime-server* buffer
