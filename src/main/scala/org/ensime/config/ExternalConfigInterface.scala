@@ -23,10 +23,10 @@ object ExternalConfigInterface {
 
   def getMavenConfig(baseDir: File): ExternalConfig = {
     val srcPaths = maybeDirs(List(
-	"src/main/scala",
-	"src/main/java",
-	"src/test/scala",
-	"src/test/java"), baseDir)
+      "src/main/scala",
+      "src/main/java",
+      "src/test/scala",
+      "src/test/java"), baseDir)
     val runtimeDeps = resolveMavenDeps(baseDir, "runtime")
     val compileDeps = resolveMavenDeps(baseDir, "compile")
     val testDeps = resolveMavenDeps(baseDir, "test")
@@ -91,10 +91,10 @@ object ExternalConfigInterface {
     testConf: Option[String]): ExternalConfig = {
 
     val srcPaths = maybeDirs(List(
-	"src/main/scala",
-	"src/main/java",
-	"src/test/scala",
-	"src/test/java"), baseDir)
+      "src/main/scala",
+      "src/main/java",
+      "src/test/scala",
+      "src/test/java"), baseDir)
 
     val resolve = { c: String => resolveIvyDeps(baseDir, ivyFile, c) }
 
@@ -140,12 +140,12 @@ object ExternalConfigInterface {
     task.deps.map(toCanonFile)
   }
 
-  def getSbtConfig(baseDir: File, deps:Iterable[String]): ExternalConfig = {
+  def getSbtConfig(baseDir: File, deps: Iterable[String]): ExternalConfig = {
 
     val projectProps = new File(baseDir, "project/build.properties")
     val parentProjectProps = new File(baseDir, "../project/build.properties")
     val isSubProject = !(projectProps.exists) && parentProjectProps.exists
-    val propFile = if(isSubProject){ parentProjectProps } else { projectProps }
+    val propFile = if (isSubProject) { parentProjectProps } else { projectProps }
     println("Loading sbt build.properties from " + propFile + ".")
     val props = JavaProperties.load(propFile)
 
@@ -156,17 +156,15 @@ object ExternalConfigInterface {
     val f = new File(baseDir, "target/scala_" + v + "/classes")
     val target = if (f.exists) { Some(toCanonFile(f)) } else { None }
 
-
     val compileDeps = ListBuffer[CanonFile]()
     val runtimeDeps = ListBuffer[CanonFile]()
     val testDeps = ListBuffer[CanonFile]()
     val srcPaths = ListBuffer[CanonFile]()
 
-    val scalaLibDir = if (isSubProject) { 
-      "../project/boot/scala-" + v + "/lib" 
-    }
-    else { 
-      "project/boot/scala-" + v + "/lib" 
+    val scalaLibDir = if (isSubProject) {
+      "../project/boot/scala-" + v + "/lib"
+    } else {
+      "project/boot/scala-" + v + "/lib"
     }
 
     println("Searching for scala libs in " + scalaLibDir)
@@ -182,47 +180,41 @@ object ExternalConfigInterface {
     runtimeDeps ++= info.runtimeDeps
     testDeps ++= info.testDeps
     srcPaths ++= info.srcPaths
-    
+
     if (isSubProject) {
       println("Adding subproject dependencies..")
-      for(proj <- deps){
-	val dir = new File(baseDir, "../" + proj)
-	val info = getSbtProjectInfo(dir, v)
-	compileDeps ++= info.compileDeps
-	runtimeDeps ++= info.runtimeDeps
-	testDeps ++= info.testDeps
-	srcPaths ++= info.srcPaths
+      for (proj <- deps) {
+        val dir = new File(baseDir, "../" + proj)
+        val info = getSbtProjectInfo(dir, v)
+        compileDeps ++= info.compileDeps
+        runtimeDeps ++= info.runtimeDeps
+        testDeps ++= info.testDeps
+        srcPaths ++= info.srcPaths
       }
     }
 
     ExternalConfig(projName, srcPaths, runtimeDeps, compileDeps, testDeps, target)
   }
 
-
-
   case class SbtProjectInfo(
-    srcPaths:Iterable[CanonFile],
-    runtimeDeps:Iterable[CanonFile],
-    compileDeps:Iterable[CanonFile],
-    testDeps:Iterable[CanonFile])
+    srcPaths: Iterable[CanonFile],
+    runtimeDeps: Iterable[CanonFile],
+    compileDeps: Iterable[CanonFile],
+    testDeps: Iterable[CanonFile])
 
-
-
-  def getSbtProjectInfo(baseDir:File, buildScalaVersion:String):SbtProjectInfo = {
+  def getSbtProjectInfo(baseDir: File, buildScalaVersion: String): SbtProjectInfo = {
     val srcPaths = maybeDirs(List(
-	"src/main/scala",
-	"src/main/java",
-	"src/test/scala",
-	"src/test/java"), baseDir)
+      "src/main/scala",
+      "src/main/java",
+      "src/test/scala",
+      "src/test/java"), baseDir)
     val compileDeps = resolveSbtDeps(baseDir, buildScalaVersion, "compile")
     val runtimeDeps = resolveSbtDeps(baseDir, buildScalaVersion, "runtime")
     val testDeps = resolveSbtDeps(baseDir, buildScalaVersion, "test")
     SbtProjectInfo(srcPaths, runtimeDeps, compileDeps, testDeps)
   }
 
-
-
-  def resolveSbtDeps(baseDir: File, scalaVersion: String, 
+  def resolveSbtDeps(baseDir: File, scalaVersion: String,
     conf: String): Iterable[CanonFile] = {
 
     println("Resolving sbt dependencies at directory: " + baseDir)

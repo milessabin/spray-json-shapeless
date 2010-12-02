@@ -552,6 +552,16 @@ You may want to examine the contents of the \emph{*inferior-ensime-server*} buff
 
 If you've hit a recurring bug, please post an issue to github.com/aemoncannon/ensime. Please include your OS, Emacs version, ENSIME version, and the contents of \emph{*inferior-ensime-server*}.
 
+\subsection{Emacs Binary Search Path}
+When launching the embedded sbt shell, or the Scala repl, ENSIME uses the Emacs start-process command. Rather than using the value of the PATH environment variable, this command searches for binaries using the paths stored at the Emacs variable exec-path. On some Windows and OSX machines, exec-path will not by default contain the value of PATH. See \begin{verbatim}http://xahlee.org/emacs/emacs_env_var_paths.html\end{verbatim} for more details. For example, the following Emacs Lisp could be used to manually add a Scala binary directory to the exec-path:
+
+\begin{mylisting}
+\begin{verbatim}
+(setq exec-path (append exec-path (list "/home/aemon/scala/bin" )))
+\end{verbatim}
+\end{mylisting}
+
+
 \subsection{Custom JVM Options}
 If you're having problems with the default arguments (max heap, initial heap) that ENSI
 ME uses in its startup script, you can modify the environment variable ENSIME\_JVM\_ARGS to override the arguments that are passed to the ENSIME Server JVM.
