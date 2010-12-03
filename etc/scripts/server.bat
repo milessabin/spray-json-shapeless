@@ -1,5 +1,4 @@
 set PORT_FILE=%1
 set CLASSPATH=<RUNTIME_CLASSPATH>
-set INITIAL_HEAP=256M
-set MAX_HEAP=1024M
-java -classpath %CLASSPATH% -Xms%INITIAL_HEAP% -Xmx%MAX_HEAP% org.ensime.server.Server %PORT_FILE%
+if "%ENSIME_JVM_ARGS%"=="" (set ENSIME_JVM_ARGS=-Xms256M -Xmx1024M)
+java -classpath %CLASSPATH% %ENSIME_JVM_ARGS% org.ensime.server.Server %PORT_FILE%
