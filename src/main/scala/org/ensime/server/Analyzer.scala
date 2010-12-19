@@ -50,6 +50,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     println("Building Java sources...")
     javaCompiler.compileAll()
 
+
     println("Building Scala sources...")
     scalaCompiler.askReloadAllFiles()
 
