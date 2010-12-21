@@ -293,12 +293,10 @@ class ProjectConfig(
 
   def compilerArgs = List(
     "-classpath", compilerClasspath,
-    "-sourcepath", sourcepath,
     "-verbose")
 
   def builderArgs = List(
     "-classpath", compilerClasspath,
-    "-sourcepath", sourcepath,
     "-verbose",
     "-d", target.getOrElse(new File(root, "classes")).getPath,
     sourceFilenames.mkString(" "))
