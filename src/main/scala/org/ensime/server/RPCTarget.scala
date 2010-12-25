@@ -180,13 +180,13 @@ trait RPCTarget { self: Project =>
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>
-          sendRPCError(ErrFormatFailed, 
-	    Some("Could not write any formatting changes: " + e), callId)
+        sendRPCError(ErrFormatFailed, 
+	  Some("Could not write any formatting changes: " + e), callId)
       }
     } catch {
       case e: ScalaParserException =>
-        sendRPCError(ErrFormatFailed, 
-	  Some("Cannot format broken syntax: " + e), callId)
+      sendRPCError(ErrFormatFailed, 
+	Some("Cannot format broken syntax: " + e), callId)
     }
 
   }

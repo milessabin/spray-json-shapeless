@@ -1,7 +1,7 @@
 package org.ensime.protocol
 
 import java.io._
-import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
+import org.ensime.config.{ ProjectConfig, DebugConfig, ReplConfig }
 import org.ensime.debug.{ DebugUnit, DebugSourceLinePairs }
 import org.ensime.model._
 import org.ensime.server._
@@ -32,6 +32,8 @@ object ProtocolConst {
 
   val ErrAnalyzerNotReady = 209
   val ErrExceptionInAnalyzer = 210
+
+  val ErrFileDoesNotExist = 211
 
 }
 

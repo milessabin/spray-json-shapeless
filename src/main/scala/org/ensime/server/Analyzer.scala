@@ -25,7 +25,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   settings.usejavacp.value = false
 
   println("\nPresentation Compiler settings:")
-  System.out.println(settings.toString)
+  println(settings.toString)
   println("")
 
   private val reporter = new PresentationReporter(new UserMessages {
@@ -49,7 +49,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
     println("Building Java sources...")
     javaCompiler.compileAll()
-
 
     println("Building Scala sources...")
     scalaCompiler.askReloadAllFiles()
@@ -109,11 +108,17 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     }, { () =>
                       project ! RPCResultEvent(toWF(null), callId)
                     })
+                    scalaCompiler.askCleanupDeleted()
                     scalaCompiler.askReloadAllFiles()
                   }
 
                   case ReloadFileReq(file: File) => {
                     val allNotes = new ListBuffer[Note]
+
+                    if (!file.exists()) {
+                      project ! RPCErrorEvent(ErrFileDoesNotExist,
+                        Some(file.getPath()), callId)
+                    }
 
                     if (file.getAbsolutePath().endsWith(".java")) {
                       javaCompiler.compileFile(file)

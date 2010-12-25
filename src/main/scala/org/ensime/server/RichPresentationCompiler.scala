@@ -3,12 +3,13 @@ import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import scala.actors._
 import scala.actors.Actor._
-import scala.collection.mutable.{ LinkedHashMap, ListBuffer, LinkedHashSet }
+import scala.collection.mutable
 import scala.tools.nsc.{ Settings, FatalError }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
 import scala.tools.nsc.util.{ SourceFile, Position }
+import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring.analysis.GlobalIndexes
 import java.io.File
 
@@ -65,8 +66,11 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     x.get
   }
 
+  def askCleanupDeleted() = askOr(cleanupDeleted(), t => ())
+
   def askReloadAllFiles() = {
-    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++ firsts).toSet.toList
+    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++
+      firsts).toSet.toList
     askReloadFiles(all)
   }
 
@@ -77,31 +81,31 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
-    reloadSources(List(p.source))
-    inspectTypeAt(p)
-  }, t => None)
+      reloadSources(List(p.source))
+      inspectTypeAt(p)
+    }, t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-    completePackageMember(path, prefix)
-  }, t => List())
+      completePackageMember(path, prefix)
+    }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = askOr({
-    reloadSources(List(p.source))
-    completeSymbolAt(p, prefix, constructor)
-  }, t => List())
+      reloadSources(List(p.source))
+      completeSymbolAt(p, prefix, constructor)
+    }, t => List())
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
-    reloadSources(List(p.source))
-    completeMemberAt(p, prefix)
-  }, t => List())
+      reloadSources(List(p.source))
+      completeMemberAt(p, prefix)
+    }, t => List())
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-    reloadAndTypeFiles(files)
-  }, t => ())
+      reloadAndTypeFiles(files)
+    }, t => ())
 
   def askImportSuggestions(p: Position, names: Iterable[String]): ImportSuggestions = askOr({
-    ImportSuggestions(symbolSuggestions(names))
-  }, t => ImportSuggestions(List()))
+      ImportSuggestions(symbolSuggestions(names))
+    }, t => ImportSuggestions(List()))
 
   def askClearTypeCache() = clearTypeCache
 
@@ -114,12 +118,43 @@ class RichPresentationCompiler(
   reporter: Reporter,
   var parent: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-  with ModelBuilders with RichCompilerControl with RefactoringImpl {
+with ModelBuilders with RichCompilerControl with RefactoringImpl {
 
   import Helpers._
 
+  private val symsByFile = new mutable.HashMap[
+    AbstractFile, mutable.LinkedHashSet[Symbol]] {
+    override def default(k: AbstractFile) = { 
+      val v = new mutable.LinkedHashSet[Symbol]
+      put(k, v)
+      v 
+    }
+  }
+
+  /** Called from typechecker every time a top-level class or object is entered.*/
+  override def registerTopLevelSym(sym: Symbol) { 
+    super.registerTopLevelSym(sym) 
+    symsByFile(sym.sourceFile) += sym
+  }
+
+  /** Remove symbols defined by files that no longer exist. */
+  def cleanupDeleted() {
+    firsts = firsts.filter{_.file.exists}
+    val deleted = symsByFile.keys.filter{!_.exists}
+    for(f <- deleted){
+      println("Missing file: " + f)
+      val syms = symsByFile(f) 
+      for (s <- syms){
+        println("Unlinking sym: " + s)
+        s.owner.info.decls unlink s	
+      }
+      symsByFile.remove(f)
+      unitOfFile.remove(f)
+    }
+  }
+
   private def typePublicMembers(tpe: Type): Iterable[TypeMember] = {
-    val members = new LinkedHashMap[Symbol, TypeMember]
+    val members = new mutable.LinkedHashMap[Symbol, TypeMember]
     def addTypeMember(sym: Symbol, pre: Type, inherited: Boolean, viaView: Symbol) {
       try {
         val m = new TypeMember(
@@ -131,8 +166,8 @@ class RichPresentationCompiler(
         members(sym) = m
       } catch {
         case e =>
-          System.err.println("Error: Omitting member " + sym
-            + ": " + e)
+        System.err.println("Error: Omitting member " + sym
+          + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -164,7 +199,7 @@ class RichPresentationCompiler(
           }
           // Remove duplicates
           // Filter out synthetic things
-          val bySym = new LinkedHashMap[Symbol, TypeMember]
+          val bySym = new mutable.LinkedHashMap[Symbol, TypeMember]
           for (m <- (members ++ typePublicMembers(tpe))) {
             if (!m.sym.nameString.contains("$")) {
               bySym(m.sym) = m
@@ -193,9 +228,9 @@ class RichPresentationCompiler(
     typeAt(p) match {
       case Left(t) => {
         Some(new TypeInspectInfo(
-          TypeInfo(t),
-          companionTypeOf(t).map(cacheType),
-          preparedMembers))
+            TypeInfo(t),
+            companionTypeOf(t).map(cacheType),
+            preparedMembers))
       }
       case Right(_) => None
     }
@@ -243,7 +278,7 @@ class RichPresentationCompiler(
 
     } catch {
       case e: FatalError =>
-        {
+      {
         println("typedTreeAt threw FatalError: " + e + ", falling back to typedTree... ")
         typedTree(p.source, true)
         locateTree(p)
@@ -303,33 +338,33 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override scopeMembers to fix issues with finding method params
-   * and occasional exception in pre.memberType. Hopefully we can
-   * get these changes into Scala.
-   */
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
     persistentTypedTreeAt(pos) // to make sure context is entered
     locateContext(pos) match {
       case Some(context) => {
-        val locals = new LinkedHashMap[Symbol, ScopeMember]
+        val locals = new mutable.LinkedHashMap[Symbol, ScopeMember]
         def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
           val ns = sym.nameString
           val accessible = context.isAccessible(sym, pre, false)
           if (accessible && ((exactMatch && ns == prefix)
-            || (!exactMatch && ns.startsWith(prefix))) &&
+	      || (!exactMatch && ns.startsWith(prefix))) &&
             !sym.nameString.contains("$") &&
             !locals.contains(sym)) {
             try {
-              val member = new ScopeMember(
+	      val member = new ScopeMember(
                 sym,
                 sym.tpe,
                 accessible,
                 viaImport)
-              locals(sym) = member
+	      locals(sym) = member
             } catch {
-              case e =>
-                System.err.println("Error: Omitting scope member "
-                  + sym + ": " + e)
+	      case e =>
+              System.err.println("Error: Omitting scope member "
+                + sym + ": " + e)
             }
           }
         }
@@ -340,7 +375,7 @@ class RichPresentationCompiler(
           }
           if (cx.prefix != null) {
             for (sym <- cx.prefix.members) {
-              addSymbol(sym, cx.prefix, EmptyTree)
+	      addSymbol(sym, cx.prefix, EmptyTree)
             }
           }
           cx = cx.outer
@@ -348,7 +383,7 @@ class RichPresentationCompiler(
         for (imp <- context.imports) {
           val pre = imp.qual.tpe
           val importedSyms = pre.members.flatMap(transformImport(
-            imp.tree.selectors, _))
+	      imp.tree.selectors, _))
           for (sym <- importedSyms) {
             addSymbol(sym, pre, imp.qual)
           }
@@ -368,8 +403,8 @@ class RichPresentationCompiler(
     case List() => List()
     case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
     case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
-      if (to == nme.WILDCARD) List()
-      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+    if (to == nme.WILDCARD) List()
+    else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
     case _ :: rest => transformImport(rest, sym)
   }
 
@@ -392,7 +427,7 @@ class RichPresentationCompiler(
 
   protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     val names = scopeMembers(p, prefix, false)
-    val result = new LinkedHashSet[SymbolInfoLight]
+    val result = new mutable.LinkedHashSet[SymbolInfoLight]
     names.foreach { m =>
       m match {
         case ScopeMember(sym, tpe, true, _) => {
@@ -446,16 +481,16 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override so we send a notification to compiler actor when finished..
-   */
+  * Override so we send a notification to compiler actor when finished..
+  */
   override def recompile(units: List[RichCompilationUnit]) {
     super.recompile(units)
     parent ! FullTypeCheckCompleteEvent()
   }
 
   /**
-   * Overriding for debug purposes..
-   */
+  * Overriding for debug purposes..
+  */
   override def parse(unit: RichCompilationUnit): Unit = {
     // System.err.println("DEBUG PARSE TRACE\n---------------------\n")
     // (new RuntimeException()).printStackTrace(System.err);
