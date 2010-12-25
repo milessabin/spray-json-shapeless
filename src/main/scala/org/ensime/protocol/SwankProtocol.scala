@@ -208,6 +208,14 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+      case "swank:remove-file" => {
+        form match {
+          case SExpList(head :: StringAtom(file) :: body) => {
+            rpcTarget.rpcRemoveFile(file, callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:typecheck-file" => {
         form match {
           case SExpList(head :: StringAtom(file) :: body) => {

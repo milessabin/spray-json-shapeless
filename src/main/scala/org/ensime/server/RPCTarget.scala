@@ -95,6 +95,12 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(ReloadFileReq(file), callId)
   }
 
+  def rpcRemoveFile(f: String, callId: Int) {
+    val file: File = new File(f)
+    analyzer ! RPCRequestEvent(RemoveFileReq(file), callId)
+    sendRPCAckOK(callId)
+  }
+
   def rpcTypecheckAll(callId: Int) {
     analyzer ! RPCRequestEvent(ReloadAllReq(), callId)
   }

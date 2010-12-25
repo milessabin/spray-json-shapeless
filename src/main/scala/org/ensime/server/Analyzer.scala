@@ -98,6 +98,10 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               } else {
                 req match {
 
+                  case RemoveFileReq(file: File) => {
+		    askRemoveDeleted(file)
+                  }
+
                   case ReloadAllReq() => {
                     javaCompiler.reset()
                     javaCompiler.compileAll()
@@ -108,7 +112,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     }, { () =>
                       project ! RPCResultEvent(toWF(null), callId)
                     })
-                    scalaCompiler.askCleanupDeleted()
+                    scalaCompiler.askRemoveAllDeleted()
                     scalaCompiler.askReloadAllFiles()
                   }
 
@@ -147,11 +151,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case req: RefactorCancelReq => {
                     handleRefactorCancel(req, callId)
-                  }
-
-                  case RemoveFileReq(file: File) => {
-                    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-                    scalaCompiler.removeUnitOf(f)
                   }
 
                   case ScopeCompletionReq(file: File, point: Int,
