@@ -28,7 +28,8 @@ class PresentationReporter(msgs:UserMessages) extends Reporter {
   }
 
   override def info(pos: Position, msg: String, force: Boolean) {
-    if(msg.contains("MissingRequirementError: object scala not found")){
+    if(msg.contains("MissingRequirementError: object scala not found") || 
+      msg.contains("MissingRequirementError: class scala.runtime.BooleanRef not found")){
       msgs.showError("Fatal Error: Scala language library not found on classpath. You may need to run 'sbt update', or 'mvn update'.")
     }
     println("INFO: " + msg)
