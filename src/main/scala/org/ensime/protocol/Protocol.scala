@@ -7,6 +7,7 @@ import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
 import scala.actors._
+import scala.tools.nsc.util.{ Position }
 
 case class IncomingMessageEvent(obj: Any)
 case class OutgoingMessageEvent(obj: Any)
@@ -201,6 +202,7 @@ trait ProtocolConversions {
   def toWF(value: InterfaceInfo): WireFormat
   def toWF(value: TypeInspectInfo): WireFormat
   def toWF(value: ImportSuggestions): WireFormat
+  def toWF(value: Position): WireFormat
 
   def toWF(value: RefactorFailure): WireFormat
   def toWF(value: RefactorEffect): WireFormat

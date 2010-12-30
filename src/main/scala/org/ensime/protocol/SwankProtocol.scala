@@ -74,9 +74,9 @@ trait SwankProtocol extends Protocol {
 
   def sendBackgroundMessage(code: Int, detail: Option[String]) {
     sendMessage(SExp(
-      key(":background-message"),
-      code,
-      detail.map(strToSExp).getOrElse(NilAtom())))
+	key(":background-message"),
+	code,
+	detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   def handleIncomingMessage(msg: Any) {
@@ -104,7 +104,7 @@ trait SwankProtocol extends Protocol {
           handleRPCRequest(name, form, callId)
         } catch {
           case e: Throwable =>
-            {
+          {
             e.printStackTrace(System.err)
             sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
           }
@@ -243,11 +243,19 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
-      case "swank:import-suggestions" => {
+      // case "swank:import-suggestions" => {
+      //   form match {
+      //     case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
+      //       rpcTarget.rpcImportSuggestions(file, point,
+      //         names.map(_.toString).toList, callId)
+      //     }
+      //     case _ => oops
+      //   }
+      // }
+      case "swank:uses-of-symbol-at-point" => {
         form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
-            rpcTarget.rpcImportSuggestions(file, point,
-              names.map(_.toString).toList, callId)
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
+            rpcTarget.rpcUsesOfSymAtPoint(file, point, callId)
           }
           case _ => oops
         }
@@ -394,11 +402,11 @@ trait SwankProtocol extends Protocol {
   def sendRPCReturn(value: WireFormat, callId: Int) {
     value match {
       case sexp: SExp =>
-        {
+      {
         sendMessage(SExp(
-          key(":return"),
-          SExp(key(":ok"), sexp),
-          callId))
+            key(":return"),
+            SExp(key(":ok"), sexp),
+            callId))
       }
       case _ => throw new IllegalStateException("Not a SExp: " + value)
     }
@@ -406,11 +414,11 @@ trait SwankProtocol extends Protocol {
 
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     sendMessage(SExp(
-      key(":return"),
-      SExp(key(":abort"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())),
-      callId))
+	key(":return"),
+	SExp(key(":abort"),
+          code,
+          detail.map(strToSExp).getOrElse(NilAtom())),
+	callId))
   }
 
   def sendProtocolError(code: Int, detail: Option[String]) {
@@ -541,6 +549,10 @@ trait SwankProtocol extends Protocol {
       (":is-callable", value.isCallable))
   }
 
+  def toWF(value: Position): SExp = {
+    posToSExp(value)
+  }
+
   def toWF(value: NamedTypeMemberInfoLight): SExp = {
     SExp.propList(
       (":name", value.name),
@@ -570,7 +582,7 @@ trait SwankProtocol extends Protocol {
   def toWF(value: TypeInfo): SExp = {
     value match {
       case value: ArrowTypeInfo =>
-        {
+      {
         SExp.propList(
           (":name", value.name),
           (":type-id", value.id),
@@ -579,7 +591,7 @@ trait SwankProtocol extends Protocol {
           (":param-sections", SExp(value.paramSections.map(toWF))))
       }
       case value: TypeInfo =>
-        {
+      {
         SExp.propList((":name", value.name),
           (":type-id", value.id),
           (":full-name", value.fullName),
@@ -609,8 +621,8 @@ trait SwankProtocol extends Protocol {
   def toWF(value: ParamSectionInfo): SExp = {
     SExp.propList(
       (":params", SExp(value.params.map {
-        case (nm, tp) => SExp(nm, toWF(tp))
-      })),
+            case (nm, tp) => SExp(nm, toWF(tp))
+	  })),
       (":is-implicit", value.isImplicit))
 
   }
@@ -626,9 +638,9 @@ trait SwankProtocol extends Protocol {
       (":type", toWF(value.tpe)),
       (":info-type", 'typeInspect),
       (":companion-id", value.companionId match {
-        case Some(id) => id
-        case None => 'nil
-      }), (":interfaces", SExp(value.supers.map(toWF))))
+          case Some(id) => id
+          case None => 'nil
+	}), (":interfaces", SExp(value.supers.map(toWF))))
   }
 
   def toWF(value: RefactorFailure): SExp = {

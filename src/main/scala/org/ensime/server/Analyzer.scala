@@ -172,6 +172,12 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     project ! RPCResultEvent(toWF(suggestions), callId)
                   }
 
+                  case UsesOfSymAtPointReq(file: File, point: Int) => {
+                    val p = pos(file, point)
+                    val uses = scalaCompiler.askUsesOfSymAtPoint(p)
+                    project ! RPCResultEvent(toWF(uses.map(toWF)), callId)
+                  }
+
                   case PackageMemberCompletionReq(path: String, prefix: String) => {
                     val members = scalaCompiler.askCompletePackageMember(path, prefix)
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
