@@ -8,7 +8,7 @@ import org.ensime.server._
 import org.ensime.util._
 import org.ensime.util.SExp._
 import scala.actors._
-import scala.tools.nsc.util.{ Position }
+import scala.tools.nsc.util.{ Position, RangePosition }
 import scala.tools.refactoring.common.Change
 import scala.util.parsing.input
 
@@ -460,6 +460,19 @@ trait SwankProtocol extends Protocol {
       }
     }
 
+    implicit def posToSExp(pos: RangePosition): SExp = {
+      if (pos.isDefined) {
+        SExp.propList(
+	  (":file", pos.source.path), 
+	  (":offset", pos.point),
+	  (":start", pos.start),
+	  (":end", pos.end)
+	)
+      } else {
+        'nil
+      }
+    }
+
   }
 
   import SExpConversion._
@@ -550,6 +563,10 @@ trait SwankProtocol extends Protocol {
   }
 
   def toWF(value: Position): SExp = {
+    posToSExp(value)
+  }
+
+  def toWF(value: RangePosition): SExp = {
     posToSExp(value)
   }
 

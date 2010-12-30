@@ -8,7 +8,7 @@ import scala.tools.nsc.{ Settings, FatalError }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
-import scala.tools.nsc.util.{ SourceFile, Position }
+import scala.tools.nsc.util.{ SourceFile, Position, RangePosition }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring.analysis.GlobalIndexes
 import java.io.File
@@ -109,7 +109,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
       ImportSuggestions(symbolSuggestions(names))
     }, t => ImportSuggestions(List()))
 
-  def askUsesOfSymAtPoint(p: Position): List[Position] = askOr({
+  def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
       usesOfSymbolAtPoint(p).toList
     }, t => List())
 
@@ -488,7 +488,7 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
     gi.result
   }
 
-  protected def usesOfSymbolAtPoint(p: Position): Iterable[Position] = {
+  protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
     symbolAt(p) match{
       case Left(s) => {
 	val gi = new GlobalIndexes {
@@ -498,7 +498,13 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
             CompilationUnitIndex(u.body)
 	  }
 	  val index = GlobalIndex(cuIndexes.toList)
-	  val result = index.occurences(sym).map{_.pos}
+	  val result = index.occurences(sym).map{
+	    _.pos match{
+	      case p:RangePosition => p
+	      case p => new RangePosition(
+		p.source, p.point, p.point, p.point)
+	    }
+	  }
 	}
 	gi.result
       }
