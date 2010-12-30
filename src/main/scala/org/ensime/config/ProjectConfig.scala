@@ -11,63 +11,63 @@ import scalariform.formatter.preferences._
 
 object ProjectConfig {
 
-  trait FormatHandler{
-    def rootDir():Option[String]
-    def useSbt():Boolean
-    def useMaven():Boolean
-    def useIvy():Boolean
-    def sbtSubprojectDeps():List[String]
-    def ivyRuntimeConf():Option[String]
-    def ivyCompileConf():Option[String]
-    def ivyTestConf():Option[String]
-    def ivyFile():Option[String]
-    def runtimeJars():List[String]
-    def excludeRuntimeJars():List[String]
-    def compileJars():List[String]
-    def excludeCompileJars():List[String]
-    def classDirs():List[String]
-    def sources():List[String]
-    def target():Option[String]
-    def projectName():Option[String]
-    def formatPrefs():Map[Symbol, Any]
+  trait FormatHandler {
+    def rootDir(): Option[String]
+    def useSbt(): Boolean
+    def useMaven(): Boolean
+    def useIvy(): Boolean
+    def sbtSubprojectDeps(): List[String]
+    def ivyRuntimeConf(): Option[String]
+    def ivyCompileConf(): Option[String]
+    def ivyTestConf(): Option[String]
+    def ivyFile(): Option[String]
+    def runtimeJars(): List[String]
+    def excludeRuntimeJars(): List[String]
+    def compileJars(): List[String]
+    def excludeCompileJars(): List[String]
+    def classDirs(): List[String]
+    def sources(): List[String]
+    def target(): Option[String]
+    def projectName(): Option[String]
+    def formatPrefs(): Map[Symbol, Any]
   }
 
-  class SExpFormatHandler(config: SExpList) extends FormatHandler{
+  class SExpFormatHandler(config: SExpList) extends FormatHandler {
     val m = config.toKeywordMap
-    private def getStr(name:String):Option[String] = m.get(key(name)) match{
+    private def getStr(name: String): Option[String] = m.get(key(name)) match {
       case Some(StringAtom(s)) => Some(s)
       case _ => None
     }
-    private def getInt(name:String):Option[Int] = m.get(key(name)) match{
+    private def getInt(name: String): Option[Int] = m.get(key(name)) match {
       case Some(IntAtom(i)) => Some(i)
       case _ => None
     }
-    private def getBool(name:String):Boolean = m.get(key(name)) match{
+    private def getBool(name: String): Boolean = m.get(key(name)) match {
       case Some(TruthAtom()) => true
       case _ => false
     }
-    private def getStrList(name:String):List[String] = m.get(key(name)) match {
-      case Some(SExpList(items:Iterable[StringAtom])) => items.map{ ea => ea.value}.toList
+    private def getStrList(name: String): List[String] = m.get(key(name)) match {
+      case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
       case _ => List()
     }
-    def rootDir():Option[String] = getStr(":root-dir")
-    def useSbt():Boolean = getBool(":use-sbt")
-    def useMaven():Boolean = getBool(":use-maven")
-    def useIvy():Boolean = getBool(":use-ivy")
-    def sbtSubprojectDeps():List[String] = getStrList(":sbt-subproject-dependencies")
-    def ivyRuntimeConf():Option[String] = getStr(":ivy-runtime-conf")
-    def ivyCompileConf():Option[String] = getStr(":ivy-compile-conf")
-    def ivyTestConf():Option[String] = getStr(":ivy-test-conf")
-    def ivyFile():Option[String] = getStr(":ivy-file")
-    def runtimeJars():List[String] = getStrList(":runtime-jars")
-    def excludeRuntimeJars():List[String] = getStrList(":exclude-runtime-jars")
-    def compileJars():List[String] = getStrList(":compile-jars")
-    def excludeCompileJars():List[String] = getStrList(":exclude-compile-jars")
-    def classDirs():List[String] = getStrList(":class-dirs")
-    def sources():List[String] = getStrList(":sources")
-    def target():Option[String] = getStr(":target")
-    def projectName():Option[String] = getStr(":project-name")
-    def formatPrefs():Map[Symbol, Any] = m.get(key(":formatting-prefs")) match {
+    def rootDir(): Option[String] = getStr(":root-dir")
+    def useSbt(): Boolean = getBool(":use-sbt")
+    def useMaven(): Boolean = getBool(":use-maven")
+    def useIvy(): Boolean = getBool(":use-ivy")
+    def sbtSubprojectDeps(): List[String] = getStrList(":sbt-subproject-dependencies")
+    def ivyRuntimeConf(): Option[String] = getStr(":ivy-runtime-conf")
+    def ivyCompileConf(): Option[String] = getStr(":ivy-compile-conf")
+    def ivyTestConf(): Option[String] = getStr(":ivy-test-conf")
+    def ivyFile(): Option[String] = getStr(":ivy-file")
+    def runtimeJars(): List[String] = getStrList(":runtime-jars")
+    def excludeRuntimeJars(): List[String] = getStrList(":exclude-runtime-jars")
+    def compileJars(): List[String] = getStrList(":compile-jars")
+    def excludeCompileJars(): List[String] = getStrList(":exclude-compile-jars")
+    def classDirs(): List[String] = getStrList(":class-dirs")
+    def sources(): List[String] = getStrList(":sources")
+    def target(): Option[String] = getStr(":target")
+    def projectName(): Option[String] = getStr(":project-name")
+    def formatPrefs(): Map[Symbol, Any] = m.get(key(":formatting-prefs")) match {
       case Some(list: SExpList) => {
         list.toKeywordMap.map {
           case (KeywordAtom(key), sexp: SExp) => (Symbol(key.substring(1)), sexp.toScala)
@@ -78,14 +78,14 @@ object ProjectConfig {
   }
 
   /**
-  * Create a ProjectConfig instance from the given
-  * SExp property list.
-  */
-  def fromSExp(sexp: SExpList):ProjectConfig = {
+   * Create a ProjectConfig instance from the given
+   * SExp property list.
+   */
+  def fromSExp(sexp: SExpList): ProjectConfig = {
     load(new SExpFormatHandler(sexp))
   }
-  
-  def load(conf: FormatHandler):ProjectConfig = {
+
+  def load(conf: FormatHandler): ProjectConfig = {
 
     import ExternalConfigInterface._
 
@@ -103,7 +103,7 @@ object ProjectConfig {
     var target: Option[CanonFile] = None
     var projectName: Option[String] = None
 
-    if(conf.useSbt){
+    if (conf.useSbt) {
       val depDirs = conf.sbtSubprojectDeps
       println("Using sbt configuration..")
       val ext = getSbtConfig(rootDir, depDirs)
@@ -114,7 +114,7 @@ object ProjectConfig {
       target = ext.target
     }
 
-    if(conf.useMaven) {
+    if (conf.useMaven) {
       println("Using maven configuration..")
       val ext = getMavenConfig(rootDir)
       projectName = ext.projectName
@@ -124,13 +124,13 @@ object ProjectConfig {
       target = ext.target
     }
 
-    if(conf.useIvy){
+    if (conf.useIvy) {
       println("Using ivy configuration..")
       val ext = getIvyConfig(
-	rootDir, conf.ivyFile.map{new File(_)}, 
-	conf.ivyRuntimeConf, 
-	conf.ivyCompileConf, 
-	conf.ivyTestConf)
+        rootDir, conf.ivyFile.map { new File(_) },
+        conf.ivyRuntimeConf,
+        conf.ivyCompileConf,
+        conf.ivyTestConf)
       sourceRoots ++= ext.sourceRoots
       runtimeDeps ++= ext.runtimeDepJars
       compileDeps ++= ext.compileDepJars
@@ -192,8 +192,10 @@ object ProjectConfig {
 
     // Provide fix for 2.8.0 backwards compatibility
     val implicitNotFoundJar = new File("lib/implicitNotFound.jar")
-    assert (implicitNotFoundJar.exists, { System.err.println(
-	  "lib/implicitNotFound.jar not found! 2.8.0 compatibility may be broken.") })
+    assert(implicitNotFoundJar.exists, {
+      System.err.println(
+        "lib/implicitNotFound.jar not found! 2.8.0 compatibility may be broken.")
+    })
     compileDeps += implicitNotFoundJar
 
     // Provide some reasonable defaults..
@@ -282,32 +284,32 @@ class ProjectConfig(
   formattingPrefsMap: Map[Symbol, Any]) {
 
   val formattingPrefs = formattingPrefsMap.
-  foldLeft(FormattingPreferences()) { (fp, p) =>
-    p match {
-      case ('alignParameters, value: Boolean) =>
-      fp.setPreference(AlignParameters, value)
-      case ('compactStringConcatenation, value: Boolean) =>
-      fp.setPreference(CompactStringConcatenation, value)
-      case ('doubleIndentClassDeclaration, value: Boolean) =>
-      fp.setPreference(DoubleIndentClassDeclaration, value)
-      case ('formatXml, value: Boolean) =>
-      fp.setPreference(FormatXml, value)
-      case ('indentPackageBlocks, value: Boolean) =>
-      fp.setPreference(IndentPackageBlocks, value)
-      case ('indentSpaces, value: Int) =>
-      fp.setPreference(IndentSpaces, value)
-      case ('preserveSpaceBeforeArguments, value: Boolean) =>
-      fp.setPreference(PreserveSpaceBeforeArguments, value)
-      case ('rewriteArrowSymbols, value: Boolean) =>
-      fp.setPreference(RewriteArrowSymbols, value)
-      case ('spaceBeforeColon, value: Boolean) =>
-      fp.setPreference(SpaceBeforeColon, value)
-      case (name, _) => {
-        System.err.println("Oops, unrecognized formatting option: " + name)
-        fp
+    foldLeft(FormattingPreferences()) { (fp, p) =>
+      p match {
+        case ('alignParameters, value: Boolean) =>
+          fp.setPreference(AlignParameters, value)
+        case ('compactStringConcatenation, value: Boolean) =>
+          fp.setPreference(CompactStringConcatenation, value)
+        case ('doubleIndentClassDeclaration, value: Boolean) =>
+          fp.setPreference(DoubleIndentClassDeclaration, value)
+        case ('formatXml, value: Boolean) =>
+          fp.setPreference(FormatXml, value)
+        case ('indentPackageBlocks, value: Boolean) =>
+          fp.setPreference(IndentPackageBlocks, value)
+        case ('indentSpaces, value: Int) =>
+          fp.setPreference(IndentSpaces, value)
+        case ('preserveSpaceBeforeArguments, value: Boolean) =>
+          fp.setPreference(PreserveSpaceBeforeArguments, value)
+        case ('rewriteArrowSymbols, value: Boolean) =>
+          fp.setPreference(RewriteArrowSymbols, value)
+        case ('spaceBeforeColon, value: Boolean) =>
+          fp.setPreference(SpaceBeforeColon, value)
+        case (name, _) => {
+          System.err.println("Oops, unrecognized formatting option: " + name)
+          fp
+        }
       }
     }
-  }
 
   def compilerClasspathFilenames: Set[String] = {
     (compileDeps ++ classDirs).map(_.getPath).toSet
