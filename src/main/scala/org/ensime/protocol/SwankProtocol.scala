@@ -243,15 +243,15 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
-      // case "swank:import-suggestions" => {
-      //   form match {
-      //     case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
-      //       rpcTarget.rpcImportSuggestions(file, point,
-      //         names.map(_.toString).toList, callId)
-      //     }
-      //     case _ => oops
-      //   }
-      // }
+      case "swank:import-suggestions" => {
+        form match {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: SExpList(names) :: body) => {
+            rpcTarget.rpcImportSuggestions(file, point,
+              names.map(_.toString).toList, callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:uses-of-symbol-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {

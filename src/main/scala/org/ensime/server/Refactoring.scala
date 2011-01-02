@@ -99,7 +99,7 @@ trait RefactoringController { self: Analyzer =>
 
 }
 
-trait RefactoringInterface { self: RichCompilerControl with RefactoringImpl =>
+trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
 
   def askPerformRefactor(
     procId: Int,

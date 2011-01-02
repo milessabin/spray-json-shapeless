@@ -13,7 +13,7 @@ import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring.analysis.GlobalIndexes
 import java.io.File
 
-trait RichCompilerControl extends CompilerControl with RefactoringInterface { self: RichPresentationCompiler =>
+trait RichCompilerControl extends CompilerControl with RefactoringControl { self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
     val result = new Response[A]()
@@ -64,6 +64,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
     val x = new Response[Unit]()
     askReload(files.toList, x)
     x.get
+    invalidateTopLevelIndex()
   }
 
   def askRemoveAllDeleted() = askOr(removeAllDeleted(), t => ())
@@ -98,15 +99,17 @@ trait RichCompilerControl extends CompilerControl with RefactoringInterface { se
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
       reloadSources(List(p.source))
+      invalidateTopLevelIndex()
       completeMemberAt(p, prefix)
     }, t => List())
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
       reloadAndTypeFiles(files)
+      invalidateTopLevelIndex()
     }, t => ())
 
   def askImportSuggestions(p: Position, names: Iterable[String]): ImportSuggestions = askOr({
-      ImportSuggestions(symbolSuggestions(names))
+      ImportSuggestions(names.map{ nm => findTopLevelSyms(nm).map(SymbolInfo.apply) })
     }, t => ImportSuggestions(List()))
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
@@ -124,9 +127,10 @@ class RichPresentationCompiler(
   reporter: Reporter,
   var parent: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-with ModelBuilders with RichCompilerControl with RefactoringImpl {
+with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl 
+with RefactoringImpl with TopLevelIndex{
 
-  import Helpers._
+  import ModelHelpers._
 
   private val symsByFile = new mutable.HashMap[AbstractFile, mutable.LinkedHashSet[Symbol]] {
     override def default(k: AbstractFile) = {
@@ -468,24 +472,6 @@ with ModelBuilders with RichCompilerControl with RefactoringImpl {
       case _ => List()
     }.toList.sortWith((a, b) => a.name.length <= b.name.length)
     visibleMembers
-  }
-
-  protected def symbolSuggestions(names: Iterable[String]): Iterable[Iterable[SymbolInfo]] = {
-    val gi = new GlobalIndexes {
-      val global = RichPresentationCompiler.this
-      val cuIndexes = this.global.unitOfFile.values.map { u =>
-        CompilationUnitIndex(u.body)
-      }
-      val index = GlobalIndex(cuIndexes.toList)
-      val result = names.map { n =>
-        index.allDeclarations.keys.flatMap { d =>
-          if (d.nameString.contains(n)) Some(
-            SymbolInfo(d.asInstanceOf[RichPresentationCompiler.this.Symbol]))
-          else None
-        }
-      }
-    }
-    gi.result
   }
 
   protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
