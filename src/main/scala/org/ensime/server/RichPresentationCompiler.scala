@@ -64,7 +64,6 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
     val x = new Response[Unit]()
     askReload(files.toList, x)
     x.get
-    invalidateTopLevelIndex()
   }
 
   def askRemoveAllDeleted() = askOr(removeAllDeleted(), t => ())
@@ -99,18 +98,20 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = askOr({
       reloadSources(List(p.source))
-      invalidateTopLevelIndex()
       completeMemberAt(p, prefix)
     }, t => List())
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
       reloadAndTypeFiles(files)
-      invalidateTopLevelIndex()
     }, t => ())
 
   def askImportSuggestions(p: Position, names: Iterable[String]): ImportSuggestions = askOr({
-      ImportSuggestions(names.map{ nm => findTopLevelSyms(nm).map(SymbolInfo.apply) })
+      ImportSuggestions(names.map{ nm => findTopLevelSyms(nm) })
     }, t => ImportSuggestions(List()))
+
+  def askInitIndex() = askOr({
+      rebuildIndex()
+    }, t => ())
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
       usesOfSymbolAtPoint(p).toList
@@ -144,9 +145,15 @@ with RefactoringImpl with TopLevelIndex{
   override def registerTopLevelSym(sym: Symbol) {
     super.registerTopLevelSym(sym)
     symsByFile(sym.sourceFile) += sym
+    indexTopLevelSyms(List(sym))
   }
 
-  /** Remove symbols defined by files that no longer exist. */
+  /**
+  * Remove symbols defined by files that no longer exist.
+  * Note that these symbols will not be collected by
+  * syncTopLevelSyms, since the units in question will
+  * never be reloaded again.
+  */
   def removeAllDeleted() {
     firsts = firsts.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
@@ -158,11 +165,21 @@ with RefactoringImpl with TopLevelIndex{
   /** Remove symbols defined by file that no longer exist. */
   def removeDeleted(f: AbstractFile) {
     val syms = symsByFile(f)
+    unindexTopLevelSyms(syms)
     for (s <- syms) {
       s.owner.info.decls unlink s
     }
     symsByFile.remove(f)
     unitOfFile.remove(f)
+  }
+
+  override def syncTopLevelSyms(unit: RichCompilationUnit) {
+    super.syncTopLevelSyms(unit)
+    unindexTopLevelSyms(deletedTopLevelSyms)
+
+    // WARNING: Clearing the set here makes 
+    // recentlyDeleted useless.
+    deletedTopLevelSyms.clear()
   }
 
   private def typePublicMembers(tpe: Type): Iterable[TypeMember] = {

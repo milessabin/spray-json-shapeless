@@ -65,14 +65,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
           case FullTypeCheckCompleteEvent() => {
 
-            // Block requests while compiler is booting
-            if (awaitingInitialCompile) {
-              project ! AnalyzerReadyEvent()
-              awaitingInitialCompile = false
-            }
-
             val notes = reporter.allNotes
-
             pendingTypeCheckRequest match {
 
               // If this compilation was explicitely requested by client...
@@ -88,6 +81,11 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               }
             }
 
+            if (awaitingInitialCompile) {
+//	      scalaCompiler.askInitIndex()
+	      awaitingInitialCompile = false
+              project ! AnalyzerReadyEvent()
+            }
           }
 
           case rpcReq@RPCRequestEvent(req: Any, callId: Int) => {

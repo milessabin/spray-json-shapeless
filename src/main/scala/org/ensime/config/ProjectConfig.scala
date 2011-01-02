@@ -248,7 +248,7 @@ object ProjectConfig {
     else Some(new File(javaHome))
   }
 
-  def javaBootJars(): Set[CanonFile] = {
+  def javaBootJars: Set[CanonFile] = {
     val javaHome = getJavaHome();
     javaHome match {
       case Some(javaHome) => {
@@ -313,6 +313,10 @@ class ProjectConfig(
 
   def compilerClasspathFilenames: Set[String] = {
     (compileDeps ++ classDirs).map(_.getPath).toSet
+  }
+
+  def allFilesOnClasspath: Set[File] = {
+    ProjectConfig.javaBootJars ++ compilerClasspathFilenames.map(new File(_))
   }
 
   def sources: Set[CanonFile] = {
