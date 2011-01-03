@@ -141,11 +141,13 @@ with RefactoringImpl with TopLevelIndex{
     }
   }
 
+  private val newTopLevelSyms = new mutable.LinkedHashSet[Symbol]
+
   /** Called from typechecker every time a top-level class or object is entered.*/
   override def registerTopLevelSym(sym: Symbol) {
     super.registerTopLevelSym(sym)
     symsByFile(sym.sourceFile) += sym
-    indexTopLevelSyms(List(sym))
+    newTopLevelSyms += sym
   }
 
   /**
@@ -176,10 +178,12 @@ with RefactoringImpl with TopLevelIndex{
   override def syncTopLevelSyms(unit: RichCompilationUnit) {
     super.syncTopLevelSyms(unit)
     unindexTopLevelSyms(deletedTopLevelSyms)
+    indexTopLevelSyms(newTopLevelSyms)
 
     // WARNING: Clearing the set here makes 
     // recentlyDeleted useless.
     deletedTopLevelSyms.clear()
+    newTopLevelSyms.clear()
   }
 
   private def typePublicMembers(tpe: Type): Iterable[TypeMember] = {

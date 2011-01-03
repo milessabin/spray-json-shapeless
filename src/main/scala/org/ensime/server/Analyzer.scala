@@ -82,7 +82,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
             }
 
             if (awaitingInitialCompile) {
-//	      scalaCompiler.askInitIndex()
 	      awaitingInitialCompile = false
               project ! AnalyzerReadyEvent()
             }

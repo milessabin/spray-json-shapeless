@@ -25,28 +25,44 @@ trait TopLevelIndex { self: RichPresentationCompiler =>
   }
 
   def unindexTopLevelSyms(syms: Iterable[Symbol]) {
-    println("Un-indexing: " + syms)
     for(sym <- syms){
-      for(name <- nameForIndex(sym)){
-	removeSuffixes(name)
+      unindexSym(sym)
+      for(mem <- try{sym.tpe.members}catch{case e => List()}){
+	unindexSym(mem)
       }
     }
   }
 
+  private def unindexSym(sym:Symbol){
+    println("Un-indexing: " + sym)
+    for(name <- nameForIndex(sym)){
+      removeSuffixes(name)
+    }
+  }
+
   def indexTopLevelSyms(syms: Iterable[Symbol]) {
-    println("Indexing: " + syms)
     for(sym <- syms){
-      for(name <- nameForIndex(sym)){
-	insertSuffixes(name, 
-	  SymbolInfo(sym))
+      indexSym(sym)
+      for(mem <- try{sym.tpe.members}catch{case e => { List()}}){
+	indexSym(mem)
       }
+    }
+  }
+
+  private def indexSym(sym:Symbol){
+    println("Indexing: " + sym)
+    for(name <- nameForIndex(sym)){
+      insertSuffixes(name, SymbolInfo(sym))
     }
   }
 
   private def nameForIndex(sym:Symbol):Option[String] = {
     try{
-      val tpe = sym.tpe
-      Some(typeFullName(tpe))
+      if(sym.isMethod) Some(sym.nameString)
+      else{
+	val tpe = sym.tpe
+	Some(typeFullName(tpe))
+      }
     }catch{
       case e:AssertionError => None
     }
@@ -71,7 +87,6 @@ trait TopLevelIndex { self: RichPresentationCompiler =>
   def rebuildIndex() {
     println("Rebuilding index...")
     val t = System.currentTimeMillis()
-    trie = new PatriciaTrie[String, SymbolInfo](StringKeyAnalyzer.INSTANCE)
     val finder = ClassFinder(config.allFilesOnClasspath.toList)
     val classes: Iterator[ClassInfo] = finder.getClasses
 
@@ -95,8 +110,9 @@ trait TopLevelIndex { self: RichPresentationCompiler =>
     }
 
     classes.foreach{ ci =>
-      if(ci.name.contains("$")){
-	if(ci.name.indexOf("$") == ci.name.length - 1){
+      val i = ci.name.indexOf("$")
+      if(i > -1){
+	if(i == ci.name.length - 1){
 	  indexType(ci)
 	}
       }
