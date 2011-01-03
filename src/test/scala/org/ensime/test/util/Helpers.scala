@@ -24,7 +24,7 @@ object Helpers{
     settings.usejavacp.value = false
     val reporter = new StoreReporter()
     val cc:RichCompilerControl = new RichPresentationCompiler(
-      settings, reporter, actor{}, ProjectConfig.nullConfig)
+      settings, reporter, actor{}, actor{}, ProjectConfig.nullConfig)
     action(cc)
     cc.askShutdown()
   }

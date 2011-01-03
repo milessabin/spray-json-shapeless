@@ -105,14 +105,6 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
       reloadAndTypeFiles(files)
     }, t => ())
 
-  def askImportSuggestions(p: Position, names: Iterable[String]): ImportSuggestions = askOr({
-      ImportSuggestions(names.map{ nm => findTopLevelSyms(nm) })
-    }, t => ImportSuggestions(List()))
-
-  def askInitIndex() = askOr({
-      rebuildIndex()
-    }, t => ())
-
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
       usesOfSymbolAtPoint(p).toList
     }, t => List())
@@ -127,9 +119,10 @@ class RichPresentationCompiler(
   settings: Settings,
   reporter: Reporter,
   var parent: Actor,
+  var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
 with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl 
-with RefactoringImpl with TopLevelIndex{
+with RefactoringImpl with IndexerInterface{
 
   import ModelHelpers._
 
@@ -546,6 +539,7 @@ with RefactoringImpl with TopLevelIndex{
   override def askShutdown() {
     super.askShutdown()
     parent = null
+    indexer = null
   }
 
   override def finalize() {

@@ -419,7 +419,7 @@ trait ModelBuilders { self: Global with Helpers =>
 
     object TypeInspectInfo {
       def nullInfo() = {
-	new TypeInspectInfo(TypeInfo.nullInfo(), None, List())
+	new TypeInspectInfo(TypeInfo.nullInfo, None, List())
       }
     }
 

@@ -35,8 +35,10 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     }
   })
 
+  protected val indexer: Actor = new Indexer(project, protocol, config)
+
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
-    settings, reporter, this, config)
+    settings, reporter, this, indexer, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
   protected var awaitingInitialCompile = true
 
@@ -53,6 +55,9 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     println("Building Scala sources...")
     scalaCompiler.askReloadAllFiles()
 
+    println("Initing Indexer...")
+    indexer.start
+
     loop {
       try {
         receive {
@@ -60,6 +65,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
             javaCompiler.shutdown()
             scalaCompiler.askClearTypeCache()
             scalaCompiler.askShutdown()
+	    indexer ! IndexerShutdownReq()
             exit('stop)
           }
 
@@ -82,7 +88,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
             }
 
             if (awaitingInitialCompile) {
-	      awaitingInitialCompile = false
+              //indexer ! RebuildStaticIndexReq()
+              awaitingInitialCompile = false
               project ! AnalyzerReadyEvent()
             }
           }
@@ -96,7 +103,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                 req match {
 
                   case RemoveFileReq(file: File) => {
-		    askRemoveDeleted(file)
+                    askRemoveDeleted(file)
                   }
 
                   case ReloadAllReq() => {
@@ -165,8 +172,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
                     val p = pos(file, point)
-                    val suggestions = scalaCompiler.askImportSuggestions(p, names)
-                    project ! RPCResultEvent(toWF(suggestions), callId)
+		    indexer ! rpcReq
                   }
 
                   case UsesOfSymAtPointReq(file: File, point: Int) => {

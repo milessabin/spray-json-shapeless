@@ -36,6 +36,8 @@ object ProtocolConst {
 
   val ErrFileDoesNotExist = 211
 
+  val ErrExceptionInIndexer = 212
+
 }
 
 trait Protocol extends ProtocolConversions {
