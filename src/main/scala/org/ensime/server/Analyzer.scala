@@ -18,7 +18,7 @@ case class FullTypeCheckCompleteEvent()
 case class CompilerFatalError(e: Throwable)
 
 class Analyzer(val project: Project, val protocol: ProtocolConversions, val config: ProjectConfig)
-  extends Actor with RefactoringController {
+  extends Actor with RefactoringHandler {
 
   private val settings = new Settings(Console.println)
   settings.processArguments(config.compilerArgs, false)

@@ -7,7 +7,6 @@ import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.common.{ Selections, Change }
 import scala.tools.refactoring.implementations._
-import scala.tools.nsc.interactive.{ Global }
 
 case class RefactorFailure(val procedureId: Int, val message: String)
 case class RefactorPerformReq(procedureId: Int, refactorType: Symbol, params: immutable.Map[Symbol, Any])
@@ -51,7 +50,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
   }
 }
 
-trait RefactoringController { self: Analyzer =>
+trait RefactoringHandler { self: Analyzer =>
 
   import protocol._
 
