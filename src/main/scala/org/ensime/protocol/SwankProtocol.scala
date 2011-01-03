@@ -252,6 +252,16 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+      case "swank:public-symbol-search" => {
+        form match {
+          case SExpList(head :: SExpList(names) :: IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
+            rpcTarget.rpcPublicSymbolSearch(
+	      names.map(_.toString).toList, maxResults, caseSens,
+	      callId)
+          }
+          case _ => oops
+        }
+      }
       case "swank:uses-of-symbol-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
@@ -682,7 +692,7 @@ trait SwankProtocol extends Protocol {
       (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
   }
 
-  def toWF(value: ImportSuggestions): SExp = {
+  def toWF(value: SymbolSearchResult): SExp = {
     SExpList(value.symLists.map { l => SExpList(l.map(toWF)) })
   }
 

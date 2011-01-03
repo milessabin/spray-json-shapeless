@@ -20,7 +20,7 @@ case class SymbolInfoLight(
   val tpeId: Int,
   val isCallable: Boolean) {}
 
-case class ImportSuggestions(symLists: Iterable[Iterable[SymbolInfo]])
+case class SymbolSearchResult(symLists: Iterable[Iterable[SymbolInfo]])
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
@@ -313,8 +313,14 @@ trait ModelBuilders { self: Global with Helpers =>
   object SymbolInfo {
 
     def apply(sym: Symbol): SymbolInfo = {
+      val name = if(sym.isMethod) {
+	sym.nameString
+      }
+      else{
+	typeFullName(sym.tpe)
+      }
       new SymbolInfo(
-        sym.name.toString,
+        name,
         sym.pos,
         TypeInfo(sym.tpe),
         isArrowType(sym.tpe)
@@ -410,18 +416,18 @@ trait ModelBuilders { self: Global with Helpers =>
         cacheType(tpe),
         TypeInfo(tpe.finalResultType),
         paramSections)
-      }
-
-      def nullInfo() = {
-	new ArrowTypeInfo("NA", -1, TypeInfo.nullInfo, List())
-      }
     }
 
-    object TypeInspectInfo {
-      def nullInfo() = {
-	new TypeInspectInfo(TypeInfo.nullInfo, None, List())
-      }
+    def nullInfo() = {
+      new ArrowTypeInfo("NA", -1, TypeInfo.nullInfo, List())
     }
-
   }
+
+  object TypeInspectInfo {
+    def nullInfo() = {
+      new TypeInspectInfo(TypeInfo.nullInfo, None, List())
+    }
+  }
+
+}
 

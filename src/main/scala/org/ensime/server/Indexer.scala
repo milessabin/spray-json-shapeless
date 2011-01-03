@@ -6,7 +6,7 @@ import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
-import org.ensime.model.{SymbolInfo, TypeInfo, ImportSuggestions}
+import org.ensime.model.{SymbolInfo, TypeInfo, SymbolSearchResult}
 import org.clapper.classutil._
 import scala.collection.JavaConversions._
 import org.ardverk.collection._
@@ -36,9 +36,17 @@ trait IndexerInterface{ self : RichPresentationCompiler =>
   def indexTopLevelSyms(syms: Iterable[Symbol]) {
     val infos = new ArrayBuffer[(String, SymbolInfo)]
     for(sym <- syms){
-      for(name <- nameForIndex(sym)) infos += ((name, SymbolInfo(sym)))
-      for(mem <- try{sym.tpe.members}catch{case e => { List()}}){
-	for(name <- nameForIndex(mem)) infos += ((name, SymbolInfo(mem)))
+      for(name <- nameForIndex(sym)) {
+	if(Indexer.isValidTypeName(name)){
+	  infos += ((name, SymbolInfo(sym)))
+	  for(mem <- try{sym.tpe.members}catch{case e => { List()}}){
+	    for(mname <- nameForIndex(mem)) {
+	      if(Indexer.isValidTypeName(mname)){
+		infos += ((mname, SymbolInfo(mem)))
+	      }
+	    }
+	  }
+	}
       }
     }
     indexer ! AddSymbolsReq(infos)
@@ -58,6 +66,16 @@ trait IndexerInterface{ self : RichPresentationCompiler =>
 
 }
 
+object Indexer{
+  def isValidTypeName(s:String):Boolean = {
+    val i = s.indexOf("$")
+    i == -1 || (i == (s.length - 1))
+  }
+  def isValidMethodName(s:String):Boolean = {
+    s.indexOf("$") == 0
+  }
+}
+
 class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor {
 
   import protocol._
@@ -67,21 +85,34 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
 
   private var invalidated = true
 
-  private def findTopLevelSyms(str: String): List[SymbolInfo] = {
+  private def findTopLevelSyms(str: String, maxResults: Int = 0, caseSens: Boolean = false): List[SymbolInfo] = {
     if(invalidated) rebuildIndex()
-    val results: Iterable[SymbolInfo] = trie.prefixMap(str).values
-    results.toList
+    val results = trie.prefixMap(str.toLowerCase()).values
+    val refined: Iterable[SymbolInfo] = if(caseSens) {
+      results.filter{ s => s.name.contains(str) }
+    }
+    else{
+      results
+    }
+    if(maxResults == 0){
+      refined.toList
+    }
+    else{
+      refined.toList.take(maxResults)
+    }
   }
 
   private def insertSuffixes(key: String, value: SymbolInfo) {
-    val k = key + key.hashCode()
+    val tmp = key.toLowerCase()
+    val k = tmp + tmp.hashCode()
     for(i <- (0 to key.length - 1)){
       trie.put(k.substring(i), value)
     }
   }
 
   private def removeSuffixes(key: String) {
-    val k = key + key.hashCode()
+    val tmp = key.toLowerCase()
+    val k = tmp + tmp.hashCode()
     for(i <- (0 to key.length - 1)){
       trie.remove(k.substring(i))
     }
@@ -97,34 +128,30 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
     def nullInfo = new TypeInfo("NA", -1, 'nil, "NA", List(), List(), NoPosition, None)
 
     def indexType(ci:ClassInfo){
-      ci.methods.foreach(indexMethod)
-      insertSuffixes(ci.name,
-	new SymbolInfo(
-	  ci.name,
-	  NoPosition,
-	  nullInfo,
-	  false))
+      if(Indexer.isValidTypeName(ci.name)){
+	ci.methods.foreach(indexMethod)
+	insertSuffixes(ci.name,
+	  new SymbolInfo(
+	    ci.name,
+	    NoPosition,
+	    nullInfo,
+	    false))
+      }
     }
 
     def indexMethod(mi:MethodInfo){
-      insertSuffixes(mi.name,
-	new SymbolInfo(
-	  mi.name,
-	  NoPosition,
-	  nullInfo,
-	  true))
+      if(Indexer.isValidMethodName(mi.name)){
+	insertSuffixes(mi.name,
+	  new SymbolInfo(
+	    mi.name,
+	    NoPosition,
+	    nullInfo,
+	    true))
+      }
     }
 
     classes.foreach{ ci =>
-      val i = ci.name.indexOf("$")
-      if(i > -1){
-	if(i == ci.name.length - 1){
-	  indexType(ci)
-	}
-      }
-      else{
-	indexType(ci)
-      }
+      indexType(ci)
     }
     invalidated = false
 
@@ -139,7 +166,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
 
     loop {
       try {
-        receive {
+	receive {
           case IndexerShutdownReq => {
             exit('stop)
           }
@@ -158,35 +185,45 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
-              req match {
-                case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
-                  val suggestions = ImportSuggestions(names.map{ nm => findTopLevelSyms(nm) })
+	      req match {
+		case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
+                  val suggestions = SymbolSearchResult(
+		    names.map{ nm => findTopLevelSyms(nm) })
                   project ! RPCResultEvent(toWF(suggestions), callId)
-                }
-              }
+		}
+		case PublicSymbolSearchReq(names: List[String], maxResults: Int, caseSens: Boolean) => {
+                  val suggestions = SymbolSearchResult(
+		    names.map{ nm => 
+		      findTopLevelSyms(nm, maxResults, caseSens).sortWith{
+			(a,b) => a.name.length < b.name.length
+		      }
+		    })
+                  project ! RPCResultEvent(toWF(suggestions), callId)
+		}
+	      }
             } catch {
-              case e: Exception =>
-              {
-                System.err.println("Error handling RPC: " +
+	      case e: Exception =>
+	      {
+		System.err.println("Error handling RPC: " +
                   e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent(ErrExceptionInIndexer,
+		project ! RPCErrorEvent(ErrExceptionInIndexer,
 		  Some("Error occurred in indexer. Check the server log."), 
 		  callId)
-              }
+	      }
             }
           }
           case other =>
           {
             println("Indexer: WTF, what's " + other)
           }
-        }
+	}
 
       } catch {
-        case e: Exception =>
-        {
+	case e: Exception =>
+	{
           System.err.println("Error at Indexer message loop: " + e + " :\n" + e.getStackTraceString)
-        }
+	}
       }
     }
   }

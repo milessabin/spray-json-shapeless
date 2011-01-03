@@ -149,6 +149,10 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(ImportSuggestionsReq(new File(f), point, names), callId)
   }
 
+  def rpcPublicSymbolSearch(names: List[String], maxResults: Int, caseSens: Boolean, callId: Int) {
+    analyzer ! RPCRequestEvent(PublicSymbolSearchReq(names, maxResults, caseSens), callId)
+  }
+
   def rpcUsesOfSymAtPoint(f: String, point: Int, callId: Int) {
     analyzer ! RPCRequestEvent(UsesOfSymAtPointReq(new File(f), point), callId)
   }

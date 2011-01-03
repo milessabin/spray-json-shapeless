@@ -88,7 +88,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
             }
 
             if (awaitingInitialCompile) {
-              //indexer ! RebuildStaticIndexReq()
+              indexer ! RebuildStaticIndexReq()
               awaitingInitialCompile = false
               project ! AnalyzerReadyEvent()
             }
@@ -170,8 +170,11 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
                   }
 
-                  case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
-                    val p = pos(file, point)
+                  case ImportSuggestionsReq(_, _, _) => {
+		    indexer ! rpcReq
+                  }
+
+                  case PublicSymbolSearchReq(_, _, _) => {
 		    indexer ! rpcReq
                   }
 
