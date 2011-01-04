@@ -10,7 +10,7 @@ import org.github.scopt.OptionParser
 
 object Server {
   def main(args: Array[String]): Unit = {
-    System.setProperty("actors.corePoolSize", "5")
+    System.setProperty("actors.corePoolSize", "8")
     System.setProperty("actors.maxPoolSize", "10")
 
     var portfile:String = ""

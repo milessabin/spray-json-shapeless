@@ -210,7 +210,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
     loop {
       try {
         receive {
-          case IndexerShutdownReq => {
+          case IndexerShutdownReq() => {
             exit('stop)
           }
           case RebuildStaticIndexReq() => {
@@ -274,7 +274,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
   }
 
   override def finalize() {
-    System.out.println("Finalizing indexer actor.")
+    System.out.println("Finalizing Indexer actor.")
   }
 
 }
