@@ -164,4 +164,35 @@ trait Helpers { self: Global =>
     }
   }
 
+    import scala.tools.nsc.symtab.Flags._
+
+    /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
+    for details on various symbol predicates. */
+    def declaredAs(sym: Symbol): scala.Symbol = {
+      if (sym.isMethod)
+      'method
+      else if (sym.isTrait)
+      'trait
+      else if (sym.isTrait && sym.hasFlag(JAVA))
+      'interface
+      else if (sym.isInterface)
+      'interface
+      else if (sym.isModule)
+      'object
+      else if (sym.isModuleClass)
+      'object
+      else if (sym.isClass)
+      'class
+      else if (sym.isPackageClass)
+      'class
+
+      // check this last so objects are not
+      // classified as fields
+      else if (sym.isValue || sym.isVariable)
+      'field
+      else 'nil
+    }
+
+
+
 }

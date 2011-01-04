@@ -74,9 +74,9 @@ trait SwankProtocol extends Protocol {
 
   def sendBackgroundMessage(code: Int, detail: Option[String]) {
     sendMessage(SExp(
-	key(":background-message"),
-	code,
-	detail.map(strToSExp).getOrElse(NilAtom())))
+      key(":background-message"),
+      code,
+      detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   def handleIncomingMessage(msg: Any) {
@@ -104,7 +104,7 @@ trait SwankProtocol extends Protocol {
           handleRPCRequest(name, form, callId)
         } catch {
           case e: Throwable =>
-          {
+            {
             e.printStackTrace(System.err)
             sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
           }
@@ -256,8 +256,8 @@ trait SwankProtocol extends Protocol {
         form match {
           case SExpList(head :: SExpList(names) :: IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
             rpcTarget.rpcPublicSymbolSearch(
-	      names.map(_.toString).toList, maxResults, caseSens,
-	      callId)
+              names.map(_.toString).toList, maxResults, caseSens,
+              callId)
           }
           case _ => oops
         }
@@ -412,11 +412,11 @@ trait SwankProtocol extends Protocol {
   def sendRPCReturn(value: WireFormat, callId: Int) {
     value match {
       case sexp: SExp =>
-      {
+        {
         sendMessage(SExp(
-            key(":return"),
-            SExp(key(":ok"), sexp),
-            callId))
+          key(":return"),
+          SExp(key(":ok"), sexp),
+          callId))
       }
       case _ => throw new IllegalStateException("Not a SExp: " + value)
     }
@@ -424,11 +424,11 @@ trait SwankProtocol extends Protocol {
 
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     sendMessage(SExp(
-	key(":return"),
-	SExp(key(":abort"),
-          code,
-          detail.map(strToSExp).getOrElse(NilAtom())),
-	callId))
+      key(":return"),
+      SExp(key(":abort"),
+        code,
+        detail.map(strToSExp).getOrElse(NilAtom())),
+      callId))
   }
 
   def sendProtocolError(code: Int, detail: Option[String]) {
@@ -473,11 +473,10 @@ trait SwankProtocol extends Protocol {
     implicit def posToSExp(pos: RangePosition): SExp = {
       if (pos.isDefined) {
         SExp.propList(
-	  (":file", pos.source.path), 
-	  (":offset", pos.point),
-	  (":start", pos.start),
-	  (":end", pos.end)
-	)
+          (":file", pos.source.path),
+          (":offset", pos.point),
+          (":start", pos.start),
+          (":end", pos.end))
       } else {
         'nil
       }
@@ -609,7 +608,7 @@ trait SwankProtocol extends Protocol {
   def toWF(value: TypeInfo): SExp = {
     value match {
       case value: ArrowTypeInfo =>
-      {
+        {
         SExp.propList(
           (":name", value.name),
           (":type-id", value.id),
@@ -618,7 +617,7 @@ trait SwankProtocol extends Protocol {
           (":param-sections", SExp(value.paramSections.map(toWF))))
       }
       case value: TypeInfo =>
-      {
+        {
         SExp.propList((":name", value.name),
           (":type-id", value.id),
           (":full-name", value.fullName),
@@ -648,8 +647,8 @@ trait SwankProtocol extends Protocol {
   def toWF(value: ParamSectionInfo): SExp = {
     SExp.propList(
       (":params", SExp(value.params.map {
-            case (nm, tp) => SExp(nm, toWF(tp))
-	  })),
+        case (nm, tp) => SExp(nm, toWF(tp))
+      })),
       (":is-implicit", value.isImplicit))
 
   }
@@ -665,9 +664,9 @@ trait SwankProtocol extends Protocol {
       (":type", toWF(value.tpe)),
       (":info-type", 'typeInspect),
       (":companion-id", value.companionId match {
-          case Some(id) => id
-          case None => 'nil
-	}), (":interfaces", SExp(value.supers.map(toWF))))
+        case Some(id) => id
+        case None => 'nil
+      }), (":interfaces", SExp(value.supers.map(toWF))))
   }
 
   def toWF(value: RefactorFailure): SExp = {
@@ -692,8 +691,35 @@ trait SwankProtocol extends Protocol {
       (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
   }
 
-  def toWF(value: SymbolSearchResult): SExp = {
+  def toWF(value: SymbolSearchResults): SExp = {
     SExpList(value.symLists.map { l => SExpList(l.map(toWF)) })
+  }
+
+  private def toWF(pos: Option[(String, Int)]): SExp = {
+    pos match{
+      case Some((f,o)) => SExp.propList((":file", f), (":offset", o))
+      case _ => 'nil
+    }
+  }
+
+  def toWF(value: SymbolSearchResult): SExp = {
+    value match {
+      case value: TypeSearchResult => {
+        SExp.propList(
+          (":name", value.name),
+	  (":decl-as", value.declaredAs),
+          (":pos", toWF(value.pos)))
+      }
+      case value: MethodSearchResult => {
+        SExp.propList(
+          (":name", value.name),
+	  (":decl-as", value.declaredAs),
+          (":pos", toWF(value.pos)),
+	  (":owner-name", value.owner))
+      }
+      case value => throw new IllegalStateException("Unknown SymbolSearchResult: " + value)
+    }
+
   }
 
   def toWF(value: Undo): SExp = {

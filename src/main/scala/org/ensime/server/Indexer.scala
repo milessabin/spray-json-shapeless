@@ -6,7 +6,13 @@ import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
-import org.ensime.model.{SymbolInfo, TypeInfo, SymbolSearchResult}
+import org.ensime.model.{
+  TypeInfo,
+  SymbolSearchResult,
+  TypeSearchResult,
+  MethodSearchResult,
+  SymbolSearchResults
+}
 import org.clapper.classutil._
 import scala.collection.JavaConversions._
 import org.ardverk.collection._
@@ -16,63 +22,83 @@ import scala.collection.mutable.{ HashMap, ArrayBuffer }
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
-case class AddSymbolsReq(syms: Iterable[(String, SymbolInfo)])
+case class AddSymbolsReq(syms: Iterable[(String, SymbolSearchResult)])
 case class RemoveSymbolsReq(syms: Iterable[String])
 
+trait IndexerInterface { self: RichPresentationCompiler =>
 
-trait IndexerInterface{ self : RichPresentationCompiler =>
+  private def isType(sym: Symbol): Boolean = {
+    sym.isClass || sym.isModule || sym.isInterface
+  }
+
+  private def typeSymName(sym:Symbol):String = {
+    try{
+      typeFullName(sym.tpe)
+    } catch{ case e => sym.nameString }
+  }
+
+  private def lookupKey(sym: Symbol):String = {
+    if(isType(sym)) typeSymName(sym)
+    else sym.nameString + typeSymName(sym.owner).hashCode()
+  }
 
   def unindexTopLevelSyms(syms: Iterable[Symbol]) {
     val keys = new ArrayBuffer[String]
-    for(sym <- syms){
-      for(name <- nameForIndex(sym)) keys += name
-      for(mem <- try{sym.tpe.members}catch{case e => List()}){
-	for(name <- nameForIndex(mem)) keys += name
+    for (sym <- syms) {
+      keys += lookupKey(sym)
+      for (mem <- try { sym.tpe.members } catch { case e => List() }) {
+        keys += lookupKey(mem)
       }
     }
     indexer ! RemoveSymbolsReq(keys)
   }
 
+  private implicit def symToSearchResult(sym:Symbol):SymbolSearchResult = {
+
+    val pos = if(sym.pos.isDefined)
+    { Some((sym.pos.source.path, sym.pos.point)) }
+    else None
+
+    if(isType(sym)) {
+      new TypeSearchResult(
+        typeSymName(sym),
+	declaredAs(sym),
+        pos)
+    }
+    else{
+      new MethodSearchResult(
+        sym.nameString,
+	declaredAs(sym),
+        pos,
+	typeSymName(sym.owner))
+    }
+  }
+
   def indexTopLevelSyms(syms: Iterable[Symbol]) {
-    val infos = new ArrayBuffer[(String, SymbolInfo)]
-    for(sym <- syms){
-      for(name <- nameForIndex(sym)) {
-	if(Indexer.isValidTypeName(name)){
-	  infos += ((name, SymbolInfo(sym)))
-	  for(mem <- try{sym.tpe.members}catch{case e => { List()}}){
-	    for(mname <- nameForIndex(mem)) {
-	      if(Indexer.isValidTypeName(mname)){
-		infos += ((mname, SymbolInfo(mem)))
-	      }
-	    }
-	  }
-	}
+    val infos = new ArrayBuffer[(String, SymbolSearchResult)]
+    for (sym <- syms) {
+      if (Indexer.isValidType(typeSymName(sym))) {
+	val key = lookupKey(sym)
+        infos += ((key, sym))
+        for (mem <- try { sym.tpe.members } catch { case e => { List() } }) {
+          if (Indexer.isValidMethod(mem.nameString)) {
+	    val key = lookupKey(mem)
+            infos += ((key, mem))
+          }
+        }
       }
     }
     indexer ! AddSymbolsReq(infos)
   }
-
-  private def nameForIndex(sym:Symbol):Option[String] = {
-    try{
-      if(sym.isMethod) Some(sym.nameString)
-      else{
-	val tpe = sym.tpe
-	Some(typeFullName(tpe))
-      }
-    }catch{
-      case e:AssertionError => None
-    }
-  }
-
 }
 
-object Indexer{
-  def isValidTypeName(s:String):Boolean = {
+object Indexer {
+  def isValidType(s: String): Boolean = {
     val i = s.indexOf("$")
     i == -1 || (i == (s.length - 1))
   }
-  def isValidMethodName(s:String):Boolean = {
-    s.indexOf("$") == 0
+  def isValidMethod(s: String): Boolean = {
+    s.indexOf("$") == -1
   }
 }
 
@@ -80,42 +106,70 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
 
   import protocol._
 
-  private var trie = new PatriciaTrie[String, SymbolInfo](
+  private var trie = new PatriciaTrie[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
 
   private var invalidated = true
 
-  private def findTopLevelSyms(str: String, maxResults: Int = 0, caseSens: Boolean = false): List[SymbolInfo] = {
-    if(invalidated) rebuildIndex()
-    val results = trie.prefixMap(str.toLowerCase()).values
-    val refined: Iterable[SymbolInfo] = if(caseSens) {
-      results.filter{ s => s.name.contains(str) }
-    }
-    else{
+  private def findTopLevelSyms(str: String, maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
+    if (invalidated) rebuildIndex()
+    val key = str.toLowerCase()
+    val results = trie.prefixMap(key).values
+    val refined: Iterable[SymbolSearchResult] = if (caseSens) {
+      results.filter { s => s.name.contains(str) }
+    } else {
       results
     }
-    if(maxResults == 0){
+    if (maxResults == 0) {
       refined.toList
-    }
-    else{
+    } else {
       refined.toList.take(maxResults)
     }
   }
 
-  private def insertSuffixes(key: String, value: SymbolInfo) {
+  private def insertSuffixes(key: String, value: SymbolSearchResult) {
     val tmp = key.toLowerCase()
     val k = tmp + tmp.hashCode()
-    for(i <- (0 to key.length - 1)){
-      trie.put(k.substring(i), value)
+    trie.put(k, value)
+    for (i <- (1 to key.length - 1)) {
+      val c:Char = key.charAt(i)
+      if(c == '.' || c == '_'){
+	trie.put(k.substring(i), value)	
+	trie.put(k.substring(i + 1), value)
+      }
+      else if(Character.isUpperCase(c)){
+	trie.put(k.substring(i), value)	
+      }
     }
   }
 
   private def removeSuffixes(key: String) {
     val tmp = key.toLowerCase()
     val k = tmp + tmp.hashCode()
-    for(i <- (0 to key.length - 1)){
-      trie.remove(k.substring(i))
+    trie.remove(k)
+    for (i <- (1 to key.length - 1)) {
+      val c:Char = key.charAt(i)
+      if(c == '.' || c == '_'){
+	trie.remove(k.substring(i))
+	trie.remove(k.substring(i + 1))
+      }
+      else if(Character.isUpperCase(c)){
+	trie.remove(k.substring(i))	
+      }
     }
+  }
+
+  private def declaredAs(ci: ClassInfo):scala.Symbol = {
+    if(ci.name.endsWith("$")) 'object
+    else if(ci.isInterface) 'trait
+    else 'class
+  }
+
+  private def declaredAs(mi: MethodInfo):scala.Symbol = 'method
+
+  private def lookupKey(ci: ClassInfo):String = ci.name
+  private def lookupKey(owner: ClassInfo, mi: MethodInfo):String = {
+    mi.name + owner.name.hashCode()
   }
 
   private def rebuildIndex() {
@@ -124,41 +178,30 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
     val finder = ClassFinder(config.allFilesOnClasspath.toList)
     val classes: Iterator[ClassInfo] = finder.getClasses
 
-    // TODO: lets not use this
-    def nullInfo = new TypeInfo("NA", -1, 'nil, "NA", List(), List(), NoPosition, None)
-
-    def indexType(ci:ClassInfo){
-      if(Indexer.isValidTypeName(ci.name)){
-	ci.methods.foreach(indexMethod)
-	insertSuffixes(ci.name,
-	  new SymbolInfo(
-	    ci.name,
-	    NoPosition,
-	    nullInfo,
-	    false))
+    for(ci <- classes){
+      if (Indexer.isValidType(ci.name)) {
+        for (mi <- ci.methods) {
+	  if (Indexer.isValidMethod(mi.name)) {
+	    val value = new MethodSearchResult(
+              mi.name,
+	      declaredAs(mi),
+              Some((ci.location.getPath(),-1)),
+              ci.name)
+            insertSuffixes(lookupKey(ci, mi), value)
+          }
+	}
+	val value = new TypeSearchResult(
+          ci.name,
+	  declaredAs(ci),
+          Some((ci.location.getPath(), -1)))
+        insertSuffixes(lookupKey(ci), value)
       }
-    }
-
-    def indexMethod(mi:MethodInfo){
-      if(Indexer.isValidMethodName(mi.name)){
-	insertSuffixes(mi.name,
-	  new SymbolInfo(
-	    mi.name,
-	    NoPosition,
-	    nullInfo,
-	    true))
-      }
-    }
-
-    classes.foreach{ ci =>
-      indexType(ci)
     }
     invalidated = false
 
     val elapsed = System.currentTimeMillis() - t
-    println("Indexing completed in " + elapsed/1000.0 + " seconds.")
+    println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
   }
-
 
   def act() {
 
@@ -166,50 +209,51 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
 
     loop {
       try {
-	receive {
+        receive {
           case IndexerShutdownReq => {
             exit('stop)
           }
           case RebuildStaticIndexReq() => {
-	    rebuildIndex()
+            rebuildIndex()
           }
-          case AddSymbolsReq(syms: Iterable[(String, SymbolInfo)]) => {
-	    syms.foreach{
+          case AddSymbolsReq(syms: Iterable[(String, SymbolSearchResult)]) => {
+            syms.foreach {
 	      case (key, info) => {
-		insertSuffixes(key, info)
+                insertSuffixes(key, info)
 	      }
-	    }
+            }
           }
           case RemoveSymbolsReq(syms: Iterable[String]) => {
-	    syms.foreach{ s => removeSuffixes(s) }
+            syms.foreach { s => removeSuffixes(s) }
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
 	      req match {
-		case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
-                  val suggestions = SymbolSearchResult(
-		    names.map{ nm => findTopLevelSyms(nm) })
+                case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
+                  val suggestions = SymbolSearchResults(
+                    names.map { nm => findTopLevelSyms(nm) })
                   project ! RPCResultEvent(toWF(suggestions), callId)
-		}
-		case PublicSymbolSearchReq(names: List[String], maxResults: Int, caseSens: Boolean) => {
-                  val suggestions = SymbolSearchResult(
-		    names.map{ nm => 
-		      findTopLevelSyms(nm, maxResults, caseSens).sortWith{
-			(a,b) => a.name.length < b.name.length
+                }
+                case PublicSymbolSearchReq(names: List[String], 
+		  maxResults: Int, caseSens: Boolean) => {
+                  val suggestions = SymbolSearchResults(
+                    names.map { nm =>
+		      findTopLevelSyms(nm, maxResults, caseSens).sortWith { (a, b) =>
+                        a.name.length < b.name.length
 		      }
-		    })
+                    })
                   project ! RPCResultEvent(toWF(suggestions), callId)
-		}
+                }
 	      }
             } catch {
 	      case e: Exception =>
 	      {
-		System.err.println("Error handling RPC: " +
+                System.err.println("Error handling RPC: " +
                   e + " :\n" +
                   e.getStackTraceString)
-		project ! RPCErrorEvent(ErrExceptionInIndexer,
-		  Some("Error occurred in indexer. Check the server log."), 
-		  callId)
+                project ! RPCErrorEvent(ErrExceptionInIndexer,
+                  Some("Error occurred in indexer. Check the server log."),
+                  callId)
 	      }
             }
           }
@@ -217,13 +261,14 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
           {
             println("Indexer: WTF, what's " + other)
           }
-	}
+        }
 
       } catch {
-	case e: Exception =>
-	{
-          System.err.println("Error at Indexer message loop: " + e + " :\n" + e.getStackTraceString)
-	}
+        case e: Exception =>
+        {
+          System.err.println("Error at Indexer message loop: " + 
+	    e + " :\n" + e.getStackTraceString)
+        }
       }
     }
   }

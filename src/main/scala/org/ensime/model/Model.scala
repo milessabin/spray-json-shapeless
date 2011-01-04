@@ -8,6 +8,17 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 
 class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
+abstract class SymbolSearchResult(
+  val name: String,
+  val declaredAs: scala.Symbol,
+  val pos: Option[(String, Int)]
+)
+class TypeSearchResult(name: String, declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, declaredAs, pos){}
+class MethodSearchResult(name: String, declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, declaredAs, pos){}
+
+case class SymbolSearchResults(symLists: Iterable[Iterable[SymbolSearchResult]])
+
+
 class SymbolInfo(
   val name: String,
   val declPos: Position,
@@ -20,7 +31,6 @@ case class SymbolInfoLight(
   val tpeId: Int,
   val isCallable: Boolean) {}
 
-case class SymbolSearchResult(symLists: Iterable[Iterable[SymbolInfo]])
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
@@ -83,35 +93,6 @@ trait ModelBuilders { self: Global with Helpers =>
   }
 
   object ModelHelpers {
-
-    import scala.tools.nsc.symtab.Flags._
-
-    /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
-    for details on various symbol predicates. */
-    def declaredAs(sym: Symbol): scala.Symbol = {
-      if (sym.isMethod)
-      'method
-      else if (sym.isTrait)
-      'trait
-      else if (sym.isTrait && sym.hasFlag(JAVA))
-      'interface
-      else if (sym.isInterface)
-      'interface
-      else if (sym.isModule)
-      'object
-      else if (sym.isModuleClass)
-      'object
-      else if (sym.isClass)
-      'class
-      else if (sym.isPackageClass)
-      'class
-
-      // check this last so objects are not
-      // classified as fields
-      else if (sym.isValue || sym.isVariable)
-      'field
-      else 'nil
-    }
 
 
     // When inspecting a type, transform a raw list of TypeMembers to a sorted
