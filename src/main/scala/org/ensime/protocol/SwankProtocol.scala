@@ -692,7 +692,11 @@ trait SwankProtocol extends Protocol {
   }
 
   def toWF(value: SymbolSearchResults): SExp = {
-    SExpList(value.symLists.map { l => SExpList(l.map(toWF)) })
+    SExpList(value.syms.map(toWF))
+  }
+
+  def toWF(value: ImportSuggestions): SExp = {
+    SExpList(value.symLists.map { l => SExpList(l.map(toWF)) })    
   }
 
   private def toWF(pos: Option[(String, Int)]): SExp = {

@@ -16,7 +16,8 @@ abstract class SymbolSearchResult(
 class TypeSearchResult(name: String, declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, declaredAs, pos){}
 class MethodSearchResult(name: String, declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, declaredAs, pos){}
 
-case class SymbolSearchResults(symLists: Iterable[Iterable[SymbolSearchResult]])
+case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
+case class SymbolSearchResults(syms: Iterable[SymbolSearchResult])
 
 
 class SymbolInfo(

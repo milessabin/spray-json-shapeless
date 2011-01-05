@@ -11,14 +11,15 @@ import org.ensime.model.{
   SymbolSearchResult,
   TypeSearchResult,
   MethodSearchResult,
-  SymbolSearchResults
+  SymbolSearchResults,
+  ImportSuggestions
 }
 import org.clapper.classutil._
 import scala.collection.JavaConversions._
 import org.ardverk.collection._
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.util.{ NoPosition }
-import scala.collection.mutable.{ HashMap, ArrayBuffer }
+import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer }
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
@@ -39,7 +40,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
 
   private def lookupKey(sym: Symbol):String = {
     if(isType(sym)) typeSymName(sym)
-    else sym.nameString + typeSymName(sym.owner).hashCode()
+    else typeSymName(sym.owner) + "." + sym.nameString
   }
 
   def unindexTopLevelSyms(syms: Iterable[Symbol]) {
@@ -67,7 +68,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
     }
     else{
       new MethodSearchResult(
-        sym.nameString,
+        typeSymName(sym.owner) + "." + sym.nameString,
 	declaredAs(sym),
         pos,
 	typeSymName(sym.owner))
@@ -98,7 +99,7 @@ object Indexer {
     i == -1 || (i == (s.length - 1))
   }
   def isValidMethod(s: String): Boolean = {
-    s.indexOf("$") == -1
+    s.indexOf("$") == -1 && !s.equals("<init>") && !s.equals("this")
   }
 }
 
@@ -109,20 +110,36 @@ trait Indexing{
   protected var trie = new PatriciaTrie[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
 
-  protected def findTopLevelSyms(str: String, maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
-    val key = str.toLowerCase()
-    val results = trie.prefixMap(key).values.toList
-    val refined = if (caseSens) {
-      results.filter { s => s.name.contains(str) }
-    } else {
-      results
+  protected def findTopLevelSyms(keywords: Iterable[String], 
+    maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
+
+    var resultSet = new HashSet[SymbolSearchResult]
+    if(keywords.size() > 0){
+      val key = keywords.head.toLowerCase()
+      resultSet ++= trie.prefixMap(key).values
     }
-    val sorted = refined.sortWith{(a, b) => a.name.length < b.name.length}
+
+    if(keywords.size() > 1){
+      for(keyword <- keywords.tail){
+	val key = keyword.toLowerCase()
+	val results = trie.prefixMap(key).values.toSet
+	resultSet = resultSet.intersect(results)
+      }
+    }
+
+    resultSet = if(caseSens){
+      resultSet.filter { s => keywords.forall{k => s.name.contains(k)} }
+    } else {
+      resultSet
+    }
+
+    val sorted = resultSet.toList.sortWith{(a, b) => a.name.length < b.name.length}
     if (maxResults == 0) {
       sorted
     } else {
       sorted.take(maxResults)
     }
+
   }
 
   protected def insertSuffixes(key: String, value: SymbolSearchResult) {
@@ -173,7 +190,7 @@ trait Indexing{
 
   protected def lookupKey(ci: ClassInfo):String = ci.name
   protected def lookupKey(owner: ClassInfo, mi: MethodInfo):String = {
-    mi.name + owner.name.hashCode()
+    owner.name + "." + mi.name
   }
 
   def buildStaticIndex(files: Iterable[File]) {
@@ -187,7 +204,7 @@ trait Indexing{
         for (mi <- ci.methods) {
 	  if (Indexer.isValidMethod(mi.name)) {
 	    val value = new MethodSearchResult(
-              mi.name,
+              ci.name + "." + mi.name,
 	      declaredAs(mi),
               Some((ci.location.getPath(),-1)),
               ci.name)
@@ -241,14 +258,16 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
             try {
 	      req match {
                 case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
-                  val suggestions = SymbolSearchResults(
-                    names.map { nm => findTopLevelSyms(nm) })
+                  val suggestions = ImportSuggestions(
+                    names.map { nm => findTopLevelSyms(List(nm)) })
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
-                case PublicSymbolSearchReq(names: List[String], 
+                case PublicSymbolSearchReq(keywords: List[String],
 		  maxResults: Int, caseSens: Boolean) => {
+		  val nonEmptyKeywords = keywords.filter{_.length > 0}
                   val suggestions = SymbolSearchResults(
-                    names.map { findTopLevelSyms(_, maxResults, caseSens) })
+		    findTopLevelSyms(nonEmptyKeywords, maxResults, caseSens)
+		  )
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
 	      }
