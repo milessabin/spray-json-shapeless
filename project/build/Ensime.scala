@@ -15,7 +15,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   val scalatest = "org.scalatest" % "scalatest" % "1.2" % "test"
   val jdt = "org.eclipse.jdt" % "core" % "3.4.2.v_883_R34x" % "compile;runtime;test"
   val scalariform = "org.scalariform" % "scalariform_2.8.0" % "0.0.7"%"compile;runtime;test"
-  val classutil = "org.clapper" %% "classutil" % "0.3.3"%"compile;runtime;test"
+  val classutil = "org.clapper" %% "classutil" % "0.3.666"%"compile;runtime;test"
 //  val refactoring = "org.scala-refactoring" % "org.scala-refactoring.library" % "0.2.0-SNAPSHOT"%"compile;runtime;test"
 
   val asm = "asm" % "asm" % "3.2"
