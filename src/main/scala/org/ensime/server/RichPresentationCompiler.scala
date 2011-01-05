@@ -521,15 +521,6 @@ with RefactoringImpl with IndexerInterface{
     parent ! FullTypeCheckCompleteEvent()
   }
 
-  /**
-  * Overriding for debug purposes..
-  */
-  override def parse(unit: RichCompilationUnit): Unit = {
-    // System.err.println("DEBUG PARSE TRACE\n---------------------\n")
-    // (new RuntimeException()).printStackTrace(System.err);
-    super.parse(unit);
-  }
-
   protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
     sources.foreach { s =>
       typedTree(s, true)
