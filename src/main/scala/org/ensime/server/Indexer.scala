@@ -111,16 +111,17 @@ trait Indexing{
 
   protected def findTopLevelSyms(str: String, maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
     val key = str.toLowerCase()
-    val results = trie.prefixMap(key).values
-    val refined: Iterable[SymbolSearchResult] = if (caseSens) {
+    val results = trie.prefixMap(key).values.toList
+    val refined = if (caseSens) {
       results.filter { s => s.name.contains(str) }
     } else {
       results
     }
+    val sorted = refined.sortWith{(a, b) => a.name.length < b.name.length}
     if (maxResults == 0) {
-      refined.toList
+      sorted
     } else {
-      refined.toList.take(maxResults)
+      sorted.take(maxResults)
     }
   }
 
@@ -247,11 +248,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
                 case PublicSymbolSearchReq(names: List[String], 
 		  maxResults: Int, caseSens: Boolean) => {
                   val suggestions = SymbolSearchResults(
-                    names.map { nm =>
-		      findTopLevelSyms(nm, maxResults, caseSens).sortWith { (a, b) =>
-                        a.name.length < b.name.length
-		      }
-                    })
+                    names.map { findTopLevelSyms(_, maxResults, caseSens) })
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
 	      }
