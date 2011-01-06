@@ -179,49 +179,33 @@ trait Indexing{
     }
   }
 
-  protected def lookupKey(className: String):String = className
-  protected def lookupKey(ownerName: String, methName: String):String = {
-    ownerName + "." + methName
-  }
-
   def buildStaticIndex(files: Iterable[File]) {
     println("Building index...")
     val t = System.currentTimeMillis()
 
     ClassIterator.find(files.toList, new ClassHandler{
+	var validClass = false
 	override def onClass(name: String, location: String){
 	  if (Indexer.isValidType(name)) {
-	    val declaredAs = if(name.endsWith("$")) 'object 
+	    validClass = true
+	    val declaredAs = if(name.endsWith("$")) 'object
 	    else 'class
 	    val value = new TypeSearchResult(
               name,
 	      declaredAs,
               Some((location, -1)))
-            insertSuffixes(lookupKey(name), value)
+            insertSuffixes(name, value)
 	  }
+	  else validClass = false
 	}
 	override def onMethod(className: String, name: String, location: String){
-	  if (Indexer.isValidType(className)) {
-	    if (Indexer.isValidMethod(name)) {
-	      val value = new MethodSearchResult(
-		className + "." + name,
-		'method,
-		Some((location,-1)),
-		name)
-              insertSuffixes(lookupKey(className, name), value)
-            }
-	  }
-	}
-	override def onField(className: String, name: String, location: String){
-	  if (Indexer.isValidType(className)) {
-	    if (Indexer.isValidMethod(name)) {
-	      val value = new MethodSearchResult(
-		className + "." + name,
-		'field,
-		Some((location,-1)),
-		name)
-              insertSuffixes(lookupKey(className, name), value)
-            }
+	  if (validClass && Indexer.isValidMethod(name)) {
+	    val value = new MethodSearchResult(
+	      className + "." + name,
+	      'method,
+	      Some((location,-1)),
+	      className)
+            insertSuffixes(className + "." + name, value)
 	  }
 	}
       })

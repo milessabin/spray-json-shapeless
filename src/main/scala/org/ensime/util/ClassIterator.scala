@@ -7,7 +7,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.commons.EmptyVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
-import java.io.{File, FileInputStream, InputStream, IOException}
+import java.io.{File, BufferedInputStream, 
+  FileInputStream, InputStream, IOException}
 import java.util.jar.{JarFile, Manifest => JarManifest}
 import java.util.zip.{ZipFile, ZipEntry}
 import java.io.{File, InputStream, IOException}
@@ -124,7 +125,8 @@ object ClassIterator{
         val zipFileName = file.getPath
 	for(e <- zipFile.entries){
 	  if(isClass(e)){
-	    processClassData(zipFile.getInputStream(e), file, handler)
+	    processClassData(new BufferedInputStream(
+		zipFile.getInputStream(e)), file, handler)
 	  }
 	}
     }
@@ -144,7 +146,8 @@ object ClassIterator{
         import FileUtils._
         for(f <- dir.andTree){
 	  if(isClass(f)){
-	    processClassData(new FileInputStream(f), dir, handler)
+	    processClassData(new BufferedInputStream(
+		new FileInputStream(f)), dir, handler)
 	  }
 	}
     }
@@ -152,7 +155,7 @@ object ClassIterator{
     private def processClassData(is: InputStream, location: File, handler:ClassHandler){
         val cr = new ClassReader(is)
         val visitor = new ClassVisitor(location, handler)
-        cr.accept(visitor, 0)
+        cr.accept(visitor, ClassReader.SKIP_CODE)
     }
 
 }
