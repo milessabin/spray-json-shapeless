@@ -64,12 +64,14 @@ trait IndexerInterface { self: RichPresentationCompiler =>
     if(isType(sym)) {
       new TypeSearchResult(
         typeSymName(sym),
+	sym.nameString,
 	declaredAs(sym),
         pos)
     }
     else{
       new MethodSearchResult(
-        typeSymName(sym.owner) + "." + sym.nameString,
+	lookupKey(sym),
+        sym.nameString,
 	declaredAs(sym),
         pos,
 	typeSymName(sym.owner))
@@ -188,40 +190,53 @@ trait Indexing{
   }
 
   def buildStaticIndex(files: Iterable[File]) {
-    println("Building index...")
     val t = System.currentTimeMillis()
 
-    ClassIterator.find(files.toList, new ClassHandler{
-	var validClass = false
-	override def onClass(name: String, location: String, flags: Int){
-	  if (Indexer.isValidType(name)) {
-	    validClass = true
-	    val value = new TypeSearchResult(
-              name,
-	      declaredAs(name, flags),
-              Some((location, -1)))
-            insertSuffixes(name, value)
-	  }
-	  else validClass = false
+    val handler = new ClassHandler{
+      var classCount = 0
+      var methodCount = 0
+      var validClass = false
+      override def onClass(name: String, location: String, flags: Int){
+	val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+	if (isPublic && Indexer.isValidType(name)) {
+	  validClass = true
+	  val i = name.lastIndexOf(".")
+	  val localName = if(i > -1) name.substring(i) else name
+	  val value = new TypeSearchResult(
+            name,
+	    localName,
+	    declaredAs(name, flags),
+            Some((location, -1)))
+          insertSuffixes(name, value)
+	  classCount += 1
 	}
-	override def onMethod(className: String, name: String, 
-	  location: String, flags:Int){
-	  if (validClass && Indexer.isValidMethod(name)) {
-	    val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
-	    val revisedClassName = if(isStatic) className + "$"
-	    else className
-	    val value = new MethodSearchResult(
-	      revisedClassName + "." + name,
-	      'method,
-	      Some((location,-1)),
-	      revisedClassName)
-            insertSuffixes(className + "." + name, value)
-	  }
+	else validClass = false
+      }
+      override def onMethod(className: String, name: String, 
+	location: String, flags:Int){
+	val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+	if (validClass && isPublic && Indexer.isValidMethod(name)) {
+	  val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+	  val revisedClassName = if(isStatic) className + "$"
+	  else className
+	  val lookupKey = revisedClassName + "." + name
+	  val value = new MethodSearchResult(
+	    lookupKey,
+	    name,
+	    'method,
+	    Some((location,-1)),
+	    revisedClassName)
+          insertSuffixes(lookupKey, value)
+	  methodCount += 1
 	}
-      })
-
+      }
+    }
+    
+    println("Indexing classpath...")
+    ClassIterator.find(files.toList, handler)
     val elapsed = System.currentTimeMillis() - t
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
+    println("Indexed " + handler.classCount + " classes with " + handler.methodCount + " methods.")
   }
 
 }

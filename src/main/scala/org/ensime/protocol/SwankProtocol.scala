@@ -711,12 +711,14 @@ trait SwankProtocol extends Protocol {
       case value: TypeSearchResult => {
         SExp.propList(
           (":name", value.name),
+	  (":local-name", value.localName),
 	  (":decl-as", value.declaredAs),
           (":pos", toWF(value.pos)))
       }
       case value: MethodSearchResult => {
         SExp.propList(
           (":name", value.name),
+	  (":local-name", value.localName),
 	  (":decl-as", value.declaredAs),
           (":pos", toWF(value.pos)),
 	  (":owner-name", value.owner))
