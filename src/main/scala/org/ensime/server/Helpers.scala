@@ -136,7 +136,9 @@ trait Helpers { self: Global =>
     else {
       val pathSegs = path.split("\\.")
       pathSegs.foldLeft(List(rootSym)) { (baseSyms, seg) =>
-        baseSyms.flatMap { s => memberSymsNamed(s, seg) }
+        baseSyms.flatMap {
+	  s => memberSymsNamed(s, seg)
+	}
       }
     }
   }

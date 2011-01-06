@@ -19,6 +19,8 @@ import org.ardverk.collection._
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.util.{ NoPosition }
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer }
+import org.objectweb.asm.Opcodes;
+
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
@@ -173,10 +175,16 @@ trait Indexing{
 	i+=1
       }
       else if(Character.isUpperCase(c)){
-	trie.remove(k.substring(i))	
+	trie.remove(k.substring(i))
       }
       i+=1
     }
+  }
+
+  private def declaredAs(name:String, flags:Int) = {
+    if(name.endsWith("$")) 'object
+    else if((flags & Opcodes.ACC_INTERFACE) != 0) 'trait
+    else 'class
   }
 
   def buildStaticIndex(files: Iterable[File]) {
@@ -185,26 +193,28 @@ trait Indexing{
 
     ClassIterator.find(files.toList, new ClassHandler{
 	var validClass = false
-	override def onClass(name: String, location: String){
+	override def onClass(name: String, location: String, flags: Int){
 	  if (Indexer.isValidType(name)) {
 	    validClass = true
-	    val declaredAs = if(name.endsWith("$")) 'object
-	    else 'class
 	    val value = new TypeSearchResult(
               name,
-	      declaredAs,
+	      declaredAs(name, flags),
               Some((location, -1)))
             insertSuffixes(name, value)
 	  }
 	  else validClass = false
 	}
-	override def onMethod(className: String, name: String, location: String){
+	override def onMethod(className: String, name: String, 
+	  location: String, flags:Int){
 	  if (validClass && Indexer.isValidMethod(name)) {
+	    val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+	    val revisedClassName = if(isStatic) className + "$"
+	    else className
 	    val value = new MethodSearchResult(
-	      className + "." + name,
+	      revisedClassName + "." + name,
 	      'method,
 	      Some((location,-1)),
-	      className)
+	      revisedClassName)
             insertSuffixes(className + "." + name, value)
 	  }
 	}
