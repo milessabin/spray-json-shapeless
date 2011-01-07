@@ -25,8 +25,8 @@ case class ReloadAllReq()
 case class RemoveFileReq(file: File)
 case class ScopeCompletionReq(file: File, point: Int, prefix: String, constructor: Boolean)
 case class TypeCompletionReq(file: File, point: Int, prefix: String)
-case class ImportSuggestionsReq(file: File, point: Int, names:List[String])
-case class PublicSymbolSearchReq(names:List[String], maxResults: Int, caseSens: Boolean)
+case class ImportSuggestionsReq(file: File, point: Int, names: List[String])
+case class PublicSymbolSearchReq(names: List[String], maxResults: Int, caseSens: Boolean)
 case class UsesOfSymAtPointReq(file: File, point: Int)
 case class PackageMemberCompletionReq(path: String, prefix: String)
 case class SymbolAtPointReq(file: File, point: Int)
@@ -134,11 +134,11 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
       case Some(b) => b
       case None =>
         {
-          val b = new IncrementalBuilder(this, protocol, this.config)
-          builder = Some(b)
-          b.start
-          b
-        }
+        val b = new IncrementalBuilder(this, protocol, this.config)
+        builder = Some(b)
+        b.start
+        b
+      }
     }
   }
 

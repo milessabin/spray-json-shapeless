@@ -57,6 +57,10 @@ extends Actor with RefactoringHandler {
 
     println("Initing Indexer...")
     indexer.start
+    if(!config.disableIndexOnStartup){
+      indexer ! RebuildStaticIndexReq()
+    }
+
 
     loop {
       try {
@@ -90,10 +94,6 @@ extends Actor with RefactoringHandler {
             if (awaitingInitialCompile) {
 	      // Initial compile is finished.
 	      // Analyzer is now ready for RPC commands
-
-	      if(!config.disableIndexOnStartup){
-		indexer ! RebuildStaticIndexReq()
-	      }
               awaitingInitialCompile = false
               project ! AnalyzerReadyEvent()
             }
@@ -151,168 +151,168 @@ extends Actor with RefactoringHandler {
                   }
 
                   case req: RefactorPerformReq => {
-                  handleRefactorRequest(req, callId)
-                }
+                    handleRefactorRequest(req, callId)
+                  }
 
-                case req: RefactorExecReq => {
-                handleRefactorExec(req, callId)
+                  case req: RefactorExecReq => {
+                    handleRefactorExec(req, callId)
+		  }
+
+		  case req: RefactorCancelReq => {
+		    handleRefactorCancel(req, callId)
+		  }
+
+		  case ScopeCompletionReq(file: File, point: Int,
+		    prefix: String, constructor: Boolean) => {
+		    val p = pos(file, point)
+		    val syms = scalaCompiler.askCompleteSymbolAt(p, prefix, constructor)
+		    project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
+		  }
+
+		  case TypeCompletionReq(file: File, point: Int, prefix: String) => {
+		    val p = pos(file, point)
+		    val members = scalaCompiler.askCompleteMemberAt(p, prefix)
+		    project ! RPCResultEvent(toWF(members.map(toWF)), callId)
+		  }
+
+		  case ImportSuggestionsReq(_, _, _) => {
+		    indexer ! rpcReq
+		  }
+
+		  case PublicSymbolSearchReq(_, _, _) => {
+		    indexer ! rpcReq
+		  }
+
+		  case UsesOfSymAtPointReq(file: File, point: Int) => {
+		    val p = pos(file, point)
+		    val uses = scalaCompiler.askUsesOfSymAtPoint(p)
+		    project ! RPCResultEvent(toWF(uses.map(toWF)), callId)
+		  }
+
+		  case PackageMemberCompletionReq(path: String, prefix: String) => {
+		    val members = scalaCompiler.askCompletePackageMember(path, prefix)
+		    project ! RPCResultEvent(toWF(members.map(toWF)), callId)
+		  }
+
+		  case InspectTypeReq(file: File, point: Int) => {
+		    val p = pos(file, point)
+		    val result = scalaCompiler.askInspectTypeAt(p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case InspectTypeByIdReq(id: Int) => {
+		    val result = scalaCompiler.askInspectTypeById(id) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case SymbolAtPointReq(file: File, point: Int) => {
+		    val p = pos(file, point)
+		    val result = scalaCompiler.askSymbolInfoAt(p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case InspectPackageByPathReq(path: String) => {
+		    val result = scalaCompiler.askPackageByPath(path) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case TypeAtPointReq(file: File, point: Int) => {
+		    val p = pos(file, point)
+		    val result = scalaCompiler.askTypeInfoAt(p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case TypeByIdReq(id: Int) => {
+		    val result = scalaCompiler.askTypeInfoById(id) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case TypeByNameReq(name: String) => {
+		    val result = scalaCompiler.askTypeInfoByName(name) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case TypeByNameAtPointReq(name: String, file: File, point: Int) => {
+		    val p = pos(file, point)
+		    val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+
+		  case CallCompletionReq(id: Int) => {
+		    val result = scalaCompiler.askCallCompletionInfoById(id) match {
+                      case Some(info) => toWF(info)
+                      case None => toWF(null)
+		    }
+		    project ! RPCResultEvent(result, callId)
+		  }
+		}
               }
+	    } catch {
+              case e: Exception => {
+		System.err.println("Error handling RPC: " + e + " :\n" +
+		  e.getStackTraceString)
+		project ! RPCErrorEvent(ErrExceptionInAnalyzer,
+		  Some("Error occurred in Analyzer. Check the server log."), callId)
+	      }
+	    }
+	  }
+	  case other => {
+	    println("Analyzer: WTF, what's " + other)
+	  }
+	}
 
-              case req: RefactorCancelReq => {
-              handleRefactorCancel(req, callId)
-            }
-
-            case ScopeCompletionReq(file: File, point: Int,
-              prefix: String, constructor: Boolean) => {
-              val p = pos(file, point)
-              val syms = scalaCompiler.askCompleteSymbolAt(p, prefix, constructor)
-              project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
-            }
-
-            case TypeCompletionReq(file: File, point: Int, prefix: String) => {
-              val p = pos(file, point)
-              val members = scalaCompiler.askCompleteMemberAt(p, prefix)
-              project ! RPCResultEvent(toWF(members.map(toWF)), callId)
-            }
-
-            case ImportSuggestionsReq(_, _, _) => {
-	      indexer ! rpcReq
-            }
-
-            case PublicSymbolSearchReq(_, _, _) => {
-	      indexer ! rpcReq
-            }
-
-            case UsesOfSymAtPointReq(file: File, point: Int) => {
-              val p = pos(file, point)
-              val uses = scalaCompiler.askUsesOfSymAtPoint(p)
-              project ! RPCResultEvent(toWF(uses.map(toWF)), callId)
-            }
-
-            case PackageMemberCompletionReq(path: String, prefix: String) => {
-              val members = scalaCompiler.askCompletePackageMember(path, prefix)
-              project ! RPCResultEvent(toWF(members.map(toWF)), callId)
-            }
-
-            case InspectTypeReq(file: File, point: Int) => {
-              val p = pos(file, point)
-              val result = scalaCompiler.askInspectTypeAt(p) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case InspectTypeByIdReq(id: Int) => {
-              val result = scalaCompiler.askInspectTypeById(id) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case SymbolAtPointReq(file: File, point: Int) => {
-              val p = pos(file, point)
-              val result = scalaCompiler.askSymbolInfoAt(p) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case InspectPackageByPathReq(path: String) => {
-              val result = scalaCompiler.askPackageByPath(path) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case TypeAtPointReq(file: File, point: Int) => {
-              val p = pos(file, point)
-              val result = scalaCompiler.askTypeInfoAt(p) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case TypeByIdReq(id: Int) => {
-              val result = scalaCompiler.askTypeInfoById(id) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case TypeByNameReq(name: String) => {
-              val result = scalaCompiler.askTypeInfoByName(name) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case TypeByNameAtPointReq(name: String, file: File, point: Int) => {
-              val p = pos(file, point)
-              val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-
-            case CallCompletionReq(id: Int) => {
-              val result = scalaCompiler.askCallCompletionInfoById(id) match {
-                case Some(info) => toWF(info)
-                case None => toWF(null)
-              }
-              project ! RPCResultEvent(result, callId)
-            }
-          }
-        }
       } catch {
-        case e: Exception => {
-        System.err.println("Error handling RPC: " + e + " :\n" +
-          e.getStackTraceString)
-        project ! RPCErrorEvent(ErrExceptionInAnalyzer,
-          Some("Error occurred in Analyzer. Check the server log."), callId)
+	case e: Exception => {
+	  System.err.println("Error at Compiler message loop: " + e + " :\n" + e.getStackTraceString)
+	}
       }
     }
   }
-  case other => {
-    println("Analyzer: WTF, what's " + other)
+
+  type TypeCheckHandler = (Iterable[Note] => Unit)
+  type TypeCheckFailureHandler = (() => Unit)
+
+  private var pendingTypeCheckRequest: Option[(TypeCheckHandler, TypeCheckFailureHandler)] = None
+
+  private def waitForScalaTypeCheckResult(handler: TypeCheckHandler, failHandler: TypeCheckFailureHandler) {
+    for ((handler, failHandler) <- pendingTypeCheckRequest) {
+      failHandler()
+    }
+    pendingTypeCheckRequest = Some((handler, failHandler))
   }
-}
 
-} catch {
-  case e: Exception => {
-  System.err.println("Error at Compiler message loop: " + e + " :\n" + e.getStackTraceString)
-}
-}
-}
-}
-
-type TypeCheckHandler = (Iterable[Note] => Unit)
-type TypeCheckFailureHandler = (() => Unit)
-
-private var pendingTypeCheckRequest: Option[(TypeCheckHandler, TypeCheckFailureHandler)] = None
-
-private def waitForScalaTypeCheckResult(handler: TypeCheckHandler, failHandler: TypeCheckFailureHandler) {
-  for ((handler, failHandler) <- pendingTypeCheckRequest) {
-    failHandler()
+  def pos(file: File, offset: Int) = {
+    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+    new OffsetPosition(f, offset)
   }
-  pendingTypeCheckRequest = Some((handler, failHandler))
-}
 
-def pos(file: File, offset: Int) = {
-  val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
-  new OffsetPosition(f, offset)
-}
-
-override def finalize() {
-  System.out.println("Finalizing Analyzer actor.")
-}
+  override def finalize() {
+    System.out.println("Finalizing Analyzer actor.")
+  }
 
 }
 
