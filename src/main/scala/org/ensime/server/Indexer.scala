@@ -110,8 +110,26 @@ object Indexer {
 
 trait Indexing{
 
-  protected var trie = new PatriciaTrie[String, SymbolSearchResult](
+  protected val trie = new PatriciaTrie[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
+
+  private def splitTypeName(nm:String):List[String] = {
+    
+  }
+
+  protected def getImportSuggestions(typeNames: Iterable[String]): List[List[SymbolSearchResult]] = {
+    def suggestions(typeName:String):List[SymbolSearchResult] = {
+      trie.prefixMap(typeName).values.filter{
+	val keywords = splitTypeName(typeName)
+	val result = new HashSet[TypeSearchResult]
+	for(key <- keywords){
+	}
+	case r:TypeSearchResult => r.localName.contains(typeName)
+	case _ => false
+      }.toList
+    }
+    typeNames.map(suggestions).toList
+  }
 
   protected def findTopLevelSyms(keywords: Iterable[String], 
     maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
@@ -274,8 +292,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
             try {
 	      req match {
                 case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
-                  val suggestions = ImportSuggestions(
-                    names.map { nm => findTopLevelSyms(List(nm)) })
+                  val suggestions = ImportSuggestions(getImportSuggestions(names))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
                 case PublicSymbolSearchReq(keywords: List[String],
