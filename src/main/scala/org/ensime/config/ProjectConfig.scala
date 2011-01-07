@@ -30,6 +30,7 @@ object ProjectConfig {
     def target(): Option[String]
     def projectName(): Option[String]
     def formatPrefs(): Map[Symbol, Any]
+    def disableIndexOnStartup(): Boolean
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
@@ -75,6 +76,7 @@ object ProjectConfig {
       }
       case _ => Map[Symbol, Any]()
     }
+    def disableIndexOnStartup(): Boolean = getBool(":disable-index-on-startup")
   }
 
   /**
@@ -214,7 +216,8 @@ object ProjectConfig {
       projectName,
       rootDir, sourceRoots, runtimeDeps,
       compileDeps, classDirs, target,
-      formatPrefs)
+      formatPrefs,
+      conf.disableIndexOnStartup)
 
   }
 
@@ -240,7 +243,7 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(None, new File("."), List(),
-    List(), List(), List(), None, Map())
+    List(), List(), List(), None, Map(), false)
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -281,7 +284,8 @@ class ProjectConfig(
   val compileDeps: Iterable[CanonFile],
   val classDirs: Iterable[CanonFile],
   val target: Option[CanonFile],
-  formattingPrefsMap: Map[Symbol, Any]) {
+  formattingPrefsMap: Map[Symbol, Any],
+  val disableIndexOnStartup: Boolean) {
 
   val formattingPrefs = formattingPrefsMap.
     foldLeft(FormattingPreferences()) { (fp, p) =>
