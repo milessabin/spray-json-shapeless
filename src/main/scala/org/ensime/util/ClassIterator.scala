@@ -13,9 +13,9 @@ import java.util.zip._
 import java.io.{ File, InputStream, IOException }
 
 trait ClassHandler {
-  def onClass(name: String, location: String, flags:Int) {}
-  def onMethod(className: String, name: String, location: String, flags:Int) {}
-  def onField(className: String, name: String, location: String, flags:Int) {}
+  def onClass(name: String, location: String, flags: Int) {}
+  def onMethod(className: String, name: String, location: String, flags: Int) {}
+  def onField(className: String, name: String, location: String, flags: Int) {}
 }
 
 private class ClassVisitor(location: File, handler: ClassHandler) extends EmptyVisitor {
@@ -65,7 +65,14 @@ object ClassIterator {
 
   def find(path: Iterable[File], handler: ClassHandler) {
     for (f <- path) {
-      findClassesIn(f, handler)
+      try {
+        findClassesIn(f, handler)
+      } catch {
+        case e: IOException => {
+          System.err.println("Failed to open: " + f)
+          e.printStackTrace(System.err)
+        }
+      }
     }
   }
 
