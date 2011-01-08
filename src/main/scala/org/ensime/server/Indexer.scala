@@ -18,7 +18,7 @@ import scala.collection.JavaConversions._
 import org.ardverk.collection._
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.util.{ NoPosition }
-import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer }
+import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
 
 
@@ -114,19 +114,34 @@ trait Indexing{
     StringKeyAnalyzer.INSTANCE)
 
   private def splitTypeName(nm:String):List[String] = {
+    val keywords = new ListBuffer[String]()
+    var i = 0
+    var k = 0
+    while(i < nm.length){
+      val c:Char = nm.charAt(i)
+      if(Character.isUpperCase(c)){
+	keywords += nm.substring(k, i)
+	k = i + 1
+      }
+      i += 1
+    }
+    keywords.toList
+  }
+
+  private def editDist(a: String, b:String): Int = {
     
   }
 
   protected def getImportSuggestions(typeNames: Iterable[String]): List[List[SymbolSearchResult]] = {
     def suggestions(typeName:String):List[SymbolSearchResult] = {
-      trie.prefixMap(typeName).values.filter{
-	val keywords = splitTypeName(typeName)
-	val result = new HashSet[TypeSearchResult]
-	for(key <- keywords){
-	}
-	case r:TypeSearchResult => r.localName.contains(typeName)
-	case _ => false
-      }.toList
+      val keywords = splitTypeName(typeName)
+      val candidates = new HashSet[SymbolSearchResult]
+      for(key <- keywords){
+	candidates ++= trie.prefixMap(key).values
+      }
+      val candidates2 = candidates.toList.sortWith{
+	(a,b) => editDist(a.localName,typeName) < editDist(b.localName,typeName) }
+      candidates2
     }
     typeNames.map(suggestions).toList
   }
