@@ -10,6 +10,7 @@
 
 
 \title{ENSIME: User Manual}
+\author{Aemon Cannon}
 
 \begin{document}
 
@@ -371,6 +372,12 @@ Select a region by setting the mark using \emph{C-SPACE} and then placing the po
 \textbf{Inline Local}:\\
 Place your cursor over the local val who's value you'd like to inline. Type \emph{M-x ensime-refactor-inline-local} and follow the minibuffer instructions.\\
 
+\subsection{Global Type and Method Search}
+
+Type \emph{C-c C-v v} to start a global search. Type space separated keywords to filter the results of the search. For example, if I wanted to find java.util.Vector, I might start by typing 'vector', which would list all symbols containing the word 'vector'(case-insensitive), and then I would type 'java' to further refine the search. \emph{C-p} and \emph{C-n} move the selection up and down, respectively, and \emph{ENTER} will jump to the source or definition of the selected symbol.
+
+Note that typing a keyword with a capital letter will automatically enable case-sensitivity.
+
 \subsection{Source Formatting}
 
 ENSIME uses the Scalariform library to format Scala sources. Type \emph{C-c C-v f} to format the current buffer. See section \ref{sec:configformat} for instructions on how to customize the formatting preferences.
@@ -419,6 +426,11 @@ Jump to definition of symbol under cursor.
 \noindent
 {\bf M-,}\\
 Pop back to previously visited position.
+\vspace{5 mm}
+
+\noindent
+{\bf C-c v v}\\
+Search globally for methods or types.
 \vspace{5 mm}
 
 \noindent

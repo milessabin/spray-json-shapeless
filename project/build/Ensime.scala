@@ -106,10 +106,11 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   } dependsOn(stage) describedAs("Compress the deployment directory.")
 
 
-  lazy val publish_manual = task {
+  lazy val publishManual = task {
     log.info("Converting manual to html..")
     val target = "/tmp/ensime_manual.html"
     val cwd = Some(new File("etc"))
+    doSh("pdflatex manual.ltx", cwd)!!log
     doSh("cat manual_head.html > " + target, cwd)!!log
     doSh("tth -r -u -Lmanual < manual.ltx >> " + target, cwd)!!(log)
     doSh("cat manual_tail.html >> " + target, cwd)!!log
