@@ -22,3 +22,5 @@ dist
 etc/pres_compiler.txt
 etc/_region_.tex
 scratch
+
+test_projects/sbt-deps
