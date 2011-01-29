@@ -292,12 +292,18 @@ class ProjectConfig(
       p match {
         case ('alignParameters, value: Boolean) =>
           fp.setPreference(AlignParameters, value)
+        case ('alignSingleLineCaseStatements, value: Boolean) =>
+          fp.setPreference(AlignSingleLineCaseStatements, value)
+        case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
+          fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
         case ('compactStringConcatenation, value: Boolean) =>
           fp.setPreference(CompactStringConcatenation, value)
         case ('doubleIndentClassDeclaration, value: Boolean) =>
           fp.setPreference(DoubleIndentClassDeclaration, value)
         case ('formatXml, value: Boolean) =>
           fp.setPreference(FormatXml, value)
+        case ('indentLocalDefs, value: Boolean) =>
+          fp.setPreference(IndentLocalDefs, value)
         case ('indentPackageBlocks, value: Boolean) =>
           fp.setPreference(IndentPackageBlocks, value)
         case ('indentSpaces, value: Int) =>
