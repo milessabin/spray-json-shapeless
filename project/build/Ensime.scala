@@ -53,7 +53,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
     // Grab all jars..
     val cpLibs = ("dist" / "lib" ** "*.jar").get.map{ p => 
-			p.toString.replace("." + File.separator + "dist" + File.separator, "")
+      p.toString.replace("." + File.separator + "dist" + File.separator, "")
     }
 
     def writeScript(classpath:String, from:String, to:String){
