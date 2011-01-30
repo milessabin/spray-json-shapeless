@@ -117,7 +117,7 @@ If the configuration directive :sbt-compile-on-save is set to 't', ENSIME will i
 
 \noindent
 \textbf{Subprojects}:\\
-Each sbt subproject must have it's own .ensime file. The server is smart enough to notice that the project is a subproject, and will find dependencies that are shared between all subprojects.
+If your project is made up of subprojects, you must declare each subproject along with its dependencies in the configuration file. See the :sbt-subprojects directive in section \ref{sec:configformat} for more information. ENSIME will then prompt you on startup for which subproject you'd like to work on. Note that there will be a separate instance of the ENSIME server process for each subproject you open.
 
 \subsubsection{Maven}
 
@@ -198,8 +198,20 @@ Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is
 \vspace{5 mm}
 
 \noindent
-{\bf :sbt-subproject-dependencies ([directory name]*)}\\
-Declare sbt sub-project dependencies. List the directory names of the dependencies and ENSIME will include their sources and dependencies when analyzing the current project.
+{\bf :sbt-subprojects ([sbt-subproject]*)}\\
+Declare sbt subprojects. Each item in the list should be a property list with the following structure: (:name ``myproj'' :deps (``otherproj'')), where :deps is a possibly empty list of subprojects that this subproject depends on. For example, here's how you'd declare two subprojects - a 'web' subproject which depends on a 'core' subproject:
+\begin{mylisting}
+\begin{verbatim}
+(
+  :use-sbt t
+  :sbt-subprojects (
+     (:name "web" :deps ("core"))
+     (:name "core" :deps ())
+  )
+)
+\end{verbatim}
+\end{mylisting}
+
 \vspace{5 mm}
 
 
