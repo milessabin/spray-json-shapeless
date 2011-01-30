@@ -16,7 +16,7 @@ object ProjectConfig {
     def useSbt(): Boolean
     def useMaven(): Boolean
     def useIvy(): Boolean
-    def sbtSubprojectDeps(): List[String]
+    def sbtActiveSubproject(): Option[SbtSubproject]
     def ivyRuntimeConf(): Option[String]
     def ivyCompileConf(): Option[String]
     def ivyTestConf(): Option[String]
@@ -55,7 +55,41 @@ object ProjectConfig {
     def useSbt(): Boolean = getBool(":use-sbt")
     def useMaven(): Boolean = getBool(":use-maven")
     def useIvy(): Boolean = getBool(":use-ivy")
-    def sbtSubprojectDeps(): List[String] = getStrList(":sbt-subproject-dependencies")
+    private def sbtSubprojects: List[Map[KeywordAtom, SExp]] = {
+      m.get(key(":sbt-subprojects")) match {
+        case Some(SExpList(items)) =>
+          items.flatMap {
+            case lst: SExpList => Some(lst.toKeywordMap)
+            case _ => None
+          }.toList
+        case _ => List()
+      }
+    }
+    private def sbtSubproject(projectName: String): Option[SbtSubproject] = {
+      val proj = sbtSubprojects.find { ea =>
+        ea.get(key(":name")) match {
+          case Some(StringAtom(str)) => str == projectName
+          case _ => false
+        }
+      }
+      proj match {
+        case Some(p) => {
+          Some(SbtSubproject(
+            p.get(key(":name")).getOrElse("NA").toString,
+            p.get(key(":deps")) match {
+              case Some(SExpList(items)) => items.map(_.toString).toList
+              case _ => List()
+            }))
+        }
+        case _ => None
+      }
+    }
+    def sbtActiveSubproject(): Option[SbtSubproject] = {
+      getStr(":sbt-active-subproject") match {
+        case Some(nm) => sbtSubproject(nm)
+        case _ => None
+      }
+    }
     def ivyRuntimeConf(): Option[String] = getStr(":ivy-runtime-conf")
     def ivyCompileConf(): Option[String] = getStr(":ivy-compile-conf")
     def ivyTestConf(): Option[String] = getStr(":ivy-test-conf")
@@ -106,9 +140,8 @@ object ProjectConfig {
     var projectName: Option[String] = None
 
     if (conf.useSbt) {
-      val depDirs = conf.sbtSubprojectDeps
-      println("Using sbt configuration..")
-      val ext = getSbtConfig(rootDir, depDirs)
+      println("Using sbt..")
+      val ext = getSbtConfig(rootDir, conf.sbtActiveSubproject)
       projectName = ext.projectName
       sourceRoots ++= ext.sourceRoots
       runtimeDeps ++= ext.runtimeDepJars
@@ -117,7 +150,7 @@ object ProjectConfig {
     }
 
     if (conf.useMaven) {
-      println("Using maven configuration..")
+      println("Using maven..")
       val ext = getMavenConfig(rootDir)
       projectName = ext.projectName
       sourceRoots ++= ext.sourceRoots
@@ -127,7 +160,7 @@ object ProjectConfig {
     }
 
     if (conf.useIvy) {
-      println("Using ivy configuration..")
+      println("Using ivy..")
       val ext = getIvyConfig(
         rootDir, conf.ivyFile.map { new File(_) },
         conf.ivyRuntimeConf,

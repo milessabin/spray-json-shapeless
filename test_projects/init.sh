@@ -13,8 +13,8 @@ read -d '' CONFIG <<EOF
 :project-package "${PROJ}"
 :use-sbt t
 :sbt-subprojects (
-  (name: "web" :deps ("core"))
-  (name: "core" :deps ())
+  (:name "web" :deps ("core"))
+  (:name "core" :deps ())
   )
 )
 EOF

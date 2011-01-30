@@ -19,6 +19,8 @@ case class ExternalConfig(
   val testDepJars: Iterable[CanonFile],
   val target: Option[CanonFile]) {}
 
+case class SbtSubproject(name: String, deps: List[String])
+
 object ExternalConfigInterface {
 
   def getMavenConfig(baseDir: File): ExternalConfig = {
@@ -140,12 +142,10 @@ object ExternalConfigInterface {
     task.deps.map(toCanonFile)
   }
 
-  def getSbtConfig(baseDir: File, deps: Iterable[String]): ExternalConfig = {
+  def getSbtConfig(baseDir: File,
+    activeSubproject: Option[SbtSubproject]): ExternalConfig = {
 
-    val projectProps = new File(baseDir, "project/build.properties")
-    val parentProjectProps = new File(baseDir, "../project/build.properties")
-    val isSubProject = !(projectProps.exists) && parentProjectProps.exists
-    val propFile = if (isSubProject) { parentProjectProps } else { projectProps }
+    val propFile = new File(baseDir, "project/build.properties")
     println("Loading sbt build.properties from " + propFile + ".")
     val props = JavaProperties.load(propFile)
 
@@ -161,11 +161,7 @@ object ExternalConfigInterface {
     val testDeps = ListBuffer[CanonFile]()
     val srcPaths = ListBuffer[CanonFile]()
 
-    val scalaLibDir = if (isSubProject) {
-      "../project/boot/scala-" + v + "/lib"
-    } else {
-      "project/boot/scala-" + v + "/lib"
-    }
+    val scalaLibDir = "project/boot/scala-" + v + "/lib"
 
     println("Searching for scala libs in " + scalaLibDir)
     var jarRoots = maybeDirs(List(scalaLibDir), baseDir)
@@ -175,16 +171,23 @@ object ExternalConfigInterface {
     testDeps ++= scalaJars
 
     println("Adding this project's dependencies..")
-    val info = getSbtProjectInfo(baseDir, v)
+    val info = activeSubproject match {
+      case Some(SbtSubproject(nm, _)) => {
+        val dir = new File(baseDir, nm)
+        getSbtProjectInfo(dir, v)
+      }
+      case None => getSbtProjectInfo(baseDir, v)
+    }
     compileDeps ++= info.compileDeps
     runtimeDeps ++= info.runtimeDeps
     testDeps ++= info.testDeps
     srcPaths ++= info.srcPaths
 
-    if (isSubProject) {
+    for (sp <- activeSubproject) {
       println("Adding subproject dependencies..")
-      for (proj <- deps) {
-        val dir = new File(baseDir, "../" + proj)
+      for (proj <- sp.deps) {
+        println("  " + proj + "...")
+        val dir = new File(baseDir, proj)
         val info = getSbtProjectInfo(dir, v)
         compileDeps ++= info.compileDeps
         runtimeDeps ++= info.runtimeDeps
