@@ -52,9 +52,7 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
 
     // Grab all jars..
-    val cpLibs = ("dist" / "lib" ** "*.jar").get.map{ p => 
-      p.toString.replace("." + File.separator + "dist" + File.separator, "")
-    }
+    val cpLibs = ((Path.fromString(".", "dist") ## ) / "lib" ** "*.jar").get
 
     def writeScript(classpath:String, from:String, to:String){
       val tmplF = new File(from)
@@ -73,11 +71,11 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
 
     // Expand the server invocation script templates.
 
-    writeScript(cpLibs.mkString(":"), 
-      "./etc/scripts/server.sh",
-      "./dist/bin/server.sh")
+    writeScript(cpLibs.mkString(":").replace("\\", "/"),
+      "./etc/scripts/server",
+      "./dist/bin/server")
 
-    writeScript("\"" + cpLibs.mkString(";") + "\"", 
+    writeScript("\"" + cpLibs.mkString(";").replace("/", "\\") + "\"",
       "./etc/scripts/server.bat",
       "./dist/bin/server.bat")
 
