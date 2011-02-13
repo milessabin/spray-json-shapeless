@@ -58,10 +58,10 @@ object ProjectConfig {
     private def sbtSubprojects: List[Map[KeywordAtom, SExp]] = {
       m.get(key(":sbt-subprojects")) match {
         case Some(SExpList(items)) =>
-          items.flatMap {
-            case lst: SExpList => Some(lst.toKeywordMap)
-            case _ => None
-          }.toList
+        items.flatMap {
+          case lst: SExpList => Some(lst.toKeywordMap)
+          case _ => None
+        }.toList
         case _ => List()
       }
     }
@@ -75,11 +75,11 @@ object ProjectConfig {
       proj match {
         case Some(p) => {
           Some(SbtSubproject(
-            p.get(key(":name")).getOrElse("NA").toString,
-            p.get(key(":deps")) match {
-              case Some(SExpList(items)) => items.map(_.toString).toList
-              case _ => List()
-            }))
+              p.get(key(":name")).getOrElse("NA").toString,
+              p.get(key(":deps")) match {
+		case Some(SExpList(items)) => items.map(_.toString).toList
+		case _ => List()
+              }))
         }
         case _ => None
       }
@@ -114,9 +114,9 @@ object ProjectConfig {
   }
 
   /**
-   * Create a ProjectConfig instance from the given
-   * SExp property list.
-   */
+  * Create a ProjectConfig instance from the given
+  * SExp property list.
+  */
   def fromSExp(sexp: SExpList): ProjectConfig = {
     load(new SExpFormatHandler(sexp))
   }
@@ -228,9 +228,9 @@ object ProjectConfig {
     // Provide fix for 2.8.0 backwards compatibility
     val implicitNotFoundJar = new File("lib/implicitNotFound.jar")
     assert(implicitNotFoundJar.exists, {
-      System.err.println(
-        "lib/implicitNotFound.jar not found! 2.8.0 compatibility may be broken.")
-    })
+	System.err.println(
+          "lib/implicitNotFound.jar not found! 2.8.0 compatibility may be broken.")
+      })
     compileDeps += implicitNotFoundJar
 
     // Provide some reasonable defaults..
@@ -245,8 +245,13 @@ object ProjectConfig {
       }
     }
 
+    val scalaLibraryJar = new File("lib/scala-library.jar")
+    val scalaCompilerJar = new File("lib/scala-compiler.jar")
+
     new ProjectConfig(
       projectName,
+      scalaLibraryJar,
+      scalaCompilerJar,
       rootDir, sourceRoots, runtimeDeps,
       compileDeps, classDirs, target,
       formatPrefs,
@@ -275,7 +280,7 @@ object ProjectConfig {
     }
   }
 
-  def nullConfig = new ProjectConfig(None, new File("."), List(),
+  def nullConfig = new ProjectConfig(None, null, null, new File("."), List(),
     List(), List(), List(), None, Map(), false)
 
   def getJavaHome(): Option[File] = {
@@ -311,6 +316,8 @@ class DebugConfig(val classpath: String, val sourcepath: String) {}
 
 class ProjectConfig(
   val name: Option[String],
+  val scalaLibraryJar: CanonFile,  
+  val scalaCompilerJar: CanonFile,  
   val root: CanonFile,
   val sourceRoots: Iterable[CanonFile],
   val runtimeDeps: Iterable[CanonFile],
@@ -321,41 +328,43 @@ class ProjectConfig(
   val disableIndexOnStartup: Boolean) {
 
   val formattingPrefs = formattingPrefsMap.
-    foldLeft(FormattingPreferences()) { (fp, p) =>
-      p match {
-        case ('alignParameters, value: Boolean) =>
-          fp.setPreference(AlignParameters, value)
-        case ('alignSingleLineCaseStatements, value: Boolean) =>
-          fp.setPreference(AlignSingleLineCaseStatements, value)
-        case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
-          fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
-        case ('compactStringConcatenation, value: Boolean) =>
-          fp.setPreference(CompactStringConcatenation, value)
-        case ('doubleIndentClassDeclaration, value: Boolean) =>
-          fp.setPreference(DoubleIndentClassDeclaration, value)
-        case ('formatXml, value: Boolean) =>
-          fp.setPreference(FormatXml, value)
-        case ('indentLocalDefs, value: Boolean) =>
-          fp.setPreference(IndentLocalDefs, value)
-        case ('indentPackageBlocks, value: Boolean) =>
-          fp.setPreference(IndentPackageBlocks, value)
-        case ('indentSpaces, value: Int) =>
-          fp.setPreference(IndentSpaces, value)
-        case ('preserveSpaceBeforeArguments, value: Boolean) =>
-          fp.setPreference(PreserveSpaceBeforeArguments, value)
-        case ('rewriteArrowSymbols, value: Boolean) =>
-          fp.setPreference(RewriteArrowSymbols, value)
-        case ('spaceBeforeColon, value: Boolean) =>
-          fp.setPreference(SpaceBeforeColon, value)
-        case (name, _) => {
-          System.err.println("Oops, unrecognized formatting option: " + name)
-          fp
-        }
+  foldLeft(FormattingPreferences()) { (fp, p) =>
+    p match {
+      case ('alignParameters, value: Boolean) =>
+      fp.setPreference(AlignParameters, value)
+      case ('alignSingleLineCaseStatements, value: Boolean) =>
+      fp.setPreference(AlignSingleLineCaseStatements, value)
+      case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
+      fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
+      case ('compactStringConcatenation, value: Boolean) =>
+      fp.setPreference(CompactStringConcatenation, value)
+      case ('doubleIndentClassDeclaration, value: Boolean) =>
+      fp.setPreference(DoubleIndentClassDeclaration, value)
+      case ('formatXml, value: Boolean) =>
+      fp.setPreference(FormatXml, value)
+      case ('indentLocalDefs, value: Boolean) =>
+      fp.setPreference(IndentLocalDefs, value)
+      case ('indentPackageBlocks, value: Boolean) =>
+      fp.setPreference(IndentPackageBlocks, value)
+      case ('indentSpaces, value: Int) =>
+      fp.setPreference(IndentSpaces, value)
+      case ('preserveSpaceBeforeArguments, value: Boolean) =>
+      fp.setPreference(PreserveSpaceBeforeArguments, value)
+      case ('rewriteArrowSymbols, value: Boolean) =>
+      fp.setPreference(RewriteArrowSymbols, value)
+      case ('spaceBeforeColon, value: Boolean) =>
+      fp.setPreference(SpaceBeforeColon, value)
+      case (name, _) => {
+        System.err.println("Oops, unrecognized formatting option: " + name)
+        fp
       }
     }
+  }
+
+  def scalaJars: Set[CanonFile] = Set(scalaCompilerJar, scalaLibraryJar)
 
   def compilerClasspathFilenames: Set[String] = {
-    (compileDeps ++ classDirs).map(_.getPath).toSet
+    (scalaJars ++ compileDeps ++ classDirs).map(_.getPath).toSet
   }
 
   def allFilesOnClasspath: Set[File] = {
@@ -390,7 +399,7 @@ class ProjectConfig(
   }
 
   def runtimeClasspath: String = {
-    val deps = runtimeDeps ++ classDirs ++ target
+    val deps = scalaJars ++ runtimeDeps ++ classDirs ++ target
     val paths = deps.map(_.getPath).toSet
     paths.mkString(File.pathSeparator)
   }

@@ -161,15 +161,6 @@ object ExternalConfigInterface {
     val testDeps = ListBuffer[CanonFile]()
     val srcPaths = ListBuffer[CanonFile]()
 
-    val scalaLibDir = "project/boot/scala-" + v + "/lib"
-
-    println("Searching for scala libs in " + scalaLibDir)
-    var jarRoots = maybeDirs(List(scalaLibDir), baseDir)
-    val scalaJars = expandRecursively(baseDir, jarRoots, isValidJar _)
-    compileDeps ++= scalaJars
-    runtimeDeps ++= scalaJars
-    testDeps ++= scalaJars
-
     println("Adding this project's dependencies..")
     val info = activeSubproject match {
       case Some(SbtSubproject(nm, _)) => {

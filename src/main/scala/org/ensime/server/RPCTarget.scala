@@ -37,12 +37,12 @@ trait RPCTarget { self: Project =>
   }
 
   def rpcReplConfig(callId: Int) {
-    sendRPCReturn(toWF(this.config.replConfig), callId)
+    sendRPCReturn(toWF(config.replConfig), callId)
   }
 
   def rpcDebugConfig(callId: Int) {
     debugInfo = Some(new ProjectDebugInfo(config))
-    sendRPCReturn(toWF(this.config.debugConfig), callId)
+    sendRPCReturn(toWF(config.debugConfig), callId)
   }
 
   def rpcBuilderInit(callId: Int) {

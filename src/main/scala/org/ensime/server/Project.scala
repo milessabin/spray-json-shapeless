@@ -47,9 +47,12 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protocol.setRPCTarget(this)
 
+  // Note: would like to use Option[ProjectConfig] here but causes
+  // prez-compiler to kerplode :\
+  protected var config: ProjectConfig = ProjectConfig.nullConfig
+
   protected var analyzer: Actor = actor {}
   protected var builder: Option[Actor] = None
-  protected var config: ProjectConfig = ProjectConfig.nullConfig
   protected var debugInfo: Option[ProjectDebugInfo] = None
 
   private var undoCounter = 0
@@ -116,7 +119,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def initProject(conf: ProjectConfig) {
-    this.config = conf
+    config = conf
     restartCompiler
     shutdownBuilder
     undos.clear
@@ -125,7 +128,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected def restartCompiler() {
     analyzer ! AnalyzerShutdownEvent()
-    analyzer = new Analyzer(this, protocol, this.config)
+    analyzer = new Analyzer(this, protocol, config)
     analyzer.start
   }
 
@@ -134,7 +137,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
       case Some(b) => b
       case None =>
         {
-        val b = new IncrementalBuilder(this, protocol, this.config)
+        val b = new IncrementalBuilder(this, protocol, config)
         builder = Some(b)
         b.start
         b
