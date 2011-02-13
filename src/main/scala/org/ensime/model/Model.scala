@@ -8,7 +8,7 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 
 class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
-abstract class SymbolSearchResult(
+class SymbolSearchResult(
   val name: String,
   val localName: String,
   val declaredAs: scala.Symbol,
