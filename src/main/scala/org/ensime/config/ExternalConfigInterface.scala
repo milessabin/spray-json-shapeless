@@ -149,9 +149,9 @@ object ExternalConfigInterface {
     println("Loading sbt build.properties from " + propFile + ".")
     val props = JavaProperties.load(propFile)
 
-    val v = props.get("build.scala.versions").map(_.toString).getOrElse("2.8.0")
+    val v = props.get("build.scala.versions").map(_.toString).getOrElse("2.8.1")
     val projName = props.get("project.name").map(_.toString)
-    println("Scala Build version is " + v)
+    println("sbt Scala Build version is " + v)
 
     val f = new File(baseDir, "target/scala_" + v + "/classes")
     val target = if (f.exists) { Some(toCanonFile(f)) } else { None }
