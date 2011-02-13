@@ -1,5 +1,5 @@
 /**
-* Much of this code is derived from a more general utility,
+* Much of this code is derived from the excellent tool,
 * ClassUtil, by Brian M. Clapper
 * 
 * Copyright 2010, Brian M. Clapp
