@@ -1,12 +1,20 @@
+/**
+* Much of this code is derived from a more general utility,
+* ClassUtil, by Brian M. Clapper
+* 
+* Copyright 2010, Brian M. Clapp
+* All Rights Reserved
+*/
+
 package org.ensime.util
 
 import scala.collection.mutable.{ Set => MutableSet }
 import scala.collection.mutable.{ HashMap, HashSet }
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.commons.EmptyVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.commons.EmptyVisitor
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.Opcodes
 import java.io._
 import java.util.jar.{ JarFile, Manifest => JarManifest }
 import java.util.zip._
