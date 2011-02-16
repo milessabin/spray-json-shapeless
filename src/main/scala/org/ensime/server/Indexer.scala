@@ -16,6 +16,7 @@ import org.ensime.model.{
 }
 import scala.collection.JavaConversions._
 import org.ardverk.collection._
+import io.prelink.critbit.MCritBitTree
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.util.{ NoPosition }
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
@@ -103,10 +104,23 @@ object Indexer {
   }
 }
 
+class ForEachValCursor[V](fn: V => Any) extends Cursor[Any,V] {
+  override def select(entry: java.util.Map.Entry[_, _ <: V]): Cursor.Decision = {
+    fn(entry.getValue())
+    Cursor.Decision.CONTINUE
+  }
+}
+
 trait Indexing extends StringSimilarity {
 
-  protected val trie = new PatriciaTrie[String, SymbolSearchResult](
+  implicit def fnToForEachValCursor[V](fn: V => Any): ForEachValCursor[V] =
+    new ForEachValCursor[V](fn)
+
+  protected val trie = new MCritBitTree[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
+  // protected val trie = new PatriciaTrie[String, SymbolSearchResult](
+  //   StringKeyAnalyzer.INSTANCE)
+
 
   private def splitTypeName(nm: String): List[String] = {
     val keywords = new ListBuffer[String]()
@@ -136,16 +150,22 @@ trait Indexing extends StringSimilarity {
     def suggestions(typeName: String): List[SymbolSearchResult] = {
       val keywords = splitTypeName(typeName)
       val candidates = new HashSet[SymbolSearchResult]
+
       for (key <- keywords) {
-        for (v <- trie.prefixMap(key.toLowerCase()).values) {
-          v match {
-            case r: TypeSearchResult => candidates += v
-            case _ =>
-          }
-        }
+        trie.traverseWithPrefix(key.toLowerCase(), (r: SymbolSearchResult) =>
+          r match {
+            case r: TypeSearchResult => candidates += r
+            case _ => // nothing
+          })
+        // for (v <- trie.prefixMap(key.toLowerCase()).values) {
+        //   v match {
+        //     case r: TypeSearchResult => candidates += v
+        //     case _ =>
+        //   }
+        // }
       }
 
-      // Sort by edit distance of type name primarily, and 
+      // Sort by edit distance of type name primarily, and
       // length of full name secondarily.
       val candidates2 = candidates.toList.sortWith { (a, b) =>
 	val d1 = editDist(a.localName, typeName)
@@ -169,13 +189,16 @@ trait Indexing extends StringSimilarity {
     var resultSet = new HashSet[SymbolSearchResult]
     if (keywords.size() > 0) {
       val key = keywords.head.toLowerCase()
-      resultSet ++= trie.prefixMap(key).values
+      trie.traverseWithPrefix(key, (r: SymbolSearchResult) => resultSet += r )
+      //resultSet ++= trie.prefixMap(key).values
     }
 
     if (keywords.size() > 1) {
       for (keyword <- keywords.tail) {
         val key = keyword.toLowerCase()
-        val results = trie.prefixMap(key).values.toSet
+        val results = new HashSet[SymbolSearchResult]
+        trie.traverseWithPrefix(key, (r: SymbolSearchResult) => results += r )
+        // val results = trie.prefixMap(key).values.toSet
         resultSet = resultSet.intersect(results)
       }
     }
