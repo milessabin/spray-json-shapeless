@@ -15,7 +15,7 @@ object Server {
 
     var portfile:String = ""
     val parser = new OptionParser("PROGRAM") {
-      arg("<portfile>", "<portfile> indicates where to write the server's port", 
+      arg("<portfile>", "<portfile> indicates where to write the server's port",
 	{ f:String => portfile = f })
     }
 

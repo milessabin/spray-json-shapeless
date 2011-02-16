@@ -148,10 +148,10 @@ trait Indexing extends StringSimilarity {
       // Sort by edit distance of type name primarily, and 
       // length of full name secondarily.
       val candidates2 = candidates.toList.sortWith { (a, b) =>
-	val d1 = editDist(a.localName, typeName)
-	val d2 = editDist(b.localName, typeName)
-	if(d1 == d2) a.name.length < b.name.length
-	else d1 < d2
+        val d1 = editDist(a.localName, typeName)
+        val d2 = editDist(b.localName, typeName)
+        if (d1 == d2) a.name.length < b.name.length
+        else d1 < d2
       }
 
       if (maxResults == 0) {
