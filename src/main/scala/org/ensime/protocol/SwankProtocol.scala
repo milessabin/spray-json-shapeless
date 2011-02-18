@@ -455,6 +455,8 @@ trait SwankProtocol extends Protocol {
 
   def sendCompilerReady() = sendMessage(SExp(key(":compiler-ready"), true))
 
+  def sendIndexerReady() = sendMessage(SExp(key(":indexer-ready"), true))
+
   def sendTypeCheckResult(notelist: NoteList) = {
     sendMessage(SExp(key(":typecheck-result"), toWF(notelist)))
   }

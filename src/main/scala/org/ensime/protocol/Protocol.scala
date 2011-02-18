@@ -171,6 +171,14 @@ trait Protocol extends ProtocolConversions {
   def sendCompilerReady()
 
   /**
+   * Send a notification that the indexer has completed indexing
+   * the classpath.
+   *
+   * @return        Void
+   */
+  def sendIndexerReady()
+
+  /**
    * Send notes describing errors, warnings that the compiler
    * generates. These results are generated asynchronously,
    * and not in response to any single RPC call.

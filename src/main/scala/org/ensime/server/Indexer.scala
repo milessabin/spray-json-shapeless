@@ -184,7 +184,7 @@ trait Indexing extends StringSimilarity {
       val keyword = keywords.head
       val key = keyword.toLowerCase()
       val caseSens = !keyword.equals(key)
-      trie.traverseWithPrefix(key, {(r: SymbolSearchResult) => 
+      trie.traverseWithPrefix(key, {(r: SymbolSearchResult) =>
 	  if(!caseSens || r.name.contains(keyword)){
 	    resultSet += r 
 	  }
@@ -316,13 +316,20 @@ trait Indexing extends StringSimilarity {
     val elapsed = System.currentTimeMillis() - t
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
     println("Indexed " + handler.classCount + " classes with " + handler.methodCount + " methods.")
+    onIndexingComplete()
   }
+
+  def onIndexingComplete()
 
 }
 
 class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor with Indexing {
 
   import protocol._
+
+  override def onIndexingComplete(){
+    project ! IndexerReadyEvent()
+  }
 
   def act() {
 
@@ -396,6 +403,9 @@ override def finalize() {
 }
 
 object IndexTest extends Indexing {
+  def onIndexingComplete(){
+    println("done")
+  }
   def main(args: Array[String]) {
     val classpath = "/usr/lib/jvm/java-6-openjdk/jre/lib/resources.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/rt.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/jsse.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/jce.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/charsets.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/rhino.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/ext/dnsns.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/ext/pulse-java.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/ext/sunjce_provider.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/ext/sunpkcs11.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/ext/localedata.jar:/usr/lib/jvm/java-6-openjdk/jre/lib/ext/gnome-java-bridge.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-project-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/scalatest-1.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/ivy-2.1.0.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/backport-util-concurrent-3.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/asm-tree-3.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/classworlds-1.1-alpha-2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/plexus-container-default-1.0-alpha-9-stable-1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/plexus-interpolation-1.11.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-plugin-registry-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/ant-1.6.5.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-repository-metadata-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/nekohtml-1.9.6.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/nekohtml-1.9.6.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/wagon-http-shared-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-ant-tasks-2.1.0.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-project-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/core-3.4.2.v_883_R34x.jar:/home/aemon/src/misc/ensime/dist/lib/implicitNotFound.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/backport-util-concurrent-3.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-plugin-registry-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/scalariform_2.8.0-0.0.7.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-artifact-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/ant-1.6.5.jar:/home/aemon/src/misc/ensime/lib/org.scala-refactoring.library_0.3.0.201101021636.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/asm-commons-3.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/xercesMinimal-1.9.6.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/ant-1.8.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/wagon-http-shared-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/wagon-http-lightweight-1.0-beta-6.jar:/home/aemon/src/misc/ensime/project/boot/scala-2.8.1/lib/scala-compiler.jar:/home/aemon/src/misc/ensime/lib/patricia-trie-0.3.jar:/home/aemon/src/misc/ensime/project/boot/scala-2.8.1/lib/scala-library.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/wagon-file-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-settings-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/wagon-provider-api-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/plexus-interpolation-1.11.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-profile-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-model-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-repository-metadata-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-error-diagnostics-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-artifact-manager-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/ant-1.8.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/wagon-file-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/ivy-2.1.0.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/core-3.4.2.v_883_R34x.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/scalariform_2.8.0-0.0.7.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/plexus-utils-1.5.15.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-settings-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/ant-launcher-1.8.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-profile-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/plexus-utils-1.5.15.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/asm-3.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/wagon-http-lightweight-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-artifact-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/maven-model-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/plexus-container-default-1.0-alpha-9-stable-1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-ant-tasks-2.1.0.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/ant-launcher-1.8.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/wagon-provider-api-1.0-beta-6.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/xercesMinimal-1.9.6.2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/compile/classworlds-1.1-alpha-2.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-error-diagnostics-2.2.1.jar:/home/aemon/src/misc/ensime/lib_managed/scala_2.8.1/test/maven-artifact-manager-2.2.1.jar"
     val files = classpath.split(":").map { new File(_) }

@@ -19,6 +19,8 @@ case class RPCRequestEvent(req: Any, callId: Int)
 case class TypeCheckResultEvent(notes: NoteList)
 case class AnalyzerReadyEvent()
 case class AnalyzerShutdownEvent()
+case class IndexerReadyEvent()
+
 
 case class ReloadFileReq(file: File)
 case class ReloadAllReq()
@@ -71,6 +73,9 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           }
           case msg: AnalyzerReadyEvent => {
             protocol.sendCompilerReady
+          }
+          case msg: IndexerReadyEvent => {
+            protocol.sendIndexerReady
           }
           case result: TypeCheckResultEvent => {
             protocol.sendTypeCheckResult(result.notes)
