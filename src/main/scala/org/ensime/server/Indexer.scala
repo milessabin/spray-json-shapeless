@@ -118,9 +118,6 @@ trait Indexing extends StringSimilarity {
 
   protected val trie = new MCritBitTree[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
-  // protected val trie = new PatriciaTrie[String, SymbolSearchResult](
-  //   StringKeyAnalyzer.INSTANCE)
-
 
   private def splitTypeName(nm: String): List[String] = {
     val keywords = new ListBuffer[String]()
@@ -157,12 +154,6 @@ trait Indexing extends StringSimilarity {
             case r: TypeSearchResult => candidates += r
             case _ => // nothing
           })
-        // for (v <- trie.prefixMap(key.toLowerCase()).values) {
-        //   v match {
-        //     case r: TypeSearchResult => candidates += v
-        //     case _ =>
-        //   }
-        // }
       }
 
       // Sort by edit distance of type name primarily, and
@@ -190,7 +181,6 @@ trait Indexing extends StringSimilarity {
     if (keywords.size() > 0) {
       val key = keywords.head.toLowerCase()
       trie.traverseWithPrefix(key, (r: SymbolSearchResult) => resultSet += r )
-      //resultSet ++= trie.prefixMap(key).values
     }
 
     if (keywords.size() > 1) {
@@ -198,7 +188,6 @@ trait Indexing extends StringSimilarity {
         val key = keyword.toLowerCase()
         val results = new HashSet[SymbolSearchResult]
         trie.traverseWithPrefix(key, (r: SymbolSearchResult) => results += r )
-        // val results = trie.prefixMap(key).values.toSet
         resultSet = resultSet.intersect(results)
       }
     }
