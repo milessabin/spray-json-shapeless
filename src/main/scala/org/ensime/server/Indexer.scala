@@ -114,7 +114,7 @@ class ForEachValCursor[V](fn: V => Any) extends Cursor[Any,V] {
 trait Indexing extends StringSimilarity {
 
   implicit def fnToForEachValCursor[V](fn: V => Any): ForEachValCursor[V] =
-    new ForEachValCursor[V](fn)
+  new ForEachValCursor[V](fn)
 
   protected val trie = new MCritBitTree[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
@@ -174,28 +174,46 @@ trait Indexing extends StringSimilarity {
     typeNames.map(suggestions).toList
   }
 
+  private val BruteForceThresh = 1000
   protected def findTopLevelSyms(keywords: Iterable[String],
     maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
 
     var resultSet = new HashSet[SymbolSearchResult]
+
     if (keywords.size() > 0) {
-      val key = keywords.head.toLowerCase()
-      trie.traverseWithPrefix(key, (r: SymbolSearchResult) => resultSet += r )
+      val keyword = keywords.head
+      val key = keyword.toLowerCase()
+      trie.traverseWithPrefix(key, {(r: SymbolSearchResult) => 
+	  if(!caseSens || r.name.contains(keyword)){
+	    resultSet += r 
+	  }
+	})
     }
 
     if (keywords.size() > 1) {
       for (keyword <- keywords.tail) {
         val key = keyword.toLowerCase()
-        val results = new HashSet[SymbolSearchResult]
-        trie.traverseWithPrefix(key, (r: SymbolSearchResult) => results += r )
-        resultSet = resultSet.intersect(results)
+	if(resultSet.size() > BruteForceThresh){
+          val results = new HashSet[SymbolSearchResult]
+          trie.traverseWithPrefix(key, {(r: SymbolSearchResult) => 
+	      if(resultSet.contains(r) && 
+		(!caseSens || r.name.contains(keyword))){
+		results += r
+	      }
+	    })
+          resultSet = results
+	}
+	else{
+	  val results = new HashSet[SymbolSearchResult]
+	  for(r <- resultSet){
+	    if(r.name.toLowerCase().contains(key) && 
+	      (!caseSens || r.name.contains(keyword))){
+	      results += r
+	    }
+	  }
+          resultSet = results
+	}
       }
-    }
-
-    resultSet = if (caseSens) {
-      resultSet.filter { s => keywords.forall { k => s.name.contains(k) } }
-    } else {
-      resultSet
     }
 
     val sorted = resultSet.toList.sortWith { (a, b) => a.name.length < b.name.length }
@@ -344,7 +362,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
               }
             } catch {
               case e: Exception =>
-                {
+              {
                 System.err.println("Error handling RPC: " +
                   e + " :\n" +
                   e.getStackTraceString)
@@ -355,23 +373,23 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
             }
           }
           case other =>
-            {
+          {
             println("Indexer: WTF, what's " + other)
           }
         }
 
       } catch {
         case e: Exception => {
-          System.err.println("Error at Indexer message loop: " +
-            e + " :\n" + e.getStackTraceString)
-        }
+        System.err.println("Error at Indexer message loop: " +
+          e + " :\n" + e.getStackTraceString)
       }
     }
   }
+}
 
-  override def finalize() {
-    System.out.println("Finalizing Indexer actor.")
-  }
+override def finalize() {
+  System.out.println("Finalizing Indexer actor.")
+}
 
 }
 
