@@ -49,17 +49,17 @@ extends Actor with RefactoringHandler {
     project ! SendBackgroundMessageEvent(
       MsgInitializingAnalyzer, Some("Initializing Analyzer. Please wait..."))
 
-    println("Building Java sources...")
-    javaCompiler.compileAll()
-
-    println("Building Scala sources...")
-    scalaCompiler.askReloadAllFiles()
-
     println("Initing Indexer...")
     indexer.start
     if(!config.disableIndexOnStartup){
       indexer ! RebuildStaticIndexReq()
     }
+
+    println("Building Java sources...")
+    javaCompiler.compileAll()
+
+    println("Building Scala sources...")
+    scalaCompiler.askReloadAllFiles()
 
 
     loop {
