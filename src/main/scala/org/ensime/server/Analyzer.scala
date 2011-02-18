@@ -179,7 +179,7 @@ extends Actor with RefactoringHandler {
 		    indexer ! rpcReq
 		  }
 
-		  case PublicSymbolSearchReq(_, _, _) => {
+		  case PublicSymbolSearchReq(_, _) => {
 		    indexer ! rpcReq
 		  }
 

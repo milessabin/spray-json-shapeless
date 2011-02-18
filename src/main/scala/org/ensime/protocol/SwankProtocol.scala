@@ -254,10 +254,9 @@ trait SwankProtocol extends Protocol {
       }
       case "swank:public-symbol-search" => {
         form match {
-          case SExpList(head :: SExpList(names) :: IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
+          case SExpList(head :: SExpList(names) :: IntAtom(maxResults) :: body) => {
             rpcTarget.rpcPublicSymbolSearch(
-              names.map(_.toString).toList, maxResults, caseSens,
-              callId)
+	      names.map(_.toString).toList, maxResults, callId)
           }
           case _ => oops
         }

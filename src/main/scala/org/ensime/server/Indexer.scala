@@ -176,13 +176,14 @@ trait Indexing extends StringSimilarity {
 
   private val BruteForceThresh = 1000
   protected def findTopLevelSyms(keywords: Iterable[String],
-    maxResults: Int = 0, caseSens: Boolean = false): List[SymbolSearchResult] = {
+    maxResults: Int = 0): List[SymbolSearchResult] = {
 
     var resultSet = new HashSet[SymbolSearchResult]
 
     if (keywords.size() > 0) {
       val keyword = keywords.head
       val key = keyword.toLowerCase()
+      val caseSens = !keyword.equals(key)
       trie.traverseWithPrefix(key, {(r: SymbolSearchResult) => 
 	  if(!caseSens || r.name.contains(keyword)){
 	    resultSet += r 
@@ -193,6 +194,7 @@ trait Indexing extends StringSimilarity {
     if (keywords.size() > 1) {
       for (keyword <- keywords.tail) {
         val key = keyword.toLowerCase()
+	val caseSens = !keyword.equals(key)
 	if(resultSet.size() > BruteForceThresh){
           val results = new HashSet[SymbolSearchResult]
           trie.traverseWithPrefix(key, {(r: SymbolSearchResult) => 
@@ -353,10 +355,10 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
                 case PublicSymbolSearchReq(keywords: List[String],
-                  maxResults: Int, caseSens: Boolean) => {
+                  maxResults: Int) => {
                   val nonEmptyKeywords = keywords.filter { _.length > 0 }
                   val suggestions = SymbolSearchResults(
-                    findTopLevelSyms(nonEmptyKeywords, maxResults, caseSens))
+                    findTopLevelSyms(nonEmptyKeywords, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
               }
