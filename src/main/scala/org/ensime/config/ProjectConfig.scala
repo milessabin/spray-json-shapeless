@@ -348,6 +348,8 @@ class ProjectConfig(
       fp.setPreference(IndentPackageBlocks, value)
       case ('indentSpaces, value: Int) =>
       fp.setPreference(IndentSpaces, value)
+      case ('preserveDanglingCloseParenthesis, value: Boolean) =>
+      fp.setPreference(PreserveDanglingCloseParenthesis, value)
       case ('preserveSpaceBeforeArguments, value: Boolean) =>
       fp.setPreference(PreserveSpaceBeforeArguments, value)
       case ('rewriteArrowSymbols, value: Boolean) =>
