@@ -11,7 +11,7 @@ import org.github.scopt.OptionParser
 object Server {
   def main(args: Array[String]): Unit = {
     System.setProperty("actors.corePoolSize", "8")
-    System.setProperty("actors.maxPoolSize", "10")
+    System.setProperty("actors.maxPoolSize", "20")
 
     var portfile:String = ""
     val parser = new OptionParser("PROGRAM") {
