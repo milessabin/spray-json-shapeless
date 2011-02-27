@@ -9,9 +9,13 @@ import scala.actors._
 import scala.actors.Actor._
 import scala.collection.immutable
 import scala.tools.nsc.io.AbstractFile
+import scala.tools.nsc.util.RangePosition
 import scala.tools.refactoring.common.Change
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
+import scalariform.astselect.AstSelector
+import scalariform.utils.Range
+
 
 trait RPCTarget { self: Project =>
 
@@ -177,6 +181,27 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(RefactorCancelReq(procId), callId)
   }
 
+  def rpcExpandSelection(filename: String, start: Int, stop: Int, callId: Int) {
+    try {
+      FileUtils.readFile(new File(filename)) match {
+        case Right(contents) => {
+          val selectionRange = Range(start, stop - start)
+          AstSelector.expandSelection(contents, selectionRange) match {
+            case Some(range) => sendRPCReturn(
+              toWF(FileRange(filename, range.offset, range.offset + range.length)), callId)
+            case _ => sendRPCReturn(
+              toWF(FileRange(filename, start, stop)), callId)
+          }
+        }
+        case Left(e) => throw e
+      }
+    } catch {
+      case e: ScalaParserException =>
+      sendRPCError(ErrFormatFailed,
+        Some("Could not parse broken syntax: " + e), callId)
+    }
+  }
+
   def rpcFormatFiles(filenames: Iterable[String], callId: Int) {
     val files = filenames.map { new File(_) }
     try {
@@ -189,20 +214,19 @@ trait RPCTarget { self: Project =>
           case Left(e) => throw e
         }
       }
-      addUndo("Formatted source of " + filenames.mkString(", ") + ".", 
-	FileUtils.inverseChanges(changeList))
+      addUndo("Formatted source of " + filenames.mkString(", ") + ".",
+        FileUtils.inverseChanges(changeList))
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>
-        sendRPCError(ErrFormatFailed, 
-	  Some("Could not write any formatting changes: " + e), callId)
+        sendRPCError(ErrFormatFailed,
+          Some("Could not write any formatting changes: " + e), callId)
       }
     } catch {
       case e: ScalaParserException =>
-      sendRPCError(ErrFormatFailed, 
-	Some("Cannot format broken syntax: " + e), callId)
+      sendRPCError(ErrFormatFailed,
+        Some("Cannot format broken syntax: " + e), callId)
     }
-
   }
 
 }

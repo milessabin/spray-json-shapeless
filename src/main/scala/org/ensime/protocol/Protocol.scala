@@ -216,6 +216,7 @@ trait ProtocolConversions {
   def toWF(value: SymbolSearchResult): WireFormat
   def toWF(value: Position): WireFormat
   def toWF(value: RangePosition): WireFormat
+  def toWF(value: FileRange): WireFormat
 
   def toWF(value: RefactorFailure): WireFormat
   def toWF(value: RefactorEffect): WireFormat

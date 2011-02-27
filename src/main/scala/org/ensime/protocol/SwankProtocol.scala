@@ -388,6 +388,15 @@ trait SwankProtocol extends Protocol {
         }
       }
 
+      case "swank:expand-selection" => {
+        form match {
+          case SExpList(head :: StringAtom(filename) :: IntAtom(start) :: IntAtom(end) :: body) => {
+            rpcTarget.rpcExpandSelection(filename, start, end, callId)
+          }
+          case _ => oops
+        }
+      }
+
       case other => {
         sendRPCError(
           ErrUnrecognizedRPC,
@@ -570,6 +579,13 @@ trait SwankProtocol extends Protocol {
       (":type", toWF(value.tpe)),
       (":decl-pos", value.declPos),
       (":is-callable", value.isCallable))
+  }
+
+  def toWF(value: FileRange): SExp = {
+    SExp.propList(
+      (":file", value.file),
+      (":start", value.start),
+      (":end", value.end))
   }
 
   def toWF(value: Position): SExp = {
