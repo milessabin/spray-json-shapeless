@@ -87,10 +87,9 @@ class JavaCompiler(config: ProjectConfig) {
   private val errorPolicy = DefaultErrorHandlingPolicies.proceedWithAllProblems()
 
   private val options = new CompilerOptions(Map(
-      CompilerOptions.OPTION_Compliance -> "1.6",
-      CompilerOptions.OPTION_Source -> "1.6",
-      CompilerOptions.OPTION_TargetPlatform -> "1.6"
-    ))
+    CompilerOptions.OPTION_Compliance -> "1.6",
+    CompilerOptions.OPTION_Source -> "1.6",
+    CompilerOptions.OPTION_TargetPlatform -> "1.6"))
 
   class Requester(nameProvider: NameProvider) extends ICompilerRequestor {
     def allNotes(): Iterable[Note] = {
@@ -124,22 +123,36 @@ class JavaCompiler(config: ProjectConfig) {
   def compileAll() = {
     val units = javaUnitForFile.values
     if (!(units.isEmpty)) {
-      compiler.compile(units.toArray)
+      try {
+        compiler.compile(units.toArray)
+      } catch {
+        case e: Exception => {
+          System.err.println("Java compilation failed.")
+          e.printStackTrace(System.err)
+        }
+      }
     }
   }
 
   def addFile(f: File) = {
     val path = f.getCanonicalPath()
-    if(path.endsWith(".java") && 
-      !javaUnitForFile.contains(path)){
+    if (path.endsWith(".java") &&
+      !javaUnitForFile.contains(path)) {
       javaUnitForFile(path) = new CompilationUnit(null, path, defaultEncoding)
     }
   }
 
   def compileFile(f: File) = {
     addFile(f)
-    for (u <- javaUnitForFile.get(f.getCanonicalPath)) {
-      compiler.compile(Array(u))
+    try {
+      for (u <- javaUnitForFile.get(f.getCanonicalPath)) {
+        compiler.compile(Array(u))
+      }
+    } catch {
+      case e: Exception => {
+        System.err.println("Java compilation failed.")
+        e.printStackTrace(System.err)
+      }
     }
   }
 
