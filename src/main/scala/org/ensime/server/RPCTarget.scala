@@ -9,11 +9,10 @@ import scala.actors._
 import scala.actors.Actor._
 import scala.collection.immutable
 import scala.tools.nsc.io.AbstractFile
-import scala.tools.nsc.util.RangePosition
 import scala.tools.refactoring.common.Change
+import scalariform.astselect.AstSelector
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
-import scalariform.astselect.AstSelector
 import scalariform.utils.Range
 
 
