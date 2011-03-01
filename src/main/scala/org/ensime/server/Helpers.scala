@@ -4,7 +4,6 @@ import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.symtab.{ Symbols, Types }
 import scala.tools.nsc.util.{ NoPosition, Position }
 
-
 trait Helpers { self: Global =>
 
   import definitions.{ ObjectClass, ScalaObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
@@ -35,32 +34,32 @@ trait Helpers { self: Global =>
   }
 
   /**
-  * Convenience method to generate a String describing the type. Omit
-  * the package name. Include the arguments postfix.
-  * 
-  * Used for type-names of symbol and member completions
-  */
+   * Convenience method to generate a String describing the type. Omit
+   * the package name. Include the arguments postfix.
+   *
+   * Used for type-names of symbol and member completions
+   */
   def typeShortNameWithArgs(tpe: Type): String = {
     if (isArrowType(tpe)) {
       (tpe.paramss.map { sect =>
-          "(" +
+        "(" +
           sect.map { p => typeShortNameWithArgs(p.tpe) }.mkString(", ") +
           ")"
-        }.mkString(" => ")
+      }.mkString(" => ")
         + " => " +
         typeShortNameWithArgs(tpe.finalResultType))
     } else {
       (typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
-            "[" +
-            tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
-            "]"
-          } else { "" }))
+        "[" +
+          tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
+          "]"
+      } else { "" }))
     }
   }
 
-  /** 
-  * Generate qualified name, without args postfix.
-  */
+  /**
+   * Generate qualified name, without args postfix.
+   */
   def typeFullName(tpe: Type): String = {
     def nestedClassName(sym: Symbol): String = {
       outerClass(sym) match {
@@ -118,7 +117,6 @@ trait Helpers { self: Global =>
     } else None
   }
 
-
   def packageSymFromPath(path: String): Option[Symbol] = {
     val candidates = symsAtQualifiedPath(path, RootPackage)
     candidates.find { s => s.isPackage }
@@ -136,9 +134,9 @@ trait Helpers { self: Global =>
     else {
       val pathSegs = path.split("\\.")
       pathSegs.foldLeft(List(rootSym)) { (baseSyms, seg) =>
-        baseSyms.flatMap {
-	  s => memberSymsNamed(s, seg)
-	}
+        baseSyms.flatMap { s =>
+          memberSymsNamed(s, seg)
+        }
       }
     }
   }
@@ -153,8 +151,8 @@ trait Helpers { self: Global =>
     def filterAndSort(symbols: Iterable[Symbol]) = {
       val validSyms = symbols.filter { s =>
         s != EmptyPackage && !isRoot(s) &&
-        // This check is necessary to prevent infinite looping..
-        ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
+          // This check is necessary to prevent infinite looping..
+          ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
       }
       validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
     }
@@ -166,35 +164,33 @@ trait Helpers { self: Global =>
     }
   }
 
-    import scala.tools.nsc.symtab.Flags._
+  import scala.tools.nsc.symtab.Flags._
 
-    /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
+  /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
     for details on various symbol predicates. */
-    def declaredAs(sym: Symbol): scala.Symbol = {
-      if (sym.isMethod)
+  def declaredAs(sym: Symbol): scala.Symbol = {
+    if (sym.isMethod)
       'method
-      else if (sym.isTrait)
+    else if (sym.isTrait)
       'trait
-      else if (sym.isTrait && sym.hasFlag(JAVA))
+    else if (sym.isTrait && sym.hasFlag(JAVA))
       'interface
-      else if (sym.isInterface)
+    else if (sym.isInterface)
       'interface
-      else if (sym.isModule)
+    else if (sym.isModule)
       'object
-      else if (sym.isModuleClass)
+    else if (sym.isModuleClass)
       'object
-      else if (sym.isClass)
+    else if (sym.isClass)
       'class
-      else if (sym.isPackageClass)
+    else if (sym.isPackageClass)
       'class
 
-      // check this last so objects are not
-      // classified as fields
-      else if (sym.isValue || sym.isVariable)
+    // check this last so objects are not
+    // classified as fields
+    else if (sym.isValue || sym.isVariable)
       'field
-      else 'nil
-    }
-
-
+    else 'nil
+  }
 
 }
