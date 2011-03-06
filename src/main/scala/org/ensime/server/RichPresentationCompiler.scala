@@ -30,28 +30,16 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
     typeAt(p).fold(s => Some(TypeInfo(s)), t => None), t => None)
 
   def askTypeInfoById(id: Int): Option[TypeInfo] = askOr(
-    typeById(id) match {
-      case Some(t) => Some(TypeInfo(t))
-      case None => None
-    }, t => None)
+    typeById(id).map{ t => TypeInfo(t) }, t => None)
 
   def askTypeInfoByName(name: String): Option[TypeInfo] = askOr(
-    typeByName(name) match {
-      case Some(t) => Some(TypeInfo(t))
-      case None => None
-    }, t => None)
+    typeByName(name).map{ t => TypeInfo(t) }, t => None)
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = askOr(
-    typeByNameAt(name, p) match {
-      case Some(t) => Some(TypeInfo(t))
-      case None => None
-    }, t => None)
+    typeByNameAt(name, p).map{ t => TypeInfo(t) }, t => None)
 
   def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] = askOr(
-    typeById(id) match {
-      case Some(t: Type) => Some(CallCompletionInfo(t))
-      case _ => None
-    }, t => None)
+    typeById(id).map{ t => CallCompletionInfo(t) }, t => None)
 
   def askPackageByPath(path: String): Option[PackageInfo] = askOr(
     Some(PackageInfo.fromPath(path)), t => None)
@@ -77,10 +65,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
   }
 
   def askInspectTypeById(id: Int): Option[TypeInspectInfo] = askOr(
-    typeById(id) match {
-      case Some(t: Type) => Some(inspectType(t))
-      case _ => None
-    }, t => None)
+    typeById(id).map{ t => inspectType(t) }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
     reloadSources(List(p.source))
@@ -305,10 +290,10 @@ class RichPresentationCompiler(
     } catch {
       case e: FatalError =>
         {
-        println("typedTreeAt threw FatalError: " + e + ", falling back to typedTree... ")
-        typedTree(p.source, true)
-        locateTree(p)
-      }
+          println("typedTreeAt threw FatalError: " + e + ", falling back to typedTree... ")
+          typedTree(p.source, true)
+          locateTree(p)
+        }
     }
   }
 
