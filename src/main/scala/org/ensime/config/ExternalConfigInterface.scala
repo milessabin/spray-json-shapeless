@@ -192,7 +192,7 @@ object ExternalConfigInterface {
         val projBaseDir = new File(baseDir, proj)
         val f = targetClasses(projBaseDir)
         if (f.exists) {
-            compileDeps += toCanonFile(f)
+          compileDeps += toCanonFile(f)
         }
 
         compileDeps ++= info.compileDeps
