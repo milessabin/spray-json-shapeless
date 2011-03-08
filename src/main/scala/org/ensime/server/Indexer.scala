@@ -1,4 +1,6 @@
 package org.ensime.server
+import org.eclipse.jdt.core.compiler.CharOperation
+import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.protocol.ProtocolConversions
@@ -24,7 +26,7 @@ import org.objectweb.asm.Opcodes;
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
-case class AddSymbolsReq(syms: Iterable[(String, SymbolSearchResult)])
+case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 
 trait IndexerInterface { self: RichPresentationCompiler =>
@@ -62,7 +64,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
 
     if (isType(sym)) {
       new TypeSearchResult(
-        typeSymName(sym),
+        lookupKey(sym),
         sym.nameString,
         declaredAs(sym),
         pos)
@@ -77,15 +79,15 @@ trait IndexerInterface { self: RichPresentationCompiler =>
   }
 
   def indexTopLevelSyms(syms: Iterable[Symbol]) {
-    val infos = new ArrayBuffer[(String, SymbolSearchResult)]
+    val infos = new ArrayBuffer[SymbolSearchResult]
     for (sym <- syms) {
       if (Indexer.isValidType(typeSymName(sym))) {
         val key = lookupKey(sym)
-        infos += ((key, sym))
+        infos += sym
         for (mem <- try { sym.tpe.members } catch { case e => { List() } }) {
           if (Indexer.isValidMethod(mem.nameString)) {
             val key = lookupKey(mem)
-            infos += ((key, mem))
+            infos += mem
           }
         }
       }
@@ -344,11 +346,9 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
           case RebuildStaticIndexReq() => {
             buildStaticIndex(config.allFilesOnClasspath)
           }
-          case AddSymbolsReq(syms: Iterable[(String, SymbolSearchResult)]) => {
-            syms.foreach {
-              case (key, info) => {
-                insertSuffixes(key, info)
-              }
+          case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
+            syms.foreach { info =>
+              insertSuffixes(info.name, info)
             }
           }
           case RemoveSymbolsReq(syms: Iterable[String]) => {
@@ -357,8 +357,8 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
               req match {
-                case ImportSuggestionsReq(file: File, point: Int, names: List[String]) => {
-                  val suggestions = ImportSuggestions(getImportSuggestions(names, 5))
+                case ImportSuggestionsReq(file: File, point: Int, names: List[String], maxResults: Int) => {
+                  val suggestions = ImportSuggestions(getImportSuggestions(names, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
                 case PublicSymbolSearchReq(keywords: List[String],

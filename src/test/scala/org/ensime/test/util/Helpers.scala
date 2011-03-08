@@ -1,5 +1,6 @@
 package org.ensime.test.util
 
+import java.io.File
 import scala.actors.Actor._
 import scala.tools.nsc.interactive.{Global, CompilerControl}
 import scala.tools.nsc.{Settings, FatalError}
@@ -16,9 +17,15 @@ object Helpers{
   def withPresCompiler(action:RichCompilerControl => Any ) =  {
     val settings = new Settings(Console.println)
 
-    //TODO: Don't hardcode this path!
+
+    val propFile = new File("./project/build.properties")
+    val props = JavaProperties.load(propFile)
+    val v = props.get("build.scala.versions") match {
+      case Some(s) => s
+      case None => throw new IllegalStateException("Failed to load sbt build version.")
+    }
     settings.processArguments(List(
-	"-classpath","project/boot/scala-2.8.1.RC3/lib/scala-library.jar",
+	"-classpath", "project/boot/scala-" + v + "/lib/scala-library.jar",
 	"-verbose"
       ), false)
     settings.usejavacp.value = false

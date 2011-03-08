@@ -12,14 +12,12 @@ class SymbolSearchResult(
   val name: String,
   val localName: String,
   val declaredAs: scala.Symbol,
-  val pos: Option[(String, Int)]
-)
-class TypeSearchResult(name: String, localName: String, declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, localName, declaredAs, pos){}
-class MethodSearchResult(name: String, localName: String, declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, localName, declaredAs, pos){}
+  val pos: Option[(String, Int)])
+class TypeSearchResult(name: String, localName: String, declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
+class MethodSearchResult(name: String, localName: String, declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
 
 case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
 case class SymbolSearchResults(syms: Iterable[SymbolSearchResult])
-
 
 class SymbolInfo(
   val name: String,
@@ -32,7 +30,6 @@ case class SymbolInfoLight(
   val tpeSig: String,
   val tpeId: Int,
   val isCallable: Boolean) {}
-
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
@@ -95,7 +92,6 @@ trait ModelBuilders { self: Global with Helpers =>
   }
 
   object ModelHelpers {
-
 
     // When inspecting a type, transform a raw list of TypeMembers to a sorted
     // list of InterfaceInfo objects, each with its own list of sorted member infos.
@@ -166,8 +162,6 @@ trait ModelBuilders { self: Global with Helpers =>
       }
     }
 
-
-
   }
 
   import ModelHelpers._
@@ -193,14 +187,12 @@ trait ModelBuilders { self: Global with Helpers =>
         new PackageInfo(
           "root",
           "_root_",
-          packageMembers(sym).flatMap(packageMemberInfoFromSym)
-        )
+          packageMembers(sym).flatMap(packageMemberInfoFromSym))
       } else {
         new PackageInfo(
           sym.name.toString,
           sym.fullName,
-          packageMembers(sym).flatMap(packageMemberInfoFromSym)
-        )
+          packageMembers(sym).flatMap(packageMemberInfoFromSym))
       }
     }
 
@@ -239,21 +231,20 @@ trait ModelBuilders { self: Global with Helpers =>
         case tpe: MethodType => ArrowTypeInfo(tpe)
         case tpe: PolyType => ArrowTypeInfo(tpe)
         case tpe: Type =>
-        {
-          val args = tpe.typeArgs.map(TypeInfo(_))
-          val typeSym = tpe.typeSymbol
-          val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
-          new TypeInfo(
-            typeShortName(tpe),
-            cacheType(tpe),
-            declaredAs(typeSym),
-            typeFullName(tpe),
-            args,
-            members,
-            typeSym.pos,
-            outerTypeId
-          )
-        }
+          {
+            val args = tpe.typeArgs.map(TypeInfo(_))
+            val typeSym = tpe.typeSymbol
+            val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
+            new TypeInfo(
+              typeShortName(tpe),
+              cacheType(tpe),
+              declaredAs(typeSym),
+              typeFullName(tpe),
+              args,
+              members,
+              typeSym.pos,
+              outerTypeId)
+          }
         case _ => nullInfo
       }
     }
@@ -263,11 +254,10 @@ trait ModelBuilders { self: Global with Helpers =>
     }
   }
 
-
-  object ParamSectionInfo{
-    def apply(params: Iterable[Symbol]):ParamSectionInfo = {
-      new ParamSectionInfo(params.map{s => (s.nameString, TypeInfo(s.tpe))}, 
-	params.forall{s => s.isImplicit})
+  object ParamSectionInfo {
+    def apply(params: Iterable[Symbol]): ParamSectionInfo = {
+      new ParamSectionInfo(params.map { s => (s.nameString, TypeInfo(s.tpe)) },
+        params.forall { s => s.isImplicit })
     }
   }
 
@@ -284,8 +274,7 @@ trait ModelBuilders { self: Global with Helpers =>
     def apply(paramSections: List[ParamSectionInfo], finalResultType: Type): CallCompletionInfo = {
       new CallCompletionInfo(
         TypeInfo(finalResultType),
-        paramSections
-      )
+        paramSections)
     }
 
     def nullInfo() = {
@@ -296,18 +285,17 @@ trait ModelBuilders { self: Global with Helpers =>
   object SymbolInfo {
 
     def apply(sym: Symbol): SymbolInfo = {
-      val name = if(sym.isMethod) {
-	sym.nameString
-      }
-      else{
-	typeFullName(sym.tpe)
+      val name = if (sym.isClass || sym.isTrait || sym.isModule ||
+        sym.isModuleClass || sym.isPackageClass) {
+        typeFullName(sym.tpe)
+      } else {
+        sym.nameString
       }
       new SymbolInfo(
         name,
         sym.pos,
         TypeInfo(sym.tpe),
-        isArrowType(sym.tpe)
-      )
+        isArrowType(sym.tpe))
     }
 
     def nullInfo() = {
@@ -318,9 +306,9 @@ trait ModelBuilders { self: Global with Helpers =>
 
   object SymbolInfoLight {
 
-    /** 
-    *  Return symbol infos for any like-named constructors.
-    */
+    /**
+     *  Return symbol infos for any like-named constructors.
+     */
     def constructorSynonyms(sym: Symbol): List[SymbolInfoLight] = {
       val members = if (sym.isClass || sym.isPackageClass) {
         sym.tpe.members
@@ -335,9 +323,9 @@ trait ModelBuilders { self: Global with Helpers =>
       }
     }
 
-    /** 
-    *  Return symbol infos for any like-named apply methods.
-    */
+    /**
+     *  Return symbol infos for any like-named apply methods.
+     */
     def applySynonyms(sym: Symbol): List[SymbolInfoLight] = {
       val members = if (sym.isModule || sym.isModuleClass) {
         sym.tpe.members
@@ -358,8 +346,7 @@ trait ModelBuilders { self: Global with Helpers =>
         sym.nameString,
         typeShortNameWithArgs(tpe),
         cacheType(tpe.underlying),
-        isArrowType(tpe.underlying)
-      )
+        isArrowType(tpe.underlying))
     }
 
     def nullInfo() = {
