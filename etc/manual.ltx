@@ -5,7 +5,7 @@
 \usepackage{amsmath}
 
 \newenvironment{mylisting}
-{\begin{list}{}{\setlength{\leftmargin}{1em}}\item\scriptsize\bfseries}
+{\begin{list}{}{\setlength{\leftmargin}{1em}}\item\bfseries}
   {\end{list}}
 
 
@@ -39,12 +39,12 @@ ENSIME is an intelligent Scala environment for Emacs. It provides many features 
 \item Emacs 22 or later (23 is recommended)
 \item Unix(y) or Windows OS
 \item JVM Version 6
-\item Scala 2.8 compatible source and libraries.
+\item Scala 2.8.1 compatible source and libraries.
 \end{itemize}
 
-\subsubsection{Note on Binary Compatibility}
+\subsubsection{Note on Scala Version Compatibility}
 
-The compiler version that ENSIME uses to analyze sources is the same as that which is used to compile ENSIME itself. This version (as of the writing of this document) is 2.8.0. It may not be possible for the ENSIME compiler to load older Scala jars. We recommend that you use a version of ENSIME that targets the same Scala version as your project.
+The compiler version that ENSIME uses to analyze sources is the same as that which is used to compile ENSIME itself. This version (as of the writing of this document) is 2.8.1. Use of ENSIME for projects that target older versions of Scala is not supported. Sorry!
 
 \subsection{Standard Installation}
 
@@ -95,7 +95,7 @@ A common work-flow when hacking ENSIME:
 \noindent
 Remember to run 'sbt update' after doing a fresh checkout. Without it, you will not have the required jars included in your project - which will cause the compilation to fail.
 
-\section{Defining a Project}
+\section{Creating a Project}
 
 
 \subsection{Generating a Config File}
@@ -286,6 +286,7 @@ Manually specify the target of the project build process. This directory will be
 \noindent
 {\bf :formatting-prefs ([:key value]*)}\\
 Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
+\vspace{5 mm}
 \begin{tabular}{|l|l|}
   \hline
   {\bf :alignParameters} & t or nil  \\ \hline
@@ -417,7 +418,7 @@ Note that \emph{ensime-make-java-doc-url-helper}, and its Scala equivalent \emph
 
 
 
-\subsection{Quick Command Reference}
+\subsection{Command Reference}
 
 \vspace{5 mm}
 
