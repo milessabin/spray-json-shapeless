@@ -1,6 +1,11 @@
 # ENSIME
 the ENhanced Scala Interaction Mode for Emacs
 
+# Links
+- [ Downloads ](https://github.com/aemoncannon/ensime/downloads)
+- [ Manual ](http://aemon.com/file_dump/ensime_manual)
+- [ Discussion Group ](http://groups.google.com/group/ensime?hl=en)
+
 
 ## Features
 
@@ -13,6 +18,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Jump to symbol definitions.
 - Automated Refactorings (rename, organize imports, extract method)
 - Source Formatting
+- AST-based selection
 - Supports sbt,Maven,Ivy projects
 - Embedded sbt shell
 - REPL
