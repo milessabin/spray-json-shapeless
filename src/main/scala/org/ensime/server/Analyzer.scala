@@ -39,7 +39,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, indexer, config)
-  protected val javaCompiler: JavaCompiler = new JavaCompiler(config)
+  protected val javaCompiler: JavaCompiler = new JavaCompiler(config, indexer)
   protected var awaitingInitialCompile = true
 
   import protocol._
@@ -174,7 +174,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
                   }
 
-                  case ImportSuggestionsReq(_, _, _) => {
+                  case ImportSuggestionsReq(_, _, _, _) => {
                     indexer ! rpcReq
                   }
 

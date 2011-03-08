@@ -148,8 +148,8 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(CallCompletionReq(id), callId)
   }
 
-  def rpcImportSuggestions(f: String, point: Int, names: List[String], callId: Int) {
-    analyzer ! RPCRequestEvent(ImportSuggestionsReq(new File(f), point, names), callId)
+  def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int, callId: Int) {
+    analyzer ! RPCRequestEvent(ImportSuggestionsReq(new File(f), point, names, maxResults), callId)
   }
 
   def rpcPublicSymbolSearch(names: List[String], maxResults: Int, callId: Int) {
