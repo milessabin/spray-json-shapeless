@@ -9,7 +9,7 @@
   {\end{list}}
 
 
-\title{ENSIME: User Manual}
+\title{ENSIME User Manual}
 \author{Aemon Cannon}
 
 \begin{document}
@@ -29,7 +29,7 @@
 \section{Introduction}
 
 \subsection{What is ENSIME?}
-ENSIME is an intelligent Scala environment for Emacs. It provides many features that are commonly found only in IDEs, such as live error-checking, symbol inspection, package/type browsing, and basic refactorings. ENSIME's architecture is client/server: a thin Emacs client communicates with an analysis server written in Scala. The client component is based heavily on the SLIME environment for Common Lisp - using the same Swank RPC protocol. The server component services these calls using an instance of the official Scala compiler, so the results should always be consistent with the commandline compiler.
+ENSIME is the ENhanced Scala Interaction Mode for Emacs. It provides many features that are commonly found only in IDEs, such as live error-checking, symbol inspection, package/type browsing, and basic refactorings. ENSIME's architecture is client/server: a thin Emacs client communicates with an analysis server written in Scala. The client component is based heavily on the SLIME environment for Common Lisp - using the same Swank RPC protocol. The server component services these calls using an instance of the official Scala compiler, so the results should always be consistent with the commandline compiler.
 
 \section{Installation}
 
@@ -286,7 +286,7 @@ Manually specify the target of the project build process. This directory will be
 \noindent
 {\bf :formatting-prefs ([:key value]*)}\\
 Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
-\vspace{5 mm}
+\vspace{1 cm}
 \begin{tabular}{|l|l|}
   \hline
   {\bf :alignParameters} & t or nil  \\ \hline
