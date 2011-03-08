@@ -3,7 +3,7 @@ the ENhanced Scala Interaction Mode for Emacs
 
 # Links
 - [ Downloads ](https://github.com/aemoncannon/ensime/downloads)
-- [ Manual ](http://aemon.com/file_dump/ensime_manual)
+- [ Manual ](http://aemon.com/file_dump/ensime_manual.html)
 - [ Discussion Group ](http://groups.google.com/group/ensime?hl=en)
 
 
