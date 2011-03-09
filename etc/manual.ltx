@@ -47,6 +47,7 @@ ENSIME is the ENhanced Scala Interaction Mode for Emacs. It provides many featur
 The compiler version that ENSIME uses to analyze sources is the same as that which is used to compile ENSIME itself. This version (as of the writing of this document) is 2.8.1. Use of ENSIME for projects that target older versions of Scala is not supported. Sorry!
 
 \subsection{Standard Installation}
+\label{sec:install}
 
 \noindent
 \textbf{scala-mode}:\\
@@ -76,24 +77,6 @@ Download the latest ENSIME distribution from github.com at \begin{verbatim}http:
 Now you need to define a .ensime file for your project. See section \ref{sec:config}.
 
 
-\subsection{Installation from Git Clone}
-
-Note: This section is for people who want to hack on ENSIME itself.\\
-
-\noindent
-After cloning, and before you can run ENSIME, you must create the distribution directory structure. The sbt task 'stage' will create the directory 'dist' underneath the root clone directory. Then, follow the install instructions in section 2.2 above, substituting CLONE\_DIR/dist as the root of your ENSIME distribution.\\
-
-\noindent
-A common work-flow when hacking ENSIME:
-\begin{itemize}
-\item Edit source files
-\item 'sbt dist'
-\item Stop ENSIME server by killing \emph{*inferior-ensime-server*} buffer
-\item Restart ENSIME with M-x ensime
-\end{itemize}
-
-\noindent
-Remember to run 'sbt update' after doing a fresh checkout. Without it, you will not have the required jars included in your project - which will cause the compilation to fail.
 
 \section{Creating a Project}
 
@@ -624,6 +607,32 @@ If you're having problems with the default arguments (max heap, initial heap) th
 \newpage
 
 \appendix
+
+\section{Installation from Git Clone}
+
+Note: This section is for people who want to hack on ENSIME itself.\\
+
+\noindent
+After cloning, run 'sbt update'. Then run 'sbt stage' to create the deployment directories underneath the root clone directory. Then follow the install instructions in section \ref{sec:install} above, substituting CLONE\_DIR/dist as the root of your ENSIME distribution.\\
+
+\noindent
+A common work-flow when hacking ENSIME:
+\begin{itemize}
+\item Edit source files
+\item 'sbt stage'
+\item Stop ENSIME server by killing \emph{*inferior-ensime-server*} buffer
+\item Restart ENSIME with M-x ensime
+\end{itemize}
+
+
+\section{Running the End-to-End ENSIME Tests}
+
+\begin{itemize}
+\item 'sbt stage'
+\item 'cd etc'
+\item 'bash run\_emacs\_tests.sh'
+\item Please be patient. These tests take a few mins to run. If all goes well you should see a buffer with a long list of 'ok's.
+\end{itemize}
 
 
 \section{Using the ENSIME Server with Other Editors}
