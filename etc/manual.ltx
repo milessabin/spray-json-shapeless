@@ -164,41 +164,41 @@ What follows is a description of all available configuration options. Required o
 \vspace{5 mm}
 
 \noindent
-{\bf :project-name "...."}\\
+{\bf :project-name} "...."\\
 The friendly name of your project. Will be displayed in the Emacs mode-line when connected to an ENSIME server. If no name is given, ENSIME will try to use an existing project name (only sbt, currently).
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :server-root "...."}\\
+{\bf :server-root} "...."\\
 The absolute path to the root of your ENSIME distribution. By default this is inferred from the location of the ensime.el E-Lisp library.
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :server-cmd  "...."}\\
+{\bf :server-cmd}  "...."\\
 The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :server-host "...."}\\
+{\bf :server-host} "...."\\
 The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :use-sbt [t or nil]}\\
+{\bf :use-sbt} [t or nil]\\
 Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :sbt-compile-on-save [t or nil]}\\
+{\bf :sbt-compile-on-save} [t or nil]\\
 Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is disabled by default as it consumes a lot of CPU.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :sbt-subprojects ([sbt-subproject]*)}\\
+{\bf :sbt-subprojects} ([sbt-subproject]*)\\
 Declare sbt subprojects. Each item in the list should be a property list with the following structure: (:name ``myproj'' :deps (``otherproj'')), where :deps is a possibly empty list of subprojects that this subproject depends on. For example, here's how you'd declare two subprojects - a 'web' subproject which depends on a 'core' subproject:
 \begin{mylisting}
 \begin{verbatim}
@@ -217,74 +217,89 @@ Declare sbt subprojects. Each item in the list should be a property list with th
 
 
 \noindent
-{\bf :use-maven t}\\
+{\bf :use-maven} [t or nil]\\
 Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :use-ivy t}\\
+{\bf :use-ivy} [t or nil]\\
 Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :ivy-file filename}\\
+{\bf :ivy-file} filename\\
 Override the default ivy.xml location.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :ivy-compile-conf "...."}\\
+{\bf :ivy-compile-conf} "...."\\
 \noindent
-{\bf :ivy-runtime-conf "...."}\\
+{\bf :ivy-runtime-conf} "...."\\
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :project-package "...."}\\
+{\bf :project-package} "...."\\
 The main scala package for your project. Used by ENSIME to populate the project outline view. 
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :sources ([directory or filename]*)}\\
+{\bf :sources } ([directory or filename]*)\\
 Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :compile-jars ([directory or filename]*)}\\
+{\bf :compile-jars} ([directory or filename]*)\\
 Manually include jars by directory(recursively) or by filename, to be included on the compile and runtime classpaths.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :exclude-compile-jars ([directory or filename]*)}\\
+{\bf :exclude-compile-jars} ([directory or filename]*)\\
 Manually exclude jars by directory(recursively) or by filename. These jars will be excluded from any classpath.
-\vspace{5 mm}
+\vspace{1 cm}
 
 
 \noindent
-{\bf :runtime-jars ([directory or filename]*)}\\
+{\bf :runtime-jars} ([directory or filename]*)\\
 Manually include jars by directory(recursively) or by filename, to be included only on the runtime classpath.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :exclude-runtime-jars ([directory or filename]*)}\\
+{\bf :exclude-runtime-jars} ([directory or filename]*)\\
 Manually exclude jars by directory(recursively) or by filename. These jars will be excluded from the runtime classpath.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :class-dirs ([directory]*)}\\
+{\bf :class-dirs} ([directory]*)\\
 Manually include directories of .class files, to be included on the compile and runtime classpaths.
-\vspace{5 mm}
+\vspace{1 cm}
 
 \noindent
-{\bf :target directory}\\
+{\bf :target} directory\\
 Manually specify the target of the project build process. This directory will be included on the runtime classpath when debugging or using the repl, and will be pupulated by the incremental compiler. Will be created if it doesn't exist.
+\vspace{1 cm}
+
+\noindent
+{\bf :disable-index-on-startup} [ t or nil]\\
+Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality.
+\vspace{1 cm}
+
+\noindent
+{\bf :exclude-from-index } (regex-string*)\\
+Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
+\begin{mylisting}
+\begin{verbatim}
+:exclude-from-index ("com\\\\.sun\\\\..\*" "com\\\\.apple\\\\..\*")
+\end{verbatim}
+\end{mylisting}
 \vspace{5 mm}
 
 \noindent
-{\bf :formatting-prefs ([:key value]*)}\\
+{\bf :formatting-prefs} ([:key value]*)\\
 Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
 \vspace{1 cm}
 \begin{tabular}{|l|l|}
