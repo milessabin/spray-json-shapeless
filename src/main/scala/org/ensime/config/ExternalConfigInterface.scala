@@ -153,7 +153,15 @@ object ExternalConfigInterface {
     val projName = props.get("project.name").map(_.toString)
     println("sbt Scala Build version is " + v)
 
-    val f = new File(baseDir, "target/scala_" + v + "/classes")
+    def targetClasses(baseDir: File) = new File(baseDir, "target/scala_" + v + "/classes")
+
+    val activeProjectBaseDir = activeSubproject match {
+      case Some(SbtSubproject(name, _)) => {
+        new File(baseDir, name)
+      }
+      case None => baseDir
+    }
+    val f = targetClasses(activeProjectBaseDir)
     val target = if (f.exists) { Some(toCanonFile(f)) } else { None }
 
     val compileDeps = ListBuffer[CanonFile]()
@@ -180,6 +188,13 @@ object ExternalConfigInterface {
         println("  " + proj + "...")
         val dir = new File(baseDir, proj)
         val info = getSbtProjectInfo(dir, v)
+
+        val projBaseDir = new File(baseDir, proj)
+        val f = targetClasses(projBaseDir)
+        if (f.exists) {
+          compileDeps += toCanonFile(f)
+        }
+
         compileDeps ++= info.compileDeps
         runtimeDeps ++= info.runtimeDeps
         testDeps ++= info.testDeps
