@@ -21,6 +21,7 @@ import org.ardverk.collection._
 import io.prelink.critbit.MCritBitTree
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.util.{ NoPosition }
+import scala.util.matching.Regex
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
 
@@ -188,7 +189,7 @@ trait Indexing extends StringSimilarity {
       val caseSens = !keyword.equals(key)
       trie.traverseWithPrefix(key, {(r: SymbolSearchResult) =>
 	  if(!caseSens || r.name.contains(keyword)){
-	    resultSet += r 
+	    resultSet += r
 	  }
 	})
     }
@@ -199,8 +200,8 @@ trait Indexing extends StringSimilarity {
 	val caseSens = !keyword.equals(key)
 	if(resultSet.size() > BruteForceThresh){
           val results = new HashSet[SymbolSearchResult]
-          trie.traverseWithPrefix(key, {(r: SymbolSearchResult) => 
-	      if(resultSet.contains(r) && 
+          trie.traverseWithPrefix(key, {(r: SymbolSearchResult) =>
+	      if(resultSet.contains(r) &&
 		(!caseSens || r.name.contains(keyword))){
 		results += r
 	      }
@@ -210,7 +211,7 @@ trait Indexing extends StringSimilarity {
 	else{
 	  val results = new HashSet[SymbolSearchResult]
 	  for(r <- resultSet){
-	    if(r.name.toLowerCase().contains(key) && 
+	    if(r.name.toLowerCase().contains(key) &&
 	      (!caseSens || r.name.contains(keyword))){
 	      results += r
 	    }
@@ -271,7 +272,16 @@ trait Indexing extends StringSimilarity {
     else 'class
   }
 
-  def buildStaticIndex(files: Iterable[File]) {
+  private def include(name: String, excludes: Iterable[Regex]): Boolean = {
+    for(exclude <- excludes) {
+      if(exclude.findFirstIn(name) != None) {
+        return false
+      }
+    }
+    true
+  }
+
+  def buildStaticIndex(files: Iterable[File], excludes: Iterable[Regex]) {
     val t = System.currentTimeMillis()
 
     val handler = new ClassHandler {
@@ -280,7 +290,7 @@ trait Indexing extends StringSimilarity {
       var validClass = false
       override def onClass(name: String, location: String, flags: Int) {
         val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-        if (isPublic && Indexer.isValidType(name)) {
+        if (isPublic && Indexer.isValidType(name) && include(name, excludes)) {
           validClass = true
           val i = name.lastIndexOf(".")
           val localName = if (i > -1) name.substring(i + 1) else name
@@ -344,7 +354,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
             exit('stop)
           }
           case RebuildStaticIndexReq() => {
-            buildStaticIndex(config.allFilesOnClasspath)
+            buildStaticIndex(config.allFilesOnClasspath, config.excludeFromIndex)
           }
           case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
             syms.foreach { info =>
@@ -412,7 +422,7 @@ object IndexTest extends Indexing {
     import java.util.Scanner
     val in = new Scanner(System.in)
     val name = in.nextLine()
-    buildStaticIndex(files)
+    buildStaticIndex(files, List())
     for (l <- getImportSuggestions(args, 5)) {
       for (s <- l) {
         println(s.name)

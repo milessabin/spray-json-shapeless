@@ -7,6 +7,7 @@ import org.ensime.util.SExp._
 import scala.actors._
 import scala.actors.Actor._
 import scala.collection.mutable
+import scala.util.matching.Regex
 import scalariform.formatter.preferences._
 
 object ProjectConfig {
@@ -31,6 +32,7 @@ object ProjectConfig {
     def projectName(): Option[String]
     def formatPrefs(): Map[Symbol, Any]
     def disableIndexOnStartup(): Boolean
+    def excludeFromIndex(): List[Regex]
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
@@ -51,6 +53,11 @@ object ProjectConfig {
       case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
       case _ => List()
     }
+    private def getRegexList(name: String): List[Regex] = m.get(key(name)) match {
+      case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value.r }.toList
+      case _ => List()
+    }
+
     def rootDir(): Option[String] = getStr(":root-dir")
     def useSbt(): Boolean = getBool(":use-sbt")
     def useMaven(): Boolean = getBool(":use-maven")
@@ -111,6 +118,7 @@ object ProjectConfig {
       case _ => Map[Symbol, Any]()
     }
     def disableIndexOnStartup(): Boolean = getBool(":disable-index-on-startup")
+    def excludeFromIndex(): List[Regex] = getRegexList(":exclude-from-index")
   }
 
   /**
@@ -255,7 +263,8 @@ object ProjectConfig {
       rootDir, sourceRoots, runtimeDeps,
       compileDeps, classDirs, target,
       formatPrefs,
-      conf.disableIndexOnStartup)
+      conf.disableIndexOnStartup,
+      conf.excludeFromIndex)
 
   }
 
@@ -281,7 +290,7 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(None, null, null, new File("."), List(),
-    List(), List(), List(), None, Map(), false)
+    List(), List(), List(), None, Map(), false, List())
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -316,8 +325,8 @@ class DebugConfig(val classpath: String, val sourcepath: String) {}
 
 class ProjectConfig(
   val name: Option[String],
-  val scalaLibraryJar: CanonFile,  
-  val scalaCompilerJar: CanonFile,  
+  val scalaLibraryJar: CanonFile,
+  val scalaCompilerJar: CanonFile,
   val root: CanonFile,
   val sourceRoots: Iterable[CanonFile],
   val runtimeDeps: Iterable[CanonFile],
@@ -325,7 +334,8 @@ class ProjectConfig(
   val classDirs: Iterable[CanonFile],
   val target: Option[CanonFile],
   formattingPrefsMap: Map[Symbol, Any],
-  val disableIndexOnStartup: Boolean) {
+  val disableIndexOnStartup: Boolean,
+  val excludeFromIndex: Iterable[Regex]) {
 
   val formattingPrefs = formattingPrefsMap.
   foldLeft(FormattingPreferences()) { (fp, p) =>

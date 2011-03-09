@@ -89,7 +89,7 @@ object SExp extends RegexParsers {
 
   import scala.util.matching.Regex
 
-  lazy val string = regexGroups("""\"((?:[^\"\\]|\\.)*)\"""".r) ^^ { m => StringAtom(m.group(1)) }
+  lazy val string = regexGroups("""\"((?:[^\"\\]|\\.)*)\"""".r) ^^ { m => StringAtom(m.group(1).replace("\\\\", "\\")) }
   lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ SymbolAtom
   lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
   lazy val number = regex("[0-9]+".r) ^^ { cs => IntAtom(cs.toInt) }
