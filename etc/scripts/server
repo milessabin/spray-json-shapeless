@@ -13,7 +13,7 @@ esac
 
 if [ "$ENSIME_JVM_ARGS" == "" ]
 then
-  ENSIME_JVM_ARGS="-Xms256M -Xmx1024M"
+  ENSIME_JVM_ARGS="-Xms256M -Xmx1024M -Dfile.encoding=UTF-8"
 fi
 
 CLASSPATH=<RUNTIME_CLASSPATH>

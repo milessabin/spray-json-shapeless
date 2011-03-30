@@ -1,7 +1,6 @@
 package org.ensime.server
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
-import scala.actors._
 import scala.actors.Actor._
 import scala.collection.mutable
 import scala.tools.nsc.{ Settings, FatalError }
@@ -12,6 +11,7 @@ import scala.tools.nsc.util.{ SourceFile, Position, RangePosition }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring.analysis.GlobalIndexes
 import java.io.File
+import scala.actors.Actor
 
 trait RichCompilerControl extends CompilerControl with RefactoringControl { self: RichPresentationCompiler =>
 

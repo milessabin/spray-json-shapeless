@@ -1,15 +1,15 @@
 package org.ensime.server
-import java.io.{ IOException, File }
-import org.ensime.util._
-import scala.collection.{ immutable, mutable }
+import java.io.File
+import org.ensime.util.FileUtils
+import scala.collection.{immutable, mutable}
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
-import scala.tools.refactoring.common.{ Selections, Change }
+import scala.tools.refactoring.common.{Selections, Change}
 import scala.tools.refactoring.implementations._
 
 case class RefactorFailure(val procedureId: Int, val message: String)
-case class RefactorPerformReq(procedureId: Int, refactorType: Symbol, params: immutable.Map[Symbol, Any])
+case class RefactorPerformReq(procedureId: Int, refactorType: Symbol, params: immutable.Map[Symbol, Any], interactive: Boolean)
 case class RefactorExecReq(procedureId: Int, refactorType: Symbol)
 case class RefactorCancelReq(procedureId: Int)
 
@@ -59,13 +59,32 @@ trait RefactoringHandler { self: Analyzer =>
   def handleRefactorRequest(req: RefactorPerformReq, callId: Int) {
     val procedureId = req.procedureId
     val result = scalaCompiler.askPerformRefactor(procedureId, req.refactorType, req.params)
+
     result match {
       case Right(effect) => {
-        effects(procedureId) = effect
-        project ! RPCResultEvent(toWF(effect), callId)
+
+	if(req.interactive){
+          effects(procedureId) = effect
+          project ! RPCResultEvent(toWF(effect), callId)
+	}
+	// Execute the refactoring immediately..
+	else{
+	  project ! AddUndo("Refactoring of type: " + req.refactorType.toString, 
+	    FileUtils.inverseChanges(effect.changes))
+	  val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
+	  result match {
+	    case Right(result) => {
+	      project ! RPCResultEvent(toWF(result), callId)
+	    }
+	    case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+	  }
+	}
+
+
       }
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
     }
+
   }
 
   def handleRefactorExec(req: RefactorExecReq, callId: Int) {
@@ -169,6 +188,19 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
   }.result
 
+  protected def doAddImport(procId: Int, tpe: scala.Symbol, qualName: String, file: String, start: Int, end: Int) = {
+    val refactoring = new AddImportStatement {
+      val global = RefactoringImpl.this
+    }
+    val selection = refactoring.FileSelection(AbstractFile.getFile(file), start, end)
+    val modifications = refactoring.addImport(selection, qualName)
+    Right(new RefactorEffect {
+        val procedureId = procId
+        val refactorType = tpe
+        val changes = modifications
+      })
+  }
+
   protected def reloadAndType(f: String) = reloadAndTypeFiles(List(getSourceFile(f)))
 
   protected def performRefactor(
@@ -222,6 +254,15 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
             case Some(f: String) => {
 	      reloadAndType(f)
 	      doOrganizeImports(procId, tpe, f)
+            }
+            case _ => badArgs
+          }
+        }
+        case 'addImport => {
+          (params.get('qualifiedName), params.get('file), params.get('start), params.get('end)) match {
+            case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+	      reloadAndType(f)
+	      doAddImport(procId, tpe, n, f, s, e)
             }
             case _ => badArgs
           }

@@ -168,8 +168,9 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
   }
 
-  def rpcPerformRefactor(refactorType: Symbol, procId: Int, params: immutable.Map[Symbol, Any], callId: Int) {
-    analyzer ! RPCRequestEvent(RefactorPerformReq(procId, refactorType, params), callId)
+  def rpcPerformRefactor(refactorType: Symbol, procId: Int, params: immutable.Map[Symbol, Any], interactive: Boolean, callId: Int) {
+    analyzer ! RPCRequestEvent(RefactorPerformReq(
+	procId, refactorType, params, interactive), callId)
   }
 
   def rpcExecRefactor(refactorType: Symbol, procId: Int, callId: Int) {

@@ -352,9 +352,9 @@ trait SwankProtocol extends Protocol {
 
       case "swank:perform-refactor" => {
         form match {
-          case SExpList(head :: IntAtom(procId) :: SymbolAtom(tpe) ::(params: SExp) :: body) => {
+          case SExpList(head :: IntAtom(procId) :: SymbolAtom(tpe) ::(params: SExp) :: BooleanAtom(interactive) :: body) => {
             rpcTarget.rpcPerformRefactor(Symbol(tpe), procId,
-              listOrEmpty(params).toSymbolMap, callId)
+              listOrEmpty(params).toSymbolMap, interactive, callId)
           }
           case _ => oops
         }
