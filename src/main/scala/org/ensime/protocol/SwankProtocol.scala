@@ -1,14 +1,14 @@
 package org.ensime.protocol
 
 import java.io._
-import org.ensime.config.{ ProjectConfig, DebugConfig, ReplConfig }
-import org.ensime.debug.{ DebugUnit, DebugSourceLinePairs }
+import org.ensime.config.{ProjectConfig, DebugConfig, ReplConfig}
+import org.ensime.debug.{DebugUnit, DebugSourceLinePairs}
 import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
 import org.ensime.util.SExp._
 import scala.actors._
-import scala.tools.nsc.util.{ Position, RangePosition }
+import scala.tools.nsc.util.{Position, RangePosition}
 import scala.tools.refactoring.common.Change
 import scala.util.parsing.input
 

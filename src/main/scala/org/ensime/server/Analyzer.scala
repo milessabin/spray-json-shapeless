@@ -1,7 +1,6 @@
 package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
-import org.ensime.model._
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
