@@ -30,6 +30,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - [Overview (a bit out of date)](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 - [Searching](http://www.youtube.com/watch?v=fcgnAJz98QE)
 - [Debugger Support](http://www.youtube.com/watch?v=v7-G6vD42z8)
+- [Import Suggestions](http://www.youtube.com/watch?v=Ynp8Df7-paw&hd=1)
 
 
 
