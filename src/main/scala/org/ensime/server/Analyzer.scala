@@ -39,7 +39,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, indexer, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config, indexer)
-  protected var awaitingInitialCompile = true
+  protected var awaitingInitialCompile = false
 
   import protocol._
   import scalaCompiler._

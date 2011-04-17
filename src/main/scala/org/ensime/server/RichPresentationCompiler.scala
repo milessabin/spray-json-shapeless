@@ -4,7 +4,8 @@ import org.ensime.model._
 import scala.actors.Actor._
 import scala.collection.mutable
 import scala.tools.nsc.{ Settings, FatalError }
-import scala.tools.nsc.interactive.{ Global, CompilerControl }
+import scala.tools.nsc.interactive.{ 
+  Global, CompilerControl, PresentationCompilerThread }
 import scala.tools.nsc.reporters.{ Reporter }
 import scala.tools.nsc.symtab.{ Flags, Types }
 import scala.tools.nsc.util.{ SourceFile, Position, RangePosition }
@@ -60,7 +61,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
 
   def askReloadAllFiles() = {
     val all = ((config.sourceFilenames.map(getSourceFile(_))) ++
-      firsts).toSet.toList
+      allSources).toSet.toList
     askReloadFiles(all)
   }
 
@@ -109,6 +110,9 @@ class RichPresentationCompiler(
   with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
   with RefactoringImpl with IndexerInterface {
 
+  override val debugIDE: Boolean = true
+  override val verboseIDE: Boolean = true
+
   import ModelHelpers._
 
   private val symsByFile = new mutable.HashMap[AbstractFile, mutable.LinkedHashSet[Symbol]] {
@@ -135,7 +139,7 @@ class RichPresentationCompiler(
    * never be reloaded again.
    */
   def removeAllDeleted() {
-    firsts = firsts.filter { _.file.exists }
+    allSources = allSources.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
     for (f <- deleted) {
       removeDeleted(f)
@@ -502,10 +506,10 @@ class RichPresentationCompiler(
   /**
    * Override so we send a notification to compiler actor when finished..
    */
-  override def recompile(units: List[RichCompilationUnit]) {
-    super.recompile(units)
-    parent ! FullTypeCheckCompleteEvent()
-  }
+  // override def recompile(units: List[RichCompilationUnit]) {
+  //   super.recompile(units)
+  //   parent ! FullTypeCheckCompleteEvent()
+  // }
 
   protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
     sources.foreach { s =>
