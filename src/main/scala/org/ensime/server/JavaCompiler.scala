@@ -60,12 +60,13 @@ class JavaCompiler(config: ProjectConfig, var indexer: Actor) {
             pos)
         }
 
-        // Remember package name
-        val i = key.lastIndexOf(".")
-        if (i > -1) {
-          val packName = key.substring(0, i)
-          knownPackages += packName
-        }
+        // Remember package names
+        var i = key.indexOf(".")
+	while(i > -1){
+	  val packName = key.substring(0, i)
+	  knownPackages += packName
+	  i = key.indexOf(".", i + 1);
+	}
       }
       indexer ! AddSymbolsReq(infos)
     }
