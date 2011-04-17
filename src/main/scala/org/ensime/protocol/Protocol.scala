@@ -186,7 +186,11 @@ trait Protocol extends ProtocolConversions {
    * @param notes  The notes
    * @return        Void
    */
-  def sendTypeCheckResult(notes: NoteList)
+  def sendNotes(lang: scala.Symbol, notes: NoteList)
+
+  def sendClearNotes(lang: scala.Symbol, files: List[String])
+
+  def sendClearAllNotes(lang: scala.Symbol)
 
 }
 

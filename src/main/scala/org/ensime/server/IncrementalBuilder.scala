@@ -44,8 +44,8 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
 
   private val settings = new Settings(Console.println)
   settings.processArguments(config.builderArgs, false)
-  private val reporter = new PresentationReporter(new UserMessages{
-      override def showError(str:String){
+  private val reporter = new PresentationReporter(new ReportHandler{
+      override def messageUser(str:String){
 	project ! SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))
       }
     })

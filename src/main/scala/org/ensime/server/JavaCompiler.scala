@@ -19,7 +19,7 @@ import scala.collection.{ mutable, Iterable }
 import scala.collection.JavaConversions._
 import scala.tools.nsc.ast._
 
-class JavaCompiler(config: ProjectConfig, var indexer: Actor) {
+class JavaCompiler(config: ProjectConfig, val reportHandler: ReportHandler, val indexer: Actor) {
 
   private val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
 
@@ -110,14 +110,13 @@ class JavaCompiler(config: ProjectConfig, var indexer: Actor) {
     CompilerOptions.OPTION_TargetPlatform -> "1.6"))
 
   class Requester(nameProvider: NameProvider) extends ICompilerRequestor {
-    def allNotes(): Iterable[Note] = {
-      problems.map(Note.apply)
-    }
-    private var problems: Iterable[IProblem] = List()
+    def allNotes(): List[Note] = problems
+    private var problems: List[Note] = List()
     override def acceptResult(result: CompilationResult) = {
       problems = List()
       if (result.hasProblems) {
-        problems = result.getProblems.toList
+        problems = result.getProblems.map(Note.apply).toList
+	reportHandler.reportJavaNotes(problems)
       }
       nameProvider.addClassFiles(result.getClassFiles)
     }
@@ -161,6 +160,7 @@ class JavaCompiler(config: ProjectConfig, var indexer: Actor) {
   }
 
   def compileFile(f: File) = {
+    reportHandler.clearJavaNotes(List(f.getCanonicalPath))
     addFile(f)
     try {
       for (u <- javaUnitForFile.get(f.getCanonicalPath)) {
@@ -180,10 +180,10 @@ class JavaCompiler(config: ProjectConfig, var indexer: Actor) {
 
   def reset() {
     compiler.reset
+    reportHandler.clearAllJavaNotes()
   }
 
   def shutdown() {
-    indexer = null
     compiler.reset
     javaUnitForFile.clear
   }

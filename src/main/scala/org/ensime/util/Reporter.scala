@@ -7,30 +7,34 @@ import scala.tools.nsc.symtab.{ Symbols, Types }
 import scala.tools.nsc.util.{ NoPosition, SourceFile, Position, OffsetPosition }
 import org.eclipse.jdt.core.compiler.IProblem
 
-trait UserMessages{
-  def showError(str:String):Unit
+trait ReportHandler {
+  def messageUser(str:String) {}
+  def clearAllScalaNotes(){}
+  def clearAllJavaNotes(){}
+  def clearScalaNotes(filenames: List[String]){}
+  def clearJavaNotes(filenames: List[String]){}
+  def reportScalaNotes(notes:List[Note]){}
+  def reportJavaNotes(notes:List[Note]){}
 }
 
-
-class PresentationReporter(msgs:UserMessages) extends Reporter {
+class PresentationReporter(handler:ReportHandler) extends Reporter {
 
   private val notes = new HashMap[SourceFile, HashSet[Note]] with SynchronizedMap[SourceFile, HashSet[Note]] {
     override def default(k: SourceFile) = { val v = new HashSet[Note]; put(k, v); v }
   }
 
-  def allNotes: Iterable[Note] = {
-    notes.flatMap { e => e._2 }.toList
-  }
+  def allNotes: Iterable[Note] = notes.flatMap { e => e._2 }.toList
 
   override def reset {
     super.reset
     notes.clear
+    handler.clearAllScalaNotes()
   }
 
   override def info(pos: Position, msg: String, force: Boolean) {
     if(msg.contains("MissingRequirementError: object scala not found") || 
       msg.contains("MissingRequirementError: class scala.runtime.BooleanRef not found")){
-      msgs.showError("Fatal Error: Scala language library not found on classpath. You may need to run 'sbt update', or 'mvn update'.")
+      handler.messageUser("Fatal Error: Scala language library not found on classpath. You may need to run 'sbt update', or 'mvn update'.")
     }
     println("INFO: " + msg)
   }
@@ -48,8 +52,8 @@ class PresentationReporter(msgs:UserMessages) extends Reporter {
           pos.endOrPoint,
           pos.line,
           pos.column
-          )
-        notes(source) += note
+        )
+	handler.reportScalaNotes(List(note))
       }
     } catch {
       case ex: UnsupportedOperationException =>

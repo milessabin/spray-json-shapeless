@@ -16,11 +16,13 @@ case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: Option[String], callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
 
-case class TypeCheckResultEvent(notes: NoteList)
+case class ClearAllNotesEvent(lang: scala.Symbol)
+case class ClearNotesEvent(lang: scala.Symbol, filenames: List[String])
+case class NewNotesEvent(lang: scala.Symbol, notelist: NoteList)
+
 case class AnalyzerReadyEvent()
 case class AnalyzerShutdownEvent()
 case class IndexerReadyEvent()
-
 
 case class ReloadFileReq(file: File)
 case class ReloadAllReq()
@@ -77,8 +79,14 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           case msg: IndexerReadyEvent => {
             protocol.sendIndexerReady
           }
-          case result: TypeCheckResultEvent => {
-            protocol.sendTypeCheckResult(result.notes)
+          case NewNotesEvent(lang, notes:NoteList) => {
+            protocol.sendNotes(lang, notes)
+          }
+          case ClearNotesEvent(lang, filenames:List[String]) => {
+            protocol.sendClearNotes(lang, filenames)
+          }
+          case ClearAllNotesEvent(lang) => {
+            protocol.sendClearAllNotes(lang)
           }
           case AddUndo(sum, changes) => {
             addUndo(sum, changes)
