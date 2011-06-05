@@ -4,6 +4,18 @@ import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.symtab.{ Symbols, Types }
 import scala.tools.nsc.util.{ NoPosition, Position }
 
+
+object SymbolHelpers {
+  import scala.tools.nsc.symtab.Flags._
+  val Method = 'method
+  val Trait = 'trait
+  val Interface = 'interface
+  val Object = 'object
+  val Class = 'class
+  val Field = 'field
+  val Nil = 'nil
+}
+
 trait Helpers { self: Global =>
 
   import definitions.{ ObjectClass, ScalaObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
@@ -34,32 +46,32 @@ trait Helpers { self: Global =>
   }
 
   /**
-   * Convenience method to generate a String describing the type. Omit
-   * the package name. Include the arguments postfix.
-   *
-   * Used for type-names of symbol and member completions
-   */
+  * Convenience method to generate a String describing the type. Omit
+  * the package name. Include the arguments postfix.
+  *
+  * Used for type-names of symbol and member completions
+  */
   def typeShortNameWithArgs(tpe: Type): String = {
     if (isArrowType(tpe)) {
       (tpe.paramss.map { sect =>
-        "(" +
+          "(" +
           sect.map { p => typeShortNameWithArgs(p.tpe) }.mkString(", ") +
           ")"
-      }.mkString(" => ")
+	}.mkString(" => ")
         + " => " +
         typeShortNameWithArgs(tpe.finalResultType))
     } else {
       (typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
-        "[" +
-          tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
-          "]"
-      } else { "" }))
+            "[" +
+            tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
+            "]"
+	  } else { "" }))
     }
   }
 
   /**
-   * Generate qualified name, without args postfix.
-   */
+  * Generate qualified name, without args postfix.
+  */
   def typeFullName(tpe: Type): String = {
     def nestedClassName(sym: Symbol): String = {
       outerClass(sym) match {
@@ -151,8 +163,8 @@ trait Helpers { self: Global =>
     def filterAndSort(symbols: Iterable[Symbol]) = {
       val validSyms = symbols.filter { s =>
         s != EmptyPackage && !isRoot(s) &&
-          // This check is necessary to prevent infinite looping..
-          ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
+        // This check is necessary to prevent infinite looping..
+        ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
       }
       validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
     }
@@ -166,31 +178,38 @@ trait Helpers { self: Global =>
 
   import scala.tools.nsc.symtab.Flags._
 
-  /* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala  
-    for details on various symbol predicates. */
+
+ /*
+   * See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala
+   * for details on various symbol predicates.
+   * 
+   * This is split out to work around scala bug 4560.
+   * 
+   * https://issues.scala-lang.org/browse/SI-4560
+   */
   def declaredAs(sym: Symbol): scala.Symbol = {
     if (sym.isMethod)
-      'method
+      SymbolHelpers.Method
     else if (sym.isTrait)
-      'trait
+      SymbolHelpers.Trait
     else if (sym.isTrait && sym.hasFlag(JAVA))
-      'interface
+      SymbolHelpers.Interface
     else if (sym.isInterface)
-      'interface
+      SymbolHelpers.Interface
     else if (sym.isModule)
-      'object
+      SymbolHelpers.Object
     else if (sym.isModuleClass)
-      'object
+      SymbolHelpers.Object
     else if (sym.isClass)
-      'class
+      SymbolHelpers.Class
     else if (sym.isPackageClass)
-      'class
+      SymbolHelpers.Class
 
     // check this last so objects are not
     // classified as fields
     else if (sym.isValue || sym.isVariable)
-      'field
-    else 'nil
+      SymbolHelpers.Field
+    else SymbolHelpers.Nil
   }
 
 }

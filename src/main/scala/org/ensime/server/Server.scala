@@ -20,6 +20,7 @@ object Server {
         { f: String => portfile = f })
     }
 
+
     if (parser.parse(args)) {
 
       // TODO add an option to change the protocol

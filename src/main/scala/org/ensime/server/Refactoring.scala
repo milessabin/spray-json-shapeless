@@ -33,7 +33,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
     tpe: scala.Symbol,
     parameters: refactoring.RefactoringParameters): Either[RefactorFailure, RefactorEffect] = {
 
-    val selection = refactoring.FileSelection(AbstractFile.getFile(file), start, end)
+    val selection = new refactoring.FileSelection(AbstractFile.getFile(file), start, end)
 
     refactoring.prepare(selection) match {
       case Right(prepare) =>
@@ -192,7 +192,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     val refactoring = new AddImportStatement {
       val global = RefactoringImpl.this
     }
-    val selection = refactoring.FileSelection(AbstractFile.getFile(file), start, end)
+    val selection = new refactoring.FileSelection(AbstractFile.getFile(file), start, end)
     val modifications = refactoring.addImport(selection, qualName)
     Right(new RefactorEffect {
         val procedureId = procId
