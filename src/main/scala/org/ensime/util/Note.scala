@@ -1,11 +1,10 @@
 package org.ensime.util
 
-import scala.collection.mutable.{ ArrayBuffer, SynchronizedMap, LinkedHashMap, HashMap, HashEntry, HashSet }
-import scala.tools.nsc.interactive.{ Global, CompilerControl }
-import scala.tools.nsc.reporters.{ Reporter, ConsoleReporter }
-import scala.tools.nsc.symtab.{ Symbols, Types }
-import scala.tools.nsc.util.{ NoPosition, SourceFile, Position, OffsetPosition }
 import org.eclipse.jdt.core.compiler.IProblem
+import scala.collection.mutable.{HashEntry, SynchronizedMap}
+import scala.tools.nsc.interactive.CompilerControl
+import scala.tools.nsc.reporters.{ConsoleReporter, Reporter}
+import scala.tools.nsc.util.{OffsetPosition, SourceFile}
 
 case class NoteList(full: Boolean, notes: Iterable[Note])
 

@@ -1,17 +1,17 @@
 package org.ensime.server
+import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import scala.actors.Actor._
-import scala.collection.mutable
-import scala.tools.nsc.{ Settings, FatalError }
-import scala.tools.nsc.interactive.{ Global, CompilerControl }
-import scala.tools.nsc.reporters.{ Reporter }
-import scala.tools.nsc.symtab.{ Flags, Types }
-import scala.tools.nsc.util.{ SourceFile, Position, RangePosition }
-import scala.tools.nsc.io.AbstractFile
-import scala.tools.refactoring.analysis.GlobalIndexes
-import java.io.File
 import scala.actors.Actor
+import scala.collection.mutable
+import scala.tools.nsc.interactive.{CompilerControl, Global}
+import scala.tools.nsc.io.AbstractFile
+import scala.tools.nsc.reporters.Reporter
+import scala.tools.nsc.symtab.Types
+import scala.tools.nsc.util.{Position, RangePosition, SourceFile}
+import scala.tools.nsc.Settings
+import scala.tools.refactoring.analysis.GlobalIndexes
 
 trait RichCompilerControl extends CompilerControl with RefactoringControl { self: RichPresentationCompiler =>
 

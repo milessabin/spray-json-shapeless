@@ -30,23 +30,7 @@ public class MavenDepsTask extends AbstractArtifactWithRepositoryTask{
 
 	public List<File> deps = new ArrayList<File>();
 
-	private List dependencies = new ArrayList();
-  
-	/**
-	 * The id of the path object containing a list of all dependencies.
-	 */
-	private String pathId;
-  
-	/**
-	 * The id of the fileset object containing a list of all dependencies.
-	 */
-	private String filesetId;
-  
-	/**
-	 * The id of the object containing a list of all artifact versions.
-	 * This is used for things like removing the version from the dependency filenames.
-	 */
-	private String versionsId;
+	private List<?> dependencies = new ArrayList<Object>();
   
 	/**
 	 * A specific maven scope used to determine which dependencies are resolved.
@@ -103,9 +87,9 @@ public class MavenDepsTask extends AbstractArtifactWithRepositoryTask{
 		log( "Resolving dependencies...", Project.MSG_VERBOSE );
     
 		ArtifactResolutionResult result;
-		Set artifacts;
+		Set<?> artifacts;
     
-		List remoteArtifactRepositories = createRemoteArtifactRepositories( pom.getRepositories() );
+		List<?> remoteArtifactRepositories = createRemoteArtifactRepositories( pom.getRepositories() );
     
 		try
 			{
@@ -114,9 +98,9 @@ public class MavenDepsTask extends AbstractArtifactWithRepositoryTask{
 				Artifact pomArtifact = artifactFactory.createBuildArtifact( pom.getGroupId(), pom.getArtifactId(),
 																			pom.getVersion(), pom.getPackaging() );
       
-				List listeners = Collections.singletonList( new AntResolutionListener( getProject() ) );
+				List<?> listeners = Collections.singletonList( new AntResolutionListener( getProject() ) );
       
-				Map managedDependencies = pom.getMavenProject().getManagedVersionMap();
+				Map<?,?> managedDependencies = pom.getMavenProject().getManagedVersionMap();
       
 				ArtifactFilter filter = null;
 				if ( useScope != null )
@@ -162,7 +146,7 @@ public class MavenDepsTask extends AbstractArtifactWithRepositoryTask{
 		Path dependencyPath = new Path(getProject());
 		Set<String> versions = new HashSet<String>();
     
-		for (Iterator i = result.getArtifacts().iterator(); i.hasNext(); ){
+		for (Iterator<?> i = result.getArtifacts().iterator(); i.hasNext(); ){
 			Artifact artifact = (Artifact) i.next();
 			addArtifactToResult( localRepo, artifact, dependencyPath );
 			versions.add( artifact.getVersion() );

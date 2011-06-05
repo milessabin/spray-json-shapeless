@@ -69,7 +69,7 @@ trait RefactoringHandler { self: Analyzer =>
 	}
 	// Execute the refactoring immediately..
 	else{
-	  project ! AddUndo("Refactoring of type: " + req.refactorType.toString, 
+	  project ! AddUndo("Refactoring of type: " + req.refactorType.toString,
 	    FileUtils.inverseChanges(effect.changes))
 	  val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
 	  result match {
