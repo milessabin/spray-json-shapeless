@@ -5,7 +5,7 @@ import scala.collection.{immutable, mutable}
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
-import scala.tools.refactoring.common.{Selections, Change}
+import scala.tools.refactoring.common.{Change, Selections}
 import scala.tools.refactoring.implementations._
 
 case class RefactorFailure(val procedureId: Int, val message: String)
@@ -211,10 +211,11 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     def badArgs = Left(RefactorFailure(procId, "Incorrect arguments passed to " +
 	tpe + ": " + params))
 
+    import org.ensime.util.{Symbols => S}
     try {
       tpe match {
-        case 'rename => {
-          (params.get('newName), params.get('file), params.get('start), params.get('end)) match {
+        case S.Rename => {
+          (params.get(S.NewName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doRename(procId, tpe, n, f, s, e)
@@ -222,8 +223,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
             case _ => badArgs
           }
         }
-        case 'extractMethod => {
-          (params.get('methodName), params.get('file), params.get('start), params.get('end)) match {
+        case S.ExtractMethod => {
+          (params.get('methodName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doExtractMethod(procId, tpe, n, f, s, e)
@@ -231,8 +232,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
             case _ => badArgs
           }
         }
-        case 'extractLocal => {
-          (params.get('name), params.get('file), params.get('start), params.get('end)) match {
+        case S.ExtractLocal => {
+          (params.get(S.Name), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doExtractLocal(procId, tpe, n, f, s, e)
@@ -240,8 +241,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
             case _ => badArgs
           }
         }
-        case 'inlineLocal => {
-          (params.get('file), params.get('start), params.get('end)) match {
+        case S.InlineLocal => {
+          (params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doInlineLocal(procId, tpe, f, s, e)
@@ -249,8 +250,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
             case _ => badArgs
           }
         }
-        case 'organizeImports => {
-          params.get('file) match {
+        case S.OrganizeImports => {
+          params.get(S.File) match {
             case Some(f: String) => {
 	      reloadAndType(f)
 	      doOrganizeImports(procId, tpe, f)
@@ -258,8 +259,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
             case _ => badArgs
           }
         }
-        case 'addImport => {
-          (params.get('qualifiedName), params.get('file), params.get('start), params.get('end)) match {
+        case S.AddImport => {
+          (params.get(S.QualifiedName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doAddImport(procId, tpe, n, f, s, e)
