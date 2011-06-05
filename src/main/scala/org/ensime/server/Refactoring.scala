@@ -224,7 +224,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           }
         }
         case S.ExtractMethod => {
-          (params.get('methodName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
+          (params.get(S.MethodName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doExtractMethod(procId, tpe, n, f, s, e)

@@ -32,6 +32,7 @@ object Symbols {
   val Name = 'name
   val Start = 'start
   val End = 'end
+  val MethodName = 'methodName
 
 }
 
