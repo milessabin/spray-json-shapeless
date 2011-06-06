@@ -5,6 +5,7 @@ import scala.collection.{immutable, mutable}
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
+import scala.tools.refactoring.common.CompilerAccess
 import scala.tools.refactoring.common.{Change, Selections}
 import scala.tools.refactoring.implementations._
 
@@ -26,14 +27,15 @@ trait RefactorResult extends RefactorProcedure {
 
 abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
 
-  val refactoring: MultiStageRefactoring
+  val refactoring: MultiStageRefactoring with CompilerAccess
 
   def performRefactoring(
     procId: Int,
     tpe: scala.Symbol,
     parameters: refactoring.RefactoringParameters): Either[RefactorFailure, RefactorEffect] = {
 
-    val selection = new refactoring.FileSelection(AbstractFile.getFile(file), start, end)
+    val af = AbstractFile.getFile(file)
+    val selection = new refactoring.FileSelection(af, refactoring.compilationUnitOfFile(af).get.body, start, end)
 
     refactoring.prepare(selection) match {
       case Right(prepare) =>
@@ -192,7 +194,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     val refactoring = new AddImportStatement {
       val global = RefactoringImpl.this
     }
-    val selection = new refactoring.FileSelection(AbstractFile.getFile(file), start, end)
+    val af = AbstractFile.getFile(file)
+    val selection = new refactoring.FileSelection(af, refactoring.compilationUnitOfFile(af).get.body, start, end)
     val modifications = refactoring.addImport(selection, qualName)
     Right(new RefactorEffect {
         val procedureId = procId

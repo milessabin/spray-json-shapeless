@@ -23,6 +23,10 @@ class PresentationReporter(handler:ReportHandler) extends Reporter {
 
   def allNotes: Iterable[Note] = notes.flatMap { e => e._2 }.toList
 
+  private var enabled = true
+  def enable(){ enabled = true }
+  def disable(){ enabled = false }
+
   override def reset {
     super.reset
     notes.clear
@@ -37,7 +41,7 @@ class PresentationReporter(handler:ReportHandler) extends Reporter {
     println("INFO: " + msg)
   }
 
-  override def info0(pos: Position, msg: String, severity: Severity, force: Boolean): Unit = {
+  override def info0(pos: Position, msg: String, severity: Severity, force: Boolean) {
     severity.count += 1
     try {
       if (pos.isDefined) {
@@ -51,10 +55,12 @@ class PresentationReporter(handler:ReportHandler) extends Reporter {
           pos.line,
           pos.column
         )
-	handler.reportScalaNotes(List(note))
+	if(enabled){
+	  handler.reportScalaNotes(List(note))
+	}
       }
     } catch {
-      case ex: UnsupportedOperationException =>
+      case ex: UnsupportedOperationException => {}
     }
   }
 

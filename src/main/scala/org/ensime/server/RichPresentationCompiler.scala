@@ -5,11 +5,11 @@ import org.ensime.model._
 import scala.actors.Actor._
 import scala.actors.Actor
 import scala.collection.mutable
-import scala.tools.nsc.interactive.{CompilerControl, Global}
+import scala.tools.nsc.interactive.{ CompilerControl, Global }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.symtab.Types
-import scala.tools.nsc.util.{Position, RangePosition, SourceFile}
+import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 
@@ -100,6 +100,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
 
   def askClearTypeCache() = clearTypeCache
 
+  def askNotifyWhenReady() = ask(setNotifyWhenReady)
+
   def sourceFileForPath(path: String) = getSourceFile(path)
 
 }
@@ -122,6 +124,9 @@ class RichPresentationCompiler(
       v
     }
   }
+
+  override val debugIDE: Boolean = true
+  override val verboseIDE: Boolean = true
 
   private val newTopLevelSyms = new mutable.LinkedHashSet[Symbol]
 
@@ -475,6 +480,20 @@ class RichPresentationCompiler(
     }
   }
 
+  private var notifyWhenReady = false
+
+  override def isOutOfDate():Boolean = {
+    if (notifyWhenReady && !super.isOutOfDate) {
+      parent ! AnalyzerReadyEvent()
+      notifyWhenReady = false
+    }
+    super.isOutOfDate
+  }
+
+  protected def setNotifyWhenReady() {
+    notifyWhenReady = true
+  }
+
   protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
     sources.foreach { s =>
       wrapTypedTree(s, true)
@@ -529,5 +548,6 @@ class RichPresentationCompiler(
 
   def wrapTypedTreeAt(position: Position): Tree =
     wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
+
 }
 
