@@ -171,6 +171,14 @@ trait Protocol extends ProtocolConversions {
   def sendCompilerReady()
 
   /**
+   * Send a notification that a full typecheck has complete and
+   * the compiler is now in an up-to-date state.
+   *
+   * @return        Void
+   */
+  def sendFullTypeCheckComplete()
+
+  /**
    * Send a notification that the indexer has completed indexing
    * the classpath.
    *

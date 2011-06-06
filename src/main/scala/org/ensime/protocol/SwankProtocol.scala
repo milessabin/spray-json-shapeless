@@ -464,6 +464,8 @@ trait SwankProtocol extends Protocol {
 
   def sendCompilerReady() = sendMessage(SExp(key(":compiler-ready"), true))
 
+  def sendFullTypeCheckComplete() = sendMessage(SExp(key(":full-typecheck-finished"), true))
+
   def sendIndexerReady() = sendMessage(SExp(key(":indexer-ready"), true))
 
   def sendNotes(lang: scala.Symbol, notes: NoteList) {

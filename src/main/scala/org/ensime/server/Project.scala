@@ -73,8 +73,11 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           case IncomingMessageEvent(msg: WireFormat) => {
             protocol.handleIncomingMessage(msg)
           }
-          case msg: AnalyzerReadyEvent => {
+          case AnalyzerReadyEvent() => {
             protocol.sendCompilerReady
+          }
+          case FullTypeCheckCompleteEvent() => {
+            protocol.sendFullTypeCheckComplete
           }
           case msg: IndexerReadyEvent => {
             protocol.sendIndexerReady

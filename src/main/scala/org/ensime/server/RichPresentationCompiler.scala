@@ -484,7 +484,7 @@ class RichPresentationCompiler(
 
   override def isOutOfDate():Boolean = {
     if (notifyWhenReady && !super.isOutOfDate) {
-      parent ! AnalyzerReadyEvent()
+      parent ! FullTypeCheckCompleteEvent()
       notifyWhenReady = false
     }
     super.isOutOfDate
@@ -495,6 +495,7 @@ class RichPresentationCompiler(
   }
 
   protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
+    wrapReloadSources(sources.toList)
     sources.foreach { s =>
       wrapTypedTree(s, true)
     }
