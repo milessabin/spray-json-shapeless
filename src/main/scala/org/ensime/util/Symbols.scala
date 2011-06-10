@@ -1,12 +1,7 @@
 package org.ensime.util
 
 /*
-* See source at root/scala/trunk/src/compiler/scala/tools/nsc/symtab/Symbols.scala
-* for details on various symbol predicates.
-* 
-* This is split out to work around scala bug 4560.
-* 
-* https://issues.scala-lang.org/browse/SI-4560
+* https://issues.scala-lang.org/browse/SI-4601
 */
 
 object Symbols {

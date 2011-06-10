@@ -145,11 +145,13 @@ object ExternalConfigInterface {
   def getSbtConfig(baseDir: File,
     activeSubproject: Option[SbtSubproject]): ExternalConfig = {
 
+    
+
     val propFile = new File(baseDir, "project/build.properties")
     println("Loading sbt build.properties from " + propFile + ".")
     val props = JavaProperties.load(propFile)
 
-    val v = props.get("build.scala.versions").map(_.toString).getOrElse("2.8.1")
+    val v = props.get("build.scala.versions").map(_.toString).getOrElse("2.9.0")
     val projName = props.get("project.name").map(_.toString)
     println("sbt Scala Build version is " + v)
 

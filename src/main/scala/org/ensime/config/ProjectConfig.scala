@@ -148,12 +148,19 @@ object ProjectConfig {
 
     if (conf.useSbt) {
       println("Using sbt..")
-      val ext = getSbtConfig(rootDir, conf.sbtActiveSubproject)
-      projectName = ext.projectName
-      sourceRoots ++= ext.sourceRoots
-      runtimeDeps ++= ext.runtimeDepJars
-      compileDeps ++= ext.compileDepJars
-      target = ext.target
+      Sbt.getConfig(rootDir, conf.sbtActiveSubproject) match{
+	case Right(ext) => {
+	  projectName = ext.projectName
+	  sourceRoots ++= ext.sourceRoots
+	  runtimeDeps ++= ext.runtimeDepJars
+	  compileDeps ++= ext.compileDepJars
+	  target = ext.target
+	}
+	case Left(except) => {
+	  System.err.println("Failed to load Sbt project information. Reason:")
+	  except.printStackTrace(System.err)
+	}
+      }
     }
 
     if (conf.useMaven) {
