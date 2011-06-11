@@ -9,31 +9,30 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 import scalariform.formatter.preferences._
 
+trait FormatHandler {
+  def rootDir(): Option[String]
+  def useSbt(): Boolean
+  def useMaven(): Boolean
+  def useIvy(): Boolean
+  def sbtActiveSubproject(): Option[SbtSubproject]
+  def ivyRuntimeConf(): Option[String]
+  def ivyCompileConf(): Option[String]
+  def ivyTestConf(): Option[String]
+  def ivyFile(): Option[String]
+  def runtimeJars(): List[String]
+  def excludeRuntimeJars(): List[String]
+  def compileJars(): List[String]
+  def excludeCompileJars(): List[String]
+  def classDirs(): List[String]
+  def sources(): List[String]
+  def target(): Option[String]
+  def projectName(): Option[String]
+  def formatPrefs(): Map[Symbol, Any]
+  def disableIndexOnStartup(): Boolean
+  def excludeFromIndex(): List[Regex]
+}
+
 object ProjectConfig {
-
-  trait FormatHandler {
-    def rootDir(): Option[String]
-    def useSbt(): Boolean
-    def useMaven(): Boolean
-    def useIvy(): Boolean
-    def sbtActiveSubproject(): Option[SbtSubproject]
-    def ivyRuntimeConf(): Option[String]
-    def ivyCompileConf(): Option[String]
-    def ivyTestConf(): Option[String]
-    def ivyFile(): Option[String]
-    def runtimeJars(): List[String]
-    def excludeRuntimeJars(): List[String]
-    def compileJars(): List[String]
-    def excludeCompileJars(): List[String]
-    def classDirs(): List[String]
-    def sources(): List[String]
-    def target(): Option[String]
-    def projectName(): Option[String]
-    def formatPrefs(): Map[Symbol, Any]
-    def disableIndexOnStartup(): Boolean
-    def excludeFromIndex(): List[Regex]
-  }
-
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
     val m = config.toKeywordMap
     private def getStr(name: String): Option[String] = m.get(key(name)) match {
@@ -130,8 +129,6 @@ object ProjectConfig {
 
   def load(conf: FormatHandler): ProjectConfig = {
 
-    import ExternalConfigInterface._
-
     val rootDir: CanonFile = conf.rootDir match {
       case Some(str) => new File(str)
       case _ => new File(".")
@@ -146,45 +143,25 @@ object ProjectConfig {
     var target: Option[CanonFile] = None
     var projectName: Option[String] = None
 
-    if (conf.useSbt) {
-      println("Using sbt..")
-      Sbt.getConfig(rootDir, conf.sbtActiveSubproject) match{
-	case Right(ext) => {
-	  projectName = ext.projectName
-	  sourceRoots ++= ext.sourceRoots
-	  runtimeDeps ++= ext.runtimeDepJars
-	  compileDeps ++= ext.compileDepJars
-	  target = ext.target
-	}
-	case Left(except) => {
-	  System.err.println("Failed to load Sbt project information. Reason:")
-	  except.printStackTrace(System.err)
-	}
+    val externalConf = if (conf.useSbt) Some(Sbt)
+    else if (conf.useMaven) Some(Maven)
+    else if (conf.useIvy) Some(Ivy)
+    else None
+
+    for (configurator <- externalConf) {
+      configurator.getConfig(rootDir, conf) match {
+        case Right(ext) => {
+          projectName = ext.projectName
+          sourceRoots ++= ext.sourceRoots
+          runtimeDeps ++= ext.runtimeDepJars
+          compileDeps ++= ext.compileDepJars
+          target = ext.target
+        }
+        case Left(except) => {
+          System.err.println("Failed to load external project information. Reason:")
+          except.printStackTrace(System.err)
+        }
       }
-    }
-
-    if (conf.useMaven) {
-      println("Using maven..")
-      val ext = getMavenConfig(rootDir)
-      projectName = ext.projectName
-      sourceRoots ++= ext.sourceRoots
-      runtimeDeps ++= ext.runtimeDepJars
-      compileDeps ++= ext.compileDepJars
-      target = ext.target
-    }
-
-    if (conf.useIvy) {
-      println("Using ivy..")
-      val ext = getIvyConfig(
-        rootDir, conf.ivyFile.map { new File(_) },
-        conf.ivyRuntimeConf,
-        conf.ivyCompileConf,
-        conf.ivyTestConf)
-      sourceRoots ++= ext.sourceRoots
-      runtimeDeps ++= ext.runtimeDepJars
-      compileDeps ++= ext.compileDepJars
-      compileDeps ++= ext.testDepJars
-      target = ext.target
     }
 
     {
