@@ -216,14 +216,6 @@ object ProjectConfig {
     val formatPrefs: Map[Symbol, Any] = conf.formatPrefs
     println("Using formatting preferences: " + formatPrefs)
 
-    // Provide fix for 2.8.0 backwards compatibility
-    val implicitNotFoundJar = new File("lib/implicitNotFound.jar")
-    assert(implicitNotFoundJar.exists, {
-	System.err.println(
-          "lib/implicitNotFound.jar not found! 2.8.0 compatibility may be broken.")
-      })
-    compileDeps += implicitNotFoundJar
-
     // Provide some reasonable defaults..
     target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
     println("Using target directory: " + target.getOrElse("ERROR"))
