@@ -12,9 +12,8 @@ class EnsimeProject(info: ProjectInfo) extends DefaultProject(info){
   val ivy = "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test"
   val maven = "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test"
   val scalatest = "org.scalatest" % "scalatest_2.9.0" % "1.4.1" % "test"
-//  val jdt = "org.eclipse.jdt" % "core" % "3.4.2.v_883_R34x" % "compile;runtime;test"
   val jdt = "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test"
-//  val scalariform = "org.scalariform" %% "scalariform" % "0.0.9" % "compile;runtime;test"
+  val scalariform = "org.scalariform" % "scalariform_2.9.0" % "0.1.0" % "compile;runtime;test"
 //  val refactoring = "org.scala-refactoring" % "org.scala-refactoring.library" % "0.2.0-SNAPSHOT"%"compile;runtime;test"
 
   val asm = "asm" % "asm" % "3.2"

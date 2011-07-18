@@ -357,14 +357,24 @@ class ProjectConfig(
       fp.setPreference(IndentPackageBlocks, value)
       case ('indentSpaces, value: Int) =>
       fp.setPreference(IndentSpaces, value)
+      case ('indentWithTabs, value: Boolean) =>
+      fp.setPreference(IndentWithTabs, value)
+      case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
+      fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
       case ('preserveDanglingCloseParenthesis, value: Boolean) =>
       fp.setPreference(PreserveDanglingCloseParenthesis, value)
       case ('preserveSpaceBeforeArguments, value: Boolean) =>
       fp.setPreference(PreserveSpaceBeforeArguments, value)
-      case ('rewriteArrowSymbols, value: Boolean) =>
-      fp.setPreference(RewriteArrowSymbols, value)
+      case ('spaceInsideBrackets, value: Boolean) =>
+      fp.setPreference(SpaceInsideBrackets, value)
+      case ('spaceInsideParentheses, value: Boolean) =>
+      fp.setPreference(SpaceInsideParentheses, value)
       case ('spaceBeforeColon, value: Boolean) =>
       fp.setPreference(SpaceBeforeColon, value)
+      case ('spacesWithinPatternBinders, value: Boolean) =>
+      fp.setPreference(SpacesWithinPatternBinders, value)
+      case ('rewriteArrowSymbols, value: Boolean) =>
+      fp.setPreference(RewriteArrowSymbols, value)
       case (name, _) => {
         System.err.println("Oops, unrecognized formatting option: " + name)
         fp
