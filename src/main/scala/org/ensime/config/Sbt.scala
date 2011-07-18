@@ -59,6 +59,37 @@ object Sbt extends ExternalConfigurator {
   }
 
   def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
+    //    getConfig7()
+    getConfig10(baseDir, conf)
+  }
+
+  private def getConfig10(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
+    // ExpectJ object with a timeout of 5s
+    val expectinator = new ExpectJ()
+    implicit val shell = expectinator.spawn("./bin/cmd-at "  +baseDir.getCanonicalPath + " sbt10")
+    shell.expect(prompt)
+    conf.sbtActiveSubproject match {
+      case Some(sub) => {
+        evalUnit("project " + sub.name)
+      }
+      case None => _
+    }
+
+    val name = eval("show name")
+    val org = eval("show organization")
+//    val sbtVersion = eval("sbtVersion.value")
+//    val projectVersion = eval("p.version")
+//    val buildScalaVersion = eval("p.buildScalaVersion")
+//    val compileDeps = evalList("(p.compileClasspath +++ p.fullClasspath(Configurations.Test)).get.toList.map(_.toString)")
+//    val testDeps = evalList("(p.testClasspath).get.toList.map(_.toString)")
+//    val runtimeDeps = evalList("(p.runClasspath  +++ p.fullClasspath(Configurations.Test)).get.toList.map(_.toString)")
+//    val sourceRoots = evalList("(p.mainSourceRoots +++ p.testSourceRoots).get.toList.map(_.toString)")
+//    val target = eval("p.outputPath.toString")
+
+    
+  }
+
+  private def getConfig7(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
     try {
       // ExpectJ object with a timeout of 5s
       val expectinator = new ExpectJ()
@@ -101,8 +132,8 @@ object Sbt extends ExternalConfigurator {
       val targetDir = if (f.exists) { Some(toCanonFile(f)) } else { None }
 
       Right(ExternalConfig(Some(name), sourceRootFiles,
-        runtimeDepJars, compileDepJars, testDepJars,
-        targetDir))
+          runtimeDepJars, compileDepJars, testDepJars,
+          targetDir))
 
     } catch {
       case e: expectj.TimeoutException => Left(e)
