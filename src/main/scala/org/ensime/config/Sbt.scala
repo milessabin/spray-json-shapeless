@@ -85,34 +85,26 @@ object Sbt extends ExternalConfigurator {
       mostRecentStr
     }
 
-    def evalSettingStr(expr: String)(implicit shell: Spawn): String = {
+    def showSetting(expr: String)(implicit shell: Spawn): String = {
       shell.send("show " + expr + "\n")
       shell.expect(prompt)
       parseSettingStr(mostRecentStr) match {
-	case Some(s) => println("found " + s); s
+	case Some(s) => s
 	case _ => throw new RuntimeException("Failed to parse result of " + expr)
       }
     }
 
-
     import scala.util.parsing.input._
     import scala.util.parsing.combinator._
-
     object ListParser extends RegexParsers {
-      
       def listOpen = regex(new Regex("List\\("))
       def listClose = regex(new Regex("\\)"))
       def attrOpen = regex(new Regex("Attributed\\("))
       def attrClose = regex(new Regex("\\)"))
-
       def list = listOpen ~> repsep(file, ", ") <~ listClose
-
       def file = (attrFile | unAttrFile)
-
       def attrFile = attrOpen ~> unAttrFile <~ attrClose
-
-      def unAttrFile = regex(new Regex("[a-zA-z\\.\\/]+"))
-
+      def unAttrFile = regex(new Regex("[^\\),]+"))
     }
 
     def parseAttributedFilesList(s: String):List[String] = {
@@ -136,7 +128,7 @@ object Sbt extends ExternalConfigurator {
       val pathToSbtJar = (new File(".", "bin/sbt-launch-0.10.1.jar")).getCanonicalPath()
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
-	    val pb = new ProcessBuilder("java", "-jar", pathToSbtJar)
+	    val pb = new ProcessBuilder("java", "-Dsbt.log.noformat=true", "-jar", pathToSbtJar)
 	    pb.directory(baseDir)
 	    pb.start()
 	  }
@@ -167,24 +159,24 @@ object Sbt extends ExternalConfigurator {
 
     evalNoop()
 
-    val name = evalSettingStr("name")
-    val org = evalSettingStr("organization")
-    val projectVersion = evalSettingStr("version")
-    val buildScalaVersion = evalSettingStr("scala-version")
+    val name = showSetting("name")
+    val org = showSetting("organization")
+    val projectVersion = showSetting("version")
+    val buildScalaVersion = showSetting("scala-version")
 
-    val compileDeps = parseAttributedFilesList(evalSettingStr("compile:dependency-classpath"))
+    val compileDeps = parseAttributedFilesList(showSetting("compile:dependency-classpath"))
     val testDeps = (
-      parseAttributedFilesList(evalSettingStr("test:external-dependency-classpath")) ++ 
-      parseAttributedFilesList(evalSettingStr("test:managed-classpath")) ++ 
-      parseAttributedFilesList(evalSettingStr("test:unmanaged-classpath"))
+      parseAttributedFilesList(showSetting("test:external-dependency-classpath")) ++ 
+      parseAttributedFilesList(showSetting("test:managed-classpath")) ++ 
+      parseAttributedFilesList(showSetting("test:unmanaged-classpath"))
     )
     val runtimeDeps = (
-      parseAttributedFilesList(evalSettingStr("runtime:external-dependency-classpath")) ++ 
-      parseAttributedFilesList(evalSettingStr("runtime:managed-classpath")) ++ 
-      parseAttributedFilesList(evalSettingStr("runtime:unmanaged-classpath"))
+      parseAttributedFilesList(showSetting("runtime:external-dependency-classpath")) ++ 
+      parseAttributedFilesList(showSetting("runtime:managed-classpath")) ++ 
+      parseAttributedFilesList(showSetting("runtime:unmanaged-classpath"))
     )
-    val sourceRoots = parseAttributedFilesList(evalSettingStr("source-directories"))
-    val target = CanonFile(evalSettingStr("target"))
+    val sourceRoots = parseAttributedFilesList(showSetting("source-directories"))
+    val target = CanonFile(showSetting("target"))
 
     shell.send("exit\n")
     shell.expectClose()
