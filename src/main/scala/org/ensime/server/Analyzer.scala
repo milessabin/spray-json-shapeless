@@ -111,6 +111,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case RemoveFileReq(file: File) => {
                     askRemoveDeleted(file)
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
 
                   case ReloadAllReq() => {
@@ -119,6 +120,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     scalaCompiler.askRemoveAllDeleted()
                     scalaCompiler.askReloadAllFiles()
                     scalaCompiler.askNotifyWhenReady()
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
 
                   case ReloadFileReq(file: File) => {

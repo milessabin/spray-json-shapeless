@@ -91,7 +91,7 @@ object EnsimeBuild extends Build {
       "./etc/scripts/server.bat",
       "./dist/bin/server.bat")
 
-    copyFile(root / "etc" / "sbt-launch-0.10.1.jar", root / "dist" / "bin" / "sbt-launch-0.10.1.jar")
+    copy(root / "etc" ** "sbt-launch-*.jar" x flat(root / "dist" / "bin"))
 
     copyFile(root / "README.md", root / "dist" / "README.md")
     copyFile(root / "LICENSE", root / "dist" / "LICENSE")

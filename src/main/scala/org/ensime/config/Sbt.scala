@@ -60,11 +60,24 @@ object Sbt extends ExternalConfigurator {
       }
     }
 
+    def spawn(baseDir: File): Spawn = {
+      val expectinator = new ExpectJ()
+      val pathToSbtJar = (new File(".", "bin/sbt-launch-0.7.7.jar")).getCanonicalPath()
+      expectinator.spawn(new Executor(){
+	  def execute():Process = {
+	    val pb = new ProcessBuilder("java", "-Dsbt.log.noformat=true", "-jar", pathToSbtJar, "console-project")
+	    pb.directory(baseDir)
+	    pb.start()
+	  }
+	  override def toString():String = "ENSIME-controlled sbt7 process"
+	})
+    }
+
   }
 
 
   private object sbt10{
-    val singleLineSetting: Pattern = Pattern.compile("^[^ ]+info[^ ]+ (.+)$", Pattern.MULTILINE)
+    val singleLineSetting: Pattern = Pattern.compile("^\\[info\\] (.+)$", Pattern.MULTILINE)
     val prompt: String = "> "
 
     def parseSettingStr(input: String): Option[String] = {
@@ -199,9 +212,8 @@ object Sbt extends ExternalConfigurator {
     try {
 
       // ExpectJ object with a timeout of 5s
-      val expectinator = new ExpectJ()
-      implicit val shell = expectinator.spawn("./bin/cmd-at " +
-	baseDir.getCanonicalPath + " sbt console-project")
+      implicit val shell = spawn(baseDir)
+
       shell.expect(prompt)
 
       conf.sbtActiveSubproject match {
