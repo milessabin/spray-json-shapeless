@@ -35,6 +35,13 @@ object CanonFile {
       case e: Exception => new CanonFile(file.getAbsolutePath)
     }
   }
+  def apply(str: String) = {
+    try {
+      new CanonFile(new File(str).getCanonicalPath)
+    } catch {
+      case e: Exception => new CanonFile(str)
+    }
+  }
 }
 
 object FileUtils {

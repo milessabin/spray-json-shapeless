@@ -91,8 +91,7 @@ object EnsimeBuild extends Build {
       "./etc/scripts/server.bat",
       "./dist/bin/server.bat")
 
-    copyFile(root / "etc" / "scripts" / "cmd-at", root / "dist" / "bin" / "cmd-at")
-    (root / "dist" / "bin" / "cmd-at").setExecutable(true)
+    copyFile(root / "etc" / "sbt-launch-0.10.1.jar", root / "dist" / "bin" / "sbt-launch-0.10.1.jar")
 
     copyFile(root / "README.md", root / "dist" / "README.md")
     copyFile(root / "LICENSE", root / "dist" / "LICENSE")
