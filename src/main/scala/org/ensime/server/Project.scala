@@ -17,7 +17,6 @@ case class RPCErrorEvent(code: Int, detail: Option[String], callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
 
 case class ClearAllNotesEvent(lang: scala.Symbol)
-case class ClearNotesEvent(lang: scala.Symbol, filenames: List[String])
 case class NewNotesEvent(lang: scala.Symbol, notelist: NoteList)
 
 case class AnalyzerReadyEvent()
@@ -84,9 +83,6 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
           }
           case NewNotesEvent(lang, notes:NoteList) => {
             protocol.sendNotes(lang, notes)
-          }
-          case ClearNotesEvent(lang, filenames:List[String]) => {
-            protocol.sendClearNotes(lang, filenames)
           }
           case ClearAllNotesEvent(lang) => {
             protocol.sendClearAllNotes(lang)

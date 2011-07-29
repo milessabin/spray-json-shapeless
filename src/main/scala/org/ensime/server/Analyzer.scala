@@ -37,12 +37,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     override def clearAllJavaNotes() {
       project ! ClearAllNotesEvent('java)
     }
-    override def clearScalaNotes(filenames: List[String]) {
-      project ! ClearNotesEvent('scala, filenames)
-    }
-    override def clearJavaNotes(filenames: List[String]) {
-      project ! ClearNotesEvent('java, filenames)
-    }
     override def reportScalaNotes(notes: List[Note]) {
       project ! NewNotesEvent('scala, NoteList(false, notes))
     }

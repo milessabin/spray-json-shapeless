@@ -196,8 +196,6 @@ trait Protocol extends ProtocolConversions {
    */
   def sendNotes(lang: scala.Symbol, notes: NoteList)
 
-  def sendClearNotes(lang: scala.Symbol, files: List[String])
-
   def sendClearAllNotes(lang: scala.Symbol)
 
 }

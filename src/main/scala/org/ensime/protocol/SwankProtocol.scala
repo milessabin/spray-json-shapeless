@@ -473,11 +473,6 @@ trait SwankProtocol extends Protocol {
     else if(lang == 'java) sendMessage(SExp(key(":java-notes"), toWF(notes)))
   }
 
-  def sendClearNotes(lang: scala.Symbol, files: List[String]) {
-    if(lang == 'scala) sendMessage(SExp(key(":clear-scala-notes"), toWF(files.map(toWF))))
-    else if(lang == 'java) sendMessage(SExp(key(":clear-java-notes"), toWF(files.map(toWF))))
-  }
-
   def sendClearAllNotes(lang: scala.Symbol) {
     if(lang == 'scala) sendMessage(SExp(key(":clear-all-scala-notes"), true))
     else if(lang == 'java) sendMessage(SExp(key(":clear-all-java-notes"), true))
