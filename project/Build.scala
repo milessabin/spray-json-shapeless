@@ -98,12 +98,11 @@ object EnsimeBuild extends Build {
   }
 
 
-
   var dist = TaskKey[Unit]("dist", "Create the release package.")
   lazy val distTask:Setting[sbt.Task[Unit]] = 
-  dist <<= (stage,moduleID,version,scalaVersion) map {
-    (_,id,version,scalaBuildVersion) =>
-    val modName = id + "_" + scalaBuildVersion + "-" + version
+  dist <<= (stage,version,scalaVersion) map {
+    (_,version,scalaBuildVersion) =>
+    val modName = "ensime_" + scalaBuildVersion + "-" + version
     val initialDir = new File(".")
     val archiveFile = new File(initialDir,
       modName + ".tar.gz").getCanonicalPath
