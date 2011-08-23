@@ -153,8 +153,15 @@ object Sbt extends ExternalConfigurator {
   }
 
   def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
-    //    getConfig7()
-    getConfig10(baseDir, conf)
+    val props = JavaProperties.load(new File(baseDir, "project/build.properties"))
+    props.get("sbt.version") match {
+      case Some(v:String) => {
+	if (v.startsWith("0.10")) getConfig10(baseDir, conf)
+	else if(v.startsWith("0.7")) getConfig7(baseDir, conf)
+	else Left(new RuntimeException("Unrecognized sbt version: " + v))
+      }
+      case None => getConfig10(baseDir, conf)
+    }
   }
 
   private def getConfig10(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
@@ -179,12 +186,12 @@ object Sbt extends ExternalConfigurator {
 
     val compileDeps = parseAttributedFilesList(showSetting("compile:dependency-classpath"))
     val testDeps = (
-      parseAttributedFilesList(showSetting("test:external-dependency-classpath")) ++ 
+      //      parseAttributedFilesList(showSetting("test:external-dependency-classpath")) ++ 
       parseAttributedFilesList(showSetting("test:managed-classpath")) ++ 
       parseAttributedFilesList(showSetting("test:unmanaged-classpath"))
     )
     val runtimeDeps = (
-      parseAttributedFilesList(showSetting("runtime:external-dependency-classpath")) ++ 
+      //      parseAttributedFilesList(showSetting("runtime:external-dependency-classpath")) ++ 
       parseAttributedFilesList(showSetting("runtime:managed-classpath")) ++ 
       parseAttributedFilesList(showSetting("runtime:unmanaged-classpath"))
     )
@@ -203,8 +210,8 @@ object Sbt extends ExternalConfigurator {
     val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
 
     Right(ExternalConfig(Some(name), sourceRootFiles,
-        runtimeDepJars, compileDepJars, testDepJars,
-        Some(target)))
+	runtimeDepJars, compileDepJars, testDepJars,
+	Some(target)))
   }
 
   private def getConfig7(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
