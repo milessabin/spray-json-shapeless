@@ -153,8 +153,8 @@ object ProjectConfig {
         case Right(ext) => {
           projectName = ext.projectName
           sourceRoots ++= ext.sourceRoots
-          runtimeDeps ++= ext.runtimeDepJars
-          compileDeps ++= ext.compileDepJars
+          runtimeDeps ++= ext.runtimeDepFiles
+          compileDeps ++= ext.compileDepFiles
           target = ext.target
         }
         case Left(except) => {
@@ -378,6 +378,7 @@ class ProjectConfig(
 
   def compilerArgs = List(
     "-classpath", compilerClasspath,
+    "-sourcepath", sourcepath,
     "-verbose")
 
   def builderArgs = List(

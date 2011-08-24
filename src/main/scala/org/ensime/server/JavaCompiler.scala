@@ -98,7 +98,7 @@ class JavaCompiler(config: ProjectConfig, val reportHandler: ReportHandler, val 
 
   }
 
-  private def classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath)
+  private def classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath) ++ config.target.map(t => Set[String](t.getAbsolutePath)).getOrElse(Set[String]())
 
   private val nameProvider = new NameProvider(classpath.toArray)
 
@@ -160,7 +160,7 @@ class JavaCompiler(config: ProjectConfig, val reportHandler: ReportHandler, val 
   }
 
   def compileFile(f: File) = {
-    reportHandler.clearJavaNotes(List(f.getCanonicalPath))
+    reportHandler.clearAllJavaNotes()
     addFile(f)
     try {
       for (u <- javaUnitForFile.get(f.getCanonicalPath)) {

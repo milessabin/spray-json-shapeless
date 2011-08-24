@@ -46,8 +46,9 @@ class PresentationReporter(handler:ReportHandler) extends Reporter {
     try {
       if (pos.isDefined) {
         val source = pos.source
+	val f = source.file.absolute.path
         val note = new Note(
-          source.file.absolute.path,
+          f,
           formatMessage(msg),
           severity.id,
           pos.startOrPoint,

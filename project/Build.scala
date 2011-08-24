@@ -128,10 +128,11 @@ object EnsimeBuild extends Build {
     val cwd = Some(new File("etc"))
     doSh("pdflatex manual.ltx", cwd)!!log
     doSh("cat manual_head.html > " + target, cwd)!!log
-    doSh("tth -r -u -Lmanual < manual.ltx >> " + target, cwd)!!(log)
+    doSh("tth -r -u -e2 -Lmanual < manual.ltx >> " + target, cwd)!!(log)
     doSh("cat manual_tail.html >> " + target, cwd)!!log
     log.info("Publishing manual to web...")
     doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
+    doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     None     
   }
 

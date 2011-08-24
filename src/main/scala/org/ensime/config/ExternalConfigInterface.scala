@@ -13,9 +13,9 @@ import java.util.Properties
 case class ExternalConfig(
   val projectName: Option[String],
   val sourceRoots: Iterable[CanonFile],
-  val runtimeDepJars: Iterable[CanonFile],
-  val compileDepJars: Iterable[CanonFile],
-  val testDepJars: Iterable[CanonFile],
+  val runtimeDepFiles: Iterable[CanonFile],
+  val compileDepFiles: Iterable[CanonFile],
+  val testDepFiles: Iterable[CanonFile],
   val target: Option[CanonFile]) {}
 
 trait ExternalConfigurator {

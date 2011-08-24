@@ -82,8 +82,11 @@ object Sbt extends ExternalConfigurator {
 
     def parseSettingStr(input: String): Option[String] = {
       val m = singleLineSetting.matcher(input);
-      if (m.find()) Some(m.group(1))
-      else None
+      var result: Option[String] = None
+      while (m.find()) {
+	result = Some(m.group(1))
+      }
+      result
     }
 
     def evalNoop()(implicit shell: Spawn): Unit = {
@@ -196,7 +199,7 @@ object Sbt extends ExternalConfigurator {
       parseAttributedFilesList(showSetting("runtime:unmanaged-classpath"))
     )
     val sourceRoots = parseAttributedFilesList(showSetting("source-directories"))
-    val target = CanonFile(showSetting("target"))
+    val target = CanonFile(showSetting("class-directory"))
 
     shell.send("exit\n")
     shell.expectClose()
@@ -204,13 +207,13 @@ object Sbt extends ExternalConfigurator {
 
     import FileUtils._
 
-    val compileDepJars = maybeFiles(compileDeps, baseDir).filter(isValidJar)
-    val testDepJars = maybeFiles(testDeps, baseDir).filter(isValidJar)
-    val runtimeDepJars = maybeFiles(runtimeDeps, baseDir).filter(isValidJar)
+    val compileDepFiles = maybeFiles(compileDeps, baseDir)
+    val testDepFiles = maybeFiles(testDeps, baseDir)
+    val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir)
     val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
 
     Right(ExternalConfig(Some(name), sourceRootFiles,
-	runtimeDepJars, compileDepJars, testDepJars,
+	runtimeDepFiles, compileDepFiles, testDepFiles,
 	Some(target)))
   }
 
@@ -250,15 +253,15 @@ object Sbt extends ExternalConfigurator {
       shell.stop()
 
       import FileUtils._
-      val compileDepJars = maybeFiles(compileDeps, baseDir).filter(isValidJar)
-      val testDepJars = maybeFiles(testDeps, baseDir).filter(isValidJar)
-      val runtimeDepJars = maybeFiles(runtimeDeps, baseDir).filter(isValidJar)
+      val compileDepFiles = maybeFiles(compileDeps, baseDir)
+      val testDepFiles = maybeFiles(testDeps, baseDir)
+      val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir)
       val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
       val f = new File(baseDir, target)
       val targetDir = if (f.exists) { Some(toCanonFile(f)) } else { None }
 
       Right(ExternalConfig(Some(name), sourceRootFiles,
-          runtimeDepJars, compileDepJars, testDepJars,
+          runtimeDepFiles, compileDepFiles, testDepFiles,
           targetDir))
 
     } catch {

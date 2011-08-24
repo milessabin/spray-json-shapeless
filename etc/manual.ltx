@@ -1,7 +1,7 @@
 \documentclass{article}
 
 \usepackage[utf8]{inputenc}
-
+\usepackage{graphics}
 \usepackage{amsmath}
 
 \newenvironment{mylisting}
@@ -655,7 +655,19 @@ Emacs starts the ENSIME server using the server.sh script in the \emph{bin} fold
 
 
 \subsection{The Swank Protocol}
-The Emacs ENSIME client communicates with the server using the Swank protocol. This protocol was originally developed for the SLIME lisp environment for Emacs and is therefore very 'lispy'. A socket connection is maintained for the duration of the session. The client and server exchange messages encoded as S-Expressions, separated by hex-encoded message lengths. See the E-Lisp function \emph{ensime-net-send} in ensime.el for details on how messages are sent from Emacs, and the functions readMessage and writeMessage in org.ensime.protocol.SwankProtocol for the Scala side of the conversation. What follows is a commented excerpt from the initialization of an ENSIME session. These SExps were copied from the \emph{*ensime-events*} buffer in Emacs which logs all protocol events (useful for learning the protocol!). Server messages are indented. Comments prefixed with \#.
+The Emacs ENSIME client communicates with the server using the Swank protocol. This protocol was originally developed for the SLIME lisp environment for Emacs. A socket connection is maintained for the duration of the session. The client and server exchange s-expressions. At the wire level, these messages are encoded as sequences of ASCII bytes. Each message is prepended with a fixed-size header denoting its length.
+
+To send an s-expression, determine its ASCII length and then encode that integer as a padded six-digit hexadecimal value.  Write this value to the output socket first, then followed by the ASCII form of the s-expression.  On the receiving side, the reader loop should read six ASCII characters into a buffer and convert that into an integer, then read that number of ASCII characters from the socket, parsing the result into an s-expression.\\
+
+\vspace{5 mm} 
+
+\includegraphics{wire_protocol.png} \\
+
+\vspace{7 mm} 
+
+See the E-Lisp function \emph{ensime-net-send} in ensime.el for details on how messages are sent from Emacs, and the function \emph{ensime-net-encode-length} for the implementation of the header encoding. See the functions readMessage and writeMessage in org.ensime.protocol.SwankProtocol to see how the messaging is handled in Scala. 
+
+At the application level, the s-expressions encode RPC calls, RPC responses, and events. RPC calls are used to make requests of the server. Events are generally used for the server to communicate un-prompted, asynchronous activity to the client -- such as an error or warning generated during compilation. What follows is a commented excerpt from the initialization of an ENSIME session. These s-expressions were copied from the \emph{*ensime-events*} buffer in Emacs which logs all protocol events (useful for learning the application protocol!). Server messages are indented. Comments prefixed with \#.
 
 \begin{mylisting}
 \begin{verbatim}
