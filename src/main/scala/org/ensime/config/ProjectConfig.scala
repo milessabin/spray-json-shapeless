@@ -378,7 +378,6 @@ class ProjectConfig(
 
   def compilerArgs = List(
     "-classpath", compilerClasspath,
-    "-sourcepath", sourcepath,
     "-verbose")
 
   def builderArgs = List(
