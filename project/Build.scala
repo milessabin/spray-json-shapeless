@@ -17,7 +17,7 @@ object EnsimeBuild extends Build {
   lazy val project = Project(
     "ensime",
     file (".")) settings(
-    version := "0.7.RC1",
+    version := "0.7.RC2",
     organization := "org.ensime",
     scalaVersion := "2.9.1",
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
@@ -38,6 +38,7 @@ object EnsimeBuild extends Build {
     exportJars := true,
     stageTask,
     distTask,
+    releaseTask,
     publishManualTask
   )
 
@@ -99,10 +100,19 @@ object EnsimeBuild extends Build {
 
 
   var dist = TaskKey[Unit]("dist", "Create the release package.")
-  lazy val distTask:Setting[sbt.Task[Unit]] = 
-  dist <<= (stage,version,scalaVersion) map {
+  lazy val distTask:Setting[sbt.Task[Unit]] = dist := {
+    println("The 'dist' task is deprecated. Use 'stage' to create release directory structure. Use 'release' to create the release archive.")
+    None
+  }
+
+
+  var release = TaskKey[Unit]("release", "Create the release package and tag the current commit.")
+  lazy val releaseTask:Setting[sbt.Task[Unit]] = 
+  release <<= (stage,version,scalaVersion) map {
     (_,version,scalaBuildVersion) =>
     val modName = "ensime_" + scalaBuildVersion + "-" + version
+    log.info("About to create archive '" + modName +"'. (Press Enter)")
+    scala.Console.readLine()
     val initialDir = new File(".")
     val archiveFile = new File(initialDir,
       modName + ".tar.gz").getCanonicalPath
@@ -115,6 +125,8 @@ object EnsimeBuild extends Build {
       log.info("Compressing temp directory to " + archiveFile + "...")
       doSh("tar -pcvzf " + archiveFile + " " + 
 	modName, Some(f)) !! (log)
+      doSh("git tag -s v" + version + 
+	" -m 'Tag for release " + modName + "'") !! (log)
       None
     }
     None
@@ -134,9 +146,9 @@ object EnsimeBuild extends Build {
     doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     None     
-  }
+    }
 
 
 
 
-}
+    }
