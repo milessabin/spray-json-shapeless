@@ -152,10 +152,19 @@ object ProjectConfig {
       configurator.getConfig(rootDir, conf) match {
         case Right(ext) => {
           projectName = ext.projectName
+	  println("External Config found project name: " + ext.projectName)
+
           sourceRoots ++= ext.sourceRoots
-          runtimeDeps ++= ext.runtimeDepFiles
+	  println("External Config found source roots: " + ext.sourceRoots)
+
           compileDeps ++= ext.compileDepFiles
+	  println("External Config found compile dependencies: " + ext.runtimeDepFiles)
+
+          runtimeDeps ++= ext.runtimeDepFiles
+	  println("External Config found runtime dependencies: " + ext.runtimeDepFiles)
+
           target = ext.target
+	  println("External Config found target: " + ext.target)
         }
         case Left(except) => {
           System.err.println("Failed to load external project information. Reason:")
@@ -200,7 +209,7 @@ object ProjectConfig {
 
     {
       val dirs = maybeDirs(conf.sources, rootDir)
-      println("Using source roots: " + dirs.mkString(", "))
+      println("Manually including source roots: " + dirs.mkString(", "))
       sourceRoots ++= dirs
     }
 

@@ -113,14 +113,14 @@ object Sbt extends ExternalConfigurator {
     import scala.util.parsing.input._
     import scala.util.parsing.combinator._
     object ListParser extends RegexParsers {
-      def listOpen = regex(new Regex("List\\("))
-      def listClose = regex(new Regex("\\)"))
-      def attrOpen = regex(new Regex("Attributed\\("))
-      def attrClose = regex(new Regex("\\)"))
+      def listOpen = regex("List\\(".r)
+      def listClose = regex("\\)".r)
+      def attrOpen = regex("Attributed\\(".r)
+      def attrClose = regex("\\)".r)
       def list = listOpen ~> repsep(file, ", ") <~ listClose
       def file = (attrFile | unAttrFile)
       def attrFile = attrOpen ~> unAttrFile <~ attrClose
-      def unAttrFile = regex(new Regex("[^\\),]+"))
+      def unAttrFile = regex("[^\\),]+".r)
     }
 
     def parseAttributedFilesList(s: String):List[String] = {
@@ -272,7 +272,14 @@ object Sbt extends ExternalConfigurator {
   }
 
   def main(args: Array[String]) {
-    //    println(getConfig(new File("."), None))
+
+    println(sbt10.parseAttributedFilesList("List(Attributed(/home/aemon/src/misc/ensime/lib/org.scala-refactoring_2.9.0-0.3.0-SNAPSHOT.jar), Attributed(/home/aemon/src/misc/ensime/lib/critbit-0.0.4.jar), Attributed(/home/aemon/src/misc/ensime/project/boot/scala-2.9.1/lib/scala-library.jar), Attributed(/home/aemon/src/misc/ensime/project/boot/scala-2.9.1/lib/scala-compiler.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.ant/ant/jars/ant-1.8.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.ant/ant-launcher/jars/ant-launcher-1.8.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.1.0.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-ant-tasks/jars/maven-ant-tasks-2.1.0.jar), Attributed(/home/aemon/.ivy2/cache/ant/ant/jars/ant-1.6.5.jar), Attributed(/home/aemon/.ivy2/cache/classworlds/classworlds/jars/classworlds-1.1-alpha-2.jar), Attributed(/home/aemon/.ivy2/cache/org.codehaus.plexus/plexus-container-default/jars/plexus-container-default-1.0-alpha-9-stable-1.jar), Attributed(/home/aemon/.ivy2/cache/org.codehaus.plexus/plexus-utils/jars/plexus-utils-1.5.15.jar), Attributed(/home/aemon/.ivy2/cache/org.codehaus.plexus/plexus-interpolation/jars/plexus-interpolation-1.11.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-artifact/jars/maven-artifact-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-artifact-manager/jars/maven-artifact-manager-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-repository-metadata/jars/maven-repository-metadata-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-provider-api/jars/wagon-provider-api-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/backport-util-concurrent/backport-util-concurrent/jars/backport-util-concurrent-3.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-model/jars/maven-model-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-project/jars/maven-project-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-settings/jars/maven-settings-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-profile/jars/maven-profile-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-plugin-registry/jars/maven-plugin-registry-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-error-diagnostics/jars/maven-error-diagnostics-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-file/jars/wagon-file-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-lightweight/jars/wagon-http-lightweight-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-shared/jars/wagon-http-shared-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/nekohtml/xercesMinimal/jars/xercesMinimal-1.9.6.2.jar), Attributed(/home/aemon/.ivy2/cache/nekohtml/nekohtml/jars/nekohtml-1.9.6.2.jar), Attributed(/home/aemon/.ivy2/cache/org.sonatype.tycho/org.eclipse.jdt.core/jars/org.eclipse.jdt.core-3.6.0.v_A58.jar), Attributed(/home/aemon/.ivy2/cache/org.scalariform/scalariform_2.9.0/jars/scalariform_2.9.0-0.1.0.jar), Attributed(/home/aemon/.ivy2/cache/net.sourceforge.expectj/expectj/jars/expectj-2.0.1.jar), Attributed(/home/aemon/.ivy2/cache/commons-logging/commons-logging/jars/commons-logging-1.1.1.jar), Attributed(/home/aemon/.ivy2/cache/asm/asm/jars/asm-3.2.jar), Attributed(/home/aemon/.ivy2/cache/asm/asm-commons/jars/asm-commons-3.2.jar), Attributed(/home/aemon/.ivy2/cache/asm/asm-tree/jars/asm-tree-3.2.jar))"))
+
+    println(sbt10.parseAttributedFilesList("List(/Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/scala, /Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/java, /Users/daniel/Local/ensime_2.9.1-0.7.RC1/target/scala-2.8.1.final/src_managed/main)"))
+
+    println(sbt10.parseAttributedFilesList("List(    /Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/scala,     /Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/java,    /Users/daniel/Local/ensime_2.9.1-0.7.RC1/target/scala-2.8.1.final/src_managed/main)"))
+
+
   }
 
 }
