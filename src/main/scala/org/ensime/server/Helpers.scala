@@ -1,5 +1,6 @@
 package org.ensime.model
 import scala.tools.nsc.interactive.{CompilerControl, Global}
+
 import scala.tools.nsc.symtab.{Symbols, Types}
 
 trait Helpers { self: Global =>
