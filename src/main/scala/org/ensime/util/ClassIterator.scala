@@ -1,12 +1,13 @@
 /**
 * Much of this code is derived from the excellent tool,
 * ClassUtil, by Brian M. Clapper
-* 
+*
 * Copyright 2010, Brian M. Clapp
 * All Rights Reserved
 */
 
 package org.ensime.util
+import org.ensime.config.Using
 
 import scala.collection.mutable.{ Set => MutableSet }
 import scala.collection.mutable.{ HashMap, HashSet }
@@ -46,20 +47,20 @@ private class ClassVisitor(location: File, handler: ClassHandler) extends EmptyV
     description: String,
     signature: String,
     exceptions: Array[String]): MethodVisitor =
-    {
-      handler.onMethod(currentClassName.getOrElse("."), name, path, access)
-      null
-    }
+  {
+    handler.onMethod(currentClassName.getOrElse("."), name, path, access)
+    null
+  }
 
   override def visitField(access: Int,
     name: String,
     description: String,
     signature: String,
     value: java.lang.Object): FieldVisitor =
-    {
-      handler.onField(currentClassName.getOrElse("."), name, path, access)
-      null
-    }
+  {
+    handler.onField(currentClassName.getOrElse("."), name, path, access)
+    null
+  }
 
   private def mapClassName(name: String): String = {
     if (name == null) ""
@@ -87,11 +88,11 @@ object ClassIterator {
   private def findClassesIn(f: File, handler: ClassHandler) {
     val name = f.getPath.toLowerCase
     if (name.endsWith(".jar"))
-      processJar(f, handler)
+    processJar(f, handler)
     else if (name.endsWith(".zip"))
-      processZip(f, handler)
+    processZip(f, handler)
     else if (f.isDirectory)
-      processDirectory(f, handler)
+    processDirectory(f, handler)
   }
 
   private def processJar(file: File, handler: ClassHandler) {
@@ -107,26 +108,33 @@ object ClassIterator {
   private def loadManifestPath(jar: JarFile,
     jarFile: File,
     manifest: JarManifest): List[File] =
-    {
-      import scala.collection.JavaConversions._
-      val attrs = manifest.getMainAttributes
-      val value = attrs.get("Class-Path").asInstanceOf[String]
+  {
+    import scala.collection.JavaConversions._
+    val attrs = manifest.getMainAttributes
+    val value = attrs.get("Class-Path").asInstanceOf[String]
 
-      if (value == null)
-        Nil
+    if (value == null)
+    Nil
 
-      else {
-        val parent = jarFile.getParent
-        val tokens = value.split("""\s+""").toList
-        if (parent == null)
-          tokens.map(new File(_))
-        else
-          tokens.map(s => new File(parent + File.separator + s))
-      }
+    else {
+      val parent = jarFile.getParent
+      val tokens = value.split("""\s+""").toList
+      if (parent == null)
+      tokens.map(new File(_))
+      else
+      tokens.map(s => new File(parent + File.separator + s))
     }
+  }
 
   private def processZip(file: File, handler: ClassHandler) {
-    processOpenZip(file, new ZipFile(file), handler)
+    var zf:ZipFile = null
+    try{
+      zf = new ZipFile(file)
+      processOpenZip(file, zf, handler)
+    }
+    finally{
+      if(zf != null) zf.close()
+    }
   }
 
   private def processOpenZip(file: File, zipFile: ZipFile, handler: ClassHandler) {
@@ -134,8 +142,15 @@ object ClassIterator {
     val zipFileName = file.getPath
     for (e <- zipFile.entries) {
       if (isClass(e)) {
-        processClassData(new BufferedInputStream(
-          zipFile.getInputStream(e)), file, handler)
+	var is:BufferedInputStream = null
+	try{
+          val is = new BufferedInputStream(
+            zipFile.getInputStream(e))
+          processClassData(is, file, handler)
+	}
+	finally{
+	  if(is != null) is.close()
+	}
       }
     }
   }
@@ -147,14 +162,20 @@ object ClassIterator {
   }
 
   private def isClass(e: FileEntry): Boolean =
-    (!e.isDirectory) && (e.getName.toLowerCase.endsWith(".class"))
+  (!e.isDirectory) && (e.getName.toLowerCase.endsWith(".class"))
 
   private def processDirectory(dir: File, handler: ClassHandler) {
     import FileUtils._
     for (f <- dir.andTree) {
       if (isClass(f)) {
-        processClassData(new BufferedInputStream(
-          new FileInputStream(f)), dir, handler)
+	var is:BufferedInputStream = null
+	try{
+	  is = new BufferedInputStream(new FileInputStream(f))
+          processClassData(is, dir, handler)
+	}
+	finally{
+	  if(is != null) is.close()
+	}
       }
     }
   }
