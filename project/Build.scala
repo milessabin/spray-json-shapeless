@@ -17,7 +17,7 @@ object EnsimeBuild extends Build {
   lazy val project = Project(
     "ensime",
     file (".")) settings(
-    version := "0.7.3",
+    version := "0.7.4",
     organization := "org.ensime",
     scalaVersion := "2.9.1",
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
@@ -111,8 +111,10 @@ object EnsimeBuild extends Build {
   release <<= (stage,version,scalaVersion) map {
     (_,version,scalaBuildVersion) =>
     val modName = "ensime_" + scalaBuildVersion + "-" + version
-    log.info("About to create archive '" + modName +"'. (Press Enter)")
-    scala.Console.readLine()
+
+    doSh("git tag -s v" + version + 
+      " -m 'Tag for release " + modName + "'") !! (log)
+
     val initialDir = new File(".")
     val archiveFile = new File(initialDir,
       modName + ".tar.gz").getCanonicalPath
@@ -125,8 +127,6 @@ object EnsimeBuild extends Build {
       log.info("Compressing temp directory to " + archiveFile + "...")
       doSh("tar -pcvzf " + archiveFile + " " + 
 	modName, Some(f)) !! (log)
-      doSh("git tag -s v" + version + 
-	" -m 'Tag for release " + modName + "'") !! (log)
       None
     }
     None
@@ -146,9 +146,9 @@ object EnsimeBuild extends Build {
     doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     None     
-    }
+  }
 
 
 
 
-    }
+}
