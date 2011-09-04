@@ -19,5 +19,5 @@ fi
 CLASSPATH=<RUNTIME_CLASSPATH>
 CMD="java -classpath ${CLASSPATH} ${ENSIME_JVM_ARGS} org.ensime.server.Server ${PORT_FILE}"
 echo $CMD
-$CMD
+exec $CMD
 
