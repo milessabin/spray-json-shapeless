@@ -164,5 +164,11 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     builder = None
   }
 
+  protected def shutdownServer() {
+    System.out.println("Server is exiting...")
+    System.out.flush()
+    System.exit(0)
+  }
+
 }
 

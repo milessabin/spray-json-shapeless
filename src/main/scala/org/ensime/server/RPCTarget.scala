@@ -20,6 +20,11 @@ trait RPCTarget { self: Project =>
 
   import protocol._
 
+  def rpcShutdownServer(callId: Int) {
+    sendRPCReturn(toWF(true), callId)
+    shutdownServer()
+  }
+
   def rpcInitProject(conf: ProjectConfig, callId: Int) {
     initProject(conf)
     sendRPCReturn(toWF(conf), callId)
