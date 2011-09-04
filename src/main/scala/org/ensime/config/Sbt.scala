@@ -187,17 +187,24 @@ object Sbt extends ExternalConfigurator {
     val projectVersion = showSetting("version")
     val buildScalaVersion = showSetting("scala-version")
 
-    val compileDeps = parseAttributedFilesList(showSetting("compile:dependency-classpath"))
+    val compileDeps = (
+      parseAttributedFilesList(showSetting("compile:unmanaged-classpath")) ++ 
+      parseAttributedFilesList(showSetting("compile:managed-classpath")) ++ 
+      parseAttributedFilesList(showSetting("compile:internal-dependency-classpath"))
+    )
     val testDeps = (
-      //      parseAttributedFilesList(showSetting("test:external-dependency-classpath")) ++ 
+      parseAttributedFilesList(showSetting("test:unmanaged-classpath")) ++
       parseAttributedFilesList(showSetting("test:managed-classpath")) ++ 
-      parseAttributedFilesList(showSetting("test:unmanaged-classpath"))
+      parseAttributedFilesList(showSetting("test:internal-dependency-classpath")) ++
+      parseAttributedFilesList(showSetting("test:exported-products"))
     )
     val runtimeDeps = (
-      //      parseAttributedFilesList(showSetting("runtime:external-dependency-classpath")) ++ 
+      parseAttributedFilesList(showSetting("runtime:unmanaged-classpath")) ++
       parseAttributedFilesList(showSetting("runtime:managed-classpath")) ++ 
-      parseAttributedFilesList(showSetting("runtime:unmanaged-classpath"))
+      parseAttributedFilesList(showSetting("runtime:internal-dependency-classpath")) ++
+      parseAttributedFilesList(showSetting("runtime:exported-products"))
     )
+
     val sourceRoots = parseAttributedFilesList(showSetting("source-directories"))
     val target = CanonFile(showSetting("class-directory"))
 
