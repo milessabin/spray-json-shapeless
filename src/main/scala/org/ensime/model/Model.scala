@@ -38,6 +38,12 @@ class MethodSearchResult(name: String, localName: String, declaredAs: scala.Symb
 case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
 case class SymbolSearchResults(syms: Iterable[SymbolSearchResult])
 
+case class SymbolDesignation(
+  val start: Int,
+  val end: Int,
+  val declaredAs: scala.Symbol)
+
+
 class SymbolInfo(
   val name: String,
   val declPos: Position,
@@ -250,20 +256,20 @@ trait ModelBuilders { self: Global with Helpers =>
         case tpe: MethodType => ArrowTypeInfo(tpe)
         case tpe: PolyType => ArrowTypeInfo(tpe)
         case tpe: Type =>
-          {
-            val args = tpe.typeArgs.map(TypeInfo(_))
-            val typeSym = tpe.typeSymbol
-            val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
-            new TypeInfo(
-              typeShortName(tpe),
-              cacheType(tpe),
-              declaredAs(typeSym),
-              typeFullName(tpe),
-              args,
-              members,
-              typeSym.pos,
-              outerTypeId)
-          }
+        {
+          val args = tpe.typeArgs.map(TypeInfo(_))
+          val typeSym = tpe.typeSymbol
+          val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
+          new TypeInfo(
+            typeShortName(tpe),
+            cacheType(tpe),
+            declaredAs(typeSym),
+            typeFullName(tpe),
+            args,
+            members,
+            typeSym.pos,
+            outerTypeId)
+        }
         case _ => nullInfo
       }
     }
@@ -326,8 +332,8 @@ trait ModelBuilders { self: Global with Helpers =>
   object SymbolInfoLight {
 
     /**
-     *  Return symbol infos for any like-named constructors.
-     */
+    *  Return symbol infos for any like-named constructors.
+    */
     def constructorSynonyms(sym: Symbol): List[SymbolInfoLight] = {
       val members = if (sym.isClass || sym.isPackageClass) {
         sym.tpe.members
@@ -343,8 +349,8 @@ trait ModelBuilders { self: Global with Helpers =>
     }
 
     /**
-     *  Return symbol infos for any like-named apply methods.
-     */
+    *  Return symbol infos for any like-named apply methods.
+    */
     def applySynonyms(sym: Symbol): List[SymbolInfoLight] = {
       val members = if (sym.isModule || sym.isModuleClass) {
         sym.tpe.members
