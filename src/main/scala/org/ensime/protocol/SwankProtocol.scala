@@ -798,11 +798,13 @@ trait SwankProtocol extends Protocol {
       (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
   }
 
-  def toWF(value: SymbolDesignation): SExp = {
+  def toWF(value: SymbolDesignations): SExp = {
     SExp.propList(
-      (":start", value.start),
-      (":end", value.end),
-      (":type", value.declaredAs))
+      (":file", value.file),
+      (":syms", 
+	SExpList(value.syms.map{s => 
+	    SExpList(List(s.symType, s.start, s.end))
+	  })))
   }
 
   private def changeToWF(ch: Change): SExp = {
