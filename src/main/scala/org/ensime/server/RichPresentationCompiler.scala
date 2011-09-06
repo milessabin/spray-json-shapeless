@@ -292,7 +292,6 @@ with RefactoringImpl with IndexerInterface {
 
     private def typeOfTree(t: Tree): Either[Type, Throwable] = {
       var tree = t
-      var dude = 1
       tree = tree match {
 	case Select(qual, name) if tree.tpe == ErrorType => {
           qual
@@ -521,12 +520,12 @@ with RefactoringImpl with IndexerInterface {
       val syms = ListBuffer[SymbolDesignation]()
       override def traverse(t: Tree) {
 	val treeP = t.pos
-	var ape = 1
-	println(ape)
+	var ape = 1.toString()
 
 	def addAt(start: Int, end: Int, designation: scala.Symbol) {
           syms += SymbolDesignation(start, end, designation)
 	}
+
 	def add(designation: scala.Symbol) {
           addAt(treeP.start, treeP.end, designation)
 	}
@@ -545,16 +544,30 @@ with RefactoringImpl with IndexerInterface {
 		add('val)
               }
             }
-            case Select(_, selector) => {
+            case Select(qual, selector) => {
+	      val selectStart = try{
+		qual.pos.end + 1
+	      } catch {
+		case _ => treeP.start
+	      }
+	      val selectEnd = selectStart + selector.length
               if (selector.isOperatorName) {
-		add('operator)
+		addAt(selectStart, selectEnd, 'operator)
               } else {
-		addAt(treeP.start, treeP.end, 'selector)
+		addAt(selectStart, selectEnd, 'selector)
               }
             }
             case ValDef(mods, name, tpt, rhs) => {
-	      val symType = if(mods.isMutable) 'var else 'val
-              addAt(treeP.start, treeP.end, symType)
+	      val symType = if(mods.isParameter) {
+		addAt(treeP.start, treeP.start + name.length, 'param)
+	      }
+	      else if(mods.isMutable) {
+		addAt(treeP.start + 4, treeP.start + 4 + name.length, 'var)
+	      }
+	      else {
+		addAt(treeP.start + 4, treeP.start + 4 + name.length, 'val)
+	      }
+              
             }
             case _ => {}
           }
