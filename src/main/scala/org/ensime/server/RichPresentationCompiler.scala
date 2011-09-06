@@ -542,39 +542,49 @@ with RefactoringImpl with IndexerInterface {
 		add('constructor)
               } else if (sym.isTypeParameter) {
 		add('typeParam)
-              } else if (sym.isVariable) {
+              } else if (sym.isVariable && sym.isLocal) {
 		add('var)
-              } else if (sym.isValue) {
+              } else if (sym.isValue && sym.isLocal) {
 		add('val)
+              } else if (sym.isVariable) {
+		add('varField)
+              } else if (sym.isValue) {
+		add('valField)
               }
             }
             case Select(qual, selector) => {
-	      val selectStart = try{
+	      val start = try{
 		qual.pos.end + 1
 	      } catch {
 		case _ => treeP.start
 	      }
 	      val len = selector.decode.length
-	      val selectEnd = selectStart + len
+	      val end = start + len
               if (selector.isOperatorName) {
-		addAt(selectStart, selectEnd, 'operator)
+		addAt(start, end, 'operator)
               } else {
-		addAt(selectStart, selectEnd, 'selector)
+		addAt(start, end, 'selector)
               }
             }
             case ValDef(mods, name, tpt, rhs) => {
 	      val start = nameStart(mods, t)
 	      val len = name.decode.length
-	      val symType = if(mods.isParameter) {
-		addAt(start, start + len, 'param)
+	      val end = start + len
+	      if(mods.isParameter) {
+		addAt(start, end, 'param)
 	      }
-	      else if(mods.isMutable) {
-		addAt(start, start + len, 'var)
+	      else if(mods.isMutable && mods.hasLocalFlag) {
+		addAt(start, end, 'var)
 	      }
-	      else {
-		addAt(start, start + len, 'val)
+	      else if(mods.hasLocalFlag) {
+		addAt(start, end, 'val)
 	      }
-              
+	      else if(mods.isMutable && !mods.hasLocalFlag) {
+		addAt(start, end, 'varField)
+	      }
+	      else if(!mods.hasLocalFlag) {
+		addAt(start, end, 'valField)
+	      }
             }
             case _ => {}
           }
