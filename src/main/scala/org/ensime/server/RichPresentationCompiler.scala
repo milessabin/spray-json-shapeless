@@ -520,7 +520,6 @@ with RefactoringImpl with IndexerInterface {
       val syms = ListBuffer[SymbolDesignation]()
       override def traverse(t: Tree) {
 	val treeP = t.pos
-	var ape = 1.toString()
 
 	def addAt(start: Int, end: Int, designation: scala.Symbol) {
           syms += SymbolDesignation(start, end, designation)
@@ -528,6 +527,11 @@ with RefactoringImpl with IndexerInterface {
 
 	def add(designation: scala.Symbol) {
           addAt(treeP.start, treeP.end, designation)
+	}
+
+	def nameStart(mods: Modifiers, owner: Tree):Int = {
+	  if(mods.positions.isEmpty) owner.pos.start
+	  else mods.positions.map(_._2.end).max + 2
 	}
 
 	if (p.overlaps(treeP)) {
@@ -550,7 +554,8 @@ with RefactoringImpl with IndexerInterface {
 	      } catch {
 		case _ => treeP.start
 	      }
-	      val selectEnd = selectStart + selector.length
+	      val len = selector.decode.length
+	      val selectEnd = selectStart + len
               if (selector.isOperatorName) {
 		addAt(selectStart, selectEnd, 'operator)
               } else {
@@ -558,14 +563,16 @@ with RefactoringImpl with IndexerInterface {
               }
             }
             case ValDef(mods, name, tpt, rhs) => {
+	      val start = nameStart(mods, t)
+	      val len = name.decode.length
 	      val symType = if(mods.isParameter) {
-		addAt(treeP.start, treeP.start + name.length, 'param)
+		addAt(start, start + len, 'param)
 	      }
 	      else if(mods.isMutable) {
-		addAt(treeP.start + 4, treeP.start + 4 + name.length, 'var)
+		addAt(start, start + len, 'var)
 	      }
 	      else {
-		addAt(treeP.start + 4, treeP.start + 4 + name.length, 'val)
+		addAt(start, start + len, 'val)
 	      }
               
             }
