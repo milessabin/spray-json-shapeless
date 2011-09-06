@@ -1,14 +1,28 @@
 /**
-* Much of this code is derived from the excellent tool,
-* ClassUtil, by Brian M. Clapper
+*  Copyright (C) 2010 Aemon Cannon
+*  Copyright 2010, Brian M. Clapp
+* 
+*  Some of this code is derived from or inspired by the
+*  excellent tool, ClassUtil, by Brian M. Clapper
+* 
 *
-* Copyright 2010, Brian M. Clapp
-* All Rights Reserved
+*  This program is free software; you can redistribute it and/or
+*  modify it under the terms of the GNU General Public License as
+*  published by the Free Software Foundation; either version 2 of
+*  the License, or (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public
+*  License along with this program; if not, write to the Free
+*  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+*  MA 02111-1307, USA.
 */
 
 package org.ensime.util
-import org.ensime.config.Using
-
 import scala.collection.mutable.{ Set => MutableSet }
 import scala.collection.mutable.{ HashMap, HashSet }
 import org.objectweb.asm.FieldVisitor
@@ -78,112 +92,112 @@ object ClassIterator {
         findClassesIn(f, handler)
       } catch {
         case e: IOException => {
-          System.err.println("Failed to open: " + f)
-          e.printStackTrace(System.err)
-        }
+        System.err.println("Failed to open: " + f)
+        e.printStackTrace(System.err)
       }
     }
   }
+}
 
-  private def findClassesIn(f: File, handler: ClassHandler) {
-    val name = f.getPath.toLowerCase
-    if (name.endsWith(".jar"))
-    processJar(f, handler)
-    else if (name.endsWith(".zip"))
-    processZip(f, handler)
-    else if (f.isDirectory)
-    processDirectory(f, handler)
+private def findClassesIn(f: File, handler: ClassHandler) {
+  val name = f.getPath.toLowerCase
+  if (name.endsWith(".jar"))
+  processJar(f, handler)
+  else if (name.endsWith(".zip"))
+  processZip(f, handler)
+  else if (f.isDirectory)
+  processDirectory(f, handler)
+}
+
+private def processJar(file: File, handler: ClassHandler) {
+  val jar = new JarFile(file)
+  processOpenZip(file, jar, handler)
+  var manifest = jar.getManifest
+  if (manifest != null) {
+    val path = loadManifestPath(jar, file, manifest)
+    find(path, handler)
   }
+}
 
-  private def processJar(file: File, handler: ClassHandler) {
-    val jar = new JarFile(file)
-    processOpenZip(file, jar, handler)
-    var manifest = jar.getManifest
-    if (manifest != null) {
-      val path = loadManifestPath(jar, file, manifest)
-      find(path, handler)
-    }
+private def loadManifestPath(jar: JarFile,
+  jarFile: File,
+  manifest: JarManifest): List[File] =
+{
+  import scala.collection.JavaConversions._
+  val attrs = manifest.getMainAttributes
+  val value = attrs.get("Class-Path").asInstanceOf[String]
+
+  if (value == null)
+  Nil
+
+  else {
+    val parent = jarFile.getParent
+    val tokens = value.split("""\s+""").toList
+    if (parent == null)
+    tokens.map(new File(_))
+    else
+    tokens.map(s => new File(parent + File.separator + s))
   }
+}
 
-  private def loadManifestPath(jar: JarFile,
-    jarFile: File,
-    manifest: JarManifest): List[File] =
-  {
-    import scala.collection.JavaConversions._
-    val attrs = manifest.getMainAttributes
-    val value = attrs.get("Class-Path").asInstanceOf[String]
-
-    if (value == null)
-    Nil
-
-    else {
-      val parent = jarFile.getParent
-      val tokens = value.split("""\s+""").toList
-      if (parent == null)
-      tokens.map(new File(_))
-      else
-      tokens.map(s => new File(parent + File.separator + s))
-    }
+private def processZip(file: File, handler: ClassHandler) {
+  var zf:ZipFile = null
+  try{
+    zf = new ZipFile(file)
+    processOpenZip(file, zf, handler)
   }
-
-  private def processZip(file: File, handler: ClassHandler) {
-    var zf:ZipFile = null
-    try{
-      zf = new ZipFile(file)
-      processOpenZip(file, zf, handler)
-    }
-    finally{
-      if(zf != null) zf.close()
-    }
+  finally{
+    if(zf != null) zf.close()
   }
+}
 
-  private def processOpenZip(file: File, zipFile: ZipFile, handler: ClassHandler) {
-    import scala.collection.JavaConversions._
-    val zipFileName = file.getPath
-    for (e <- zipFile.entries) {
-      if (isClass(e)) {
-	var is:BufferedInputStream = null
-	try{
-          val is = new BufferedInputStream(
-            zipFile.getInputStream(e))
-          processClassData(is, file, handler)
-	}
-	finally{
-	  if(is != null) is.close()
-	}
+private def processOpenZip(file: File, zipFile: ZipFile, handler: ClassHandler) {
+  import scala.collection.JavaConversions._
+  val zipFileName = file.getPath
+  for (e <- zipFile.entries) {
+    if (isClass(e)) {
+      var is:BufferedInputStream = null
+      try{
+        val is = new BufferedInputStream(
+          zipFile.getInputStream(e))
+        processClassData(is, file, handler)
+      }
+      finally{
+	if(is != null) is.close()
       }
     }
   }
+}
 
-  // Matches both ZipEntry and File
-  type FileEntry = {
-    def isDirectory(): Boolean
-    def getName(): String
-  }
+// Matches both ZipEntry and File
+type FileEntry = {
+  def isDirectory(): Boolean
+  def getName(): String
+}
 
-  private def isClass(e: FileEntry): Boolean =
-  (!e.isDirectory) && (e.getName.toLowerCase.endsWith(".class"))
+private def isClass(e: FileEntry): Boolean =
+(!e.isDirectory) && (e.getName.toLowerCase.endsWith(".class"))
 
-  private def processDirectory(dir: File, handler: ClassHandler) {
-    import FileUtils._
-    for (f <- dir.andTree) {
-      if (isClass(f)) {
-	var is:BufferedInputStream = null
-	try{
-	  is = new BufferedInputStream(new FileInputStream(f))
-          processClassData(is, dir, handler)
-	}
-	finally{
-	  if(is != null) is.close()
-	}
+private def processDirectory(dir: File, handler: ClassHandler) {
+  import FileUtils._
+  for (f <- dir.andTree) {
+    if (isClass(f)) {
+      var is:BufferedInputStream = null
+      try{
+	is = new BufferedInputStream(new FileInputStream(f))
+        processClassData(is, dir, handler)
+      }
+      finally{
+	if(is != null) is.close()
       }
     }
   }
+}
 
-  private def processClassData(is: InputStream, location: File, handler: ClassHandler) {
-    val cr = new ClassReader(is)
-    val visitor = new ClassVisitor(location, handler)
-    cr.accept(visitor, ClassReader.SKIP_CODE)
-  }
+private def processClassData(is: InputStream, location: File, handler: ClassHandler) {
+  val cr = new ClassReader(is)
+  val visitor = new ClassVisitor(location, handler)
+  cr.accept(visitor, ClassReader.SKIP_CODE)
+}
 
 }

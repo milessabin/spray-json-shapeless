@@ -1,3 +1,22 @@
+/**
+*  Copyright (C) 2010 Aemon Cannon
+*
+*  This program is free software; you can redistribute it and/or
+*  modify it under the terms of the GNU General Public License as
+*  published by the Free Software Foundation; either version 2 of
+*  the License, or (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public
+*  License along with this program; if not, write to the Free
+*  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+*  MA 02111-1307, USA.
+*/
+
 package org.ensime.util
 
 import java.io._
@@ -7,7 +26,7 @@ import scala.collection.Seq
 import scala.collection.mutable
 import scala.tools.refactoring.common.Change
 
-// This routine stolen from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
+// This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
 /** A wrapper around file, allowing iteration either on direct children or on directory tree */
 class RichFile(file: File) {
@@ -216,21 +235,21 @@ object FileUtils {
       }
 
       // Apply the changes. An error here may result in a corrupt disk state :(
-	changes.foreach {
-          case (file, newContents) => {
-            replaceFileContents(file, newContents) match {
-              case Right(_) => {}
-              case Left(e) => Right(Left(e))
-            }
+      changes.foreach {
+        case (file, newContents) => {
+          replaceFileContents(file, newContents) match {
+            case Right(_) => {}
+            case Left(e) => Right(Left(e))
           }
-	}
-
-	Right(Right(()))
-
-      } catch {
-	case e: Exception => Left(e)
+        }
       }
-    }
 
+      Right(Right(()))
+
+    } catch {
+      case e: Exception => Left(e)
+    }
   }
+
+}
 
