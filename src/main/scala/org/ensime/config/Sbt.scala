@@ -84,7 +84,9 @@ object Sbt extends ExternalConfigurator {
       val pathToSbtJar = (new File(".", "bin/sbt-launch-0.7.7.jar")).getCanonicalPath()
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
-	    val pb = new ProcessBuilder("java", "-Dsbt.log.noformat=true", "-jar", pathToSbtJar, "console-project")
+	    val opts = Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector()
+	    val args = opts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar, "console-project")
+	    val pb = new ProcessBuilder("java" +: args: _*)
 	    pb.directory(baseDir)
 	    pb.start()
 	  }
@@ -163,7 +165,9 @@ object Sbt extends ExternalConfigurator {
       val pathToSbtJar = (new File(".", "bin/sbt-launch-0.10.1.jar")).getCanonicalPath()
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
-	    val pb = new ProcessBuilder("java", "-Dsbt.log.noformat=true", "-jar", pathToSbtJar)
+	    val opts = Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector()
+	    val args = opts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar)
+	    val pb = new ProcessBuilder("java" +: args: _*)
 	    pb.directory(baseDir)
 	    pb.start()
 	  }
