@@ -134,7 +134,7 @@ object Sbt extends ExternalConfigurator {
     import scala.util.parsing.input._
     import scala.util.parsing.combinator._
     object ListParser extends RegexParsers {
-      def listOpen = regex("List\\(".r)
+      def listOpen = regex("(List|ArraySeq)\\(".r)
       def listClose = regex("\\)".r)
       def attrOpen = regex("Attributed\\(".r)
       def attrClose = regex("\\)".r)
