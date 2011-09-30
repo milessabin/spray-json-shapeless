@@ -45,6 +45,9 @@ object Sbt extends ExternalConfigurator {
     def jarName:String
     def appArgs:List[String] = List()
 
+    protected val delim = "%%ENSIME%%"
+    protected def expandDelim = delim.map("\"" + _ + "\"").mkString(" + ")
+
     def spawn(baseDir: File): Spawn = {
       val expectinator = new ExpectJ()
       val pathToSbtJar = (new File(".", "bin/" + jarName)).getCanonicalPath()
@@ -52,7 +55,7 @@ object Sbt extends ExternalConfigurator {
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
 	    val envOpts = Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector()
-	    val args = envOpts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar) ++ sbtArgs
+	    val args = envOpts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar) ++ appArgs
 	    val pb = new ProcessBuilder("java" +: args: _*)
 	    pb.directory(baseDir)
 	    pb.start()
@@ -123,8 +126,7 @@ object Sbt extends ExternalConfigurator {
     }
 
 
-    private val delim = "%%ENSIME%%"
-    private def expandDelim = delim.map("\"" + _ + "\"").mkString(" + ")
+
     private def isolated(str: String) = expandDelim + " + " + str + " + " + expandDelim
     private def printIsolated(str: String) = "println(" + isolated(str) + ")\n"
     private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
@@ -243,7 +245,10 @@ object Sbt extends ExternalConfigurator {
       val m = singleLineSetting.matcher(input);
       var result: Option[String] = None
       while (m.find()) {
-	result = Some(m.group(1))
+	val g = m.group(1)
+	if(g.indexOf(delim) == -1){
+	  result = Some(g)
+	}
       }
       result
     }
@@ -256,13 +261,15 @@ object Sbt extends ExternalConfigurator {
 
     private def evalUnit(expr: String)(implicit shell: Spawn): Unit = {
       shell.send(expr + "\n")
-      shell.expect(prompt)
+      shell.send("eval " + expandDelim + "\n")
+      shell.expect(delim)
       mostRecentStr
     }
 
     private def showSetting(expr: String)(implicit shell: Spawn): Option[String] = {
       shell.send("show " + expr + "\n")
-      shell.expect(prompt)
+      shell.send("eval " + expandDelim + "\n")
+      shell.expect(delim)
       parseSettingStr(mostRecentStr)
     }
 
