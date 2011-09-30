@@ -43,6 +43,7 @@ object Sbt extends ExternalConfigurator {
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig]
     def versionName:String
     def jarName:String
+    def appArgs:List[String] = List()
 
     def spawn(baseDir: File): Spawn = {
       val expectinator = new ExpectJ()
@@ -50,8 +51,8 @@ object Sbt extends ExternalConfigurator {
       println("Using sbt at " + pathToSbtJar)
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
-	    val opts = Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector()
-	    val args = opts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar)
+	    val envOpts = Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector()
+	    val args = envOpts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar) ++ sbtArgs
 	    val pb = new ProcessBuilder("java" +: args: _*)
 	    pb.directory(baseDir)
 	    pb.start()
@@ -66,6 +67,7 @@ object Sbt extends ExternalConfigurator {
 
     def versionName:String = "0.7"
     def jarName:String = "sbt-launch-0.7.7.jar"
+    override def appArgs:List[String] = List("console-project")
 
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
       try {
@@ -213,6 +215,7 @@ object Sbt extends ExternalConfigurator {
 	getList("compile:source-directories") ++
 	getList("test:source-directories")
       )
+      println("parsed " + sourceRoots)
       val target = CanonFile(showSetting("class-directory").getOrElse("./classes"))
 
       shell.send("exit\n")
@@ -225,6 +228,9 @@ object Sbt extends ExternalConfigurator {
       val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
       val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
       val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
+
+      println("files " + sourceRoots)
+
       Right(ExternalConfig(Some(name), sourceRootFiles,
 	  runtimeDepFiles, compileDepFiles, testDepFiles,
 	  Some(target)))
