@@ -30,6 +30,8 @@ trait FormatHandler {
   def formatPrefs(): Map[Symbol, Any]
   def disableIndexOnStartup(): Boolean
   def excludeFromIndex(): List[Regex]
+  def extraCompilerArgs(): List[String]
+  def extraBuilderArgs(): List[String]
 }
 
 object ProjectConfig {
@@ -117,6 +119,9 @@ object ProjectConfig {
     }
     def disableIndexOnStartup(): Boolean = getBool(":disable-index-on-startup")
     def excludeFromIndex(): List[Regex] = getRegexList(":exclude-from-index")
+    def extraCompilerArgs(): List[String] = getStrList(":compiler-args")
+    def extraBuilderArgs(): List[String] = getStrList(":builder-args")
+
   }
 
   /**
@@ -248,7 +253,10 @@ object ProjectConfig {
       compileDeps, classDirs, target,
       formatPrefs,
       conf.disableIndexOnStartup,
-      conf.excludeFromIndex)
+      conf.excludeFromIndex,
+      conf.extraCompilerArgs,
+      conf.extraBuilderArgs
+    )
 
   }
 
@@ -274,7 +282,7 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(None, null, null, new File("."), List(),
-    List(), List(), List(), None, Map(), false, List())
+    List(), List(), List(), None, Map(), false, List(), List(), List())
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -319,7 +327,9 @@ class ProjectConfig(
   val target: Option[CanonFile],
   formattingPrefsMap: Map[Symbol, Any],
   val disableIndexOnStartup: Boolean,
-  val excludeFromIndex: Iterable[Regex]) {
+  val excludeFromIndex: Iterable[Regex],
+  val extraCompilerArgs: Iterable[String],
+  val extraBuilderArgs: Iterable[String]) {
 
   val formattingPrefs = formattingPrefsMap.
   foldLeft(FormattingPreferences()) { (fp, p) =>
@@ -387,13 +397,13 @@ class ProjectConfig(
 
   def compilerArgs = List(
     "-classpath", compilerClasspath,
-    "-verbose")
+    "-verbose") ++ extraCompilerArgs
 
   def builderArgs = List(
     "-classpath", compilerClasspath,
     "-verbose",
     "-d", target.getOrElse(new File(root, "classes")).getPath,
-    sourceFilenames.mkString(" "))
+    sourceFilenames.mkString(" ")) ++ extraBuilderArgs
 
   def compilerClasspath: String = {
     val files = compilerClasspathFilenames
