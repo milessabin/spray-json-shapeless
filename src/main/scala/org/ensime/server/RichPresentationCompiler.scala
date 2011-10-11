@@ -1,21 +1,21 @@
 /**
-*  Copyright (C) 2010 Aemon Cannon
-*
-*  This program is free software; you can redistribute it and/or
-*  modify it under the terms of the GNU General Public License as
-*  published by the Free Software Foundation; either version 2 of
-*  the License, or (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public
-*  License along with this program; if not, write to the Free
-*  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-*  MA 02111-1307, USA.
-*/
+ *  Copyright (C) 2010 Aemon Cannon
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as
+ *  published by the Free Software Foundation; either version 2 of
+ *  the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
+ *  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+ *  MA 02111-1307, USA.
+ */
 
 package org.ensime.server
 import java.io.File
@@ -40,11 +40,11 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
     scheduler doQuickly new WorkItem {
       def apply() = respond(result)(op)
     }
-    result.get.fold(o => o, {t => 
-	System.err.println("[Error in RichCompilerControl]")
-	t.printStackTrace()
-	handle(t)
-      })
+    result.get.fold(o => o, { t =>
+      System.err.println("[Error in RichCompilerControl]")
+      t.printStackTrace()
+      handle(t)
+    })
   }
 
   def askOrLazy[A](op: => A, handle: Throwable => A): A = {
@@ -100,39 +100,39 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl { self
     typeById(id).map { t => inspectType(t) }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
-      inspectTypeAt(p)
-    }, t => None)
+    inspectTypeAt(p)
+  }, t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-      completePackageMember(path, prefix)
-    }, t => List())
+    completePackageMember(path, prefix)
+  }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     // Make sure new tree is loaded
     askReloadFile(p.source)
     askOr({
-	completeSymbolAt(p, prefix, constructor)
-      }, t => List())
+      completeSymbolAt(p, prefix, constructor)
+    }, t => List())
   }
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
     askReloadFile(p.source)
     askOr({
-	completeMemberAt(p, prefix)
-      }, t => List())
+      completeMemberAt(p, prefix)
+    }, t => List())
   }
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-      reloadAndTypeFiles(files)
-    }, t => ())
+    reloadAndTypeFiles(files)
+  }, t => ())
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
-      usesOfSymbolAtPoint(p).toList
-    }, t => List())
+    usesOfSymbolAtPoint(p).toList
+  }, t => List())
 
   def askSymbolDesignationsInRegion(p: RangePosition): SymbolDesignations = askOr({
-      symbolDesignationsInRegion(p)
-    }, t => SymbolDesignations("", List()))
+    symbolDesignationsInRegion(p)
+  }, t => SymbolDesignations("", List()))
 
   def askClearTypeCache() = clearTypeCache
 
@@ -148,8 +148,8 @@ class RichPresentationCompiler(
   var parent: Actor,
   var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
-with RefactoringImpl with IndexerInterface {
+  with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
+  with RefactoringImpl with IndexerInterface {
 
   import ModelHelpers._
 
@@ -174,11 +174,11 @@ with RefactoringImpl with IndexerInterface {
   }
 
   /**
-  * Remove symbols defined by files that no longer exist.
-  * Note that these symbols will not be collected by
-  * syncTopLevelSyms, since the units in question will
-  * never be reloaded again.
-  */
+   * Remove symbols defined by files that no longer exist.
+   * Note that these symbols will not be collected by
+   * syncTopLevelSyms, since the units in question will
+   * never be reloaded again.
+   */
   def removeAllDeleted() {
     allSources = allSources.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
@@ -222,7 +222,7 @@ with RefactoringImpl with IndexerInterface {
         members(sym) = m
       } catch {
         case e =>
-        System.err.println("Error: Omitting member " + sym + ": " + e)
+          System.err.println("Error: Omitting member " + sym + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -264,419 +264,464 @@ with RefactoringImpl with IndexerInterface {
       }
       case Right(e) => {
         System.err.println("ERROR: Failed to get any type information :(  " + e)
-          List()
-	}
+        List()
       }
     }
+  }
 
-    protected def inspectType(tpe: Type): TypeInspectInfo = {
-      new TypeInspectInfo(
-	TypeInfo(tpe),
-	companionTypeOf(tpe).map(cacheType),
-	prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
-    }
+  protected def inspectType(tpe: Type): TypeInspectInfo = {
+    new TypeInspectInfo(
+      TypeInfo(tpe),
+      companionTypeOf(tpe).map(cacheType),
+      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
+  }
 
-    protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
-      val members = getMembersForTypeAt(p)
-      val preparedMembers = prepareSortedInterfaceInfo(members)
-      typeAt(p) match {
-	case Left(t) => {
-          Some(new TypeInspectInfo(
-              TypeInfo(t),
-              companionTypeOf(t).map(cacheType),
-              preparedMembers))
-	}
-	case Right(_) => None
+  protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
+    val members = getMembersForTypeAt(p)
+    val preparedMembers = prepareSortedInterfaceInfo(members)
+    typeAt(p) match {
+      case Left(t) => {
+        Some(new TypeInspectInfo(
+          TypeInfo(t),
+          companionTypeOf(t).map(cacheType),
+          preparedMembers))
       }
+      case Right(_) => None
     }
+  }
 
-    private def typeOfTree(t: Tree): Either[Type, Throwable] = {
-      var tree = t
-      tree = tree match {
-	case Select(qual, name) if tree.tpe == ErrorType => {
-          qual
-	}
-	case t: ImplDef if t.impl != null => {
-          t.impl
-	}
-	case t: ValOrDefDef if t.tpt != null => {
-          t.tpt
-	}
-	case t: ValOrDefDef if t.rhs != null => {
-          t.rhs
-	}
-	case t => t
+  private def typeOfTree(t: Tree): Either[Type, Throwable] = {
+    var tree = t
+    tree = tree match {
+      case Select(qual, name) if tree.tpe == ErrorType => {
+        qual
       }
-      if (tree.tpe != null) {
-	Left(tree.tpe)
+      case t: ImplDef if t.impl != null => {
+        t.impl
+      }
+      case t: ValOrDefDef if t.tpt != null => {
+        t.tpt
+      }
+      case t: ValOrDefDef if t.rhs != null => {
+        t.rhs
+      }
+      case t => t
+    }
+    if (tree.tpe != null) {
+      Left(tree.tpe)
+    } else {
+      Right(new Exception("Null tpe"))
+    }
+  }
+
+  protected def typeAt(p: Position): Either[Type, Throwable] = {
+    val tree = wrapTypedTreeAt(p)
+    typeOfTree(tree)
+  }
+
+  protected def typeByName(name: String): Option[Type] = {
+    def maybeType(sym: Symbol) = sym match {
+      case NoSymbol => None
+      case sym: Symbol => Some(sym.tpe)
+      case _ => None
+    }
+    try {
+      if (name.endsWith("$")) {
+        maybeType(definitions.getModule(name.substring(0, name.length - 1)))
       } else {
-	Right(new Exception("Null tpe"))
+        maybeType(definitions.getClass(name))
       }
+    } catch {
+      case e => None
     }
+  }
 
-    protected def typeAt(p: Position): Either[Type, Throwable] = {
-      val tree = wrapTypedTreeAt(p)
-      typeOfTree(tree)
+  protected def typeByNameAt(nameStr: String, p: Position): Option[Type] = {
+    val matchingSyms = lookupSymbolByNameAt(nameStr, p)
+    matchingSyms.filter { _.tpe != NoType }.headOption.map { _.tpe }
+  }
+
+  protected def lookupSymbolByNameAt(nameStr: String, p: Position): List[Symbol] = {
+    val nameSegs = nameStr.split("\\.")
+    val firstName: String = nameSegs.head
+
+    val roots = scopeMembers(p, firstName, true).map { _.sym }
+
+    if (nameSegs.length > 1) {
+      val restOfPath: String = nameSegs.drop(1).mkString(".")
+      roots.flatMap { r => symsAtQualifiedPath(restOfPath, r) }
+    } else {
+      roots
     }
+  }
 
-    protected def typeByName(name: String): Option[Type] = {
-      def maybeType(sym: Symbol) = sym match {
-	case NoSymbol => None
-	case sym: Symbol => Some(sym.tpe)
-	case _ => None
-      }
-      try {
-	if (name.endsWith("$")) {
-          maybeType(definitions.getModule(name.substring(0, name.length - 1)))
-	} else {
-          maybeType(definitions.getClass(name))
-	}
-      } catch {
-	case e => None
-      }
+  protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
+    p.source.file
+    val tree = wrapTypedTreeAt(p)
+    if (tree.symbol != null) {
+      Left(tree.symbol)
+    } else {
+      Right(new Exception("Null sym"))
     }
+  }
 
-    protected def typeByNameAt(nameStr: String, p: Position): Option[Type] = {
-      val matchingSyms = lookupSymbolByNameAt(nameStr, p)
-      matchingSyms.filter { _.tpe != NoType }.headOption.map { _.tpe }
-    }
-
-    protected def lookupSymbolByNameAt(nameStr: String, p: Position): List[Symbol] = {
-      val nameSegs = nameStr.split("\\.")
-      val firstName: String = nameSegs.head
-
-      val roots = scopeMembers(p, firstName, true).map { _.sym }
-
-      if (nameSegs.length > 1) {
-	val restOfPath: String = nameSegs.drop(1).mkString(".")
-	roots.flatMap { r => symsAtQualifiedPath(restOfPath, r) }
-      } else {
-	roots
-      }
-    }
-
-    protected def symbolAt(p: Position): Either[Symbol, Throwable] = {
-      p.source.file
-      val tree = wrapTypedTreeAt(p)
-      if (tree.symbol != null) {
-	Left(tree.symbol)
-      } else {
-	Right(new Exception("Null sym"))
-      }
-    }
-
-    /**
-    * Override scopeMembers to fix issues with finding method params
-    * and occasional exception in pre.memberType. Hopefully we can
-    * get these changes into Scala.
-    */
-    def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
-      wrapTypedTreeAt(pos) // to make sure context is entered
-      locateContext(pos) match {
-	case Some(context) => {
-          val locals = new mutable.LinkedHashMap[Symbol, ScopeMember]
-          def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
-            try {
-              val ns = sym.nameString
-              val accessible = context.isAccessible(sym, pre, false)
-              if (accessible && ((exactMatch && ns == prefix)
-		  || (!exactMatch && ns.startsWith(prefix))) &&
-		!sym.nameString.contains("$") &&
-		!locals.contains(sym)) {
-		val member = new ScopeMember(
-                  sym,
-                  sym.tpe,
-                  accessible,
-                  viaImport)
-		locals(sym) = member
-              }
-            } catch {
-              case e: Exception => {
-		System.err.println("Error: Omitting scope member.")
-		e.printStackTrace(System.err)
-              }
+  /**
+   * Override scopeMembers to fix issues with finding method params
+   * and occasional exception in pre.memberType. Hopefully we can
+   * get these changes into Scala.
+   */
+  def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
+    wrapTypedTreeAt(pos) // to make sure context is entered
+    locateContext(pos) match {
+      case Some(context) => {
+        val locals = new mutable.LinkedHashMap[Symbol, ScopeMember]
+        def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
+          try {
+            val ns = sym.nameString
+            val accessible = context.isAccessible(sym, pre, false)
+            if (accessible && ((exactMatch && ns == prefix)
+              || (!exactMatch && ns.startsWith(prefix))) &&
+              !sym.nameString.contains("$") &&
+              !locals.contains(sym)) {
+              val member = new ScopeMember(
+                sym,
+                sym.tpe,
+                accessible,
+                viaImport)
+              locals(sym) = member
+            }
+          } catch {
+            case e: Exception => {
+              System.err.println("Error: Omitting scope member.")
+              e.printStackTrace(System.err)
             }
           }
-          var cx = context
-          while (cx != NoContext) {
-            for (sym <- cx.scope) {
-              addSymbol(sym, NoPrefix, EmptyTree)
-            }
-            if (cx.prefix != null) {
-              for (sym <- cx.prefix.members) {
-		addSymbol(sym, cx.prefix, EmptyTree)
-              }
-            }
-            cx = cx.outer
+        }
+        var cx = context
+        while (cx != NoContext) {
+          for (sym <- cx.scope) {
+            addSymbol(sym, NoPrefix, EmptyTree)
           }
-          for (imp <- context.imports) {
-            val pre = imp.qual.tpe
-            val importedSyms = pre.members.flatMap(transformImport(
-		imp.tree.selectors, _))
-            for (sym <- importedSyms) {
-              addSymbol(sym, pre, imp.qual)
+          if (cx.prefix != null) {
+            for (sym <- cx.prefix.members) {
+              addSymbol(sym, cx.prefix, EmptyTree)
             }
           }
-          val result = locals.values.toList
-          result
-	}
-	case _ => List()
+          cx = cx.outer
+        }
+        for (imp <- context.imports) {
+          val pre = imp.qual.tpe
+          val importedSyms = pre.members.flatMap(transformImport(
+            imp.tree.selectors, _))
+          for (sym <- importedSyms) {
+            addSymbol(sym, pre, imp.qual)
+          }
+        }
+        val result = locals.values.toList
+        result
       }
+      case _ => List()
     }
+  }
 
-    // TODO: 
-    // This hides the core implementation is Contexts.scala, which
-    // has been patched. Once this bug is fixed, we can get rid of 
-    // this workaround.
-    private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
-      case List() => List()
-      case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
-      case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
+  // TODO: 
+  // This hides the core implementation is Contexts.scala, which
+  // has been patched. Once this bug is fixed, we can get rid of 
+  // this workaround.
+  private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
+    case List() => List()
+    case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
+    case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
       if (to == nme.WILDCARD) List()
       else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
-      case _ :: rest => transformImport(rest, sym)
-    }
+    case _ :: rest => transformImport(rest, sym)
+  }
 
-    protected def completePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = {
-      packageSymFromPath(path) match {
-	case Some(sym) => {
-          val memberSyms = packageMembers(sym).filterNot { s =>
-            s == NoSymbol || s.nameString.contains("$")
+  protected def completePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = {
+    packageSymFromPath(path) match {
+      case Some(sym) => {
+        val memberSyms = packageMembers(sym).filterNot { s =>
+          s == NoSymbol || s.nameString.contains("$")
+        }
+        memberSyms.flatMap { s =>
+          val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
+          if (name.startsWith(prefix)) {
+            Some(new PackageMemberInfoLight(name))
+          } else None
+        }
+      }
+      case _ => List()
+    }
+  }
+
+  protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
+    val names = scopeMembers(p, prefix, false)
+    val result = new mutable.LinkedHashSet[SymbolInfoLight]
+    names.foreach { m =>
+      m match {
+        case ScopeMember(sym, tpe, true, _) => {
+          if (constructor) {
+            result ++= SymbolInfoLight.constructorSynonyms(sym)
+          } else {
+            result += SymbolInfoLight(sym, tpe)
+            result ++= SymbolInfoLight.applySynonyms(sym)
           }
-          memberSyms.flatMap { s =>
-            val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
-            if (name.startsWith(prefix)) {
-              Some(new PackageMemberInfoLight(name))
-            } else None
-          }
-	}
-	case _ => List()
+        }
+        case _ => {}
       }
     }
+    result.toList.sortWith((a, b) => a.name.length <= b.name.length)
+  }
 
-    protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
-      val names = scopeMembers(p, prefix, false)
-      val result = new mutable.LinkedHashSet[SymbolInfoLight]
-      names.foreach { m =>
-	m match {
-          case ScopeMember(sym, tpe, true, _) => {
-            if (constructor) {
-              result ++= SymbolInfoLight.constructorSynonyms(sym)
+  protected def completeMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
+    val members = getMembersForTypeAt(p)
+    val visibleMembers = members.flatMap {
+      case tm @ TypeMember(sym, tpe, true, _, _) => {
+        val s = sym.nameString
+        if (s.startsWith(prefix) &&
+          !(s == "this") &&
+          !(s == "→")) {
+          List(NamedTypeMemberInfoLight(tm))
+        } else {
+          List()
+        }
+      }
+      case _ => List()
+    }.toList.sortWith((a, b) => a.name.length <= b.name.length)
+    visibleMembers
+  }
+
+  protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
+    symbolAt(p) match {
+      case Left(s) => {
+        val gi = new GlobalIndexes {
+          val global = RichPresentationCompiler.this
+          val sym = s.asInstanceOf[global.Symbol]
+          val cuIndexes = this.global.unitOfFile.values.map { u =>
+            CompilationUnitIndex(u.body)
+          }
+          val index = GlobalIndex(cuIndexes.toList)
+          val result = index.occurences(sym).map {
+            _.pos match {
+              case p: RangePosition => p
+              case p =>
+                new RangePosition(
+                  p.source, p.point, p.point, p.point)
+            }
+          }
+        }
+        gi.result
+      }
+      case Right(e) => List()
+    }
+  }
+
+  class SymDesigsTraverser(p: RangePosition) extends Traverser {
+    val syms = ListBuffer[SymbolDesignation]()
+    override def traverse(t: Tree) {
+      val treeP = t.pos
+
+      def addAt(start: Int, end: Int, designation: scala.Symbol) {
+        syms += SymbolDesignation(start, end, designation)
+      }
+
+      def add(designation: scala.Symbol) {
+        addAt(treeP.start, treeP.end, designation)
+      }
+
+      def nameStart(mods: Modifiers, owner: Tree): Int = {
+        if (mods.positions.isEmpty) owner.pos.start
+        else mods.positions.map(_._2.end).max + 2
+      }
+
+      var continue = true
+      if (p.overlaps(treeP)) {
+        t match {
+          case Ident(_) => {
+            val sym = t.symbol
+	    if (sym.isCaseApplyOrUnapply) {
+	      val owner = sym.owner
+	      val start = treeP.start
+	      val end = start + owner.name.length
+	      addAt(start, end, 'caseApplyOrUnapply)
+	    } else if (sym.isConstructor) {
+              add('constructor)
+            } else if (sym.isTypeParameter) {
+              add('typeParam)
+            } else if (sym.isVariable && sym.isLocal) {
+              add('var)
+            } else if (sym.isValue && sym.isLocal) {
+              add('val)
+            } else if (sym.isVariable) {
+              add('varField)
+            } else if (sym.isValue) {
+              add('valField)
+            } else if (sym.isPackage) {
+              add('package)
+            } else if (sym.isClass) {
+              add('class)
+            } else if (sym.isModule) {
+              add('object)
             } else {
-              result += SymbolInfoLight(sym, tpe)
-              result ++= SymbolInfoLight.applySynonyms(sym)
+              println("WTF ident: " + sym)
+            }
+
+          }
+          case tree @ Select(qual, selector: Name) => {
+            val sym = tree.symbol
+            println(symbolSummary(sym).toString())
+            val start = try {
+              qual.pos.end + 1
+            } catch {
+              case _ => treeP.start
+            }
+            val len = selector.decode.length
+            val end = start + len
+	    if (sym.isCaseApplyOrUnapply) {
+	      val owner = sym.owner
+	      val start = treeP.start
+	      val end = start + owner.name.length
+	      addAt(start, end, 'caseApplyOrUnapply)
+	      continue = false
+	    }
+            else if (sym.hasAccessorFlag) {
+              val under = sym.accessed
+              if (under.isVariable) {
+                addAt(start, end, 'varField)
+              } else if (under.isValue) {
+                addAt(start, end, 'valField)
+              } else {
+                println("WTF accessor: " + under)
+              }
+            } else if (sym.isConstructor) {
+              val start = try { sym.pos.start }
+              catch { case _ => treeP.start }
+              val end = try { sym.pos.end }
+              catch { case _ => treeP.end }
+              addAt(start, end, 'constructor)
+            } else if (sym.isMethod) {
+              if (selector.isOperatorName) {
+                addAt(start, end, 'operator)
+              } else {
+                addAt(start, end, 'method)
+              }
+            } else if (sym.isPackage) {
+              addAt(start, end, 'package)
+            } else if (sym.isClass) {
+              addAt(start, end, 'class)
+            } else if (sym.isModule) {
+              addAt(start, end, 'object)
+            } else {
+              addAt(start, end, 'method)
+            }
+          }
+          case ValDef(mods, name, tpt, rhs) => {
+            val start = nameStart(mods, t)
+            val len = name.decode.length
+            val end = start + len
+            if (mods.isParameter) {
+              addAt(start, end, 'param)
+            } else if (mods.isMutable && mods.hasLocalFlag) {
+              addAt(start, end, 'var)
+            } else if (mods.hasLocalFlag) {
+              addAt(start, end, 'val)
+            } else if (mods.isMutable && !mods.hasLocalFlag) {
+              addAt(start, end, 'varField)
+            } else if (!mods.hasLocalFlag) {
+              addAt(start, end, 'valField)
             }
           }
           case _ => {}
-	}
-      }
-      result.toList.sortWith((a, b) => a.name.length <= b.name.length)
-    }
-
-    protected def completeMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
-      val members = getMembersForTypeAt(p)
-      val visibleMembers = members.flatMap {
-	case tm @ TypeMember(sym, tpe, true, _, _) => {
-          val s = sym.nameString
-          if (s.startsWith(prefix) &&
-            !(s == "this") &&
-            !(s == "→")) {
-            List(NamedTypeMemberInfoLight(tm))
-          } else {
-            List()
-          }
-	}
-	case _ => List()
-      }.toList.sortWith((a, b) => a.name.length <= b.name.length)
-      visibleMembers
-    }
-
-    protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
-      symbolAt(p) match {
-	case Left(s) => {
-          val gi = new GlobalIndexes {
-            val global = RichPresentationCompiler.this
-            val sym = s.asInstanceOf[global.Symbol]
-            val cuIndexes = this.global.unitOfFile.values.map { u =>
-              CompilationUnitIndex(u.body)
-            }
-            val index = GlobalIndex(cuIndexes.toList)
-            val result = index.occurences(sym).map {
-              _.pos match {
-		case p: RangePosition => p
-		case p =>
-                new RangePosition(
-                  p.source, p.point, p.point, p.point)
-              }
-            }
-          }
-          gi.result
-	}
-	case Right(e) => List()
+        }
+        if(continue) super.traverse(t)
       }
     }
+  }
 
-    class SymDesigsTraverser(p: RangePosition) extends Traverser {
-      val syms = ListBuffer[SymbolDesignation]()
-      override def traverse(t: Tree) {
-	val treeP = t.pos
-
-	def addAt(start: Int, end: Int, designation: scala.Symbol) {
-          syms += SymbolDesignation(start, end, designation)
-	}
-
-	def add(designation: scala.Symbol) {
-          addAt(treeP.start, treeP.end, designation)
-	}
-
-	def nameStart(mods: Modifiers, owner: Tree):Int = {
-	  if(mods.positions.isEmpty) owner.pos.start
-	  else mods.positions.map(_._2.end).max + 2
-	}
-
-	if (p.overlaps(treeP)) {
-          t match {
-            case Ident(_) => {
-              val sym = t.symbol
-              if (sym.isConstructor) {
-		add('constructor)
-              } else if (sym.isTypeParameter) {
-		add('typeParam)
-              } else if (sym.isVariable && sym.isLocal) {
-		add('var)
-              } else if (sym.isValue && sym.isLocal) {
-		add('val)
-              } else if (sym.isVariable) {
-		add('varField)
-              } else if (sym.isValue) {
-		add('valField)
-              }
-            }
-            case Select(qual, selector) => {
-	      val start = try{
-		qual.pos.end + 1
-	      } catch {
-		case _ => treeP.start
-	      }
-	      val len = selector.decode.length
-	      val end = start + len
-              if (selector.isOperatorName) {
-		addAt(start, end, 'operator)
-              } else {
-		addAt(start, end, 'selector)
-              }
-            }
-            case ValDef(mods, name, tpt, rhs) => {
-	      val start = nameStart(mods, t)
-	      val len = name.decode.length
-	      val end = start + len
-	      if(mods.isParameter) {
-		addAt(start, end, 'param)
-	      }
-	      else if(mods.isMutable && mods.hasLocalFlag) {
-		addAt(start, end, 'var)
-	      }
-	      else if(mods.hasLocalFlag) {
-		addAt(start, end, 'val)
-	      }
-	      else if(mods.isMutable && !mods.hasLocalFlag) {
-		addAt(start, end, 'varField)
-	      }
-	      else if(!mods.hasLocalFlag) {
-		addAt(start, end, 'valField)
-	      }
-            }
-            case _ => {}
-          }
-          super.traverse(t)
-	}
+  protected def symbolDesignationsInRegion(p: RangePosition): SymbolDesignations = {
+    val traverser = new SymDesigsTraverser(p)
+    val typed = new Response[Tree]
+    askType(p.source, false, typed)
+    typed.get.left.toOption match {
+      case Some(tree) => {
+        traverser.traverse(tree)
+        SymbolDesignations(
+          p.source.file.path,
+          traverser.syms.toList)
       }
+      case None => SymbolDesignations("", List())
     }
+  }
 
-    protected def symbolDesignationsInRegion(p: RangePosition): SymbolDesignations = {
-      val traverser = new SymDesigsTraverser(p)
-      val typed = new Response[Tree]
-      askType(p.source, false, typed)
-      typed.get.left.toOption match {
-	case Some(tree) => {
-          traverser.traverse(tree)
-          SymbolDesignations(
-            p.source.file.path,
-            traverser.syms.toList)
-	}
-	case None => SymbolDesignations("", List())
-      }
+  private var notifyWhenReady = false
+
+  override def isOutOfDate(): Boolean = {
+    if (notifyWhenReady && !super.isOutOfDate) {
+      parent ! FullTypeCheckCompleteEvent()
+      notifyWhenReady = false
     }
+    super.isOutOfDate
+  }
 
-    private var notifyWhenReady = false
+  protected def setNotifyWhenReady() {
+    notifyWhenReady = true
+  }
 
-    override def isOutOfDate(): Boolean = {
-      if (notifyWhenReady && !super.isOutOfDate) {
-	parent ! FullTypeCheckCompleteEvent()
-	notifyWhenReady = false
-      }
-      super.isOutOfDate
+  protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
+    wrapReloadSources(sources.toList)
+    sources.foreach { s =>
+      wrapTypedTree(s, true)
     }
+  }
 
-    protected def setNotifyWhenReady() {
-      notifyWhenReady = true
-    }
+  override def askShutdown() {
+    super.askShutdown()
+    parent = null
+    indexer = null
+  }
 
-    protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
-      wrapReloadSources(sources.toList)
-      sources.foreach { s =>
-	wrapTypedTree(s, true)
-      }
-    }
+  override def finalize() {
+    System.out.println("Finalizing Global instance.")
+  }
 
-    override def askShutdown() {
-      super.askShutdown()
-      parent = null
-      indexer = null
-    }
+  /*
+  * The following functions wrap up operations that interact with
+  * the presentation compiler. The wrapping just helps with the
+  * create response / compute / get result pattern.
+  *
+  * These units of work should probably be wrapped up into a
+  * Work monad that will make it easier to compose the operations.
+  */
 
-    override def finalize() {
-      System.out.println("Finalizing Global instance.")
-    }
+  def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
+    val result = new Response[A]
+    compute(result)
+    result.get.fold(o => o, handle)
+  }
 
-    /*
-    * The following functions wrap up operations that interact with
-    * the presentation compiler. The wrapping just helps with the
-    * create response / compute / get result pattern.
-    *
-    * These units of work should probably be wrapped up into a
-    * Work monad that will make it easier to compose the operations.
-    */
-
-    def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
-      val result = new Response[A]
-      compute(result)
-      result.get.fold(o => o, handle)
-    }
-
-    def wrapReloadPosition(p: Position): Unit =
+  def wrapReloadPosition(p: Position): Unit =
     wrapReloadSource(p.source)
 
-    def wrapReloadSource(source: SourceFile): Unit =
+  def wrapReloadSource(source: SourceFile): Unit =
     wrapReloadSources(List(source))
 
-    def wrapReloadSources(sources: List[SourceFile]): Unit = {
-      val superseeded = scheduler.dequeueAll {
-	case ri: ReloadItem if ri.sources == sources => Some(ri)
-	case _ => None
-      }
-      superseeded.foreach(_.response.set())
-      wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
+  def wrapReloadSources(sources: List[SourceFile]): Unit = {
+    val superseeded = scheduler.dequeueAll {
+      case ri: ReloadItem if ri.sources == sources => Some(ri)
+      case _ => None
     }
+    superseeded.foreach(_.response.set())
+    wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
+  }
 
-    def wrapTypeMembers(p: Position): List[Member] =
+  def wrapTypeMembers(p: Position): List[Member] =
     wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
 
-    def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
+  def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
     wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
 
-    def wrapTypedTreeAt(position: Position): Tree =
+  def wrapTypedTreeAt(position: Position): Tree =
     wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
 
-  }
+}
 

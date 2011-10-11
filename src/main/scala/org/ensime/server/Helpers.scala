@@ -210,4 +210,32 @@ trait Helpers { self: Global =>
     else S.Nil
   }
 
+  def symbolSummary(sym: Symbol): Map[String, Any] = {
+    Map(
+      "name" -> sym.toString(),
+      "  isMethod" -> sym.isMethod,
+      "  isAbstractClass" -> sym.isAbstractClass,
+      "  isPackage" -> sym.isPackage,
+      "  isValue" -> sym.isValue,
+      "  isVariable" -> sym.isVariable,
+      "  isClass" -> sym.isClass,
+      "  isType" -> sym.isType,
+      "  isTrait" -> sym.isTrait,
+      "  isInterface" -> sym.isInterface,
+      "  isModule" -> sym.isModule,
+      "  isModuleClass" -> sym.isModuleClass,
+      "  isConstructor" -> sym.isConstructor,
+      "  hasAccessorFlag" -> sym.hasAccessorFlag,
+      "  hasLocalFlag" -> sym.hasLocalFlag,
+      "  isCase" -> sym.isCase,
+      "  isCaseAccessor" -> sym.isCaseAccessor,
+      "  isParameter" -> sym.isParameter,
+      "  isSynthetic" -> sym.isSynthetic,
+      "  isMutable" -> sym.isMutable,
+      "  isFinal" -> sym.isFinal,
+      "  isGetter" -> sym.isGetter,
+      "  isSetter" -> sym.isSetter
+      )
+   }
+
 }
