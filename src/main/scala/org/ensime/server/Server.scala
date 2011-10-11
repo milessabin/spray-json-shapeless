@@ -33,7 +33,7 @@ object Server {
     System.setProperty("actors.maxPoolSize", "20")
 
     args match{
-      case Array(portfile) => 
+      case Array(portfile) =>
       {
 	// TODO add an option to change the protocol
 	val protocol: Protocol = SwankProtocol
@@ -48,6 +48,7 @@ object Server {
           val actualPort = listener.getLocalPort
           println("Server listening on " + actualPort + "..")
           writePort(portfile, actualPort)
+	  System.out.flush();
           while (true) {
             try {
               val socket = listener.accept()
