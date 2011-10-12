@@ -56,6 +56,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
 	  }
           case Ident(_) => {
             val sym = t.symbol
+            println("IDENT:" + symbolSummary(sym).toString())
             if (sym.isCaseApplyOrUnapply) {
               val owner = sym.owner
               val start = treeP.start
@@ -65,6 +66,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
               add('constructor)
             } else if (sym.isTypeParameter) {
               add('typeParam)
+            } else if (sym.isMethod) {
+              add('method)
             } else if (sym.isVariable && sym.isLocal) {
               add('var)
             } else if (sym.isValue && sym.isLocal) {
@@ -86,7 +89,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case tree @ Select(qual, selector: Name) => {
             val sym = tree.symbol
-            println(symbolSummary(sym).toString())
+            println("SELECT:" + symbolSummary(sym).toString())
             val start = try {
               qual.pos.end + 1
             } catch {
