@@ -131,8 +131,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
     usesOfSymbolAtPoint(p).toList
   }, t => List())
 
-  def askSymbolDesignationsInRegion(p: RangePosition): SymbolDesignations = askOr({
-    symbolDesignationsInRegion(p)
+  def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = askOr({
+    symbolDesignationsInRegion(p, tpes)
   }, t => SymbolDesignations("", List()))
 
   def askClearTypeCache() = clearTypeCache

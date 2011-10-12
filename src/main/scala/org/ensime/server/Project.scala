@@ -60,7 +60,7 @@ case class TypeByNameReq(name: String)
 case class TypeByNameAtPointReq(name: String, file: File, point: Int)
 case class CallCompletionReq(id: Int)
 case class TypeAtPointReq(file: File, point: Int)
-case class SymbolDesignationsReq(file: File, start: Int, end: Int)
+case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol])
 
 case class AddUndo(summary: String, changes: List[Change])
 case class Undo(id: Int, summary: String, changes: Iterable[Change])

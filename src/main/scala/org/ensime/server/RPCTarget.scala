@@ -117,9 +117,9 @@ trait RPCTarget { self: Project =>
       callId)
   }
 
-  def rpcSymbolDesignations(f: String, start: Int, end: Int, callId: Int) {
+  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes:List[Symbol], callId: Int) {
     val file: File = new File(f)
-    analyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end), callId)
+    analyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
   }
 
   def rpcTypecheckFile(f: String, callId: Int) {

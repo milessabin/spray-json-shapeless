@@ -272,10 +272,10 @@ extends Actor with RefactoringHandler {
                     project ! RPCResultEvent(result, callId)
                   }
 
-                  case SymbolDesignationsReq(file: File, start: Int, end:Int) => {
+                  case SymbolDesignationsReq(file: File, start: Int, end:Int, tpes: List[Symbol]) => {
 		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
 		    val pos = new RangePosition(f, start, start, end)
-                    val syms = scalaCompiler.askSymbolDesignationsInRegion(pos)
+                    val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                     project ! RPCResultEvent(toWF(syms), callId)
                   }
 

@@ -1,21 +1,21 @@
 /**
-*  Copyright (C) 2010 Aemon Cannon
-*
-*  This program is free software; you can redistribute it and/or
-*  modify it under the terms of the GNU General Public License as
-*  published by the Free Software Foundation; either version 2 of
-*  the License, or (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public
-*  License along with this program; if not, write to the Free
-*  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-*  MA 02111-1307, USA.
-*/
+ *  Copyright (C) 2010 Aemon Cannon
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as
+ *  published by the Free Software Foundation; either version 2 of
+ *  the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
+ *  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+ *  MA 02111-1307, USA.
+ */
 
 package org.ensime.server
 import org.ensime.model.Helpers
@@ -26,37 +26,34 @@ import scala.tools.nsc.interactive.{ CompilerControl, Global }
 import scala.tools.nsc.util.RangePosition
 
 trait SemanticHighlighting { self: Global with Helpers =>
-  class SymDesigsTraverser(p: RangePosition) extends Traverser {
+  class SymDesigsTraverser(p: RangePosition, tpeSet: Set[scala.Symbol]) extends Traverser {
     val syms = ListBuffer[SymbolDesignation]()
     override def traverse(t: Tree) {
       val treeP = t.pos
 
       def addAt(start: Int, end: Int, designation: scala.Symbol) {
-        syms += SymbolDesignation(start, end, designation)
+        if (tpeSet.contains(designation)) {
+          syms += SymbolDesignation(start, end, designation)
+        }
       }
 
       def add(designation: scala.Symbol) {
         addAt(treeP.start, treeP.end, designation)
       }
 
-      def nameStart(mods: Modifiers, owner: Tree): Int = {
-        if (mods.positions.isEmpty) owner.pos.start
-        else mods.positions.map(_._2.end).max + 2
-      }
-
       var continue = true
       if (p.overlaps(treeP)) {
         t match {
-	  case Import(expr, selectors) => {
-	    for(impSel <- selectors){
-	      val start = impSel.namePos
-	      val end = start + impSel.name.decode.length
-	      addAt(start, end, 'importedName)
-	    }
-	  }
+          case Import(expr, selectors) => {
+            for (impSel <- selectors) {
+              val start = impSel.namePos
+              val end = start + impSel.name.decode.length
+              addAt(start, end, 'importedName)
+            }
+          }
           case Ident(_) => {
             val sym = t.symbol
-            println("IDENT:" + symbolSummary(sym).toString())
+//            println("IDENT:" + symbolSummary(sym).toString())
             if (sym.isCaseApplyOrUnapply) {
               val owner = sym.owner
               val start = treeP.start
@@ -89,7 +86,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case tree @ Select(qual, selector: Name) => {
             val sym = tree.symbol
-            println("SELECT:" + symbolSummary(sym).toString())
+//            println("SELECT:" + symbolSummary(sym).toString())
             val start = try {
               qual.pos.end + 1
             } catch {
@@ -122,9 +119,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
             } else if (sym.isMethod) {
               if (selector.isOperatorName) {
                 addAt(start, end, 'operator)
-              } 
-	      else if(sym.nameString == "apply"){}
-	      else {
+              } else if (sym.nameString == "apply") {}
+              else {
                 addAt(start, end, 'method)
               }
             } else if (sym.isPackage) {
@@ -138,6 +134,12 @@ trait SemanticHighlighting { self: Global with Helpers =>
             }
           }
           case ValDef(mods, name, tpt, rhs) => {
+
+            def nameStart(mods: Modifiers, owner: Tree): Int = {
+              if (mods.positions.isEmpty) owner.pos.start
+              else mods.positions.map(_._2.end).max + 2
+            }
+
             val start = nameStart(mods, t)
             val len = name.decode.length
             val end = start + len
@@ -160,8 +162,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
     }
   }
 
-  protected def symbolDesignationsInRegion(p: RangePosition): SymbolDesignations = {
-    val traverser = new SymDesigsTraverser(p)
+  protected def symbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = {
+    val tpeSet = Set[scala.Symbol]() ++ tpes
+    val traverser = new SymDesigsTraverser(p, tpeSet)
     val typed = new Response[Tree]
     askType(p.source, false, typed)
     typed.get.left.toOption match {
@@ -174,5 +177,5 @@ trait SemanticHighlighting { self: Global with Helpers =>
       case None => SymbolDesignations("", List())
     }
   }
-  
+
 }
