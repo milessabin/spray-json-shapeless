@@ -33,7 +33,8 @@ import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 
-trait RichCompilerControl extends CompilerControl with RefactoringControl { self: RichPresentationCompiler =>
+trait RichCompilerControl extends CompilerControl with RefactoringControl { 
+  self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
     val result = new Response[A]()
@@ -149,7 +150,7 @@ class RichPresentationCompiler(
   var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
   with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
-  with RefactoringImpl with IndexerInterface {
+  with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
 
   import ModelHelpers._
 
@@ -513,143 +514,6 @@ class RichPresentationCompiler(
         gi.result
       }
       case Right(e) => List()
-    }
-  }
-
-  class SymDesigsTraverser(p: RangePosition) extends Traverser {
-    val syms = ListBuffer[SymbolDesignation]()
-    override def traverse(t: Tree) {
-      val treeP = t.pos
-
-      def addAt(start: Int, end: Int, designation: scala.Symbol) {
-        syms += SymbolDesignation(start, end, designation)
-      }
-
-      def add(designation: scala.Symbol) {
-        addAt(treeP.start, treeP.end, designation)
-      }
-
-      def nameStart(mods: Modifiers, owner: Tree): Int = {
-        if (mods.positions.isEmpty) owner.pos.start
-        else mods.positions.map(_._2.end).max + 2
-      }
-
-      var continue = true
-      if (p.overlaps(treeP)) {
-        t match {
-          case Ident(_) => {
-            val sym = t.symbol
-	    if (sym.isCaseApplyOrUnapply) {
-	      val owner = sym.owner
-	      val start = treeP.start
-	      val end = start + owner.name.length
-	      addAt(start, end, 'caseApplyOrUnapply)
-	    } else if (sym.isConstructor) {
-              add('constructor)
-            } else if (sym.isTypeParameter) {
-              add('typeParam)
-            } else if (sym.isVariable && sym.isLocal) {
-              add('var)
-            } else if (sym.isValue && sym.isLocal) {
-              add('val)
-            } else if (sym.isVariable) {
-              add('varField)
-            } else if (sym.isValue) {
-              add('valField)
-            } else if (sym.isPackage) {
-              add('package)
-            } else if (sym.isClass) {
-              add('class)
-            } else if (sym.isModule) {
-              add('object)
-            } else {
-              println("WTF ident: " + sym)
-            }
-
-          }
-          case tree @ Select(qual, selector: Name) => {
-            val sym = tree.symbol
-            println(symbolSummary(sym).toString())
-            val start = try {
-              qual.pos.end + 1
-            } catch {
-              case _ => treeP.start
-            }
-            val len = selector.decode.length
-            val end = start + len
-	    if (sym.isCaseApplyOrUnapply) {
-	      val owner = sym.owner
-	      val start = treeP.start
-	      val end = start + owner.name.length
-	      addAt(start, end, 'caseApplyOrUnapply)
-	      continue = false
-	    }
-            else if (sym.hasAccessorFlag) {
-              val under = sym.accessed
-              if (under.isVariable) {
-                addAt(start, end, 'varField)
-              } else if (under.isValue) {
-                addAt(start, end, 'valField)
-              } else {
-                println("WTF accessor: " + under)
-              }
-            } else if (sym.isConstructor) {
-              val start = try { sym.pos.start }
-              catch { case _ => treeP.start }
-              val end = try { sym.pos.end }
-              catch { case _ => treeP.end }
-              addAt(start, end, 'constructor)
-            } else if (sym.isMethod) {
-              if (selector.isOperatorName) {
-                addAt(start, end, 'operator)
-              } else {
-                addAt(start, end, 'method)
-              }
-            } else if (sym.isPackage) {
-              addAt(start, end, 'package)
-            } else if (sym.isClass) {
-              addAt(start, end, 'class)
-            } else if (sym.isModule) {
-              addAt(start, end, 'object)
-            } else {
-              addAt(start, end, 'method)
-            }
-          }
-          case ValDef(mods, name, tpt, rhs) => {
-            val start = nameStart(mods, t)
-            val len = name.decode.length
-            val end = start + len
-            if (mods.isParameter) {
-              addAt(start, end, 'param)
-            } else if (mods.isMutable && mods.hasLocalFlag) {
-              addAt(start, end, 'var)
-            } else if (mods.hasLocalFlag) {
-              addAt(start, end, 'val)
-            } else if (mods.isMutable && !mods.hasLocalFlag) {
-              addAt(start, end, 'varField)
-            } else if (!mods.hasLocalFlag) {
-              addAt(start, end, 'valField)
-            }
-          }
-          case _ => {}
-        }
-        if(continue) super.traverse(t)
-      }
-    }
-  }
-
-  protected def symbolDesignationsInRegion(p: RangePosition): SymbolDesignations = {
-    val traverser = new SymDesigsTraverser(p)
-    val typed = new Response[Tree]
-    askType(p.source, false, typed)
-    typed.get.left.toOption match {
-      case Some(tree) => {
-        traverser.traverse(tree)
-        SymbolDesignations(
-          p.source.file.path,
-          traverser.syms.toList)
-      }
-      case None => SymbolDesignations("", List())
     }
   }
 
