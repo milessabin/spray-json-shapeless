@@ -234,7 +234,8 @@ trait Helpers { self: Global =>
       "  isMutable" -> sym.isMutable,
       "  isFinal" -> sym.isFinal,
       "  isGetter" -> sym.isGetter,
-      "  isSetter" -> sym.isSetter
+      "  isSetter" -> sym.isSetter,
+      "  hasTraitFlag" -> sym.hasTraitFlag
       )
    }
 

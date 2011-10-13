@@ -282,7 +282,8 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           }
         }
         case S.AddImport => {
-          (params.get(S.QualifiedName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
+          (params.get(S.QualifiedName), params.get(S.File), 
+	    params.get(S.Start), params.get(S.End)) match {
             case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
 	      reloadAndType(f)
 	      doAddImport(procId, tpe, n, f, s, e)

@@ -59,6 +59,7 @@ extends Actor with RefactoringHandler {
     }
     override def reportScalaNotes(notes: List[Note]) {
       project ! NewNotesEvent('scala, NoteList(false, notes))
+
     }
     override def reportJavaNotes(notes: List[Note]) {
       project ! NewNotesEvent('java, NoteList(false, notes))

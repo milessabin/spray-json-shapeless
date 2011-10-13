@@ -203,7 +203,6 @@ class RichPresentationCompiler(
     super.syncTopLevelSyms(unit)
     unindexTopLevelSyms(deletedTopLevelSyms)
     indexTopLevelSyms(newTopLevelSyms)
-
     //    WARNING: Clearing the set here makes 
     //    recentlyDeleted useless.
     deletedTopLevelSyms.clear()
@@ -242,9 +241,7 @@ class RichPresentationCompiler(
           typePublicMembers(typeOrArrowTypeResult(tpe))
         } else {
           val members: Iterable[Member] = try {
-
             wrapTypeMembers(p)
-
           } catch {
             case e => {
               System.err.println("Error retrieving type members:")
@@ -315,10 +312,12 @@ class RichPresentationCompiler(
     }
   }
 
+
   protected def typeAt(p: Position): Either[Type, Throwable] = {
     val tree = wrapTypedTreeAt(p)
     typeOfTree(tree)
   }
+
 
   protected def typeByName(name: String): Option[Type] = {
     def maybeType(sym: Symbol) = sym match {
