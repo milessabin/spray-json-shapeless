@@ -14,15 +14,17 @@ the ENhanced Scala Interaction Mode for Emacs
 - Browse packages
 - Completion for variables, methods, constructors, etc.
 - Incrementally search through classpath symbols
-- Find references to a symbol
+- Find all references to a symbol
 - Jump to symbol definitions.
+- Semantic Highlighting
 - Automated Refactorings (rename, organize imports, extract method)
 - Source Formatting
 - AST-based selection
-- Supports sbt,Maven,Ivy projects
+- Supports sbt7,10,11
+- Supports Maven,Ivy build descriptions
 - Embedded sbt shell
 - REPL
-- Debugger
+- Debug support
 
 
 ## Demo Videos
@@ -39,7 +41,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Emacs 22 or later.
 - Unix-like OS or Windows.
 - Java Runtime
-- A Scala 2.8.1 compatible project. 
+- A Scala 2.8.1 compatible project (see appropriate ENSIME build for your scala version)
 
 
 ## Documentation
@@ -96,7 +98,6 @@ After cloning, and before you can run ENSIME, you must create the distribution d
 The work-flow I use when hacking ENSIME:
 
 - Edit source files
-- 'sbt update'
-- 'sbt dist'
+- 'sbt stage'
 - Stop existing ENSIME server by killing *inferior-ensime-server* buffer
 - Restart ENSIME with M-x ensime
