@@ -57,7 +57,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case Ident(_) => {
             val sym = t.symbol
-            println("IDENT:" + symbolSummary(sym).toString())
+            //println("IDENT:" + symbolSummary(sym).toString())
             if (sym.isCaseApplyOrUnapply) {
               val owner = sym.owner
               val start = treeP.start
@@ -70,7 +70,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
             } else if (sym.isParameter) {
               add('param)
             } else if (sym.isMethod) {
-              add('method)
+              add('functionCall)
             } else if (sym.isVariable && sym.isLocal) {
               add('var)
             } else if (sym.isValue && sym.isLocal) {
@@ -93,7 +93,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case Select(qual, selector: Name) => {
             val sym = t.symbol
-            println("SELECT:" + symbolSummary(sym).toString())
+            //println("SELECT:" + symbolSummary(sym).toString())
             val start = try {
               qual.pos.end + 1
             } catch {
@@ -127,11 +127,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'operator)
               } else if (sym.nameString == "apply") {}
               else {
-                if (sym.paramss.isEmpty) {
-                  addAt(start, end, 'method)
-                } else {
-                  addAt(start, end, 'methodWithParams)
-                }
+                  addAt(start, end, 'functionCall)
               }
             } else if (sym.isPackage) {
               addAt(start, end, 'package)
@@ -142,7 +138,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
             } else if (sym.isModule) {
               addAt(start, end, 'object)
             } else {
-              addAt(start, end, 'method)
+              addAt(start, end, 'functionCall)
             }
           }
           case ValDef(mods, name, tpt, rhs) => {
@@ -167,7 +163,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case TypeTree() => {
             val sym = t.symbol
-            println("TypeTree:" + symbolSummary(sym).toString())
+            //println("TypeTree:" + symbolSummary(sym).toString())
             val start = treeP.start
             val end = treeP.end
             if (sym.isTrait) {
