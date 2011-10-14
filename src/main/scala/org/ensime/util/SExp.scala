@@ -20,7 +20,7 @@
 package org.ensime.util
 import scala.collection.immutable.Map
 import scala.util.parsing.combinator._
-import scala.util.parsing.input._
+import scala.util.parsing.input
 
 abstract class SExp extends WireFormat {
   def toReadableString: String = toString
@@ -109,16 +109,20 @@ object SExp extends RegexParsers {
 
   import scala.util.matching.Regex
 
-  lazy val string = regexGroups("""\"((?:[^\"\\]|\\.)*)\"""".r) ^^ { m => StringAtom(m.group(1).replace("\\\\", "\\")) }
-  lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ SymbolAtom
+  lazy val string = regexGroups("""\"((?:[^\"\\]|\\.)*)\"""".r) ^^ { m => 
+    StringAtom(m.group(1).replace("\\\\", "\\")) 
+  }
+  lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ { s => 
+    if(s == "nil") NilAtom()
+    else if(s == "t") TruthAtom()
+    else SymbolAtom(s)
+  }
   lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
-  lazy val number = regex("-?[0-9]+".r) ^^ { cs => IntAtom(cs.toInt) }
+  lazy val number = regex("-?[0-9]+".r) ^^ { s => IntAtom(s.toInt) }
   lazy val list = literal("(") ~> rep(expr) <~ literal(")") ^^ SExpList.apply
-  lazy val nil = regex("nil[^A-z0-9\\-]".r) ^^ { cs => NilAtom() }
-  lazy val truth = regex("t[^A-z0-9\\-]".r) ^^ { cs => TruthAtom() }
-  lazy val expr: Parser[SExp] = list | nil | truth | keyword | sym | number | string
+  lazy val expr: Parser[SExp] = list | keyword | string | number | sym
 
-  def read(r: Reader[Char]): SExp = {
+  def read(r: input.Reader[Char]): SExp = {
     val result: ParseResult[SExp] = expr(r)
     result match {
       case Success(value, next) => value
@@ -142,9 +146,9 @@ object SExp extends RegexParsers {
       (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
         case Some(matched) => Success(matched, in.drop(start + matched.end - offset))
         case None =>
-          Failure("string matching regex `" + r +
-            "' expected but `" +
-            in.first + "' found", in.drop(start - offset))
+        Failure("string matching regex `" + r +
+          "' expected but `" +
+          in.first + "' found", in.drop(start - offset))
       }
     }
   }
@@ -214,6 +218,51 @@ object SExp extends RegexParsers {
   implicit def listToSExpable(o: Iterable[SExpable]): SExpable = new Iterable[SExpable] with SExpable {
     override def iterator = o.iterator
     override def toSExp = SExp(o.map { _.toSExp })
+  }
+
+
+  def main(args:Array[String]){
+    def readStr(s:String) = {
+      val chars = new Array[Char](s.length)
+      s.getChars(0, s.length, chars, 0)
+      val r = new input.CharArrayReader(chars)
+      SExp.read(r)      
+    }
+    def check(s:String, r:String) {
+      assert(readStr(s).toString() == r, "Failed at: " + s)
+    }
+    check("()", "()")
+    check("(nil)", "(nil)")
+    check("(t)", "(t)")
+    check("(a b c d)", "(a b c d)")
+    check("(a b c () nil)", "(a b c () nil)")
+    check("(a b c () trait)", "(a b c () trait)")
+    check("(a b c () t())", "(a b c () t ())")
+    check("(a b c\n() nil(nil\n t))", "(a b c () nil (nil t))")
+    check("(nildude)", "(nildude)")
+
+
+    assert(readStr("t\n").toScala == true, "t should be true!")
+    assert(readStr("t\n\t").toScala == true, "t should be true!")
+    assert(readStr("t\n\t").toScala == true, "t should be true!")
+    assert(readStr("t ").toScala == true, "t should be true!")
+    assert(readStr("t").toScala == true, "t should be true!")
+
+
+    assert(readStr("nil\n").toScala == false, "nil should be false!")
+    assert(readStr("nil\n\t").toScala == false, "nil should be false!")
+    assert(readStr("nil\n\t").toScala == false, "nil should be false!")
+    assert(readStr("nil ").toScala == false, "nil should be false!")
+    assert(readStr("nil").toScala == false, "nil should be false!")
+
+    val map = readStr("(:use-sbt t :dude 1212)") match{
+      case ls:SExpList => ls.toKeywordMap()
+    }
+    map.get(key(":use-sbt")) match{
+      case Some(v) => assert(v.toScala == true)
+      case None => assert(false)
+    }
+
   }
 
 }
