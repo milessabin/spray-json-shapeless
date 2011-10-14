@@ -37,25 +37,35 @@ trait FormatHandler {
 object ProjectConfig {
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
     val m = config.toKeywordMap
+
+    def matchError(s:String) = {
+      System.err.println("Configuration Format Error: " + s)
+    }
+
     private def getStr(name: String): Option[String] = m.get(key(name)) match {
       case Some(StringAtom(s)) => Some(s)
-      case _ => None
+      case None => None
+      case _ => matchError("Expecting a string value at key: " + name);None
     }
     private def getInt(name: String): Option[Int] = m.get(key(name)) match {
       case Some(IntAtom(i)) => Some(i)
-      case _ => None
+      case None => None
+      case _ => matchError("Expecting an integer value at key: " + name);None
     }
     private def getBool(name: String): Boolean = m.get(key(name)) match {
       case Some(TruthAtom()) => true
-      case _ => false
+      case None => false
+      case _ => matchError("Expecting a nil or t value at key: " + name);false
     }
     private def getStrList(name: String): List[String] = m.get(key(name)) match {
       case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
-      case _ => List()
+      case None => List()
+      case _ => matchError("Expecting a list of string values at key: " + name);List()
     }
     private def getRegexList(name: String): List[Regex] = m.get(key(name)) match {
       case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value.r }.toList
-      case _ => List()
+      case None => List()
+      case _ => matchError("Expecting a list of string-encoded regexps at key: " + name);List()
     }
 
     def rootDir(): Option[String] = getStr(":root-dir")
