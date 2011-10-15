@@ -30,8 +30,13 @@ trait SemanticHighlighting { self: Global with Helpers =>
   class SymDesigsTraverser(p: RangePosition, tpeSet: Set[scala.Symbol]) extends Traverser {
 
     val syms = ListBuffer[SymbolDesignation]()
+    var depth:Int = 0
 
     override def traverse(t: Tree) {
+
+//      var ds = ""
+//      for(i <- 0 until depth) ds += " "
+//      println(ds + t.getClass.getName)
 
       val treeP = t.pos
 
@@ -42,6 +47,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
       }
 
       def add(designation: scala.Symbol) {
+//	println(ds + "Adding:" + designation)
         addAt(treeP.start, treeP.end, designation)
       }
 
@@ -57,12 +63,12 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case Ident(_) => {
             val sym = t.symbol
-            //println("IDENT:" + symbolSummary(sym).toString())
+//            println("IDENT:" + symbolSummary(sym).toString())
             if (sym.isCaseApplyOrUnapply) {
               val owner = sym.owner
               val start = treeP.start
               val end = start + owner.name.length
-              addAt(start, end, 'caseApplyOrUnapply)
+              addAt(start, end, 'object)
             } else if (sym.isConstructor) {
               add('constructor)
             } else if (sym.isTypeParameter) {
@@ -71,14 +77,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
               add('param)
             } else if (sym.isMethod) {
               add('functionCall)
-            } else if (sym.isVariable && sym.isLocal) {
-              add('var)
-            } else if (sym.isValue && sym.isLocal) {
-              add('val)
-            } else if (sym.isVariable) {
-              add('varField)
-            } else if (sym.isValue) {
-              add('valField)
             } else if (sym.isPackage) {
               add('package)
             } else if (sym.isTrait) {
@@ -87,13 +85,21 @@ trait SemanticHighlighting { self: Global with Helpers =>
               add('class)
             } else if (sym.isModule) {
               add('object)
-            } else {
-              println("WTF ident: " + sym)
+            } else if (sym.isVariable && sym.isLocal) {
+              add('var)
+            } else if (sym.isValue && sym.isLocal) {
+              add('val)
+            } else if (sym.isVariable) {
+              add('varField)
+            } else if (sym.isValue) {
+              add('valField)
+            }  else {
+//              println("WTF ident: " + sym)
             }
           }
           case Select(qual, selector: Name) => {
             val sym = t.symbol
-            //println("SELECT:" + symbolSummary(sym).toString())
+//            println("SELECT:" + symbolSummary(sym).toString())
             val start = try {
               qual.pos.end + 1
             } catch {
@@ -106,7 +112,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
               val owner = sym.owner
               val start = treeP.start
               val end = start + owner.name.length
-              addAt(start, end, 'caseApplyOrUnapply)
+              addAt(start, end, 'object)
             } else if (sym.hasAccessorFlag) {
               val under = sym.accessed
               if (under.isVariable) {
@@ -114,7 +120,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
               } else if (under.isValue) {
                 addAt(start, end, 'valField)
               } else {
-                println("WTF accessor: " + under)
+//                println("WTF accessor: " + under)
               }
             } else if (sym.isConstructor) {
               val start = try { sym.pos.start }
@@ -161,9 +167,10 @@ trait SemanticHighlighting { self: Global with Helpers =>
               addAt(start, end, 'valField)
             }
           }
+
           case TypeTree() => {
             val sym = t.symbol
-            //println("TypeTree:" + symbolSummary(sym).toString())
+//            println("TypeTree:" + symbolSummary(sym).toString())
             val start = treeP.start
             val end = treeP.end
             if (sym.isTrait) {
@@ -174,14 +181,27 @@ trait SemanticHighlighting { self: Global with Helpers =>
               addAt(start, end, 'object)
             }
           }
+
+          case UnApply(t, ts) => {
+            val sym = t.symbol
+//            println("UnApply:" + symbolSummary(sym).toString())
+            val owner = sym.owner
+            val start = treeP.start
+            val end = start + owner.name.length
+            addAt(start, end, 'object)
+          }
+
           case _ => {}
         }
+	depth += 1
         if (continue) super.traverse(t)
+	depth -= 1
       }
     }
   }
 
-  protected def symbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = {
+  protected def symbolDesignationsInRegion(p: RangePosition, 
+    tpes: List[scala.Symbol]): SymbolDesignations = {
     val tpeSet = Set[scala.Symbol]() ++ tpes
     val traverser = new SymDesigsTraverser(p, tpeSet)
     val typed:Response[Tree] = new Response[Tree]

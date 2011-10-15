@@ -111,7 +111,7 @@ object FileUtils {
     f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
   }
 
-  def readFileToByteArray(file:File):Array[Byte] = {  
+  def readFileToByteArray(file:File):Array[Byte] = {
     val length = file.length.toInt
     val array = new Array[Byte](length)
     val in = new FileInputStream(file)
