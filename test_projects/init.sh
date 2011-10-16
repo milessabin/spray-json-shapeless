@@ -7,14 +7,14 @@ PROJ=sbt-deps
 rm -rf $PROJ
 git clone https://github.com/hdeshev/${PROJ}.git
 cd ${PROJ}
-sbt update
+sbt7 update
 read -d '' CONFIG <<EOF
 (
 :project-package "${PROJ}"
 :use-sbt t
 :sbt-subprojects (
-  (:name "web" :deps ("core"))
-  (:name "core" :deps ())
+  (:name "web")
+  (:name "core")
   )
 )
 EOF
