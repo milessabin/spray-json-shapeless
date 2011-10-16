@@ -18,11 +18,9 @@
 */
 
 package org.ensime.server
-import org.ensime.model.Helpers
-import org.ensime.model.SymbolDesignation
-import org.ensime.model.SymbolDesignations
+import org.ensime.model.{Helpers, SymbolDesignation, SymbolDesignations}
 import scala.collection.mutable.ListBuffer
-import scala.tools.nsc.interactive.{ CompilerControl, Global }
+import scala.tools.nsc.interactive.{CompilerControl, Global}
 import scala.tools.nsc.util.RangePosition
 
 trait SemanticHighlighting { self: Global with Helpers =>
@@ -30,14 +28,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
   class SymDesigsTraverser(p: RangePosition, tpeSet: Set[scala.Symbol]) extends Traverser {
 
     val syms = ListBuffer[SymbolDesignation]()
-    var depth:Int = 0
 
     override def traverse(t: Tree) {
-
-      //      var ds = ""
-      //      for(i <- 0 until depth) ds += " "
-      //      println(ds + t.getClass.getName)
-
       val treeP = t.pos
 
       def addAt(start: Int, end: Int, designation: scala.Symbol) {
@@ -47,11 +39,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
       }
 
       def add(designation: scala.Symbol) {
-	//	println(ds + "Adding:" + designation)
         addAt(treeP.start, treeP.end, designation)
       }
 
-      var continue = true
       if (p.overlaps(treeP)) {
         t match {
           case Import(expr, selectors) => {
@@ -63,7 +53,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case Ident(_) => {
             val sym = t.symbol
-	    //            println("IDENT:" + symbolSummary(sym).toString())
             if (sym.isCaseApplyOrUnapply) {
               val owner = sym.owner
               val start = treeP.start
@@ -93,13 +82,10 @@ trait SemanticHighlighting { self: Global with Helpers =>
               add('varField)
             } else if (sym.isValue) {
               add('valField)
-            }  else {
-	      //              println("WTF ident: " + sym)
-            }
+            }  
           }
           case Select(qual, selector: Name) => {
             val sym = t.symbol
-	    //            println("SELECT:" + symbolSummary(sym).toString())
             val start = try {
               qual.pos.end + 1
             } catch {
@@ -119,9 +105,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'varField)
               } else if (under.isValue) {
                 addAt(start, end, 'valField)
-              } else {
-		//                println("WTF accessor: " + under)
-              }
+              } 
             } else if (sym.isConstructor) {
               val start = try { sym.pos.start }
               catch { case _ => treeP.start }
@@ -150,6 +134,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           case ValDef(mods, name, tpt, rhs) => {
             val sym = t.symbol
 
+	    // TODO:
 	    // Unfotunately t.symbol.pos returns a RangePosition
 	    // that covers the entire declaration. 
 	    //
@@ -177,7 +162,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
           case TypeTree() => {
             val sym = t.symbol
-	    //            println("TypeTree:" + symbolSummary(sym).toString())
             val start = treeP.start
             val end = treeP.end
             if (sym.isTrait) {
@@ -187,22 +171,21 @@ trait SemanticHighlighting { self: Global with Helpers =>
             } else if (sym.isModule) {
               addAt(start, end, 'object)
             }
+	    else if(t.tpe != null){
+	      // TODO:
+	      // This case occurs when 
+	      // pattern matching on 
+	      // case classes. 
+	      // As in:
+	      // case MyClass(a:Int,b:Int)
+	      //
+	      // Works, but this is *way* under-constrained.
+	      addAt(start, end, 'object)
+            }
           }
-
-          case UnApply(t, ts) => {
-            val sym = t.symbol
-	    //            println("UnApply:" + symbolSummary(sym).toString())
-            val owner = sym.owner
-            val start = treeP.start
-            val end = start + owner.name.length
-            addAt(start, end, 'object)
-          }
-
           case _ => {}
         }
-	depth += 1
-        if (continue) super.traverse(t)
-	depth -= 1
+        super.traverse(t)
       }
     }
   }
@@ -215,6 +198,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
     askType(p.source, false, typed)
     typed.get.left.toOption match {
       case Some(tree) => {
+	println(tree.toString())
         traverser.traverse(tree)
         SymbolDesignations(
           p.source.file.path,
