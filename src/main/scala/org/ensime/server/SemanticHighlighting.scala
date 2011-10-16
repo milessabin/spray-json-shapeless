@@ -34,9 +34,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
     override def traverse(t: Tree) {
 
-//      var ds = ""
-//      for(i <- 0 until depth) ds += " "
-//      println(ds + t.getClass.getName)
+      //      var ds = ""
+      //      for(i <- 0 until depth) ds += " "
+      //      println(ds + t.getClass.getName)
 
       val treeP = t.pos
 
@@ -47,7 +47,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
       }
 
       def add(designation: scala.Symbol) {
-//	println(ds + "Adding:" + designation)
+	//	println(ds + "Adding:" + designation)
         addAt(treeP.start, treeP.end, designation)
       }
 
@@ -63,7 +63,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
           case Ident(_) => {
             val sym = t.symbol
-//            println("IDENT:" + symbolSummary(sym).toString())
+	    //            println("IDENT:" + symbolSummary(sym).toString())
             if (sym.isCaseApplyOrUnapply) {
               val owner = sym.owner
               val start = treeP.start
@@ -94,12 +94,12 @@ trait SemanticHighlighting { self: Global with Helpers =>
             } else if (sym.isValue) {
               add('valField)
             }  else {
-//              println("WTF ident: " + sym)
+	      //              println("WTF ident: " + sym)
             }
           }
           case Select(qual, selector: Name) => {
             val sym = t.symbol
-//            println("SELECT:" + symbolSummary(sym).toString())
+	    //            println("SELECT:" + symbolSummary(sym).toString())
             val start = try {
               qual.pos.end + 1
             } catch {
@@ -120,7 +120,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
               } else if (under.isValue) {
                 addAt(start, end, 'valField)
               } else {
-//                println("WTF accessor: " + under)
+		//                println("WTF accessor: " + under)
               }
             } else if (sym.isConstructor) {
               val start = try { sym.pos.start }
@@ -133,7 +133,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'operator)
               } else if (sym.nameString == "apply") {}
               else {
-                  addAt(start, end, 'functionCall)
+                addAt(start, end, 'functionCall)
               }
             } else if (sym.isPackage) {
               addAt(start, end, 'package)
@@ -148,11 +148,18 @@ trait SemanticHighlighting { self: Global with Helpers =>
             }
           }
           case ValDef(mods, name, tpt, rhs) => {
-            val start = if (mods.positions.isEmpty) t.pos.start
-            else mods.positions.map(_._2.end).max + 2
-            val len = name.decode.length()
-            val end = start + len
             val sym = t.symbol
+
+	    // Unfotunately t.symbol.pos returns a RangePosition
+	    // that covers the entire declaration. 
+	    //
+	    // This is brittle, but I don't know a better 
+	    // way to get the position of just the name.
+
+	    val start = if (mods.positions.isEmpty) t.pos.start
+	    else mods.positions.map(_._2.end).max + 2
+	    val len = name.decode.length()
+	    val end = start + len
             val isField = sym.owner.isType || sym.owner.isModule
 
             if (mods.isParameter) {
@@ -170,7 +177,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
           case TypeTree() => {
             val sym = t.symbol
-//            println("TypeTree:" + symbolSummary(sym).toString())
+	    //            println("TypeTree:" + symbolSummary(sym).toString())
             val start = treeP.start
             val end = treeP.end
             if (sym.isTrait) {
@@ -184,7 +191,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
           case UnApply(t, ts) => {
             val sym = t.symbol
-//            println("UnApply:" + symbolSummary(sym).toString())
+	    //            println("UnApply:" + symbolSummary(sym).toString())
             val owner = sym.owner
             val start = treeP.start
             val end = start + owner.name.length
