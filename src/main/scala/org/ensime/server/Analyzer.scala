@@ -145,7 +145,7 @@ extends Actor with RefactoringHandler {
                       if (file.getAbsolutePath().endsWith(".java")) {
                         javaCompiler.compileFile(file)
                       }
-                      val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+                      val f = sourceFile(file)
                       scalaCompiler.askReloadFile(f)
                       scalaCompiler.askNotifyWhenReady()
                       project ! RPCResultEvent(toWF(true), callId)
@@ -273,7 +273,7 @@ extends Actor with RefactoringHandler {
                   }
 
                   case SymbolDesignationsReq(file: File, start: Int, end:Int, tpes: List[Symbol]) => {
-		    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+		    val f = sourceFile(file)
 		    val pos = new RangePosition(f, start, start, end)
                     val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                     project ! RPCResultEvent(toWF(syms), callId)
@@ -304,8 +304,12 @@ extends Actor with RefactoringHandler {
   }
 
   def pos(file: File, offset: Int) = {
-    val f = scalaCompiler.sourceFileForPath(file.getAbsolutePath())
+    val f = scalaCompiler.sourceFileForPath(file.getCanonicalPath())
     new OffsetPosition(f, offset)
+  }
+
+  def sourceFile(file: File) = {
+    scalaCompiler.sourceFileForPath(file.getCanonicalPath())
   }
 
   override def finalize() {

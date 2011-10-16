@@ -183,6 +183,7 @@ object FileUtils {
               dy += ch.text.length - original.length
             }
           }
+
           case Left(e) =>
         }
       }

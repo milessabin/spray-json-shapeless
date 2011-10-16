@@ -1,21 +1,21 @@
 /**
- *  Copyright (C) 2010 Aemon Cannon
- *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License as
- *  published by the Free Software Foundation; either version 2 of
- *  the License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public
- *  License along with this program; if not, write to the Free
- *  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- *  MA 02111-1307, USA.
- */
+*  Copyright (C) 2010 Aemon Cannon
+*
+*  This program is free software; you can redistribute it and/or
+*  modify it under the terms of the GNU General Public License as
+*  published by the Free Software Foundation; either version 2 of
+*  the License, or (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public
+*  License along with this program; if not, write to the Free
+*  Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+*  MA 02111-1307, USA.
+*/
 
 package org.ensime.server
 import java.io.File
@@ -42,10 +42,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
       def apply() = respond(result)(op)
     }
     result.get.fold(o => o, { t =>
-      System.err.println("[Error in RichCompilerControl]")
-      t.printStackTrace()
-      handle(t)
-    })
+	System.err.println("[Error in RichCompilerControl]")
+	t.printStackTrace()
+	handle(t)
+      })
   }
 
   def askOrLazy[A](op: => A, handle: Throwable => A): A = {
@@ -101,39 +101,39 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
     typeById(id).map { t => inspectType(t) }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
-    inspectTypeAt(p)
-  }, t => None)
+      inspectTypeAt(p)
+    }, t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-    completePackageMember(path, prefix)
-  }, t => List())
+      completePackageMember(path, prefix)
+    }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     // Make sure new tree is loaded
     askReloadFile(p.source)
     askOr({
-      completeSymbolAt(p, prefix, constructor)
-    }, t => List())
+	completeSymbolAt(p, prefix, constructor)
+      }, t => List())
   }
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
     askReloadFile(p.source)
     askOr({
-      completeMemberAt(p, prefix)
-    }, t => List())
+	completeMemberAt(p, prefix)
+      }, t => List())
   }
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-    reloadAndTypeFiles(files)
-  }, t => ())
+      reloadAndTypeFiles(files)
+    }, t => ())
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
-    usesOfSymbolAtPoint(p).toList
-  }, t => List())
+      usesOfSymbolAtPoint(p).toList
+    }, t => List())
 
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = askOr({
-    symbolDesignationsInRegion(p, tpes)
-  }, t => SymbolDesignations("", List()))
+      symbolDesignationsInRegion(p, tpes)
+    }, t => SymbolDesignations("", List()))
 
   def askClearTypeCache() = clearTypeCache
 
@@ -149,8 +149,8 @@ class RichPresentationCompiler(
   var parent: Actor,
   var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-  with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
-  with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
+with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
+with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
 
   import ModelHelpers._
 
@@ -167,6 +167,11 @@ class RichPresentationCompiler(
 
   private val newTopLevelSyms = new mutable.LinkedHashSet[Symbol]
 
+  def activeUnits():List[CompilationUnit] = {
+    val invalidSet = toBeRemoved.synchronized{toBeRemoved.toSet}
+    unitOfFile.filter{kv => !invalidSet.contains(kv._1)}.values.toList
+  }
+
   /** Called from typechecker every time a top-level class or object is entered.*/
   override def registerTopLevelSym(sym: Symbol) {
     super.registerTopLevelSym(sym)
@@ -175,11 +180,11 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Remove symbols defined by files that no longer exist.
-   * Note that these symbols will not be collected by
-   * syncTopLevelSyms, since the units in question will
-   * never be reloaded again.
-   */
+  * Remove symbols defined by files that no longer exist.
+  * Note that these symbols will not be collected by
+  * syncTopLevelSyms, since the units in question will
+  * never be reloaded again.
+  */
   def removeAllDeleted() {
     allSources = allSources.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
@@ -222,7 +227,7 @@ class RichPresentationCompiler(
         members(sym) = m
       } catch {
         case e =>
-          System.err.println("Error: Omitting member " + sym + ": " + e)
+        System.err.println("Error: Omitting member " + sym + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -280,9 +285,9 @@ class RichPresentationCompiler(
     typeAt(p) match {
       case Left(t) => {
         Some(new TypeInspectInfo(
-          TypeInfo(t),
-          companionTypeOf(t).map(cacheType),
-          preparedMembers))
+            TypeInfo(t),
+            companionTypeOf(t).map(cacheType),
+            preparedMembers))
       }
       case Right(_) => None
     }
@@ -366,10 +371,10 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override scopeMembers to fix issues with finding method params
-   * and occasional exception in pre.memberType. Hopefully we can
-   * get these changes into Scala.
-   */
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
     wrapTypedTreeAt(pos) // to make sure context is entered
     locateContext(pos) match {
@@ -380,7 +385,7 @@ class RichPresentationCompiler(
             val ns = sym.nameString
             val accessible = context.isAccessible(sym, pre, false)
             if (accessible && ((exactMatch && ns == prefix)
-              || (!exactMatch && ns.startsWith(prefix))) &&
+		|| (!exactMatch && ns.startsWith(prefix))) &&
               !sym.nameString.contains("$") &&
               !locals.contains(sym)) {
               val member = new ScopeMember(
@@ -412,7 +417,7 @@ class RichPresentationCompiler(
         for (imp <- context.imports) {
           val pre = imp.qual.tpe
           val importedSyms = pre.members.flatMap(transformImport(
-            imp.tree.selectors, _))
+              imp.tree.selectors, _))
           for (sym <- importedSyms) {
             addSymbol(sym, pre, imp.qual)
           }
@@ -432,8 +437,8 @@ class RichPresentationCompiler(
     case List() => List()
     case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
     case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
-      if (to == nme.WILDCARD) List()
-      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+    if (to == nme.WILDCARD) List()
+    else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
     case _ :: rest => transformImport(rest, sym)
   }
 
@@ -505,8 +510,8 @@ class RichPresentationCompiler(
             _.pos match {
               case p: RangePosition => p
               case p =>
-                new RangePosition(
-                  p.source, p.point, p.point, p.point)
+              new RangePosition(
+                p.source, p.point, p.point, p.point)
             }
           }
         }
@@ -563,10 +568,10 @@ class RichPresentationCompiler(
   }
 
   def wrapReloadPosition(p: Position): Unit =
-    wrapReloadSource(p.source)
+  wrapReloadSource(p.source)
 
   def wrapReloadSource(source: SourceFile): Unit =
-    wrapReloadSources(List(source))
+  wrapReloadSources(List(source))
 
   def wrapReloadSources(sources: List[SourceFile]): Unit = {
     val superseeded = scheduler.dequeueAll {
@@ -578,13 +583,13 @@ class RichPresentationCompiler(
   }
 
   def wrapTypeMembers(p: Position): List[Member] =
-    wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
+  wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
 
   def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
-    wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
+  wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
 
   def wrapTypedTreeAt(position: Position): Tree =
-    wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
+  wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
 
 }
 
