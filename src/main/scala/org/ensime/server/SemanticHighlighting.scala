@@ -198,7 +198,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
     askType(p.source, false, typed)
     typed.get.left.toOption match {
       case Some(tree) => {
-	println(tree.toString())
         traverser.traverse(tree)
         SymbolDesignations(
           p.source.file.path,
