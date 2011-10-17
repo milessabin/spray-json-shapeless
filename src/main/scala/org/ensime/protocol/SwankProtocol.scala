@@ -46,10 +46,6 @@ trait SwankProtocol extends Protocol {
   import SwankProtocol._
   import ProtocolConst._
 
-  val PROTOCOL_VERSION: String = "0.0.1"
-
-  val SERVER_NAME: String = "ENSIMEserver"
-
   private var outPeer: Actor = null;
   private var rpcTarget: RPCTarget = null;
 
@@ -153,9 +149,41 @@ trait SwankProtocol extends Protocol {
     def oops = sendRPCError(ErrMalformedRPC, Some("Malformed " + callType + " call: " + form), callId)
 
     callType match {
+
+
+      /**
+      * Doc:
+      *   swank:connection-info
+      * Summary:
+      *   Request connection information.
+      * Arguments:
+      *   None
+      * Return:
+      *   A property list describing the server.
+      * Example return:
+      *   (:pid nil :implementation (:name "ENSIMEserver") :version "0.7")
+      */
       case "swank:connection-info" => {
         sendConnectionInfo(callId)
       }
+
+
+
+      /**
+      * Doc:
+      *   swank:init-project
+      * Summary:
+      *   Initialize the server with a project configuration.
+      * Arguments:
+      *   A complete ENSIME configuration property list. See manual for description of config format.
+      * Return:
+      *   A property list containing server's knowledge of the project after interacting with
+      *   the project's build system. Includes source roots which can be used by clients to
+      *   determine whether a given source file belongs to this project. 
+      * Example return:
+      *   (:project-name "ensime" :source-roots ("/Users/aemon/projects/ensime/src/main/scala"
+      *   "/Users/aemon/projects/ensime/src/test/scala" "/Users/aemon/projects/ensime/src/main/java"))
+      */
       case "swank:init-project" => {
         form match {
           case SExpList(head ::(conf: SExpList) :: body) => {
@@ -165,9 +193,44 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
+
+      /**
+      * Doc:
+      *   swank:peek-undo
+      * Summary:
+      *   The intention of this call is to preview the effect of an undo before executing it.
+      * Arguments:
+      *   None
+      * Return:
+      *   A property list describing the undo at the top of the undo stack.:id identifies the undo for
+      *   subsequent calls to swank:exec-undo. :changes is a list of textual changes that the undo would
+      *   effect. :summary summarizes the effect of the undo.
+      * Example return:
+      *   (:id 1 :changes ((:file "/Users/aemon/projects/ensime/src/main/scala/org/ensime/server/RPCTarget.scala"
+      *    :text "rpcInitProject" :from 2280 :to 2284)) :summary "Refactoring of type: 'rename")
+      */
       case "swank:peek-undo" => {
         rpcTarget.rpcPeekUndo(callId)
       }
+
+
+
+      /**
+      * Doc:
+      *   swank:exec-undo
+      * Summary:
+      *   Execute a specific, server-side undo operation.
+      * Arguments:
+      *   An integer undo id. See swank:peek-undo for how to learn this id.
+      * Return:
+      *   A property list describing the changes that the undo has effected. :id identifies the undo
+      *   that was executed. :touched-files is a list of files that were modified. A client may wish
+      *   to reload these files from disk.
+      * Example return:
+      *   (:id 1 :touched-files ("/Users/aemon/projects/ensime/src/main/scala/org/ensime/server/RPCTarget.scala"))
+      */
       case "swank:exec-undo" => {
         form match {
           case SExpList(head ::(IntAtom(id)) :: body) => {
@@ -176,12 +239,32 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
+
+      /**
+      * Doc:
+      *   swank:repl-config
+      * Summary:
+      *   Get information necessary to launch a scala repl for this project.
+      * Arguments:
+      *   None
+      * Return:
+      *   A property list with runtime configuration details for this project. :classpath is a classpath
+      *   string formatted for passing directly to the scala executable. 
+      * Example return:
+      *   (:classpath "lib1.jar:lib2.jar:lib3.jar")
+      */
       case "swank:repl-config" => {
         rpcTarget.rpcReplConfig(callId)
       }
+
+
       case "swank:builder-init" => {
         rpcTarget.rpcBuilderInit(callId)
       }
+
+
       case "swank:builder-add-files" => {
         form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
@@ -191,6 +274,8 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
       case "swank:builder-update-files" => {
         form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
@@ -200,6 +285,8 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
       case "swank:builder-remove-files" => {
         form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
@@ -209,9 +296,13 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
       case "swank:debug-config" => {
         rpcTarget.rpcDebugConfig(callId)
       }
+
+
       case "swank:debug-unit-info" => {
         form match {
           case SExpList(head :: StringAtom(sourceName) :: IntAtom(line) :: StringAtom(packPrefix) :: body) => {
@@ -220,6 +311,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
 
       case "swank:debug-class-locs-to-source-locs" => {
         form match {
@@ -488,18 +580,20 @@ trait SwankProtocol extends Protocol {
         detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
+
+  val ServerName: String = "ENSIME - Reference Server"
+  val ProtocolVersion: String = "0.7"
+
   /*
   * A sexp describing the server configuration, per the Swank standard.
   */
   def sendConnectionInfo(callId: Int) = {
     val info = SExp(
       key(":pid"), 'nil,
-      key(":server-implementation"),
+      key(":implementation"),
       SExp(
-        key(":name"), SERVER_NAME),
-      key(":machine"), 'nil,
-      key(":features"), 'nil,
-      key(":version"), PROTOCOL_VERSION)
+        key(":name"), ServerName),
+      key(":version"), ProtocolVersion)
     sendRPCReturn(info, callId)
   }
 
