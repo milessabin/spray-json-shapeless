@@ -274,6 +274,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                       case Some(info) => toWF(info)
                       case None => toWF(null)
                     }
+
                     project ! RPCResultEvent(result, callId)
                   }
 
