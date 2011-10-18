@@ -624,6 +624,31 @@ trait SwankProtocol extends Protocol {
       }
 
 
+      /**
+       * Doc:
+       *   swank:scope-completion
+       * Summary:
+       *   Find possible completions for a name in the given scope.
+       * Arguments:
+       *   A Scala source filename, absolute or relative to the project.
+       *   Character offset within that file.
+       *   The prefix of the name we are looking for.
+       *   Are we looking for a constructor? (a name following 'new').
+       * Return:
+       *   A list of symbol descriptions. :name is the name that completes
+       *   the provided prefix. :type-sig describes the type. :type-id is
+       *   an integer id that can be used in subsequent calls to
+       *   swank:type-by-id. :is-callable denotes whether this symbol is
+       *   callable (as in a method or function).
+       * Example call:
+       *   (:swank-rpc (swank:scope-completion
+       *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
+       *   22624 "fo" nil) 42)
+       * Example return:
+       *   (:return (:ok ((:name "form" :type-sig "SExp" :type-id 10)
+       *   (:name "format" :type-sig "(String, <repeated>[Any]) => String"
+       *   :type-id 11 :is-callable t))) 42)
+       */
       case "swank:scope-completion" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
@@ -633,6 +658,32 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
+      /**
+       * Doc:
+       *   swank:type-completion
+       * Summary:
+       *   Find possible completions for a member of the object at
+       *   the given point.
+       * Arguments:
+       *   A Scala source filename, absolute or relative to the project.
+       *   Character offset of the owning object within that file.
+       *   The prefix of the member name we are looking for.
+       * Return:
+       *   A list of symbol descriptions. :name is the name that completes
+       *   the provided prefix. :type-sig describes the type. :type-id is
+       *   an integer id that can be used in subsequent calls to
+       *   swank:type-by-id. :is-callable denotes whether this symbol is
+       *   callable (as in a method or function).
+       * Example call:
+       *   (:swank-rpc (swank:type-completion "SwankProtocol.scala"
+       *   24392 "rpcTypeC") 42)
+       * Example return:
+       *   (:return (:ok ((:name "rpcTypeCompletion"
+       *   :type-sig "(String, Int, String, Int) => Unit"
+       *   :type-id 75 :is-callable t))) 42)
+       */
       case "swank:type-completion" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
@@ -644,14 +695,22 @@ trait SwankProtocol extends Protocol {
       }
 
 
-      case "swank:uses-of-symbol-at-point" => {
-        form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
-            rpcTarget.rpcUsesOfSymAtPoint(file, point, callId)
-          }
-          case _ => oops
-        }
-      }
+      /**
+       * Doc:
+       *   swank:package-member-completion
+       * Summary:
+       *   Find possible completions for a given package path.
+       * Arguments:
+       *   A package path: such as "org.ensime" or "com".
+       *   The prefix of the package member name we are looking for.
+       * Return:
+       *   A list of names.
+       * Example call:
+       *   (:swank-rpc (swank:package-member-completion org.ensime.server Server)
+       *   42)
+       * Example return:
+       *   (:return (:ok ((:name "Server$") (:name "Server"))) 42)
+       */
       case "swank:package-member-completion" => {
         form match {
           case SExpList(head :: StringAtom(path) :: StringAtom(prefix) :: body) => {
@@ -660,6 +719,74 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
+      /**
+       * Doc:
+       *   swank:call-completion
+       * Summary:
+       *   Lookup the type information of a specific method or function
+       *   type. This is used by ENSIME to retrieve detailed parameter
+       *   and return type information after the user has selected a
+       *   method or function completion.
+       * Arguments:
+       *   A type id, as returned by swank:scope-completion or swank:type-completion.
+       * Return:
+       *   A property list describing a callable type. :result-type is the
+       *   type returned by the overall function type. :param-sections
+       *   contains potentially multiple lists of parameters, to reflect
+       *   Scala's support for multiple parameter lists (as with implicit
+       *   arguments). Each param is a two-item list: the first item
+       *   being the name of the parameter and the second being the type
+       *   description for that param.
+       * Example call:
+       *   (:swank-rpc (swank:call-completion 1)) 42)
+       * Example return:
+       *   (:return (:ok (:result-type (:name "Unit" :type-id 7 :full-name
+       *   "scala.Unit" :decl-as class) :param-sections ((:params (("id"
+       *   (:name "Int" :type-id 74 :full-name "scala.Int" :decl-as class))
+       *   ("callId" (:name "Int" :type-id 74 :full-name "scala.Int"
+       *   :decl-as class))))))) 42)
+       */
+      case "swank:call-completion" => {
+        form match {
+          case SExpList(head :: IntAtom(id) :: body) => {
+            rpcTarget.rpcCallCompletion(id, callId)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc:
+       *   swank:uses-of-symbol-at-point
+       * Summary:
+       *   Request all source locations where indicated symbol is used in
+       *   this project.
+       * Arguments:
+       *   A Scala source filename, absolute or relative to the project.
+       *   Character offset of the desired symbol within that file.
+       * Return:
+       *   A list of range positions. :file is the filename where the symbol
+       *   can be found. :offset is its character offset within the file. :start
+       *   and :end delimit the range that the symbol occupies.
+       * Example call:
+       *   (:swank-rpc (swank:uses-of-symbol-at-point "Test.scala" 11334) 42)
+       * Example return:
+       *   (:return (:ok ((:file "RichPresentationCompiler.scala" :offset 11442
+       *   :start 11428 :end 11849) (:file "RichPresentationCompiler.scala"
+       *   :offset 11319 :start 11319 :end 11339))) 42)
+       */
+      case "swank:uses-of-symbol-at-point" => {
+        form match {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
+            rpcTarget.rpcUsesOfSymAtPoint(file, point, callId)
+          }
+          case _ => oops
+        }
+      }
+
       case "swank:inspect-type-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
@@ -668,6 +795,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
       case "swank:inspect-type-by-id" => {
         form match {
           case SExpList(head :: IntAtom(id) :: body) => {
@@ -676,6 +804,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
       case "swank:symbol-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
@@ -684,6 +813,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
       case "swank:type-by-id" => {
         form match {
           case SExpList(head :: IntAtom(id) :: body) => {
@@ -692,6 +822,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
       case "swank:type-by-name" => {
         form match {
           case SExpList(head :: StringAtom(name) :: body) => {
@@ -700,6 +831,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
       case "swank:type-by-name-at-point" => {
         form match {
           case SExpList(head :: StringAtom(name) :: StringAtom(file) ::
@@ -709,14 +841,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
-      case "swank:call-completion" => {
-        form match {
-          case SExpList(head :: IntAtom(id) :: body) => {
-            rpcTarget.rpcCallCompletion(id, callId)
-          }
-          case _ => oops
-        }
-      }
+
       case "swank:type-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
@@ -725,6 +850,7 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
       case "swank:inspect-package-by-path" => {
         form match {
           case SExpList(head :: StringAtom(path) :: body) => {
