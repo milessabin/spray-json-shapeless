@@ -146,6 +146,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'functionCall)
               }
             }
+
+
             case ValDef(mods, name, tpt, rhs) => {
               val sym = t.symbol
               if (sym != NoSymbol) {
