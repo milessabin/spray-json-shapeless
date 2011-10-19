@@ -1,40 +1,40 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*  
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*  
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.server
 import java.io.File
 import org.ensime.util.CanonFile
 import org.ensime.util.FileUtils
-import scala.collection.{immutable, mutable}
+import scala.collection.{ immutable, mutable }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.common.CompilerAccess
-import scala.tools.refactoring.common.{Change, Selections}
+import scala.tools.refactoring.common.{ Change, Selections }
 import scala.tools.refactoring.implementations._
 
 case class RefactorFailure(val procedureId: Int, val message: String)
@@ -63,25 +63,25 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
     parameters: refactoring.RefactoringParameters): Either[RefactorFailure, RefactorEffect] = {
 
     val af = AbstractFile.getFile(file)
-    
-    refactoring.compilationUnitOfFile(af) match{
+
+    refactoring.compilationUnitOfFile(af) match {
       case Some(cu) => {
-	val selection = new refactoring.FileSelection(af, cu.body, start, end)
-	refactoring.prepare(selection) match {
-	  case Right(prepare) =>
-	  refactoring.perform(selection, prepare, parameters) match {
-            case Right(modifications) => Right(new RefactorEffect {
-		val procedureId = procId
-		val refactorType = tpe
-		val changes = modifications
+        val selection = new refactoring.FileSelection(af, cu.body, start, end)
+        refactoring.prepare(selection) match {
+          case Right(prepare) =>
+            refactoring.perform(selection, prepare, parameters) match {
+              case Right(modifications) => Right(new RefactorEffect {
+                val procedureId = procId
+                val refactorType = tpe
+                val changes = modifications
               })
-            case Left(error) => Left(RefactorFailure(procId, error.cause))
-	  }
-	  case Left(error) => Left(RefactorFailure(procId, error.cause))
-	}
+              case Left(error) => Left(RefactorFailure(procId, error.cause))
+            }
+          case Left(error) => Left(RefactorFailure(procId, error.cause))
+        }
       }
-      case None =>{
-	Left(RefactorFailure(procId, "Compilation unit not found: " + af))
+      case None => {
+        Left(RefactorFailure(procId, "Compilation unit not found: " + af))
       }
     }
 
@@ -101,23 +101,21 @@ trait RefactoringHandler { self: Analyzer =>
     result match {
       case Right(effect) => {
 
-	if(req.interactive){
+        if (req.interactive) {
           effects(procedureId) = effect
           project ! RPCResultEvent(toWF(effect), callId)
-	}
-	// Execute the refactoring immediately..
-	else{
-	  project ! AddUndo("Refactoring of type: " + req.refactorType.toString,
-	    FileUtils.inverseChanges(effect.changes))
-	  val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
-	  result match {
-	    case Right(result) => {
-	      project ! RPCResultEvent(toWF(result), callId)
-	    }
-	    case Left(f) => project ! RPCResultEvent(toWF(f), callId)
-	  }
-	}
-
+        } 
+        else { // Execute the refactoring immediately..
+          project ! AddUndo("Refactoring of type: " + req.refactorType.toString,
+            FileUtils.inverseChanges(effect.changes))
+          val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
+          result match {
+            case Right(result) => {
+              project ! RPCResultEvent(toWF(result), callId)
+            }
+            case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+          }
+        }
 
       }
       case Left(f) => project ! RPCResultEvent(toWF(f), callId)
@@ -127,23 +125,23 @@ trait RefactoringHandler { self: Analyzer =>
 
   def handleRefactorExec(req: RefactorExecReq, callId: Int) {
     val procedureId = req.procedureId
-    effects.get(procedureId) match{
+    effects.get(procedureId) match {
       case Some(effect) => {
-	project ! AddUndo(
-	  "Refactoring of type: " + req.refactorType.toString, 
-	  FileUtils.inverseChanges(effect.changes))
-	val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
-	result match {
-	  case Right(result) => {
-	    project ! RPCResultEvent(toWF(result), callId)
-	  }
-	  case Left(f) => project ! RPCResultEvent(toWF(f), callId)
-	}
+        project ! AddUndo(
+          "Refactoring of type: " + req.refactorType.toString,
+          FileUtils.inverseChanges(effect.changes))
+        val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
+        result match {
+          case Right(result) => {
+            project ! RPCResultEvent(toWF(result), callId)
+          }
+          case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+        }
       }
       case None => {
-	val f = RefactorFailure(procedureId, 
-	  "No effect found for procId " + procedureId)
-	project ! RPCResultEvent(toWF(f), callId)
+        val f = RefactorFailure(procedureId,
+          "No effect found for procId " + procedureId)
+        project ! RPCResultEvent(toWF(f), callId)
       }
     }
   }
@@ -157,7 +155,7 @@ trait RefactoringHandler { self: Analyzer =>
 
 trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
 
-  import org.ensime.util.{Symbols => S}
+  import org.ensime.util.{ Symbols => S }
 
   def askPerformRefactor(
     procId: Int,
@@ -180,65 +178,69 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
   import FileUtils._
 
   protected def doRename(procId: Int, tpe: scala.Symbol, name: String, file: CanonFile, start: Int, end: Int) =
-  new RefactoringEnvironment(file.getPath, start, end) {
-    val refactoring = new Rename with GlobalIndexes {
-      val global = RefactoringImpl.this
-      val invalidSet = toBeRemoved.synchronized{toBeRemoved.toSet}
-      val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
-      val index = GlobalIndex(cuIndexes.toList)
-    }
-    val result = performRefactoring(procId, tpe, name)
-  }.result
+    new RefactoringEnvironment(file.getPath, start, end) {
+      val refactoring = new Rename with GlobalIndexes {
+        val global = RefactoringImpl.this
+        val invalidSet = toBeRemoved.synchronized { toBeRemoved.toSet }
+        val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
+        val index = GlobalIndex(cuIndexes.toList)
+      }
+      val result = performRefactoring(procId, tpe, name)
+    }.result
 
-  protected def doExtractMethod(procId: Int, tpe: scala.Symbol, name: String, file: CanonFile, start: Int, end: Int) =
-  new RefactoringEnvironment(file.getPath, start, end) {
-    val refactoring = new ExtractMethod with GlobalIndexes {
-      val global = RefactoringImpl.this
-      val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
-      val index = GlobalIndex(cuIndexes.toList)
-    }
-    val result = performRefactoring(procId, tpe, name)
-  }.result
+  protected def doExtractMethod(procId: Int, tpe: scala.Symbol,
+    name: String, file: CanonFile, start: Int, end: Int) =
+    new RefactoringEnvironment(file.getPath, start, end) {
+      val refactoring = new ExtractMethod with GlobalIndexes {
+        val global = RefactoringImpl.this
+        val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
+        val index = GlobalIndex(cuIndexes.toList)
+      }
+      val result = performRefactoring(procId, tpe, name)
+    }.result
 
-  protected def doExtractLocal(procId: Int, tpe: scala.Symbol, name: String, file: CanonFile, start: Int, end: Int) =
-  new RefactoringEnvironment(file.getPath, start, end) {
-    val refactoring = new ExtractLocal with GlobalIndexes {
-      val global = RefactoringImpl.this
-      val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
-      val index = GlobalIndex(cuIndexes.toList)
-    }
-    val result = performRefactoring(procId, tpe, name)
-  }.result
+  protected def doExtractLocal(procId: Int, tpe: scala.Symbol,
+    name: String, file: CanonFile, start: Int, end: Int) =
+    new RefactoringEnvironment(file.getPath, start, end) {
+      val refactoring = new ExtractLocal with GlobalIndexes {
+        val global = RefactoringImpl.this
+        val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
+        val index = GlobalIndex(cuIndexes.toList)
+      }
+      val result = performRefactoring(procId, tpe, name)
+    }.result
 
-  protected def doInlineLocal(procId: Int, tpe: scala.Symbol, file: CanonFile, start: Int, end: Int) =
-  new RefactoringEnvironment(file.getPath, start, end) {
-    val refactoring = new InlineLocal with GlobalIndexes {
-      val global = RefactoringImpl.this
-      val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
-      val index = GlobalIndex(cuIndexes.toList)
-    }
-    val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
-  }.result
+  protected def doInlineLocal(procId: Int, tpe: scala.Symbol, file: CanonFile,
+    start: Int, end: Int) =
+    new RefactoringEnvironment(file.getPath, start, end) {
+      val refactoring = new InlineLocal with GlobalIndexes {
+        val global = RefactoringImpl.this
+        val cuIndexes = this.global.activeUnits.map { u => CompilationUnitIndex(u.body) }
+        val index = GlobalIndex(cuIndexes.toList)
+      }
+      val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
+    }.result
 
   protected def doOrganizeImports(procId: Int, tpe: scala.Symbol, file: CanonFile) =
-  new RefactoringEnvironment(file.getPath, 0, 0) {
-    val refactoring = new OrganizeImports {
-      val global = RefactoringImpl.this
-    }
-    val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
-  }.result
+    new RefactoringEnvironment(file.getPath, 0, 0) {
+      val refactoring = new OrganizeImports {
+        val global = RefactoringImpl.this
+      }
+      val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
+    }.result
 
-  protected def doAddImport(procId: Int, tpe: scala.Symbol, qualName: String, file: CanonFile, start: Int, end: Int) = {
+  protected def doAddImport(procId: Int, tpe: scala.Symbol, qualName: String,
+    file: CanonFile, start: Int, end: Int) = {
     val refactoring = new AddImportStatement {
       val global = RefactoringImpl.this
     }
     val af = AbstractFile.getFile(file.getPath)
     val modifications = refactoring.addImport(af, qualName)
     Right(new RefactorEffect {
-        val procedureId = procId
-        val refactorType = tpe
-        val changes = modifications
-      })
+      val procedureId = procId
+      val refactorType = tpe
+      val changes = modifications
+    })
   }
 
   protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.sourceFileForPath(f.getPath())))
@@ -249,47 +251,50 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     params: immutable.Map[scala.Symbol, Any]): Either[RefactorFailure, RefactorEffect] = {
 
     def badArgs = Left(RefactorFailure(procId, "Incorrect arguments passed to " +
-	tpe + ": " + params))
+      tpe + ": " + params))
 
-    import org.ensime.util.{Symbols => S}
+    import org.ensime.util.{ Symbols => S }
     try {
       tpe match {
         case S.Rename => {
-          (params.get(S.NewName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
-            case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
-	      val file = CanonFile(f)
-	      reloadAndType(file)
-	      doRename(procId, tpe, n, file, s, e)
+          (params.get(S.NewName), params.get(S.File), params.get(S.Start),
+            params.get(S.End)) match {
+              case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+                val file = CanonFile(f)
+                reloadAndType(file)
+                doRename(procId, tpe, n, file, s, e)
+              }
+              case _ => badArgs
             }
-            case _ => badArgs
-          }
         }
         case S.ExtractMethod => {
-          (params.get(S.MethodName), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
-            case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
-	      val file = CanonFile(f)
-	      reloadAndType(file)
-	      doExtractMethod(procId, tpe, n, file, s, e)
+          (params.get(S.MethodName), params.get(S.File), params.get(S.Start),
+            params.get(S.End)) match {
+              case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+                val file = CanonFile(f)
+                reloadAndType(file)
+                doExtractMethod(procId, tpe, n, file, s, e)
+              }
+              case _ => badArgs
             }
-            case _ => badArgs
-          }
         }
         case S.ExtractLocal => {
-          (params.get(S.Name), params.get(S.File), params.get(S.Start), params.get(S.End)) match {
-            case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
-	      val file = CanonFile(f)
-	      reloadAndType(file)
-	      doExtractLocal(procId, tpe, n, file, s, e)
+          (params.get(S.Name), params.get(S.File), params.get(S.Start),
+            params.get(S.End)) match {
+              case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+                val file = CanonFile(f)
+                reloadAndType(file)
+                doExtractLocal(procId, tpe, n, file, s, e)
+              }
+              case _ => badArgs
             }
-            case _ => badArgs
-          }
         }
         case S.InlineLocal => {
           (params.get(S.File), params.get(S.Start), params.get(S.End)) match {
             case (Some(f: String), Some(s: Int), Some(e: Int)) => {
-	      val file = CanonFile(f)
-	      reloadAndType(file)
-	      doInlineLocal(procId, tpe, file, s, e)
+              val file = CanonFile(f)
+              reloadAndType(file)
+              doInlineLocal(procId, tpe, file, s, e)
             }
             case _ => badArgs
           }
@@ -297,23 +302,23 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
         case S.OrganizeImports => {
           params.get(S.File) match {
             case Some(f: String) => {
-	      val file = CanonFile(f)
-	      reloadAndType(file)
-	      doOrganizeImports(procId, tpe, file)
+              val file = CanonFile(f)
+              reloadAndType(file)
+              doOrganizeImports(procId, tpe, file)
             }
             case _ => badArgs
           }
         }
         case S.AddImport => {
-          (params.get(S.QualifiedName), params.get(S.File), 
-	    params.get(S.Start), params.get(S.End)) match {
-            case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
-	      val file = CanonFile(f)
-	      reloadAndType(file)
-	      doAddImport(procId, tpe, n, file, s, e)
+          (params.get(S.QualifiedName), params.get(S.File),
+            params.get(S.Start), params.get(S.End)) match {
+              case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+                val file = CanonFile(f)
+                reloadAndType(file)
+                doAddImport(procId, tpe, n, file, s, e)
+              }
+              case _ => badArgs
             }
-            case _ => badArgs
-          }
         }
         case _ => Left(RefactorFailure(procId, "Unknown refactoring: " + tpe))
       }
@@ -329,10 +334,10 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     writeChanges(effect.changes) match {
       case Right(touchedFiles) => {
         Right(new RefactorResult {
-            val refactorType = refctrType
-            val procedureId = procId
-            val touched = touchedFiles
-          })
+          val refactorType = refctrType
+          val procedureId = procId
+          val touched = touchedFiles
+        })
       }
       case Left(err) => Left(RefactorFailure(procId, err.toString))
     }
