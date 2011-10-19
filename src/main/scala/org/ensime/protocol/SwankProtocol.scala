@@ -1395,7 +1395,6 @@ trait SwankProtocol extends Protocol {
        *   swank:shutdown-server
        * Summary:
        *   Politely ask the server to shutdown.
-       *   Note: this just results in a call to System.exit(0)
        * Arguments:
        *   None
        * Return:
