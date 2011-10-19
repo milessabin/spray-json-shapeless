@@ -100,7 +100,6 @@ trait RefactoringHandler { self: Analyzer =>
 
     result match {
       case Right(effect) => {
-
         if (req.interactive) {
           effects(procedureId) = effect
           project ! RPCResultEvent(toWF(effect), callId)
