@@ -322,7 +322,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
         case _ => Left(RefactorFailure(procId, "Unknown refactoring: " + tpe))
       }
     } catch {
-      case e: Throwable => Left(RefactorFailure(procId, e.toString))
+      case e => Left(RefactorFailure(procId, e.toString))
     }
   }
 
