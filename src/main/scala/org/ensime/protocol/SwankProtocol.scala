@@ -302,6 +302,18 @@ trait SwankProtocol extends Protocol {
   *   )
   */
 
+  /**
+  * Doc DataStructure:
+  *   SymbolDesignations
+  * Summary:
+  *   Describe the symbol classes in a given textual range.
+  * Structure:
+  *   (
+  *   :file //String:Filename of file to be annotated.
+  *   :syms //List of (Symbol Integer Integer):Denoting the symbol class and start and end of the range where it applies.
+  *   )
+  */
+
 
   /**
   * Doc DataStructure:
@@ -1156,6 +1168,22 @@ trait SwankProtocol extends Protocol {
 	}
       }
 
+
+      /**
+      * Doc:
+      *   swank:cancel-refactor
+      * Summary:
+      *   Cancel a refactor that's been performed but not
+      *   executed.
+      * Arguments:
+      *   Int:Procedure Id of the refactoring.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:cancel-refactor 1) 42)
+      * Example return:
+      *   (:return (:ok t))
+      */
       case "swank:cancel-refactor" => {
 	form match {
           case SExpList(head :: IntAtom(procId) :: body) => {
@@ -1166,16 +1194,31 @@ trait SwankProtocol extends Protocol {
       }
 
 
-      case "swank:expand-selection" => {
-	form match {
-          case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
-            IntAtom(end) :: body) => {
-            rpcTarget.rpcExpandSelection(filename, start, end, callId)
-          }
-          case _ => oops
-	}
-      }
-
+      
+      /**
+      * Doc:
+      *   swank:symbol-designations
+      * Summary:
+      *   Request the semantic classes of symbols in the given
+      *   range. These classes are intended to be used for
+      *   semantic highlighting.
+      * Arguments:
+      *   String:A source filename.
+      *   Int:The character offset of the start of the input range.
+      *   Int:The character offset of the end of the input range.
+      *   List of Symbol:The symbol classes in which we are interested.
+      *     Available classes are: var,val,varField,valField,functionCall,
+      *     operator,param,class,trait,object.
+      * Return:
+      *   SymbolDesignations
+      * Example call:
+      *   (:swank-rpc (swank:symbol-designations "SwankProtocol.scala" 0 46857
+      *   (var val varField valField)) 42)
+      * Example return:
+      *   (:return (:ok (:file "SwankProtocol.scala" :syms
+      *   ((varField 33625 33634) (val 33657 33661) (val 33663 33668)
+      *   (varField 34369 34378) (val 34398 34400)))) 42)
+      */
       case "swank:symbol-designations" => {
 	form match {
           case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
@@ -1188,6 +1231,37 @@ trait SwankProtocol extends Protocol {
           case _ => oops
 	}
       }
+
+
+      /**
+      * Doc:
+      *   swank:expand-selection
+      * Summary:
+      *   Given a start and end point in a file, expand the
+      *   selection so that it spans the smallest syntactic
+      *   scope that contains start and end.
+      * Arguments:
+      *   String:A source filename.
+      *   Int:The character offset of the start of the input range.
+      *   Int:The character offset of the end of the input range.
+      * Return:
+      *   A RangePosition:The expanded range.
+      * Example call:
+      *   (:swank-rpc (swank:expand-selection "Model.scala" 4648 4721) 42)
+      * Example return:
+      *   (:return (:ok (:file "Model.scala" :start 4374 :end 14085)) 42)
+      */
+      case "swank:expand-selection" => {
+	form match {
+          case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
+            IntAtom(end) :: body) => {
+            rpcTarget.rpcExpandSelection(filename, start, end, callId)
+          }
+          case _ => oops
+	}
+      }
+
+
 
       /**
       * Doc:
