@@ -167,7 +167,7 @@ trait ModelBuilders { self: Global with Helpers =>
           }
 
           // Convert type members into NamedTypeMemberInfos
-          // and divided into different kinds..
+          // and divid into different kinds..
 
           val nestedTypes = new ArrayBuffer[NamedTypeMemberInfo]()
           val constructors = new ArrayBuffer[NamedTypeMemberInfo]()

@@ -288,7 +288,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) => {
                     val f = sourceFile(file)
-                    val pos = new RangePosition(f, start, start, end)
+		    val clampedEnd = math.max(end,start)
+                    val pos = new RangePosition(f, start, start, clampedEnd)
                     val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                     project ! RPCResultEvent(toWF(syms), callId)
                   }
@@ -296,7 +297,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                 }
               }
             } catch {
-              case e: Exception => {
+              case e  => {
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
                 project ! RPCErrorEvent(ErrExceptionInAnalyzer,

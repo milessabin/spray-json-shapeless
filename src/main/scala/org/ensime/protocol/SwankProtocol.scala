@@ -1,29 +1,29 @@
 /**
- *  Copyright (c) 2010, Aemon Cannon
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *      * Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *      * Redistributions in binary form must reproduce the above copyright
- *        notice, this list of conditions and the following disclaimer in the
- *        documentation and/or other materials provided with the distribution.
- *      * Neither the name of ENSIME nor the
- *        names of its contributors may be used to endorse or promote products
- *        derived from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
- *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+*  Copyright (c) 2010, Aemon Cannon
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions are met:
+*      * Redistributions of source code must retain the above copyright
+*        notice, this list of conditions and the following disclaimer.
+*      * Redistributions in binary form must reproduce the above copyright
+*        notice, this list of conditions and the following disclaimer in the
+*        documentation and/or other materials provided with the distribution.
+*      * Neither the name of ENSIME nor the
+*        names of its contributors may be used to endorse or promote products
+*        derived from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 package org.ensime.protocol
 
@@ -97,9 +97,9 @@ trait SwankProtocol extends Protocol {
 
   def sendBackgroundMessage(code: Int, detail: Option[String]) {
     sendMessage(SExp(
-      key(":background-message"),
-      code,
-      detail.map(strToSExp).getOrElse(NilAtom())))
+	key(":background-message"),
+	code,
+	detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   def handleIncomingMessage(msg: Any) {
@@ -127,10 +127,10 @@ trait SwankProtocol extends Protocol {
           handleRPCRequest(name, form, callId)
         } catch {
           case e: Throwable =>
-            {
-              e.printStackTrace(System.err)
-              sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
-            }
+          {
+            e.printStackTrace(System.err)
+            sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
+          }
         }
       }
       case _ => {
@@ -142,6 +142,192 @@ trait SwankProtocol extends Protocol {
     }
   }
 
+
+
+  /**
+  * Doc DataStructure:
+  *   Position
+  * Summary:
+  *   A source position.
+  * Structure:
+  *   (
+  *     :file   //String:A filename
+  *     :offset  //Int:The zero-indexed character offset of this position.
+  *   )
+  */
+
+  /**
+  * Doc DataStructure:
+  *   RangePosition
+  * Summary:
+  *   A source position that describes a range of characters in a file.
+  * Structure:
+  *   (
+  *     :file   //String:A filename
+  *     :start  //Int:The character offset of the start of the range.
+  *     :end    //Int:The character offset of the end of the range.
+  *   )
+  */
+
+  /**
+  * Doc DataStructure:
+  *   Change
+  * Summary:
+  *   Describes a change to a source code file.
+  * Structure:
+  *   (
+  *   :file //String:Filename of source  to be changed
+  *   :text //String:Text to be inserted
+  *   :from //Int:Character offset of start of text to replace.
+  *   :to //Int:Character offset of end of text to replace.
+  *   )
+  */
+
+  /**
+  * Doc DataStructure:
+  *   SymbolSearchResult
+  * Summary:
+  *   Describes a symbol found in a search operation.
+  * Structure:
+  *   (
+  *   :name //String:Qualified name of symbol.
+  *   :local-name //String:Unqualified name of symbol
+  *   :decl-as //Symbol:What kind of symbol this is.
+  *   :pos //Position:Where is this symbol declared?
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   ParamSectionInfo
+  * Summary:
+  *   Description of one of a method's parameter sections.
+  * Structure:
+  *   (
+  *   :params //List of (String TypeInfo) pairs:Describes params in section
+  *   :is-implicit //Bool:Is this an implicit parameter section.
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   CallCompletionInfo
+  * Summary:
+  *   Description of a Scala method's type
+  * Structure:
+  *   (
+  *   :result-type //TypeInfo
+  *   :param-sections //List of ParamSectionInfo:
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   TypeMemberInfo
+  * Summary:
+  *   Description of a type member
+  * Structure:
+  *   (
+  *   :name //String:The name of this member.
+  *   :type-sig //String:The type signature of this member
+  *   :type-id //Int:The type id for this member's type.
+  *   :is-callable //Bool:Is this a function or method type.
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   TypeInfo
+  * Summary:
+  *   Description of a Scala type.
+  * Structure:
+  *   (
+  *   :name //String:The short name of this type.
+  *   :type-id //Int:Type Id of this type (for fast lookups) 
+  *   :full-name //String:The qualified name of this type 
+  *   :decl-as //Symbol:What kind of type is this? (class,trait,object, etc) 
+  *   :type-args //List of TypeInfo:Type args this type has been applied to.
+  *   :members //List of TypeMemberInfo
+  *   :arrow-type //Bool:Is this a function or method type?
+  *   :result-type //TypeInfo:
+  *   :param-sections //List of ParamSectionInfo:
+  *   :pos //Position:Position where this type was declared
+  *   :outer-type-id //Int:If this is a nested type, type id of owning type
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   InterfaceInfo
+  * Summary:
+  *   Describes an inteface that a type supports
+  * Structure:
+  *   (
+  *   :type //TypeInfo:The type of the interface.
+  *   :via-view //Bool:Is this type suppoted via an implicit conversion?
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   TypeInspectInfo
+  * Summary:
+  *   Detailed description of a Scala type.
+  * Structure:
+  *   (
+  *   :type //TypeInfo
+  *   :companion-id //Int:Type Id of this type's companion type.
+  *   :interfaces //List of InterfaceInfo:Interfaces this type supports
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   SymbolInfoLight
+  * Summary:
+  *   An abbreviated symbol description.
+  * Structure:
+  *   (
+  *   :name //String:Name of this symbol.
+  *   :type-sig //String:The type signature of this symbol.
+  *   :type-id //Int:A type id.
+  *   :is-callable //Bool:Is this symbol a method or function?
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   PackageMemberInfoLight
+  * Summary:
+  *   An abbreviated package member description.
+  * Structure:
+  *   (
+  *   :name //String:Name of this symbol.
+  *   )
+  */
+
+
+  /**
+  * Doc DataStructure:
+  *   Type
+  * Summary:
+  *   Describe a type in detail.
+  * Structure:
+  * (
+  *
+  *
+  *
+  * )
+  */
+
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
     println("\nHandling RPC: " + form)
@@ -152,760 +338,846 @@ trait SwankProtocol extends Protocol {
     callType match {
 
       /**
-       * Doc:
-       *   swank:connection-info
-       * Summary:
-       *   Request connection information.
-       * Arguments:
-       *   None
-       * Return:
-       *   A property list describing the server.
-       * Example call:
-       *   (:swank-rpc (swank:connection-info) 42)
-       * Example return:
-       *   (:return (:ok (:pid nil :implementation (:name "ENSIME - Reference Server")
-       *   :version "0.7")) 42)
-       */
+      * Doc:
+      *   swank:connection-info
+      * Summary:
+      *   Request connection information.
+      * Arguments:
+      *   None
+      * Return:
+      *   (
+      *   :pid  //Int:The integer process id of the server (or nil if unnavailable)
+      *   :implementation
+      *     (
+      *     :name  //String:An identifying name for this server implementation.
+      *     )
+      *     :version //String:The version of the protocol this server supports.
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:connection-info) 42)
+      * Example return:
+      *   (:return (:ok (:pid nil :implementation (:name "ENSIME - Reference Server")
+      *   :version "0.7")) 42)
+      */
       case "swank:connection-info" => {
-        sendConnectionInfo(callId)
+	sendConnectionInfo(callId)
       }
 
       /**
-       * Doc:
-       *   swank:init-project
-       * Summary:
-       *   Initialize the server with a project configuration.
-       * Arguments:
-       *   A complete ENSIME configuration property list. See manual for
-       *   description of config format.
-       * Return:
-       *   A property list containing server's knowledge of the project after
-       *   interacting withthe project's build system. Includes source roots
-       *   which can be used by clients to determine whether a given source
-       *   file belongs to this project.
-       * Example call:
-       *   (:swank-rpc (swank:init-project (:use-sbt t :compiler-args
-       *   (-Ywarn-dead-code -Ywarn-catches -Xstrict-warnings)
-       *   :root-dir /Users/aemon/projects/ensime/)) 42)
-       * Example return:
-       *   (:return (:ok (:project-name "ensime" :source-roots
-       *   ("/Users/aemon/projects/ensime/src/main/scala"
-       *   "/Users/aemon/projects/ensime/src/test/scala"
-       *   "/Users/aemon/projects/ensime/src/main/java"))) 42)
-       */
+      * Doc:
+      *   swank:init-project
+      * Summary:
+      *   Initialize the server with a project configuration. The
+      *   server returns it's own knowledge about the project, including
+      *   source roots which can be used by clients to determine whether
+      *   a given source file belongs to this project.
+      * Arguments:
+      *   A complete ENSIME configuration property list. See manual.
+      * Return:
+      *   (
+      *   :project-name //String:The name of the project.
+      *   :source-roots //List of Strings:The source code directory roots..
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:init-project (:use-sbt t :compiler-args
+      *   (-Ywarn-dead-code -Ywarn-catches -Xstrict-warnings)
+      *   :root-dir /Users/aemon/projects/ensime/)) 42)
+      * Example return:
+      *   (:return (:ok (:project-name "ensime" :source-roots
+      *   ("/Users/aemon/projects/ensime/src/main/scala"
+      *   "/Users/aemon/projects/ensime/src/test/scala"
+      *   "/Users/aemon/projects/ensime/src/main/java"))) 42)
+      */
       case "swank:init-project" => {
-        form match {
+	form match {
           case SExpList(head :: (conf: SExpList) :: body) => {
             val config = ProjectConfig.fromSExp(conf)
             rpcTarget.rpcInitProject(config, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:peek-undo
-       * Summary:
-       *   The intention of this call is to preview the effect of an undo
-       *   before executing it.
-       * Arguments:
-       *   None
-       * Return:
-       *   A property list describing the undo at the top of the undo stack.
-       *   :id identifies the undo for subsequent calls to swank:exec-undo.
-       *   :changes is a list of textual changes that the undo would
-       *   effect. :summary summarizes the effect of the undo.
-       * Example call:
-       *   (:swank-rpc (swank:peek-undo) 42)
-       * Example return:
-       *   (:return (:ok (:id 1 :changes ((:file
-       *   "/ensime/src/main/scala/org/ensime/server/RPCTarget.scala"
-       *   :text "rpcInitProject" :from 2280 :to 2284))
-       *   :summary "Refactoring of type: 'rename") 42)
-       */
+      * Doc:
+      *   swank:peek-undo
+      * Summary:
+      *   The intention of this call is to preview the effect of an undo
+      *   before executing it.
+      * Arguments:
+      *   None
+      * Return:
+      *   (
+      *   :id //Int:Id of this undo 
+      *   :changes //List of Changes:Describes changes this undo would effect.
+      *   :summary //String:Summary of action this undo would revert.
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:peek-undo) 42)
+      * Example return:
+      *   (:return (:ok (:id 1 :changes ((:file
+      *   "/ensime/src/main/scala/org/ensime/server/RPCTarget.scala"
+      *   :text "rpcInitProject" :from 2280 :to 2284))
+      *   :summary "Refactoring of type: 'rename") 42)
+      */
       case "swank:peek-undo" => {
-        rpcTarget.rpcPeekUndo(callId)
+	rpcTarget.rpcPeekUndo(callId)
       }
 
       /**
-       * Doc:
-       *   swank:exec-undo
-       * Summary:
-       *   Execute a specific, server-side undo operation.
-       * Arguments:
-       *   An integer undo id. See swank:peek-undo for how to learn this id.
-       * Return:
-       *   A property list describing the changes that the undo has effected.
-       *   :id identifies the undo that was executed. :touched-files is a list
-       *   of files that were modified. A client may wish to reload these files
-       *   from disk.
-       * Example call:
-       *   (:swank-rpc (swank:exec-undo 1) 42)
-       * Example return:
-       *   (:return (:ok (:id 1 :touched-files
-       *   ("/src/main/scala/org/ensime/server/RPCTarget.scala"))) 42)
-       */
+      * Doc:
+      *   swank:exec-undo
+      * Summary:
+      *   Execute a specific, server-side undo operation.
+      * Arguments:
+      *   An integer undo id. See swank:peek-undo for how to learn this id.
+      * Return:
+      *   (
+      *   :id //Int:Id of this undo 
+      *   :touched-files //List of Strings:Filenames of touched files,
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:exec-undo 1) 42)
+      * Example return:
+      *   (:return (:ok (:id 1 :touched-files
+      *   ("/src/main/scala/org/ensime/server/RPCTarget.scala"))) 42)
+      */
       case "swank:exec-undo" => {
-        form match {
+	form match {
           case SExpList(head :: (IntAtom(id)) :: body) => {
             rpcTarget.rpcExecUndo(id, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:repl-config
-       * Summary:
-       *   Get information necessary to launch a scala repl for this project.
-       * Arguments:
-       *   None
-       * Return:
-       *   A property list with runtime configuration details for this project.
-       *   :classpath is a classpath string formatted for passing directly to
-       *   the scala executable.
-       * Example call:
-       *   (:swank-rpc (swank:repl-config) 42)
-       * Example return:
-       *   (:return (:ok (:classpath "lib1.jar:lib2.jar:lib3.jar")) 42)
-       */
+      * Doc:
+      *   swank:repl-config
+      * Summary:
+      *   Get information necessary to launch a scala repl for this project.
+      * Arguments:
+      *   None
+      * Return:
+      *   (
+      *   :classpath //String:Classpath string formatted for passing to Scala.
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:repl-config) 42)
+      * Example return:
+      *   (:return (:ok (:classpath "lib1.jar:lib2.jar:lib3.jar")) 42)
+      */
       case "swank:repl-config" => {
-        rpcTarget.rpcReplConfig(callId)
+	rpcTarget.rpcReplConfig(callId)
       }
 
       /**
-       * Doc:
-       *   swank:builder-init
-       * Summary:
-       *   Initialize the incremental builder and kick off a full rebuild.
-       * Arguments:
-       *   None
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:builder-init) 42)
-       * Example return:
-       *   (:return (:ok ()) 42)
-       */
+      * Doc:
+      *   swank:builder-init
+      * Summary:
+      *   Initialize the incremental builder and kick off a full rebuild.
+      * Arguments:
+      *   None
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:builder-init) 42)
+      * Example return:
+      *   (:return (:ok ()) 42)
+      */
       case "swank:builder-init" => {
-        rpcTarget.rpcBuilderInit(callId)
+	rpcTarget.rpcBuilderInit(callId)
       }
 
       /**
-       * Doc:
-       *   swank:builder-update-files
-       * Summary:
-       *   Signal to the incremental builder that the given files
-       *   have changed and must be rebuilt. Triggers rebuild.
-       * Arguments:
-       *   A list of filenames, absolute or relative to the project root.
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:builder-update-files
-       *   ("/ensime/src/main/scala/org/ensime/server/Analyzer.scala")) 42)
-       * Example return:
-       *   (:return (:ok ()) 42)
-       */
+      * Doc:
+      *   swank:builder-update-files
+      * Summary:
+      *   Signal to the incremental builder that the given files
+      *   have changed and must be rebuilt. Triggers rebuild.
+      * Arguments:
+      *   List of Strings:Filenames, absolute or relative to the project root.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:builder-update-files
+      *   ("/ensime/src/main/scala/org/ensime/server/Analyzer.scala")) 42)
+      * Example return:
+      *   (:return (:ok ()) 42)
+      */
       case "swank:builder-update-files" => {
-        form match {
+	form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
             val files = filenames.map(_.toString)
             rpcTarget.rpcBuilderUpdateFiles(files, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:builder-add-files
-       * Summary:
-       *   Signal to the incremental builder that the given files
-       *   should be added to the build. Triggers rebuild.
-       * Arguments:
-       *   A list of filenames, absolute or relative to the project root.
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:builder-add-files
-       *   ("/ensime/src/main/scala/org/ensime/server/Analyzer.scala")) 42)
-       * Example return:
-       *   (:return (:ok ()) 42)
-       */
+      * Doc:
+      *   swank:builder-add-files
+      * Summary:
+      *   Signal to the incremental builder that the given files
+      *   should be added to the build. Triggers rebuild.
+      * Arguments:
+      *   List of Strings:Filenames, absolute or relative to the project root.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:builder-add-files
+      *   ("/ensime/src/main/scala/org/ensime/server/Analyzer.scala")) 42)
+      * Example return:
+      *   (:return (:ok ()) 42)
+      */
       case "swank:builder-add-files" => {
-        form match {
+	form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
             val files = filenames.map(_.toString)
             rpcTarget.rpcBuilderAddFiles(files, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:builder-remove-files
-       * Summary:
-       *   Signal to the incremental builder that the given files
-       *   should be removed from the build. Triggers rebuild.
-       * Arguments:
-       *   A list of filenames, absolute or relative to the project root.
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:builder-remove-files
-       *   ("/ensime/src/main/scala/org/ensime/server/Analyzer.scala")) 42)
-       * Example return:
-       *   (:return (:ok ()) 42)
-       */
+      * Doc:
+      *   swank:builder-remove-files
+      * Summary:
+      *   Signal to the incremental builder that the given files
+      *   should be removed from the build. Triggers rebuild.
+      * Arguments:
+      *   List of Strings:Filenames, absolute or relative to the project root.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:builder-remove-files
+      *   ("/ensime/src/main/scala/org/ensime/server/Analyzer.scala")) 42)
+      * Example return:
+      *   (:return (:ok ()) 42)
+      */
       case "swank:builder-remove-files" => {
-        form match {
+	form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
             val files = filenames.map(_.toString)
             rpcTarget.rpcBuilderRemoveFiles(files, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:debug-config
-       * Summary:
-       *   Retrieve information necessary for starting a debugger. Also triggers
-       *   the creation of internal debug datastructures (mappings between Scala
-       *   source locations and mangled Java names)
-       * Arguments:
-       *   None
-       * Return:
-       *   A property list with runtime configuration details for this project.
-       *   :classpath is a classpath string formatted for passing directly to
-       *   the JDB executable. :sourcepath is sourcepath string formatted for
-       *   passing to JDB.
-       * Example call:
-       *   (:swank-rpc (swank:debug-config) 42)
-       * Example return:
-       *   (:return (:ok (:classpath "lib1.jar:lib2.jar:lib3.jar" :sourcepath
-       *   "/Users/aemon/projects/ensime/src/main/scala:/other/misc/src") 42)
-       */
+      * Doc:
+      *   swank:debug-config
+      * Summary:
+      *   Retrieve information necessary for starting a debugger. Also triggers
+      *   the creation of internal debug datastructures (mappings between Scala
+      *   source locations and mangled Java names)
+      * Arguments:
+      *   None
+      * Return:
+      *   (
+      *   :classpath //String:Classpath string formatted for passing to JDB.
+      *   :sourcepath //String:Sourcepath string formatted for passing to JDB.
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:debug-config) 42)
+      * Example return:
+      *   (:return (:ok (:classpath "lib1.jar:lib2.jar:lib3.jar" :sourcepath
+      *   "/ensime/src/main/scala:/other/misc/src") 42)
+      */
       case "swank:debug-config" => {
-        rpcTarget.rpcDebugConfig(callId)
+	rpcTarget.rpcDebugConfig(callId)
       }
 
       /**
-       * Doc:
-       *   swank:debug-unit-info
-       * Summary:
-       *   Request the mangled Java name of the compilation unit that
-       *   results from the Scala code at the given source location.
-       * Arguments:
-       *   The filename of the Scala source location.
-       *   A zero-indexed character offset into the file.
-       * Return:
-       *   A property list describing the Java comilation unit. :fullname
-       *   is the qualified name of the unit. :package is currently unused.
-       *   :start-line and :end-line are the source-code line numbers that
-       *   were compiled into the on-disk class file.
-       * Example call:
-       *   (:swank-rpc (swank:debug-unit-info "Server.scala" 47 ) 42)
-       * Example return:
-       *   (:return (:ok (:full-name "org.ensime.server.Server$" :package ""
-       *    :start-line 37 :end-line 103)) 42)
-       */
+      * Doc:
+      *   swank:debug-unit-info
+      * Summary:
+      *   Request the mangled Java name of the compilation unit that
+      *   results from the Scala code at the given source location.
+      * Arguments:
+      *   String:The filename of the Scala source location.
+      *   Int:A zero-indexed character offset into the file.
+      * Return:
+      *   (
+      *   :full-name //String:The qualified name of the unit. 
+      *   :package //String:The package of the unit.
+      *   :start-line //Int:Source line stored in debug info of .class file.
+      *   :end-line //Int:Source line stored in debug info of .class file.
+      *   )
+      * Example call:
+      *   (:swank-rpc (swank:debug-unit-info "Server.scala" 47 ) 42)
+      * Example return:
+      *   (:return (:ok (:full-name "org.ensime.server.Server$" :package ""
+      *    :start-line 37 :end-line 103)) 42)
+      */
       case "swank:debug-unit-info" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(sourceName) ::
             IntAtom(line) :: StringAtom(packPrefix) :: body) => {
             rpcTarget.rpcDebugUnitInfo(sourceName, line, packPrefix, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:debug-class-locs-to-source-locs
-       * Summary:
-       *   Map from a Java location that the debugger refers to, to
-       *   a Scala source location.
-       * Arguments:
-       *   A list of locations. Each location is a list with two items:
-       *   a qualified Java name, and a line number in that Java unit.
-       * Return:
-       *   A corresponding list of Scala source locations. Each location is
-       *   a list with two items: A Scala source file name, and a line number
-       *   in that Scala source.
-       * Example call:
-       *   (:swank-rpc (swank:debug-class-locs-to-source-locs
-       *   (("org.ensime.server.Server$" 49))) 42)
-       * Example return:
-       *   (:return (:ok (("/src/main/scala/org/ensime/server/Server.scala"
-       *   49))) 42)
-       */
+      * Doc:
+      *   swank:debug-class-locs-to-source-locs
+      * Summary:
+      *   Map from a Java location that the debugger refers to, to
+      *   a Scala source location.
+      * Arguments:
+      *   List of (String Int):The String is a filename and Int is a line in
+      *     that file.
+      * Return:
+      *   List of (String Int):The String is a filename and Int is a line in
+      *     that file.
+      * Example call:
+      *   (:swank-rpc (swank:debug-class-locs-to-source-locs
+      *   (("org.ensime.server.Server$" 49))) 42)
+      * Example return:
+      *   (:return (:ok (("Server.scala" 49))) 42)
+      */
       case "swank:debug-class-locs-to-source-locs" => {
-        form match {
+	form match {
           case SExpList(head :: SExpList(pairs) :: body) => {
             val nameLinePairs = pairs.flatMap {
               case SExpList((classname: StringAtom) :: (line: IntAtom) :: body) => {
-                Some(classname.toString, line.value)
+		Some(classname.toString, line.value)
               }
               case _ => Some("", -1)
             }
             rpcTarget.rpcDebugClassLocsToSourceLocs(nameLinePairs, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:remove-file
-       * Summary:
-       *   Remove a file from consideration by the ENSIME analyzer.
-       * Arguments:
-       *   A single filename, absolute or relative to the project.
-       * Return:
-       *   A corresponding list of Scala source locations. Each location is
-       *   a list with two items: A Scala source file name, and a line number
-       *   in that Scala source.
-       * Example call:
-       *   (:swank-rpc (swank:remove-file
-       *   "/ensime/src/org/ensime/server/Analyzer.scala") 42)
-       * Example return:
-       *   (:return (:ok t) 42)
-       */
+      * Doc:
+      *   swank:remove-file
+      * Summary:
+      *   Remove a file from consideration by the ENSIME analyzer.
+      * Arguments:
+      *   String:A filename, absolute or relative to the project.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:remove-file "Analyzer.scala") 42)
+      * Example return:
+      *   (:return (:ok t) 42)
+      */
       case "swank:remove-file" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: body) => {
             rpcTarget.rpcRemoveFile(file, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:typecheck-file
-       * Summary:
-       *   Request immediate load and check the given source file.
-       * Arguments:
-       *   A single filename, absolute or relative to the project.
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:typecheck-file
-       *   "/ensime/src/org/ensime/server/Analyzer.scala") 42)
-       * Example return:
-       *   (:return (:ok t) 42)
-       */
+      * Doc:
+      *   swank:typecheck-file
+      * Summary:
+      *   Request immediate load and check the given source file.
+      * Arguments:
+      *   String:A filename, absolute or relative to the project.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:typecheck-file "Analyzer.scala") 42)
+      * Example return:
+      *   (:return (:ok t) 42)
+      */
       case "swank:typecheck-file" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: body) => {
             rpcTarget.rpcTypecheckFile(file, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       /**
-       * Doc:
-       *   swank:typecheck-all
-       * Summary:
-       *   Request immediate load and check of all known sources.
-       * Arguments:
-       *   None
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:typecheck-all) 42)
-       * Example return:
-       *   (:return (:ok t) 42)
-       */
+      * Doc:
+      *   swank:typecheck-all
+      * Summary:
+      *   Request immediate load and typecheck of all known sources.
+      * Arguments:
+      *   None
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:typecheck-all) 42)
+      * Example return:
+      *   (:return (:ok t) 42)
+      */
       case "swank:typecheck-all" => {
-        rpcTarget.rpcTypecheckAll(callId)
+	rpcTarget.rpcTypecheckAll(callId)
       }
 
 
       /**
-       * Doc:
-       *   swank:format-source
-       * Summary:
-       *   Run the source formatter the given source files. Writes
-       *   the formatted sources to the disk. Note: the client is
-       *   responsible for reloading the files from disk to display
-       *   to user.
-       * Arguments:
-       *   A list of source filenames, absolute or relative to the project.
-       * Return:
-       *   None
-       * Example call:
-       *   (:swank-rpc (swank:format-source ("/ensime/src/Test.scala")) 42)
-       * Example return:
-       *   (:return (:ok t) 42)
-       */
+      * Doc:
+      *   swank:format-source
+      * Summary:
+      *   Run the source formatter the given source files. Writes
+      *   the formatted sources to the disk. Note: the client is
+      *   responsible for reloading the files from disk to display
+      *   to user.
+      * Arguments:
+      *   List of String:Filenames, absolute or relative to the project.
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:format-source ("/ensime/src/Test.scala")) 42)
+      * Example return:
+      *   (:return (:ok t) 42)
+      */
       case "swank:format-source" => {
-        form match {
+	form match {
           case SExpList(head :: SExpList(filenames) :: body) => {
             val files = filenames.map(_.toString)
             rpcTarget.rpcFormatFiles(files, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:public-symbol-search
-       * Summary:
-       *   Search top-level symbols (types and methods) for names that
-       *   contain ALL the given search keywords.
-       * Arguments:
-       *   A list of keywords that will be ANDed to form the search.
-       *   The maximum number of results to return.
-       * Return:
-       *   The list of property lists describing each matched symbol. Note:
-       *   :pos will be a source file and character offset if available.
-       *   Otherwise it will be a binary file and a nonsense offset of -1.
-       * Example call:
-       *   (:swank-rpc (swank:public-symbol-search ("java" "io" "File") 50) 42)
-       * Example return:
-       *   (:return (:ok ((:name "java.io.File" :local-name "File" :decl-as class
-       *   :pos (:file "/Classes/classes.jar" :offset -1))) 42)
-       */
+      * Doc:
+      *   swank:public-symbol-search
+      * Summary:
+      *   Search top-level symbols (types and methods) for names that
+      *   contain ALL the given search keywords.
+      * Arguments:
+      *   List of Strings:Keywords that will be ANDed to form the query.
+      *   Int:Maximum number of results to return.
+      * Return:
+      *   List of SymbolSearchResults
+      * Example call:
+      *   (:swank-rpc (swank:public-symbol-search ("java" "io" "File") 50) 42)
+      * Example return:
+      *   (:return (:ok ((:name "java.io.File" :local-name "File" :decl-as class
+      *   :pos (:file "/Classes/classes.jar" :offset -1))) 42)
+      */
       case "swank:public-symbol-search" => {
-        form match {
+	form match {
           case SExpList(head :: SExpList(keywords) :: IntAtom(maxResults) :: body) => {
             rpcTarget.rpcPublicSymbolSearch(
               keywords.map(_.toString).toList, maxResults, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:import-suggestions
-       * Summary:
-       *   Search top-level types for qualified names similar to the given
-       *   type names. This call can service requests for many typenames at
-       *   once, but this isn't currently used in ENSIME.
-       * Arguments:
-       *   A Scala source filename, absolute or relative to the project.
-       *   Character offset within that file where type name is referenced.
-       *   A list of type names (possibly incomplete) for which to offer suggestions.
-       *   The maximum number of results to return.
-       * Return:
-       *   A list of lists of import suggestions - each list corresponding to one of the
-       *   name arguments. In the symbol descriptions, :name is the fully qualified name
-       *   that should be added to the import list.
-       * Example call:
-       *   (:swank-rpc (swank:import-suggestions
-       *   "/ensime/src/main/scala/org/ensime/server/Analyzer.scala"
-       *   2300 (Actor) 10) 42)
-       * Example return:
-       *   (:return (:ok (((:name "scala.actors.Actor" :local-name "Actor"
-       *   :decl-as trait :pos (:file "/lib/scala-library.jar" :offset -1)))))
-       *   42)
-       */
+      * Doc:
+      *   swank:import-suggestions
+      * Summary:
+      *   Search top-level types for qualified names similar to the given
+      *   type names. This call can service requests for many typenames at
+      *   once, but this isn't currently used in ENSIME.
+      * Arguments:
+      *   String:Source filename, absolute or relative to the project.
+      *   Int:Character offset within that file where type name is referenced.
+      *   List of String:Type names (possibly partial) for which to suggest.
+      *   Int:The maximum number of results to return.
+      * Return:
+      *   List of Lists of SymbolSearchResults:Each list corresponds to one of the
+      *     type name arguments. 
+      * Example call:
+      *   (:swank-rpc (swank:import-suggestions
+      *   "/ensime/src/main/scala/org/ensime/server/Analyzer.scala"
+      *   2300 (Actor) 10) 42)
+      * Example return:
+      *   (:return (:ok (((:name "scala.actors.Actor" :local-name "Actor"
+      *   :decl-as trait :pos (:file "/lib/scala-library.jar" :offset -1)))))
+      *   42)
+      */
       case "swank:import-suggestions" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
             SExpList(names) :: IntAtom(maxResults) :: body) => {
             rpcTarget.rpcImportSuggestions(file, point,
               names.map(_.toString).toList, maxResults, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:scope-completion
-       * Summary:
-       *   Find possible completions for a name in the given scope.
-       * Arguments:
-       *   A Scala source filename, absolute or relative to the project.
-       *   Character offset within that file.
-       *   The prefix of the name we are looking for.
-       *   Are we looking for a constructor? (a name following 'new').
-       * Return:
-       *   A list of symbol descriptions. :name is the name that completes
-       *   the provided prefix. :type-sig describes the type. :type-id is
-       *   an integer id that can be used in subsequent calls to
-       *   swank:type-by-id. :is-callable denotes whether this symbol is
-       *   callable (as in a method or function).
-       * Example call:
-       *   (:swank-rpc (swank:scope-completion
-       *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
-       *   22624 "fo" nil) 42)
-       * Example return:
-       *   (:return (:ok ((:name "form" :type-sig "SExp" :type-id 10)
-       *   (:name "format" :type-sig "(String, <repeated>[Any]) => String"
-       *   :type-id 11 :is-callable t))) 42)
-       */
+      * Doc:
+      *   swank:scope-completion
+      * Summary:
+      *   Find possible completions for a name in the given scope.
+      * Arguments:
+      *   String:Source filename, absolute or relative to the project.
+      *   Int:Character offset within that file.
+      *   String:The prefix of the name we are looking for.
+      *   Bool:Are we looking for a constructor? (a name following 'new').
+      * Return:
+      *   List of SymbolInfoLight: The possible completions.
+      * Example call:
+      *   (:swank-rpc (swank:scope-completion
+      *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
+      *   22624 "fo" nil) 42)
+      * Example return:
+      *   (:return (:ok ((:name "form" :type-sig "SExp" :type-id 10)
+      *   (:name "format" :type-sig "(String, <repeated>[Any]) => String"
+      *   :type-id 11 :is-callable t))) 42)
+      */
       case "swank:scope-completion" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
             StringAtom(prefix) :: BooleanAtom(constructor) :: body) => {
             rpcTarget.rpcScopeCompletion(file, point, prefix, constructor, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:type-completion
-       * Summary:
-       *   Find possible completions for a member of the object at
-       *   the given point.
-       * Arguments:
-       *   A Scala source filename, absolute or relative to the project.
-       *   Character offset of the owning object within that file.
-       *   The prefix of the member name we are looking for.
-       * Return:
-       *   A list of symbol descriptions. :name is the name that completes
-       *   the provided prefix. :type-sig describes the type. :type-id is
-       *   an integer id that can be used in subsequent calls to
-       *   swank:type-by-id. :is-callable denotes whether this symbol is
-       *   callable (as in a method or function).
-       * Example call:
-       *   (:swank-rpc (swank:type-completion "SwankProtocol.scala"
-       *   24392 "rpcTypeC") 42)
-       * Example return:
-       *   (:return (:ok ((:name "rpcTypeCompletion"
-       *   :type-sig "(String, Int, String, Int) => Unit"
-       *   :type-id 75 :is-callable t))) 42)
-       */
+      * Doc:
+      *   swank:type-completion
+      * Summary:
+      *   Find possible completions for a member of the object at
+      *   the given point.
+      * Arguments:
+      *   String:A Scala source filename, absolute or relative to the project.
+      *   Int:Character offset of the owning object within that file.
+      *   String:The prefix of the member name we are looking for.
+      * Return:
+      *   List of SymbolInfoLight: The possible completions.
+      * Example call:
+      *   (:swank-rpc (swank:type-completion "SwankProtocol.scala"
+      *   24392 "rpcTypeC") 42)
+      * Example return:
+      *   (:return (:ok ((:name "rpcTypeCompletion"
+      *   :type-sig "(String, Int, String, Int) => Unit"
+      *   :type-id 75 :is-callable t))) 42)
+      */
       case "swank:type-completion" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
             StringAtom(prefix) :: body) => {
             rpcTarget.rpcTypeCompletion(file, point, prefix, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:package-member-completion
-       * Summary:
-       *   Find possible completions for a given package path.
-       * Arguments:
-       *   A package path: such as "org.ensime" or "com".
-       *   The prefix of the package member name we are looking for.
-       * Return:
-       *   A list of names.
-       * Example call:
-       *   (:swank-rpc (swank:package-member-completion org.ensime.server Server)
-       *   42)
-       * Example return:
-       *   (:return (:ok ((:name "Server$") (:name "Server"))) 42)
-       */
+      * Doc:
+      *   swank:package-member-completion
+      * Summary:
+      *   Find possible completions for a given package path.
+      * Arguments:
+      *   String:A package path: such as "org.ensime" or "com".
+      *   String:The prefix of the package member name we are looking for.
+      * Return:
+      *   List of PackageMemberInfoLight: List of possible completions.
+      * Example call:
+      *   (:swank-rpc (swank:package-member-completion org.ensime.server Server)
+      *   42)
+      * Example return:
+      *   (:return (:ok ((:name "Server$") (:name "Server"))) 42)
+      */
       case "swank:package-member-completion" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(path) :: StringAtom(prefix) :: body) => {
             rpcTarget.rpcPackageMemberCompletion(path, prefix, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:call-completion
-       * Summary:
-       *   Lookup the type information of a specific method or function
-       *   type. This is used by ENSIME to retrieve detailed parameter
-       *   and return type information after the user has selected a
-       *   method or function completion.
-       * Arguments:
-       *   A type id, as returned by swank:scope-completion or swank:type-completion.
-       * Return:
-       *   A property list describing a callable type. :result-type is the
-       *   type returned by the overall function type. :param-sections
-       *   contains potentially multiple lists of parameters, to reflect
-       *   Scala's support for multiple parameter lists (as with implicit
-       *   arguments). Each param is a two-item list: the first item
-       *   being the name of the parameter and the second being the type
-       *   description for that param.
-       * Example call:
-       *   (:swank-rpc (swank:call-completion 1)) 42)
-       * Example return:
-       *   (:return (:ok (:result-type (:name "Unit" :type-id 7 :full-name
-       *   "scala.Unit" :decl-as class) :param-sections ((:params (("id"
-       *   (:name "Int" :type-id 74 :full-name "scala.Int" :decl-as class))
-       *   ("callId" (:name "Int" :type-id 74 :full-name "scala.Int"
-       *   :decl-as class))))))) 42)
-       */
+      * Doc:
+      *   swank:call-completion
+      * Summary:
+      *   Lookup the type information of a specific method or function
+      *   type. This is used by ENSIME to retrieve detailed parameter
+      *   and return type information after the user has selected a
+      *   method or function completion.
+      * Arguments:
+      *   Int:A type id, as returned by swank:scope-completion or
+      *     swank:type-completion.
+      * Return:
+      *   A CallCompletionInfo
+      * Example call:
+      *   (:swank-rpc (swank:call-completion 1)) 42)
+      * Example return:
+      *   (:return (:ok (:result-type (:name "Unit" :type-id 7 :full-name
+      *   "scala.Unit" :decl-as class) :param-sections ((:params (("id"
+      *   (:name "Int" :type-id 74 :full-name "scala.Int" :decl-as class))
+      *   ("callId" (:name "Int" :type-id 74 :full-name "scala.Int"
+      *   :decl-as class))))))) 42)
+      */
       case "swank:call-completion" => {
-        form match {
+	form match {
           case SExpList(head :: IntAtom(id) :: body) => {
             rpcTarget.rpcCallCompletion(id, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       /**
-       * Doc:
-       *   swank:uses-of-symbol-at-point
-       * Summary:
-       *   Request all source locations where indicated symbol is used in
-       *   this project.
-       * Arguments:
-       *   A Scala source filename, absolute or relative to the project.
-       *   Character offset of the desired symbol within that file.
-       * Return:
-       *   A list of range positions. :file is the filename where the symbol
-       *   can be found. :offset is its character offset within the file. :start
-       *   and :end delimit the range that the symbol occupies.
-       * Example call:
-       *   (:swank-rpc (swank:uses-of-symbol-at-point "Test.scala" 11334) 42)
-       * Example return:
-       *   (:return (:ok ((:file "RichPresentationCompiler.scala" :offset 11442
-       *   :start 11428 :end 11849) (:file "RichPresentationCompiler.scala"
-       *   :offset 11319 :start 11319 :end 11339))) 42)
-       */
+      * Doc:
+      *   swank:uses-of-symbol-at-point
+      * Summary:
+      *   Request all source locations where indicated symbol is used in
+      *   this project.
+      * Arguments:
+      *   String:A Scala source filename, absolute or relative to the project.
+      *   Int:Character offset of the desired symbol within that file.
+      * Return:
+      *   List of RangePosition:Locations where the symbol is reference.
+      * Example call:
+      *   (:swank-rpc (swank:uses-of-symbol-at-point "Test.scala" 11334) 42)
+      * Example return:
+      *   (:return (:ok ((:file "RichPresentationCompiler.scala" :offset 11442
+      *   :start 11428 :end 11849) (:file "RichPresentationCompiler.scala"
+      *   :offset 11319 :start 11319 :end 11339))) 42)
+      */
       case "swank:uses-of-symbol-at-point" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
             rpcTarget.rpcUsesOfSymAtPoint(file, point, callId)
           }
           case _ => oops
-        }
+	}
       }
 
-      case "swank:inspect-type-at-point" => {
-        form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
-            rpcTarget.rpcInspectTypeAtPoint(file, point, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      case "swank:inspect-type-by-id" => {
-        form match {
-          case SExpList(head :: IntAtom(id) :: body) => {
-            rpcTarget.rpcInspectTypeById(id, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      case "swank:symbol-at-point" => {
-        form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
-            rpcTarget.rpcSymbolAtPoint(file, point, callId)
-          }
-          case _ => oops
-        }
-      }
-
+      /**
+      * Doc:
+      *   swank:type-by-id
+      * Summary:
+      *   Request description of the type with given type id.
+      * Arguments:
+      *   Int:A type id.
+      * Return:
+      *   A TypeIfo
+      * Example call:
+      *   (:swank-rpc (swank:type-by-id 1381) 42)
+      * Example return:
+      *   (:return (:ok (:name "Option" :type-id 1381 :full-name "scala.Option"
+      *   :decl-as class :type-args ((:name "Int" :type-id 1129 :full-name "scala.Int"
+      *   :decl-as class)))) 42)
+      */
       case "swank:type-by-id" => {
-        form match {
+	form match {
           case SExpList(head :: IntAtom(id) :: body) => {
             rpcTarget.rpcTypeById(id, callId)
           }
           case _ => oops
-        }
+	}
       }
 
+      /**
+      * Doc:
+      *   swank:type-by-name
+      * Summary:
+      *   Lookup a type description by name.
+      * Arguments:
+      *   String:The fully qualified name of a type.
+      * Return:
+      *   A TypeIfo
+      * Example call:
+      *   (:swank-rpc (swank:type-by-name "java.lang.String") 42)
+      * Example return:
+      *   (:return (:ok (:name "String" :type-id 1188 :full-name
+      *   "java.lang.String" :decl-as class)) 42)
+      */
       case "swank:type-by-name" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(name) :: body) => {
             rpcTarget.rpcTypeByName(name, callId)
           }
           case _ => oops
-        }
+	}
       }
 
+
+      /**
+      * Doc:
+      *   swank:type-by-name-at-point
+      * Summary:
+      *   Lookup a type by name, in a specific source context.
+      * Arguments:
+      *   String:The local or qualified name of the type.
+      *   String:A source filename.
+      *   Int:A character offset in the file.
+      * Return:
+      *   A TypeInfo
+      * Example call:
+      *   (:swank-rpc (swank:type-by-name-at-point "String"
+      *   "SwankProtocol.scala" 31680) 42)
+      * Example return:
+      *   (:return (:ok (:name "String" :type-id 1188 :full-name
+      *   "java.lang.String" :decl-as class)) 42)
+      */
       case "swank:type-by-name-at-point" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(name) :: StringAtom(file) ::
             IntAtom(point) :: body) => {
             rpcTarget.rpcTypeByNameAtPoint(name, file, point, callId)
           }
           case _ => oops
-        }
+	}
       }
 
+
+      /**
+      * Doc:
+      *   swank:type-at-point
+      * Summary:
+      *   Lookup type of thing at given position.
+      * Arguments:
+      *   String:A source filename.
+      *   Int:A character offset in the file.
+      * Return:
+      *   A TypeInfo
+      * Example call:
+      *   (:swank-rpc (swank:type-at-point "SwankProtocol.scala"
+      *    32736) 42)
+      * Example return:
+      *   (:return (:ok (:name "String" :type-id 1188 :full-name
+      *   "java.lang.String" :decl-as class)) 42)
+      */
       case "swank:type-at-point" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
             rpcTarget.rpcTypeAtPoint(file, point, callId)
           }
           case _ => oops
-        }
+	}
+      }
+
+      /**
+      * Doc:
+      *   swank:inspect-type-at-point
+      * Summary:
+      *   Lookup detailed type of thing at given position.
+      * Arguments:
+      *   String:A source filename.
+      *   Int:A character offset in the file.
+      * Return:
+      *   A TypeInspectInfo
+      * Example call:
+      *   (:swank-rpc (swank:inspect-type-at-point "SwankProtocol.scala"
+      *    32736) 42)
+      * Example return:
+      *   (:return (:ok (:type (:name "SExpList$" :type-id 1469 :full-name
+      *   "org.ensime.util.SExpList$" :decl-as object :pos
+      *   (:file "SExp.scala" :offset 1877))......)) 42)
+      */
+      case "swank:inspect-type-at-point" => {
+	form match {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
+            rpcTarget.rpcInspectTypeAtPoint(file, point, callId)
+          }
+          case _ => oops
+	}
+      }
+
+      /**
+      * Doc:
+      *   swank:inspect-type-by-id
+      * Summary:
+      *   Lookup detailed type description by id
+      * Arguments:
+      *   Int:A type id.
+      * Return:
+      *   A TypeInspectInfo
+      * Example call:
+      *   (:swank-rpc (swank:inspect-type-by-id 232) 42)
+      * Example return:
+      *   (:return (:ok (:type (:name "SExpList$" :type-id 1469 :full-name
+      *   "org.ensime.util.SExpList$" :decl-as object :pos
+      *   (:file "SExp.scala" :offset 1877))......)) 42)
+      */
+      case "swank:inspect-type-by-id" => {
+	form match {
+          case SExpList(head :: IntAtom(id) :: body) => {
+            rpcTarget.rpcInspectTypeById(id, callId)
+          }
+          case _ => oops
+	}
+      }
+
+      case "swank:symbol-at-point" => {
+	form match {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
+            rpcTarget.rpcSymbolAtPoint(file, point, callId)
+          }
+          case _ => oops
+	}
       }
 
       case "swank:inspect-package-by-path" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(path) :: body) => {
             rpcTarget.rpcInspectPackageByPath(path, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       case "swank:perform-refactor" => {
-        form match {
+	form match {
           case SExpList(head :: IntAtom(procId) :: SymbolAtom(tpe) ::
             (params: SExp) :: BooleanAtom(interactive) :: body) => {
             rpcTarget.rpcPerformRefactor(Symbol(tpe), procId,
               listOrEmpty(params).toSymbolMap, interactive, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       case "swank:exec-refactor" => {
-        form match {
+	form match {
           case SExpList(head :: IntAtom(procId) :: SymbolAtom(tpe) :: body) => {
             rpcTarget.rpcExecRefactor(Symbol(tpe), procId, callId)
           }
           case _ => oops
-        }
+	}
       }
 
       case "swank:cancel-refactor" => {
-        form match {
+	form match {
           case SExpList(head :: IntAtom(procId) :: body) => {
             rpcTarget.rpcCancelRefactor(procId, callId)
           }
           case _ => oops
-        }
+	}
       }
 
 
       case "swank:expand-selection" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
             IntAtom(end) :: body) => {
             rpcTarget.rpcExpandSelection(filename, start, end, callId)
           }
           case _ => oops
-        }
-      }
-
-      case "swank:shutdown-server" => {
-        rpcTarget.rpcShutdownServer(callId)
+	}
       }
 
       case "swank:symbol-designations" => {
-        form match {
+	form match {
           case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
             IntAtom(end) :: SExpList(reqTypes) :: body) => {
             val requestedTypes: List[Symbol] = reqTypes.map(
@@ -914,11 +1186,31 @@ trait SwankProtocol extends Protocol {
               end, requestedTypes, callId)
           }
           case _ => oops
-        }
+	}
       }
 
+      /**
+      * Doc:
+      *   swank:shutdown-server
+      * Summary:
+      *   Politely ask the server to shutdown.
+      *   Note: this just results in a call to System.exit(0)
+      * Arguments:
+      *   None
+      * Return:
+      *   None
+      * Example call:
+      *   (:swank-rpc (swank:shutdown-server) 42)
+      * Example return:
+      *   (:return (:ok t) 42)
+      */
+      case "swank:shutdown-server" => {
+	rpcTarget.rpcShutdownServer(callId)
+      }
+
+
       case other => {
-        sendRPCError(
+	sendRPCError(
           ErrUnrecognizedRPC,
           Some("Unknown :swank-rpc call: " + other),
           callId)
@@ -940,31 +1232,31 @@ trait SwankProtocol extends Protocol {
   def sendRPCReturn(value: WireFormat, callId: Int) {
     value match {
       case sexp: SExp =>
-        {
-          sendMessage(SExp(
+      {
+	sendMessage(SExp(
             key(":return"),
             SExp(key(":ok"), sexp),
             callId))
-        }
+      }
       case _ => throw new IllegalStateException("Not a SExp: " + value)
     }
   }
 
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     sendMessage(SExp(
-      key(":return"),
-      SExp(key(":abort"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())),
-      callId))
+	key(":return"),
+	SExp(key(":abort"),
+          code,
+          detail.map(strToSExp).getOrElse(NilAtom())),
+	callId))
   }
 
   def sendProtocolError(code: Int, detail: Option[String]) {
     sendMessage(
       SExp(
-        key(":reader-error"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())))
+	key(":reader-error"),
+	code,
+	detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   val ServerName: String = "ENSIME - Reference Server"
@@ -978,7 +1270,7 @@ trait SwankProtocol extends Protocol {
       key(":pid"), 'nil,
       key(":implementation"),
       SExp(
-        key(":name"), ServerName),
+	key(":name"), ServerName),
       key(":version"), ProtocolVersion)
     sendRPCReturn(info, callId)
   }
@@ -1003,21 +1295,21 @@ trait SwankProtocol extends Protocol {
 
     implicit def posToSExp(pos: Position): SExp = {
       if (pos.isDefined) {
-        SExp.propList((":file", pos.source.path), (":offset", pos.point))
+	SExp.propList((":file", pos.source.path), (":offset", pos.point))
       } else {
-        'nil
+	'nil
       }
     }
 
     implicit def posToSExp(pos: RangePosition): SExp = {
       if (pos.isDefined) {
-        SExp.propList(
+	SExp.propList(
           (":file", pos.source.path),
           (":offset", pos.point),
           (":start", pos.start),
           (":end", pos.end))
       } else {
-        'nil
+	'nil
       }
     }
 
@@ -1154,25 +1446,25 @@ trait SwankProtocol extends Protocol {
   def toWF(value: TypeInfo): SExp = {
     value match {
       case value: ArrowTypeInfo =>
-        {
-          SExp.propList(
-            (":name", value.name),
-            (":type-id", value.id),
-            (":arrow-type", true),
-            (":result-type", toWF(value.resultType)),
-            (":param-sections", SExp(value.paramSections.map(toWF))))
-        }
+      {
+	SExp.propList(
+          (":name", value.name),
+          (":type-id", value.id),
+          (":arrow-type", true),
+          (":result-type", toWF(value.resultType)),
+          (":param-sections", SExp(value.paramSections.map(toWF))))
+      }
       case value: TypeInfo =>
-        {
-          SExp.propList((":name", value.name),
-            (":type-id", value.id),
-            (":full-name", value.fullName),
-            (":decl-as", value.declaredAs),
-            (":type-args", SExp(value.args.map(toWF))),
-            (":members", SExp(value.members.map(toWF))),
-            (":pos", value.pos),
-            (":outer-type-id", value.outerTypeId.map(intToSExp).getOrElse('nil)))
-        }
+      {
+	SExp.propList((":name", value.name),
+          (":type-id", value.id),
+          (":full-name", value.fullName),
+          (":decl-as", value.declaredAs),
+          (":type-args", SExp(value.args.map(toWF))),
+          (":members", SExp(value.members.map(toWF))),
+          (":pos", value.pos),
+          (":outer-type-id", value.outerTypeId.map(intToSExp).getOrElse('nil)))
+      }
       case value => throw new IllegalStateException("Unknown TypeInfo: " + value)
     }
   }
@@ -1193,8 +1485,8 @@ trait SwankProtocol extends Protocol {
   def toWF(value: ParamSectionInfo): SExp = {
     SExp.propList(
       (":params", SExp(value.params.map {
-        case (nm, tp) => SExp(nm, toWF(tp))
-      })),
+            case (nm, tp) => SExp(nm, toWF(tp))
+	  })),
       (":is-implicit", value.isImplicit))
 
   }
@@ -1210,9 +1502,9 @@ trait SwankProtocol extends Protocol {
       (":type", toWF(value.tpe)),
       (":info-type", 'typeInspect),
       (":companion-id", value.companionId match {
-        case Some(id) => id
-        case None => 'nil
-      }), (":interfaces", SExp(value.supers.map(toWF))))
+          case Some(id) => id
+          case None => 'nil
+	}), (":interfaces", SExp(value.supers.map(toWF))))
   }
 
   def toWF(value: RefactorFailure): SExp = {
@@ -1255,14 +1547,14 @@ trait SwankProtocol extends Protocol {
   def toWF(value: SymbolSearchResult): SExp = {
     value match {
       case value: TypeSearchResult => {
-        SExp.propList(
+	SExp.propList(
           (":name", value.name),
           (":local-name", value.localName),
           (":decl-as", value.declaredAs),
           (":pos", toWF(value.pos)))
       }
       case value: MethodSearchResult => {
-        SExp.propList(
+	SExp.propList(
           (":name", value.name),
           (":local-name", value.localName),
           (":decl-as", value.declaredAs),
@@ -1291,9 +1583,9 @@ trait SwankProtocol extends Protocol {
     SExp.propList(
       (":file", value.file),
       (":syms",
-        SExpList(value.syms.map { s =>
-          SExpList(List(s.symType, s.start, s.end))
-        })))
+	SExpList(value.syms.map { s =>
+            SExpList(List(s.symType, s.start, s.end))
+          })))
   }
 
   private def changeToWF(ch: Change): SExp = {
