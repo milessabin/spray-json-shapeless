@@ -90,7 +90,7 @@ object Sbt extends ExternalConfigurator {
 
 	conf.sbtActiveSubproject match {
 	  case Some(sub) => {
-            evalUnit("val p = subProjects.values.find(_.name == \"" + sub.name + "\").get.asInstanceOf[DefaultProject]")
+            evalUnit("val p = subProjects.find(_._1 == \"" + sub.name + "\").get._2.asInstanceOf[BasicScalaProject]")
             // Fail fast if subproject was not found...
             eval("p.name")
 	  }
@@ -321,7 +321,7 @@ object Sbt extends ExternalConfigurator {
     val sbt9 = (new Sbt10Style(){
 	override def versionName:String = "0.9"
       })
-    props.get("sbt.version") match {
+    props.get("sbt.version").orElse(conf.sbtVersion) match {
       case Some(v:String) => {
 
 	if(v.startsWith("0.7")) (new Sbt7Style()).getConfig(baseDir, conf)
@@ -333,13 +333,13 @@ object Sbt extends ExternalConfigurator {
 	else if(v.startsWith("0.11")) sbt11.getConfig(baseDir, conf)
 
 	else {
-	  println("Unrecognized sbt version " + v + ". Guessing sbt-10...")
-	  (new Sbt10Style()).getConfig(baseDir, conf)
+	  println("Unrecognized sbt version " + v + ". Guessing sbt-11...")
+	  sbt11.getConfig(baseDir, conf)
 	}
       }
       case None => {
 	println("No project/build.properties found. Guessing sbt-11...")
-	(new Sbt10Style()).getConfig(baseDir, conf)
+	sbt11.getConfig(baseDir, conf)
       }
     }
   }

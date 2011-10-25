@@ -28,6 +28,7 @@
 package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
+import org.ensime.model.SymbolDesignations
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
@@ -288,16 +289,21 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) => {
                     val f = sourceFile(file)
-		    val clampedEnd = math.max(end,start)
+                    val clampedEnd = math.max(end, start)
                     val pos = new RangePosition(f, start, start, clampedEnd)
-                    val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
-                    project ! RPCResultEvent(toWF(syms), callId)
+                    if (!tpes.isEmpty) {
+                      val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
+                      project ! RPCResultEvent(toWF(syms), callId)
+                    }
+		    else{
+		      project ! RPCResultEvent(toWF(SymbolDesignations(f.path, List())), callId)
+		    }
                   }
 
                 }
               }
             } catch {
-              case e  => {
+              case e => {
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
                 project ! RPCErrorEvent(ErrExceptionInAnalyzer,

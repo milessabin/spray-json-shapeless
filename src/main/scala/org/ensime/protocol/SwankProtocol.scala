@@ -1352,8 +1352,8 @@ trait SwankProtocol extends Protocol {
       case "swank:symbol-designations" => {
         form match {
           case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
-            IntAtom(end) :: SExpList(reqTypes) :: body) => {
-            val requestedTypes: List[Symbol] = reqTypes.map(
+            IntAtom(end) :: (reqTypes:SExp) :: body) => {
+            val requestedTypes: List[Symbol] = listOrEmpty(reqTypes).map(
               tpe => Symbol(tpe.toString)).toList
             rpcTarget.rpcSymbolDesignations(filename, start,
               end, requestedTypes, callId)

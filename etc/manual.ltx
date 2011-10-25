@@ -170,6 +170,10 @@ The host to connect to. Connecting to remote ENSIME servers is not currently sup
 Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
 \vspace{1 cm}
 
+\noindent
+{\bf :sbt-version} ``....'']\\
+Specify the version of sbt to use for this project. Useful when this cannot be determined from the project files (no build.properties).
+\vspace{1 cm}
 
 \noindent
 {\bf :sbt-compile-on-save} [t or nil]\\
@@ -413,7 +417,12 @@ ENSIME uses the Scalariform library to format Scala sources. Type \emph{C-c C-v 
 
 \subsection{Semantic Highlighting}
 
-Normally syntax highlighting is based on the \emph{syntactic} aspects of the source code. Semantic Highlighting adds color-coding based on semantic properties of the source. For example: a syntax highlighter can't tell whether a given identifier is a var or a val or a method call. Semantic Highlighting on the other hand can color vars differently to warn of their mutability. Semantic Highlighting is configured using the variable, ensime-sem-high-faces, which stores a list of (symbolType . face) associations. A ``face'' can be a reference to an existing Emacs face, such as font-lock-keyword-face, or a list of the form (:foreground ``color''), where ``color'' is either a standard Emacs color (such as ``slate gray'') or a hex value like ``#ff0000''. For example, you might add the following to your .emacs file:
+Normally syntax highlighting is based on the \emph{syntactic} aspects of the source code. Semantic Highlighting adds color-coding based on semantic properties of the source. For example: a syntax highlighter can't tell whether a given identifier is a var or a val or a method call. Semantic Highlighting on the other hand can color vars differently to warn of their mutability. 
+
+
+Semantic Highlighting is \emph{disabled} by default. People use a wide variety of color schemes in Emacs; it would have been difficult to arrive at coloring scheme that worked well for everyone. 
+
+Enabling Semantic Highlighting is as simple as changing the value of the variable ensime-sem-high-faces, which stores a list of (symbolType . face) associations. A ``face'' can be a reference to an existing Emacs face, such as font-lock-keyword-face, or a list of the form (:foreground ``color''), where ``color'' is either a standard Emacs color (such as ``slate gray'') or a hex value like ``\#ff0000''. For example, you might add the following to your .emacs file:
 \begin{mylisting}
 \begin{verbatim}
 (setq ensime-sem-high-faces
@@ -431,8 +440,8 @@ Normally syntax highlighting is based on the \emph{syntactic} aspects of the sou
    ))
 \end{verbatim}
 \end{mylisting}
-The symbol types above (var, val, etc.) are all that is currently supported. 
-
+Once the value of ensime-sem-high-faces has changed, the next time you save a file, the designated symbol types will be highlighted.
+By the way, the symbol types in the example above are all that are currently supported. 
 
 \subsection{Scaladoc and Javadoc Browsing (customizing)}
 
