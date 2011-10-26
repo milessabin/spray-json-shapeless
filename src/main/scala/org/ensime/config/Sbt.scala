@@ -90,7 +90,7 @@ object Sbt extends ExternalConfigurator {
 
 	conf.sbtActiveSubproject match {
 	  case Some(sub) => {
-            evalUnit("val p = subProjects.find(_._1 == \"" + sub.name + "\").get._2.asInstanceOf[BasicScalaProject]")
+            evalUnit("val p = subProjects.values.find(_.name == \"" + sub.name + "\").get.asInstanceOf[DefaultProject]")
             // Fail fast if subproject was not found...
             eval("p.name")
 	  }
