@@ -33,7 +33,7 @@ import scala.actors.Actor._
 import scala.actors.Actor
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.tools.nsc.interactive.{ CompilerControl, Global }
+import scala.tools.nsc.interactive.{ CompilerControl, Global, MissingResponse }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.symtab.Types
@@ -48,6 +48,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
     val result = new Response[A]()
     scheduler doQuickly new WorkItem {
       def apply() = respond(result)(op)
+      def raiseMissing() = result raise new MissingResponse
     }
     result.get.fold(o => o, { t =>
 	System.err.println("[Error in RichCompilerControl]")
@@ -60,6 +61,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
     val result = new Response[A]()
     scheduler postWorkItem new WorkItem {
       def apply() = respond(result)(op)
+      def raiseMissing() = result raise new MissingResponse
     }
     result.get.fold(o => o, handle)
   }
