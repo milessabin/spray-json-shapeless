@@ -57,8 +57,8 @@ object EnsimeBuild extends Build {
       "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
       "org.scalatest" % "scalatest_2.9.0" % "1.4.1" % "test",
       "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
-      "org.scalariform" % "scalariform_2.9.0" % "0.1.0" % "compile;runtime;test",
-      "org.scala-refactoring" % "org.scala-refactoring_2.9.1" % "0.3.0-SNAPSHOT" from "http://scala-tools.org/repo-snapshots/org/scala-refactoring/org.scala-refactoring_2.9.1/0.3.0-SNAPSHOT/org.scala-refactoring_2.9.1-0.3.0-20111014.181542-40.jar",
+      "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
+      "org.scala-refactoring" % "org.scala-refactoring_2.9.2" % "0.3.0-SNAPSHOT" from "http://scala-tools.org/repo-snapshots/org/scala-refactoring/org.scala-refactoring_2.9.2-SNAPSHOT/0.3.0-SNAPSHOT/org.scala-refactoring_2.9.2-SNAPSHOT-0.3.0-20111028.065820-89.jar",
       "net.sourceforge.expectj" % "expectj" % "2.0.1" % "compile;runtime;test",
       "asm" % "asm" % "3.2",
       "asm" % "asm-commons" % "3.2"

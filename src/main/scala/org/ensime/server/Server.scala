@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*  
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*  
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.server
 
@@ -40,48 +40,48 @@ object Server {
     System.setProperty("actors.corePoolSize", "8")
     System.setProperty("actors.maxPoolSize", "20")
 
-    args match{
+    args match {
       case Array(portfile) =>
-      {
-	// TODO add an option to change the protocol
-	val protocol: Protocol = SwankProtocol
+        {
+          // TODO add an option to change the protocol
+          val protocol: Protocol = SwankProtocol
 
-	val project: Project = new Project(protocol)
-	project.start()
+          val project: Project = new Project(protocol)
+          project.start()
 
-	try {
-          // 0 will cause socket to bind to first available port
-          val requestedPort = 0
-          val listener = new ServerSocket(requestedPort)
-          val actualPort = listener.getLocalPort
-          println("Server listening on " + actualPort + "..")
-          writePort(portfile, actualPort)
-	  System.out.flush();
-          while (true) {
-            try {
-              val socket = listener.accept()
-              println("Got connection, creating handler...")
-              val handler = new SocketHandler(socket, protocol, project)
-              handler.start()
-            } catch {
-              case e: IOException =>
-              {
-		System.err.println("Error in server listen loop: " + e)
+          try {
+            // 0 will cause socket to bind to first available port
+            val requestedPort = 0
+            val listener = new ServerSocket(requestedPort)
+            val actualPort = listener.getLocalPort
+            println("Server listening on " + actualPort + "..")
+            writePort(portfile, actualPort)
+            System.out.flush();
+            while (true) {
+              try {
+                val socket = listener.accept()
+                println("Got connection, creating handler...")
+                val handler = new SocketHandler(socket, protocol, project)
+                handler.start()
+              } catch {
+                case e: IOException =>
+                  {
+                    System.err.println("Error in server listen loop: " + e)
+                  }
               }
             }
+            listener.close()
+          } catch {
+            case e: IOException =>
+              {
+                System.err.println("Server listen failed: " + e)
+                System.exit(-1)
+              }
           }
-          listener.close()
-	} catch {
-          case e: IOException =>
-          {
-            System.err.println("Server listen failed: " + e)
-            System.exit(-1)
-          }
-	}
-      }
+        }
       case _ => {
-	println("Usage: PROGRAM <portfile>")
-	System.exit(0)
+        println("Usage: PROGRAM <portfile>")
+        System.exit(0)
       }
     }
   }
@@ -94,12 +94,11 @@ object Server {
       System.out.println("Wrote port " + port + " to " + filename + ".")
     } catch {
       case e: IOException =>
-      {
-	System.err.println("Could not write port to " + filename + ". " + e)
-	System.exit(-1)
-      }
-    }
-    finally {
+        {
+          System.err.println("Could not write port to " + filename + ". " + e)
+          System.exit(-1)
+        }
+    } finally {
       out.close()
     }
   }
@@ -120,10 +119,10 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
         }
       } catch {
         case e: IOException =>
-        {
-          System.err.println("Error in socket reader: " + e)
-          exit('error)
-        }
+          {
+            System.err.println("Error in socket reader: " + e)
+            exit('error)
+          }
       }
     }
   }
@@ -135,15 +134,15 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
       protocol.writeMessage(value, out)
     } catch {
       case e: IOException =>
-      {
-        System.err.println("Write to client failed: " + e)
-        exit('error)
-      }
+        {
+          System.err.println("Write to client failed: " + e)
+          exit('error)
+        }
     }
   }
 
   def act() {
-    val reader: SocketReader = new SocketReader(socket, this)
+    val reader = new SocketReader(socket, this)
     this.link(reader)
     reader.start()
     loop {
