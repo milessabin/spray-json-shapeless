@@ -46,11 +46,12 @@ object EnsimeBuild extends Build {
     file (".")) settings(
     version := "0.7.6",
     organization := "org.ensime",
-    scalaVersion := "2.9.1",
+    scalaVersion := "2.9.2-SNAPSHOT",
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
     resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-compiler" % "2.9.1" % "compile;runtime;test",
+//      "org.scala-lang" % "scala-compiler" % "2.9.1" % "compile;runtime;test",
+      "org.scala-lang" % "scala-compiler" % "2.9.2-SNAPSHOT" % "compile;runtime;test",
       "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
       "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
       "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
