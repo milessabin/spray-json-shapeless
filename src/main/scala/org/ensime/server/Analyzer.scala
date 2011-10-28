@@ -54,7 +54,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
   println("\nPresentation Compiler settings:")
   println(settings.toString)
-  println("")
 
   private val reportHandler = new ReportHandler {
     override def messageUser(str: String) {
@@ -294,10 +293,9 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     if (!tpes.isEmpty) {
                       val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                       project ! RPCResultEvent(toWF(syms), callId)
+                    } else {
+                      project ! RPCResultEvent(toWF(SymbolDesignations(f.path, List())), callId)
                     }
-		    else{
-		      project ! RPCResultEvent(toWF(SymbolDesignations(f.path, List())), callId)
-		    }
                   }
 
                 }

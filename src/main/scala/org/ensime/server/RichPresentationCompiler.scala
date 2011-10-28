@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*  
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*  
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.server
 import java.io.File
@@ -41,7 +41,7 @@ import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 
-trait RichCompilerControl extends CompilerControl with RefactoringControl { 
+trait RichCompilerControl extends CompilerControl with RefactoringControl {
   self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
@@ -50,10 +50,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
       def apply() = respond(result)(op)
     }
     result.get.fold(o => o, { t =>
-	System.err.println("[Error in RichCompilerControl]")
-	t.printStackTrace()
-	handle(t)
-      })
+      System.err.println("[Error in RichCompilerControl]")
+      t.printStackTrace()
+      handle(t)
+    })
   }
 
   def askOrLazy[A](op: => A, handle: Throwable => A): A = {
@@ -109,39 +109,39 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
     typeById(id).map { t => inspectType(t) }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
-      inspectTypeAt(p)
-    }, t => None)
+    inspectTypeAt(p)
+  }, t => None)
 
   def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-      completePackageMember(path, prefix)
-    }, t => List())
+    completePackageMember(path, prefix)
+  }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     // Make sure new tree is loaded
     askReloadFile(p.source)
     askOr({
-	completeSymbolAt(p, prefix, constructor)
-      }, t => List())
+      completeSymbolAt(p, prefix, constructor)
+    }, t => List())
   }
 
   def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
     askReloadFile(p.source)
     askOr({
-	completeMemberAt(p, prefix)
-      }, t => List())
+      completeMemberAt(p, prefix)
+    }, t => List())
   }
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-      reloadAndTypeFiles(files)
-    }, t => ())
+    reloadAndTypeFiles(files)
+  }, t => ())
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
-      usesOfSymbolAtPoint(p).toList
-    }, t => List())
+    usesOfSymbolAtPoint(p).toList
+  }, t => List())
 
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = askOr({
-      symbolDesignationsInRegion(p, tpes)
-    }, t => SymbolDesignations("", List()))
+    symbolDesignationsInRegion(p, tpes)
+  }, t => SymbolDesignations("", List()))
 
   def askClearTypeCache() = clearTypeCache
 
@@ -157,8 +157,8 @@ class RichPresentationCompiler(
   var parent: Actor,
   var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
-with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
+  with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
+  with RefactoringImpl with IndexerInterface with SemanticHighlighting {
 
   import ModelHelpers._
 
@@ -175,9 +175,9 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
 
   private val newTopLevelSyms = new mutable.LinkedHashSet[Symbol]
 
-  def activeUnits():List[CompilationUnit] = {
-    val invalidSet = toBeRemoved.synchronized{toBeRemoved.toSet}
-    unitOfFile.filter{kv => !invalidSet.contains(kv._1)}.values.toList
+  def activeUnits(): List[CompilationUnit] = {
+    val invalidSet = toBeRemoved.synchronized { toBeRemoved.toSet }
+    unitOfFile.filter { kv => !invalidSet.contains(kv._1) }.values.toList
   }
 
   /** Called from typechecker every time a top-level class or object is entered.*/
@@ -188,11 +188,11 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   /**
-  * Remove symbols defined by files that no longer exist.
-  * Note that these symbols will not be collected by
-  * syncTopLevelSyms, since the units in question will
-  * never be reloaded again.
-  */
+   * Remove symbols defined by files that no longer exist.
+   * Note that these symbols will not be collected by
+   * syncTopLevelSyms, since the units in question will
+   * never be reloaded again.
+   */
   def removeAllDeleted() {
     allSources = allSources.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
@@ -235,7 +235,7 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
         members(sym) = m
       } catch {
         case e =>
-        System.err.println("Error: Omitting member " + sym + ": " + e)
+          System.err.println("Error: Omitting member " + sym + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -293,9 +293,9 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
     typeAt(p) match {
       case Left(t) => {
         Some(new TypeInspectInfo(
-            TypeInfo(t),
-            companionTypeOf(t).map(cacheType),
-            preparedMembers))
+          TypeInfo(t),
+          companionTypeOf(t).map(cacheType),
+          preparedMembers))
       }
       case Right(_) => None
     }
@@ -325,12 +325,10 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
     }
   }
 
-
   protected def typeAt(p: Position): Either[Type, Throwable] = {
     val tree = wrapTypedTreeAt(p)
     typeOfTree(tree)
   }
-
 
   protected def typeByName(name: String): Option[Type] = {
     def maybeType(sym: Symbol) = sym match {
@@ -358,7 +356,7 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
     val nameSegs = nameStr.split("\\.")
     val firstName: String = nameSegs.head
 
-    val roots = scopeMembers(p, firstName, true).map { _.sym }
+    val roots = scopeMembers(p, firstName, true, true).map { _.sym }
 
     if (nameSegs.length > 1) {
       val restOfPath: String = nameSegs.drop(1).mkString(".")
@@ -379,23 +377,24 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   /**
-  * Override scopeMembers to fix issues with finding method params
-  * and occasional exception in pre.memberType. Hopefully we can
-  * get these changes into Scala.
-  */
-  def scopeMembers(pos: Position, prefix: String, exactMatch: Boolean): List[ScopeMember] = {
+   * Override scopeMembers to fix issues with finding method params
+   * and occasional exception in pre.memberType. Hopefully we can
+   * get these changes into Scala.
+   */
+  def scopeMembers(pos: Position, prefix: String, matchEntire: Boolean, caseSens: Boolean): List[ScopeMember] = {
     wrapTypedTreeAt(pos) // to make sure context is entered
     locateContext(pos) match {
       case Some(context) => {
         val locals = new mutable.LinkedHashMap[Symbol, ScopeMember]
+        val prefixUpper = prefix.toUpperCase()
         def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
           try {
             val ns = sym.nameString
             val accessible = context.isAccessible(sym, pre, false)
-            if (accessible && ((exactMatch && ns == prefix)
-		|| (!exactMatch && ns.startsWith(prefix))) &&
-              !sym.nameString.contains("$") &&
-              !locals.contains(sym)) {
+            if (accessible && ((matchEntire && ns == prefix) ||
+              (!matchEntire && caseSens && ns.startsWith(prefix)) ||
+              (!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
+              && !sym.nameString.contains("$") && !locals.contains(sym)) {
               val member = new ScopeMember(
                 sym,
                 sym.tpe,
@@ -425,7 +424,7 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
         for (imp <- context.imports) {
           val pre = imp.qual.tpe
           val importedSyms = pre.members.flatMap(transformImport(
-              imp.tree.selectors, _))
+            imp.tree.selectors, _))
           for (sym <- importedSyms) {
             addSymbol(sym, pre, imp.qual)
           }
@@ -445,8 +444,8 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
     case List() => List()
     case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
     case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
-    if (to == nme.WILDCARD) List()
-    else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+      if (to == nme.WILDCARD) List()
+      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
     case _ :: rest => transformImport(rest, sym)
   }
 
@@ -468,7 +467,8 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
-    val names = scopeMembers(p, prefix, false)
+    val caseSens = prefix != prefix.toLowerCase()
+    val names = scopeMembers(p, prefix, false, caseSens)
     val result = new mutable.LinkedHashSet[SymbolInfoLight]
     names.foreach { m =>
       m match {
@@ -487,11 +487,14 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   protected def completeMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
+    val caseSens = prefix != prefix.toLowerCase()
+    val prefixUpper = prefix.toUpperCase()
     val members = getMembersForTypeAt(p)
     val visibleMembers = members.flatMap {
       case tm @ TypeMember(sym, tpe, true, _, _) => {
         val s = sym.nameString
-        if (s.startsWith(prefix) &&
+        if (((caseSens && s.startsWith(prefix)) ||
+          (!caseSens && s.toUpperCase().startsWith(prefixUpper))) &&
           !(s == "this") &&
           !(s == "→")) {
           List(NamedTypeMemberInfoLight(tm))
@@ -518,8 +521,8 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
             _.pos match {
               case p: RangePosition => p
               case p =>
-              new RangePosition(
-                p.source, p.point, p.point, p.point)
+                new RangePosition(
+                  p.source, p.point, p.point, p.point)
             }
           }
         }
@@ -561,13 +564,13 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   /*
-  * The following functions wrap up operations that interact with
-  * the presentation compiler. The wrapping just helps with the
-  * create response / compute / get result pattern.
-  *
-  * These units of work should probably be wrapped up into a
-  * Work monad that will make it easier to compose the operations.
-  */
+* The following functions wrap up operations that interact with
+* the presentation compiler. The wrapping just helps with the
+* create response / compute / get result pattern.
+*
+* These units of work should probably be wrapped up into a
+* Work monad that will make it easier to compose the operations.
+*/
 
   def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
     val result = new Response[A]
@@ -576,10 +579,10 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   def wrapReloadPosition(p: Position): Unit =
-  wrapReloadSource(p.source)
+    wrapReloadSource(p.source)
 
   def wrapReloadSource(source: SourceFile): Unit =
-  wrapReloadSources(List(source))
+    wrapReloadSources(List(source))
 
   def wrapReloadSources(sources: List[SourceFile]): Unit = {
     val superseeded = scheduler.dequeueAll {
@@ -591,13 +594,13 @@ with RefactoringImpl with IndexerInterface  with SemanticHighlighting {
   }
 
   def wrapTypeMembers(p: Position): List[Member] =
-  wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
+    wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
 
   def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
-  wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
+    wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
 
   def wrapTypedTreeAt(position: Position): Tree =
-  wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
+    wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
 
 }
 
