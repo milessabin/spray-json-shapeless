@@ -44,7 +44,7 @@ object EnsimeBuild extends Build {
   lazy val project = Project(
     "ensime",
     file (".")) settings(
-    version := "0.7.6",
+    version := "0.7.6.RC1",
     organization := "org.ensime",
     scalaVersion := "2.9.2-SNAPSHOT",
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
