@@ -51,20 +51,32 @@ object Sbt extends ExternalConfigurator {
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig]
     def versionName:String
     def jarName:String
-    def appArgs:List[String] = List()
+    def appArgs:Seq[String] = List()
+
+    // TODO: 
+    // We want JVM args passed via the environment to supercede default args,
+    // but the handling of duplicate arguments is JVM implementation specific.
+    // It seems they generally prefer the later arguments. We're just gonna go
+    // with that assumption for now.
+    // 
+    // To do this right we need to parse the argument strings.
+    // 
+    def jvmArgs:Seq[String] = List("-Xmx512M") ++ (
+      Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector())
 
     protected val delim = "%%ENSIME%%"
     protected def expandDelim = delim.map("\"" + _ + "\"").mkString(" + ")
 
     def spawn(baseDir: File): Spawn = {
+      import scala.collection.JavaConversions._
       val expectinator = new ExpectJ()
       val pathToSbtJar = (new File(".", "bin/" + jarName)).getCanonicalPath()
-      println("Using sbt at " + pathToSbtJar)
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
-	    val envOpts = Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector()
-	    val args = envOpts ++ Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar) ++ appArgs
-	    val pb = new ProcessBuilder("java" +: args: _*)
+	    val reqArgs = Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar)
+	    val args = Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs
+	    println("Starting sbt with command line: " + args.mkString(" "))
+	    val pb = new ProcessBuilder(args)
 	    pb.directory(baseDir)
 	    pb.start()
 	  }
@@ -177,6 +189,7 @@ object Sbt extends ExternalConfigurator {
   private class Sbt10Style extends SbtInstance{
 
     def versionName:String = "0.10"
+
     def jarName:String = "sbt-launch-0.10.1.jar"
 
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
@@ -201,7 +214,7 @@ object Sbt extends ExternalConfigurator {
       val name = showSetting("name").getOrElse("NA")
       val org = showSetting("organization").getOrElse("NA")
       val projectVersion = showSetting("version").getOrElse("NA")
-      val buildScalaVersion = showSetting("scala-version").getOrElse("2.9.0")
+      val buildScalaVersion = showSetting("scala-version").getOrElse("2.9.1")
 
       val compileDeps = (
 	getList("compile:unmanaged-classpath") ++ 
@@ -211,14 +224,14 @@ object Sbt extends ExternalConfigurator {
       val testDeps = (
 	getList("test:unmanaged-classpath") ++
 	getList("test:managed-classpath") ++ 
-	getList("test:internal-dependency-classpath")
-	//	  ++ getList("test:exported-products")
+	getList("test:internal-dependency-classpath") ++ 
+	getList("test:exported-products")
       )
       val runtimeDeps = (
 	getList("runtime:unmanaged-classpath") ++
 	getList("runtime:managed-classpath") ++
-	getList("runtime:internal-dependency-classpath")
-	//	  ++ getList("runtime:exported-products")
+	getList("runtime:internal-dependency-classpath") ++ 
+	getList("runtime:exported-products")
       )
 
       val sourceRoots =  (
