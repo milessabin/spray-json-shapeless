@@ -37,17 +37,18 @@ case class SbtSubproject(name: String, deps: List[String])
 
 object Sbt extends ExternalConfigurator {
 
-  class IndexTracker(var i: Int)
-  private implicit object IndexTracker extends IndexTracker(0)
-
-  private def mostRecentStr(implicit x: IndexTracker, shell: Spawn): String = {
-    val all = shell.getCurrentStandardOutContents()
-    val s = all.substring(x.i)
-    x.i = all.length
-    s
-  }
-
   private trait SbtInstance{
+
+    class IndexTracker(var i: Int)
+    protected implicit object IndexTracker extends IndexTracker(0)
+
+    protected def mostRecentStr(implicit x: IndexTracker, shell: Spawn): String = {
+      val all = shell.getCurrentStandardOutContents()
+      val s = all.substring(x.i)
+      x.i = all.length
+      s
+    }
+
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig]
     def versionName:String
     def jarName:String
