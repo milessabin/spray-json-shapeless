@@ -352,7 +352,7 @@ object Sbt extends ExternalConfigurator {
 	}
       }
       case None => {
-	println("No project/build.properties found. Guessing sbt-11...")
+	println("No sbt version specified. Guessing sbt-11...")
 	sbt11.getConfig(baseDir, conf)
       }
     }
