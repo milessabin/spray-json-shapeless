@@ -30,6 +30,7 @@ import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
 import scala.collection.mutable.ListBuffer
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
 import scala.tools.nsc.util.RangePosition
+import scala.tools.nsc.symtab.Flags._
 import scala.math
 
 trait SemanticHighlighting { self: Global with Helpers =>
@@ -75,7 +76,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                   add('constructor)
                 } else if (sym.isTypeParameter) {
                   add('typeParam)
-                } else if (sym.isParameter) {
+                } else if (sym.hasFlag(PARAM)) {
                   add('param)
                 } else if (sym.isMethod) {
                   add('functionCall)
@@ -113,7 +114,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 val start = treeP.start
                 val end = start + owner.name.length
                 addAt(start, end, 'object)
-              } else if (sym.hasAccessorFlag) {
+              } else if (sym.hasFlag(ACCESSOR)) {
                 val under = sym.accessed
                 if (under.isVariable) {
                   addAt(start, end, 'varField)
@@ -165,13 +166,13 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 val end = start + len
                 val isField = sym.owner.isType || sym.owner.isModule
 
-                if (mods.isParameter) {
+                if (mods.hasFlag(PARAM)) {
                   addAt(start, end, 'param)
-                } else if (mods.isMutable && !isField) {
+                } else if (mods.hasFlag(MUTABLE) && !isField) {
                   addAt(start, end, 'var)
                 } else if (!isField) {
                   addAt(start, end, 'val)
-                } else if (mods.isMutable && isField) {
+                } else if (mods.hasFlag(MUTABLE) && isField) {
                   addAt(start, end, 'varField)
                 } else if (isField) {
                   addAt(start, end, 'valField)
