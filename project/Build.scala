@@ -40,29 +40,51 @@ object EnsimeBuild extends Build {
 
   val root = Path(".")
 
+  val TwoEightVersion = "2.8.3-SNAPSHOT"
+  val TwoNineVersion = "2.9.2-SNAPSHOT"
 
   lazy val project = Project(
     "ensime",
     file (".")) settings(
     version := "0.8.0.RC1",
     organization := "org.ensime",
-    scalaVersion := "2.8.3-SNAPSHOT",
+    scalaVersion := TwoNineVersion,
+    crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
     resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
-    libraryDependencies ++= Seq(
-//      "org.scala-lang" % "scala-compiler" % "2.9.1" % "compile;runtime;test",
-      "org.scala-lang" % "scala-compiler" % "2.8.3-SNAPSHOT" % "compile;runtime;test",
-      "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
-      "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
-      "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
-      "org.scalatest" % "scalatest_2.8.2" % "1.5.1" % "test",
-      "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
-      "org.scalariform" % "scalariform_2.8.3-SNAPSHOT" % "0.1.1" % "compile;runtime;test",
-      "org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala.ifs.hsr.ch/hudson/job/Scala-Refactoring-2.8.2-SNAPSHOT/ws/org.scala-refactoring.library/target/org.scala-refactoring_2.8.2-SNAPSHOT-0.3.0-SNAPSHOT.jar",
-      "net.sourceforge.expectj" % "expectj" % "2.0.1" % "compile;runtime;test",
-      "asm" % "asm" % "3.2",
-      "asm" % "asm-commons" % "3.2"
-    ),
+    libraryDependencies <++= (scalaVersion) { scalaVersion =>
+      val compilerVersion = scalaVersion
+      val scalatest = scalaVersion match {
+	case v if v == TwoEightVersion => 
+	"org.scalatest" % "scalatest_2.8.2" % "1.5.1" % "test"
+	case v if v == TwoNineVersion => 
+	"org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test"
+      }
+      val scalariform = scalaVersion match {
+	case v if v == TwoEightVersion => 
+	"org.scalariform" % "scalariform_2.8.3-SNAPSHOT" % "0.1.1" % "compile;runtime;test"
+	case v if v == TwoNineVersion => 
+	"org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test"
+      }
+      val scalaRefactoring = scalaVersion match {
+	case v if v == TwoEightVersion => 
+	"org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala.ifs.hsr.ch/hudson/job/Scala-Refactoring-2.8.2-SNAPSHOT/ws/org.scala-refactoring.library/target/org.scala-refactoring_2.8.2-SNAPSHOT-0.3.0-SNAPSHOT.jar"
+	case v if v == TwoNineVersion => 
+	"org.scala-refactoring" % "org.scala-refactoring_2.9.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala.ifs.hsr.ch/hudson/job/Scala-Refactoring-2.9.2-SNAPSHOT/ws/org.scala-refactoring.library/target/org.scala-refactoring_2.9.2-SNAPSHOT-0.3.0-SNAPSHOT.jar"
+      }
+      Seq(
+	"org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
+	"org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
+	"org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
+	"org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
+	"net.sourceforge.expectj" % "expectj" % "2.0.1" % "compile;runtime;test",
+	"asm" % "asm" % "3.2",
+	"asm" % "asm-commons" % "3.2",
+	scalatest,
+	scalariform,
+	scalaRefactoring,
+	"org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
+      )},
     scalacOptions ++= Seq("-deprecation"),
     exportJars := true,
     stageTask,
@@ -80,28 +102,31 @@ object EnsimeBuild extends Build {
   lazy val stageTask:Setting[sbt.Task[Unit]] = 
   stage <<= (
     dependencyClasspath in Runtime,
-    exportedProducts in Runtime) map { (depCP, exportedCP) =>
+    exportedProducts in Runtime,
+    scalaVersion) map { (depCP, exportedCP, scalaBuildVersion) =>
 
-    delete(file("dist"))
+    val distDir = "dist_" + scalaBuildVersion
 
-    log.info("Copying runtime environment to ./dist....")
+    delete(file(distDir))
+
+    log.info("Copying runtime environment to ./" + distDir + "....")
     createDirectories(List(
-	file("dist"), 
-	file("dist/bin"),
-	file("dist/lib"),
-	file("dist/elisp")))
+	file(distDir), 
+	file(distDir + "/bin"),
+	file(distDir + "/lib"),
+	file(distDir + "/elisp")))
 
     // Copy the emacs lisp to dist
     val elisp = root / "src" / "main" / "elisp" ** "*.el"
-    copy(elisp x flat(root / "dist" / "elisp"))
+    copy(elisp x flat(root / distDir / "elisp"))
 
     // Copy the runtime jars
     val deps = (depCP ++ exportedCP).map(_.data)
-    copy(deps x flat(root / "dist" / "lib"))
+    copy(deps x flat(root / distDir / "lib"))
 
     // Grab all jars..
-    val cpLibs = (root / "dist" / "lib" ** "*.jar").get.flatMap(
-      _.relativeTo(root / "dist"))
+    val cpLibs = (root / distDir / "lib" ** "*.jar").get.flatMap(
+      _.relativeTo(root / distDir))
 
     def writeScript(classpath:String, from:String, to:String){
       val tmplF = new File(from)
@@ -115,16 +140,16 @@ object EnsimeBuild extends Build {
     // Expand the server invocation script templates.
     writeScript(cpLibs.mkString(":").replace("\\", "/"),
       "./etc/scripts/server",
-      "./dist/bin/server")
+      "./" + distDir + "/bin/server")
 
     writeScript("\"" + cpLibs.mkString(";").replace("/", "\\") + "\"",
       "./etc/scripts/server.bat",
-      "./dist/bin/server.bat")
+      "./" + distDir + "/bin/server.bat")
 
-    copy(root / "etc" ** "sbt-launch-*.jar" x flat(root / "dist" / "bin"))
+    copy(root / "etc" ** "sbt-launch-*.jar" x flat(root / distDir / "bin"))
 
-    copyFile(root / "README.md", root / "dist" / "README.md")
-    copyFile(root / "LICENSE", root / "dist" / "LICENSE")
+    copyFile(root / "README.md", root / distDir / "README.md")
+    copyFile(root / "LICENSE", root / distDir / "LICENSE")
   }
 
 
@@ -139,6 +164,8 @@ object EnsimeBuild extends Build {
   lazy val releaseTask:Setting[sbt.Task[Unit]] = 
   release <<= (stage,version,scalaVersion) map {
     (_,version,scalaBuildVersion) =>
+
+    val distDir = "dist_" + scalaBuildVersion
     val modName = "ensime_" + scalaBuildVersion + "-" + version
 
     doSh("git tag -s v" + version + 
@@ -151,8 +178,8 @@ object EnsimeBuild extends Build {
       val releaseDir = new File(
 	f.getAbsolutePath + "/" + 
 	modName)
-      log.info("Copying ./dist to temp directory: " + releaseDir)
-      doSh("cp -r ./dist " + releaseDir)!!(log)
+      log.info("Copying ./" + distDir + " to temp directory: " + releaseDir)
+      doSh("cp -r ./" + distDir + " " + releaseDir)!!(log)
       log.info("Compressing temp directory to " + archiveFile + "...")
       doSh("tar -pcvzf " + archiveFile + " " + 
 	modName, Some(f)) !! (log)

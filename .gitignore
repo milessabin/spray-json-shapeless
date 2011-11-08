@@ -17,6 +17,7 @@ project/build/target
 test_data
 one_offs
 dist
+dist_*
 .ensime
 .ensime.bak
 .emacs_clean.el
