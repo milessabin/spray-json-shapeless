@@ -182,14 +182,14 @@ Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is
 
 \noindent
 {\bf :sbt-subprojects} ([sbt-subproject]*)\\
-Declare sbt subprojects. Each item in the list should be a property list with the following structure: (:name ``myproj'' :deps (``otherproj'')), where :deps is a possibly empty list of subprojects that this subproject depends on. For example, here's how you'd declare two subprojects - a 'web' subproject which depends on a 'core' subproject:
+Declare sbt subprojects. Each item in the list should be a property list with the following structure: (:name ``NAME''), where NAME is replaced with the proper name of the project. Contrary to previous versions of ENSIME, it is no longer necessary to declare subproject dependencies:
 \begin{mylisting}
 \begin{verbatim}
 (
   :use-sbt t
   :sbt-subprojects (
-     (:name "web" :deps ("core"))
-     (:name "core" :deps ())
+     (:name "web")
+     (:name "core")
   )
 )
 \end{verbatim}
