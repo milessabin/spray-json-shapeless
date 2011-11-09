@@ -87,6 +87,10 @@ ENSIME includes a wizard for automatically generating configuration files. In Em
 \subsubsection{SBT}
 
 \noindent
+\textbf{Passing JVM arguments to SBT process at initialization time}:\\
+If you've configured ENSIME to read your SBT project configuration, ENSIME will launch an SBT process at startup. You can pass JVM arguments to this process using the SBT_OPTS environment variable. This may be useful for increasing memory limits for big projects.
+
+\noindent
 \textbf{Inferior SBT}:\\
 The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior sbt session.\\
 
