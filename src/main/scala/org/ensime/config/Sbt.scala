@@ -74,7 +74,10 @@ object Sbt extends ExternalConfigurator {
       val pathToSbtJar = (new File(".", "bin/" + jarName)).getCanonicalPath()
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
-	    val reqArgs = Vector("-Dsbt.log.noformat=true", "-jar", pathToSbtJar)
+	    val reqArgs = Vector(
+	      "-Djline.terminal=jline.UnixTerminal",
+	      "-Dsbt.log.noformat=true",
+	      "-jar", pathToSbtJar)
 	    val args = Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs
 	    println("Starting sbt with command line: " + args.mkString(" "))
 	    val pb = new ProcessBuilder(args)
