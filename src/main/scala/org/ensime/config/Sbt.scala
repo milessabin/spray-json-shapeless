@@ -263,8 +263,9 @@ object Sbt extends ExternalConfigurator {
 	  Some(target)))
     }
 
-    private val singleLineSetting: Pattern = Pattern.compile("^\\[info\\] (.+)$", Pattern.MULTILINE)
-    private val prompt: String = "> "
+    // Note the optional '> ' is required for windows. See github issue 202.
+    private val singleLineSetting = Pattern.compile("^(?:" + prompt + ")?\\[info\\] (.+)$", Pattern.MULTILINE)
+    private val prompt = "> "
 
     private def parseSettingStr(input: String): Option[String] = {
       val m = singleLineSetting.matcher(input);
