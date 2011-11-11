@@ -199,7 +199,7 @@ object Sbt extends ExternalConfigurator {
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
       implicit val shell = spawn(baseDir)
 
-      shell.expect(prompt)
+      evalUnit("set shellPrompt := {state => \"\"}")
 
       conf.sbtActiveSubproject match {
 	case Some(sub) => {
@@ -207,8 +207,6 @@ object Sbt extends ExternalConfigurator {
 	}
 	case None =>
       }
-
-      evalNoop()
 
       def getList(key:String):List[String] = {
 	parseAttributedFilesList(
@@ -263,9 +261,7 @@ object Sbt extends ExternalConfigurator {
 	  Some(target)))
     }
 
-    // Note the optional '> ' is required for windows. See github issue 202.
-    private val singleLineSetting = Pattern.compile("^(?:" + prompt + ")?\\[info\\] (.+)$", Pattern.MULTILINE)
-    private val prompt = "> "
+    private val singleLineSetting = Pattern.compile("^\\[info\\] (.+)$", Pattern.MULTILINE)
 
     private def parseSettingStr(input: String): Option[String] = {
       val m = singleLineSetting.matcher(input);
@@ -279,11 +275,6 @@ object Sbt extends ExternalConfigurator {
       result
     }
 
-    private def evalNoop()(implicit shell: Spawn): Unit = {
-      shell.send("noop\n")
-      shell.expect(prompt)
-      mostRecentStr
-    }
 
     private def evalUnit(expr: String)(implicit shell: Spawn): Unit = {
       shell.send(expr + "\n")
