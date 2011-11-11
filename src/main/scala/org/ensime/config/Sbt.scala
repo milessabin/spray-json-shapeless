@@ -199,11 +199,15 @@ object Sbt extends ExternalConfigurator {
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
       implicit val shell = spawn(baseDir)
 
+      // Disable any custom prompts so we can parse
+      // reliably:
       evalUnit("set shellPrompt := {state => \"\"}")
 
       conf.sbtActiveSubproject match {
 	case Some(sub) => {
 	  evalUnit("project " + sub.name)
+	  // Re-disable, in case subproject set a new prompt:
+	  evalUnit("set shellPrompt := {state => \"\"}")
 	}
 	case None =>
       }
@@ -240,7 +244,6 @@ object Sbt extends ExternalConfigurator {
 	getList("compile:source-directories") ++
 	getList("test:source-directories")
       )
-      println("parsed " + sourceRoots)
       val target = CanonFile(showSetting("class-directory").getOrElse("./classes"))
 
       shell.send("exit\n")
@@ -253,8 +256,6 @@ object Sbt extends ExternalConfigurator {
       val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
       val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
       val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
-
-      println("files " + sourceRoots)
 
       Right(ExternalConfig(Some(name), sourceRootFiles,
 	  runtimeDepFiles, compileDepFiles, testDepFiles,
