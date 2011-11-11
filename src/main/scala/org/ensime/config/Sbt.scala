@@ -66,7 +66,7 @@ object Sbt extends ExternalConfigurator {
       Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector())
 
     protected val delim = "%%ENSIME%%"
-    protected def expandDelim = delim.map("\"" + _ + "\"").mkString(" + ")
+    protected def expandedDelim = delim.map("\"" + _ + "\"").mkString(" + ")
 
     def spawn(baseDir: File): Spawn = {
       import scala.collection.JavaConversions._
@@ -151,7 +151,7 @@ object Sbt extends ExternalConfigurator {
 
 
 
-    private def isolated(str: String) = expandDelim + " + " + str + " + " + expandDelim
+    private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
     private def printIsolated(str: String) = "println(" + isolated(str) + ")\n"
     private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
     private val prompt: String = "scala> "
@@ -279,14 +279,14 @@ object Sbt extends ExternalConfigurator {
 
     private def evalUnit(expr: String)(implicit shell: Spawn): Unit = {
       shell.send(expr + "\n")
-      shell.send("eval " + expandDelim + "\n")
+      shell.send("eval " + expandedDelim + "\n")
       shell.expect(delim)
       mostRecentStr
     }
 
     private def showSetting(expr: String)(implicit shell: Spawn): Option[String] = {
       shell.send("show " + expr + "\n")
-      shell.send("eval " + expandDelim + "\n")
+      shell.send("eval " + expandedDelim + "\n")
       shell.expect(delim)
       parseSettingStr(mostRecentStr)
     }
