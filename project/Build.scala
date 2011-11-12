@@ -167,8 +167,9 @@ object EnsimeBuild extends Build {
 
     val distDir = "dist_" + scalaBuildVersion
     val modName = "ensime_" + scalaBuildVersion + "-" + version
+    val tagName = scalaBuildVersion + "-" + version
 
-    doSh("git tag -s v" + version + 
+    doSh("git tag -s v" + tagName + 
       " -m 'Tag for release " + modName + "'") !! (log)
 
     val initialDir = new File(".")
