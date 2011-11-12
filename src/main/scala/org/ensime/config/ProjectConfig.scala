@@ -1,7 +1,7 @@
 /**
 *  Copyright (c) 2010, Aemon Cannon
 *  All rights reserved.
-*  
+*
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions are met:
 *      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
 *      * Neither the name of ENSIME nor the
 *        names of its contributors may be used to endorse or promote products
 *        derived from this software without specific prior written permission.
-*  
+*
 *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -63,6 +63,7 @@ trait FormatHandler {
 
   def formatPrefs(): Map[Symbol, Any]
   def disableIndexOnStartup(): Boolean
+  def onlyIncludeInIndex(): List[Regex]
   def excludeFromIndex(): List[Regex]
   def extraCompilerArgs(): List[String]
   def extraBuilderArgs(): List[String]
@@ -79,7 +80,7 @@ object ProjectConfig {
   trait Prop {
     def m:KeyMap
     def key:String
-    def desc:String 
+    def desc:String
     def typeHint:Option[String]
     def synonymKey:Option[String]
     def apply():Any
@@ -133,13 +134,13 @@ object ProjectConfig {
     }
   }
 
-  class OptionalStringProp(val m:KeyMap, val key:String, val desc:String, 
+  class OptionalStringProp(val m:KeyMap, val key:String, val desc:String,
     val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
     def apply():Option[String] = getStr(key).orElse(synonymKey.flatMap(getStr(_)))
     override def defaultTypeHint:String = "a string"
   }
 
-  class BooleanProp(val m:KeyMap, val key:String, val desc:String, 
+  class BooleanProp(val m:KeyMap, val key:String, val desc:String,
     val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
     def apply():Boolean = getBool(key) || synonymKey.map(getBool(_)).getOrElse(false)
     override def defaultTypeHint:String = "[t or nil]"
@@ -151,13 +152,13 @@ object ProjectConfig {
     override def defaultTypeHint:String = "(string*)"
   }
 
-  class RegexListProp(val m:KeyMap, val key:String, val desc:String, 
+  class RegexListProp(val m:KeyMap, val key:String, val desc:String,
     val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
     def apply():List[Regex] = getRegexList(key) ++ synonymKey.map(getRegexList(_)).getOrElse(List[Regex]())
     override def defaultTypeHint:String = "(regex*)"
   }
 
-  class SymbolMapProp(val m:KeyMap, val key:String, val desc:String, 
+  class SymbolMapProp(val m:KeyMap, val key:String, val desc:String,
     val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
     def apply():Map[Symbol, Any] = getMap(key) ++ synonymKey.map(getMap(_)).getOrElse(Map[Symbol,Any]())
     override def defaultTypeHint:String = "([keyword value]*)"
@@ -308,7 +309,7 @@ object ProjectConfig {
     def ivyTestConf() = ivyTestConf_()
 
 
-    
+
     val compileDeps_ = new StringListProp(
       m,
       ":compile-deps",
@@ -330,7 +331,7 @@ object ProjectConfig {
     def compileJars() = compileJars_()
 
 
-    
+
     val runtimeDeps_ = new StringListProp(
       m,
       ":runtime-deps",
@@ -350,7 +351,7 @@ object ProjectConfig {
     props += runtimeJars_
     def runtimeJars() = runtimeJars_()
 
-    
+
     val testDeps_ = new StringListProp(
       m,
       ":test-deps",
@@ -392,18 +393,31 @@ object ProjectConfig {
     def disableIndexOnStartup() = disableIndexOnStartup_()
 
 
+    val onlyIncludeInIndex_ = new RegexListProp(
+      m,
+      ":only-include-in-index",
+      """Only classes that match one of the given regular expressions will be added to the index. If this is omitted, all classes will be added. This can be used to reduce memory usage and speed up loading. For example:
+      \begin{mylisting}
+      \begin{verbatim}:only-include-in-index ("my\\.project\\.packages\\.\*" "important\\.dependency\\..\*")\end{verbatim}
+      \end{mylisting}
+      This option can be used in conjunction with 'exclude-from-index' - the result when both are given is that the exclusion expressions are applied to the names that pass the inclusion filter."""
+    )
+    props += onlyIncludeInIndex_
+    def onlyIncludeInIndex() = onlyIncludeInIndex_()
+
 
     val excludeFromIndex_ = new RegexListProp(
       m,
       ":exclude-from-index",
       """Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
       \begin{mylisting}
-      \begin{verbatim}:exclude-from-index ("com\\\\.sun\\\\..\*" "com\\\\.apple\\\\..\*")\end{verbatim}
-      \end{mylisting}"""
+      \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
+      \end{mylisting}
+      This option can be used in conjunction with 'only-include-in-index' - the result when both are given is that the exclusion expressions are applied to the classes that pass the inclusion filter.
+"""
     )
     props += excludeFromIndex_
     def excludeFromIndex() = excludeFromIndex_()
-
 
 
     val extraCompilerArgs_ = new StringListProp(
@@ -451,7 +465,7 @@ object ProjectConfig {
       {\bf :spaceBeforeColon} & t or nil  \\ \hline
       {\bf :spaceInsideBrackets} & t or nil  \\ \hline
       {\bf :spaceInsideParentheses} & t or nil  \\ \hline
-      {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline 
+      {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
       \end{tabular}
       """
     )
@@ -592,13 +606,14 @@ object ProjectConfig {
       projectName,
       scalaLibraryJar,
       scalaCompilerJar,
-      rootDir, 
-      sourceRoots, 
+      rootDir,
+      sourceRoots,
       runtimeDeps,
       compileDeps,
       target,
       formatPrefs,
       conf.disableIndexOnStartup,
+      conf.onlyIncludeInIndex,
       conf.excludeFromIndex,
       conf.extraCompilerArgs,
       conf.extraBuilderArgs
@@ -628,7 +643,7 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(None, null, null, new File("."), List(),
-    List(), List(), None, Map(), false, List(), List(), List())
+    List(), List(), None, Map(), false, List(), List(), List(), List())
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -672,6 +687,7 @@ class ProjectConfig(
   val target: Option[CanonFile],
   formattingPrefsMap: Map[Symbol, Any],
   val disableIndexOnStartup: Boolean,
+  val onlyIncludeInIndex: Iterable[Regex],
   val excludeFromIndex: Iterable[Regex],
   val extraCompilerArgs: Iterable[String],
   val extraBuilderArgs: Iterable[String]) {
