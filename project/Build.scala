@@ -46,7 +46,7 @@ object EnsimeBuild extends Build {
   lazy val project = Project(
     "ensime",
     file (".")) settings(
-    version := "0.8.0.RC1",
+    version := "0.8.0.RC2",
     organization := "org.ensime",
     scalaVersion := TwoNineVersion,
     crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
