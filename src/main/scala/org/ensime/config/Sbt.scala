@@ -154,7 +154,7 @@ object Sbt extends ExternalConfigurator {
     private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
     private def printIsolated(str: String) = "println(" + isolated(str) + ")\n"
     private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
-    private val prompt: String = "scala> "
+    private val prompt: String = "scala>"
 
     private def parseValues(input: String): Option[String] = {
       val m = pattern.matcher(input);
