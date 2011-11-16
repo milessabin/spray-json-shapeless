@@ -78,7 +78,7 @@ object Sbt extends ExternalConfigurator {
 	      "-Djline.terminal=jline.UnixTerminal",
 	      "-Dsbt.log.noformat=true",
 	      "-jar", pathToSbtJar)
-	    val args = Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs
+	    val args = (Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs) filter { _.trim().length > 0 }
 	    println("Starting sbt with command line: " + args.mkString(" "))
 	    val pb = new ProcessBuilder(args)
 	    pb.directory(baseDir)
@@ -154,7 +154,7 @@ object Sbt extends ExternalConfigurator {
     private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
     private def printIsolated(str: String) = "println(" + isolated(str) + ")\n"
     private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
-    private val prompt: String = "scala> "
+    private val prompt: String = "scala>"
 
     private def parseValues(input: String): Option[String] = {
       val m = pattern.matcher(input);
@@ -197,69 +197,77 @@ object Sbt extends ExternalConfigurator {
     def jarName:String = "sbt-launch-0.10.1.jar"
 
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
-      implicit val shell = spawn(baseDir)
+      try{
 
-      // Disable any custom prompts so we can parse
-      // reliably:
-      evalUnit("set shellPrompt := {state => \"\"}")
+	implicit val shell = spawn(baseDir)
 
-      conf.sbtActiveSubproject match {
-	case Some(sub) => {
-	  evalUnit("project " + sub.name)
-	  // Re-disable, in case subproject set a new prompt:
-	  evalUnit("set shellPrompt := {state => \"\"}")
+	// Disable any custom prompts so we can parse
+	// reliably:
+	evalUnit("set shellPrompt := {state => \"\"}")
+
+	conf.sbtActiveSubproject match {
+	  case Some(sub) => {
+	    evalUnit("project " + sub.name)
+	    // Re-disable, in case subproject set a new prompt:
+	    evalUnit("set shellPrompt := {state => \"\"}")
+	  }
+	  case None =>
 	}
-	case None =>
+
+	def getList(key:String):List[String] = {
+	  parseAttributedFilesList(
+	    showSetting(key).getOrElse("List()"))
+	}
+
+	val name = showSetting("name").getOrElse("NA")
+	val org = showSetting("organization").getOrElse("NA")
+	val projectVersion = showSetting("version").getOrElse("NA")
+	val buildScalaVersion = showSetting("scala-version").getOrElse("2.9.1")
+
+	val compileDeps = (
+	  getList("compile:unmanaged-classpath") ++ 
+	  getList("compile:managed-classpath") ++ 
+	  getList("compile:internal-dependency-classpath")
+	)
+	val testDeps = (
+	  getList("test:unmanaged-classpath") ++
+	  getList("test:managed-classpath") ++ 
+	  getList("test:internal-dependency-classpath") ++ 
+	  getList("test:exported-products")
+	)
+	val runtimeDeps = (
+	  getList("runtime:unmanaged-classpath") ++
+	  getList("runtime:managed-classpath") ++
+	  getList("runtime:internal-dependency-classpath") ++ 
+	  getList("runtime:exported-products")
+	)
+
+	val sourceRoots =  (
+	  getList("compile:source-directories") ++
+	  getList("test:source-directories")
+	)
+	val target = CanonFile(showSetting("class-directory").getOrElse("./classes"))
+
+	shell.send("exit\n")
+	shell.expectClose()
+	shell.stop()
+
+	import FileUtils._
+
+	val testDepFiles = maybeFiles(testDeps, baseDir)
+	val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
+	val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
+	val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
+
+	Right(ExternalConfig(Some(name), sourceRootFiles,
+	    runtimeDepFiles, compileDepFiles, testDepFiles,
+	    Some(target)))
+
+      } catch {
+	case e: expectj.TimeoutException => Left(e)
+	case e => Left(e)
       }
 
-      def getList(key:String):List[String] = {
-	parseAttributedFilesList(
-	  showSetting(key).getOrElse("List()"))
-      }
-
-      val name = showSetting("name").getOrElse("NA")
-      val org = showSetting("organization").getOrElse("NA")
-      val projectVersion = showSetting("version").getOrElse("NA")
-      val buildScalaVersion = showSetting("scala-version").getOrElse("2.9.1")
-
-      val compileDeps = (
-	getList("compile:unmanaged-classpath") ++ 
-	getList("compile:managed-classpath") ++ 
-	getList("compile:internal-dependency-classpath")
-      )
-      val testDeps = (
-	getList("test:unmanaged-classpath") ++
-	getList("test:managed-classpath") ++ 
-	getList("test:internal-dependency-classpath") ++ 
-	getList("test:exported-products")
-      )
-      val runtimeDeps = (
-	getList("runtime:unmanaged-classpath") ++
-	getList("runtime:managed-classpath") ++
-	getList("runtime:internal-dependency-classpath") ++ 
-	getList("runtime:exported-products")
-      )
-
-      val sourceRoots =  (
-	getList("compile:source-directories") ++
-	getList("test:source-directories")
-      )
-      val target = CanonFile(showSetting("class-directory").getOrElse("./classes"))
-
-      shell.send("exit\n")
-      shell.expectClose()
-      shell.stop()
-
-      import FileUtils._
-
-      val testDepFiles = maybeFiles(testDeps, baseDir)
-      val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
-      val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
-      val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
-
-      Right(ExternalConfig(Some(name), sourceRootFiles,
-	  runtimeDepFiles, compileDepFiles, testDepFiles,
-	  Some(target)))
     }
 
     private val singleLineSetting = Pattern.compile("^\\[info\\] (.+)$", Pattern.MULTILINE)
