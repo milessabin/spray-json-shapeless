@@ -54,7 +54,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
         addAt(treeP.start, treeP.end, designation)
       }
 
-      if (p.overlaps(treeP)) {
+      if (!treeP.isTransparent && p.overlaps(treeP)) {
 	try {
           t match {
             case Import(expr, selectors) => {
