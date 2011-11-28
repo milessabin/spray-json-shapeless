@@ -249,7 +249,7 @@ object Sbt extends ExternalConfigurator {
 	  settingAsList("sourceDirectories in Compile") ++
 	  settingAsList("sourceDirectories in Test")
 	)
-	val target = CanonFile(getSetting("classDirectory").getOrElse("./classes"))
+	val target = CanonFile(getSetting("classDirectory in Compile").getOrElse("./classes"))
 
 	shell.send(":quit\n")
 	shell.expectClose()
