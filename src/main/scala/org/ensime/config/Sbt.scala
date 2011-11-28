@@ -75,7 +75,7 @@ object Sbt extends ExternalConfigurator {
       expectinator.spawn(new Executor(){
 	  def execute():Process = {
 	    val reqArgs = Vector(
-	      "-Djline.terminal=jline.UnixTerminal",
+//	      "-Djline.terminal=scala.UnixTerminal",
 	      "-Dsbt.log.noformat=true",
 	      "-jar", pathToSbtJar)
 	    val args = (Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs) filter { _.trim().length > 0 }
@@ -150,7 +150,6 @@ object Sbt extends ExternalConfigurator {
     }
 
 
-
     private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
     private def printIsolated(str: String) = "println(" + isolated(str) + ")\n"
     private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
@@ -190,11 +189,13 @@ object Sbt extends ExternalConfigurator {
   }
 
 
-  private class Sbt10Style extends SbtInstance{
+  private class Sbt10StyleOld extends SbtInstance{
 
     def versionName:String = "0.10"
 
     def jarName:String = "sbt-launch-0.10.1.jar"
+
+    override def appArgs:List[String] = List("console-project")
 
     def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
       try{
@@ -297,6 +298,153 @@ object Sbt extends ExternalConfigurator {
       shell.send("eval " + expandedDelim + "\n")
       shell.expect(delim)
       parseSettingStr(mostRecentStr)
+    }
+
+    import scala.util.parsing.input._
+    import scala.util.parsing.combinator._
+    private object ListParser extends RegexParsers {
+      def listOpen = regex("([A-z]+)\\(".r)
+      def listClose = regex("\\)".r)
+      def attrOpen = regex("Attributed\\(".r)
+      def attrClose = regex("\\)".r)
+      def list = listOpen ~> repsep(file, ", ") <~ listClose
+      def file = (attrFile | unAttrFile)
+      def attrFile = attrOpen ~> unAttrFile <~ attrClose
+      def unAttrFile = regex("[^\\),]+".r)
+    }
+
+    private def parseAttributedFilesList(s: String):List[String] = {
+      val result: ListParser.ParseResult[List[String]] = ListParser.list(
+	new CharSequenceReader(s))
+      result match {
+	case ListParser.Success(value, next) => value
+	case ListParser.Failure(errMsg, next) => {
+	  System.err.println(errMsg)
+	  List()
+	}
+	case ListParser.Error(errMsg, next) => {
+	  System.err.println(errMsg)
+	  List()
+	}
+      }
+    }
+  }
+
+
+  private class Sbt10Style extends SbtInstance{
+
+    def versionName:String = "0.10"
+
+    def jarName:String = "sbt-launch-0.10.1.jar"
+
+    override def appArgs:List[String] = List("console-project")
+
+    def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
+      try{
+
+	implicit val shell = spawn(baseDir)
+
+	shell.expect(prompt)
+
+	conf.sbtActiveSubproject match {
+	  case Some(sub) => {
+	    evalUnit("val x = Extracted(structure, session, ProjectRef(new File(\"" + baseDir + "\"),\"" + sub.name + "\"))")
+	  }
+	  case None =>
+	    evalUnit("val x = Project.extract(currentState)")
+	}
+
+	def taskResultAsList(key:String):List[String] = {
+	  parseAttributedFilesList(
+	    runTask(key).getOrElse("List()"))
+	}
+
+	def settingAsList(key:String):List[String] = {
+	  parseAttributedFilesList(
+	    getSetting(key).getOrElse("List()"))
+	}
+
+	val name = getSetting("name").getOrElse("NA")
+	val org = getSetting("organization").getOrElse("NA")
+	val projectVersion = getSetting("version").getOrElse("NA")
+	val buildScalaVersion = getSetting("scalaVersion").getOrElse("2.9.1")
+
+	val compileDeps = (
+	  taskResultAsList("unmanagedClasspath in Compile") ++ 
+	  taskResultAsList("managedClasspath in Compile") ++ 
+	  taskResultAsList("internalDependencyClasspath in Compile")
+	)
+	val testDeps = (
+	  taskResultAsList("unmanagedClasspath in Test") ++
+	  taskResultAsList("managedClasspath in Test") ++ 
+	  taskResultAsList("internalDependencyClasspath in Test") ++ 
+	  taskResultAsList("exportedProducts in Test")
+	)
+	val runtimeDeps = (
+	  taskResultAsList("unmanagedClasspath in Runtime") ++
+	  taskResultAsList("managedClasspath in Runtime") ++
+	  taskResultAsList("internalDependencyClasspath in Runtime") ++ 
+	  taskResultAsList("exportedProducts in Runtime")
+	)
+
+	val sourceRoots =  (
+	  settingAsList("sourceDirectories in Compile") ++
+	  settingAsList("sourceDirectories in Test")
+	)
+	val target = CanonFile(getSetting("classDirectory").getOrElse("./classes"))
+
+	shell.send(":quit\n")
+	shell.expectClose()
+	shell.stop()
+
+	import FileUtils._
+
+	val testDepFiles = maybeFiles(testDeps, baseDir)
+	val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
+	val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
+	val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
+
+	Right(ExternalConfig(Some(name), sourceRootFiles,
+	    runtimeDepFiles, compileDepFiles, testDepFiles,
+	    Some(target)))
+
+      } catch {
+	case e: expectj.TimeoutException => Left(e)
+	case e => Left(e)
+      }
+
+    }
+
+    private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
+    private def println(str: String) = "println(" + str + ")"
+    private def ignoreErrors(str: String) = "try{" + str + "}catch{ case e => e }"
+    private def ln(str: String) = str + "\n"
+
+    private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
+    private val prompt: String = "scala>"
+
+    private def parseValues(input: String): Option[String] = {
+      val m = pattern.matcher(input);
+      if (m.find()) Some(m.group(1))
+      else None
+    }
+
+    private def evalUnit(expr: String)(implicit shell: Spawn): Unit = {
+      shell.send(ln(expr))
+      shell.expect(prompt)
+      mostRecentStr
+    }
+
+    private def getSetting(setting: String)(implicit shell: Spawn): Option[String] = {
+      shell.send(ln(println(isolated("x.get(" + setting + ")"))))
+      shell.expect(prompt)
+      parseValues(mostRecentStr)
+    }
+
+    private def runTask(key: String)(implicit shell: Spawn): Option[String] = {
+      shell.send(ln(println(isolated("x.evalTask(" + key + ", currentState)"))))
+      shell.expect(prompt)
+      parseValues(mostRecentStr)
     }
 
     import scala.util.parsing.input._
