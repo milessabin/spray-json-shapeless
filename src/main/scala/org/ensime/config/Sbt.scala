@@ -32,26 +32,19 @@ import java.util.regex.Pattern
 import scala.util.matching._
 import org.ensime.util._
 import scala.collection.mutable.ArrayBuffer
+import FileUtils._
+
 
 case class SbtSubproject(name: String, deps: List[String])
 
 object Sbt extends ExternalConfigurator {
 
+  val OutputFile = ".ensime-sbt-proj.json"
+
   private trait SbtInstance{
-
-    class IndexTracker(var i: Int)
-    protected implicit object IndexTracker extends IndexTracker(0)
-
-    protected def mostRecentStr(implicit x: IndexTracker, shell: Spawn): String = {
-      val all = shell.getCurrentStandardOutContents()
-      val s = all.substring(x.i)
-      x.i = all.length
-      s
-    }
-
-    def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig]
     def versionName:String
     def jarName:String
+    def pathToSbtJar = (new File(".", "bin/" + jarName)).getCanonicalPath()
     def appArgs:Seq[String] = List()
 
     // TODO: 
@@ -65,318 +58,115 @@ object Sbt extends ExternalConfigurator {
     def jvmArgs:Seq[String] = List("-Xmx512M") ++ (
       Option(System getenv "SBT_OPTS") map { _ split "\\s+" } map { arr => Vector(arr: _*) } getOrElse Vector())
 
-    protected val delim = "%%ENSIME%%"
-    protected def expandedDelim = delim.map("\"" + _ + "\"").mkString(" + ")
+    def run(baseDir: File): Either[Throwable,String] = {
 
-    def spawn(baseDir: File): Spawn = {
+      val reqArgs = Vector("-Dsbt.log.noformat=true","-jar", pathToSbtJar)
+      val args = (Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs) filter { _.trim().length > 0 }
+      println("Starting sbt with command line: " + args.mkString(" "))
       import scala.collection.JavaConversions._
-      val expectinator = new ExpectJ()
-      val pathToSbtJar = (new File(".", "bin/" + jarName)).getCanonicalPath()
-      expectinator.spawn(new Executor(){
-	  def execute():Process = {
-	    val reqArgs = Vector(
-//	      "-Djline.terminal=scala.UnixTerminal",
-	      "-Dsbt.log.noformat=true",
-	      "-jar", pathToSbtJar)
-	    val args = (Vector("java") ++ jvmArgs ++ reqArgs ++ appArgs) filter { _.trim().length > 0 }
-	    println("Starting sbt with command line: " + args.mkString(" "))
-	    val pb = new ProcessBuilder(args)
-	    pb.directory(baseDir)
-	    pb.start()
+      val pb = new ProcessBuilder(args)
+      pb.directory(baseDir)
+      ProcessUtil.readAllOutputToConsole(pb.start()) match{
+	case Right(status) => {
+	  if(status == 0){
+	    readFile(new File(baseDir, OutputFile))
 	  }
-	  override def toString():String = "ENSIME-controlled sbt-" + versionName + " process"
-	})
+	  else{
+	    Left(new RuntimeException("Non-zero exit value for process: " + status))
+	  }
+	}
+	case Left(t:Throwable) => Left(t)
+      }
     }
   }
 
-
-  private class Sbt7Style extends SbtInstance{
-
-    def versionName:String = "0.7"
-    def jarName:String = "sbt-launch-0.7.7.jar"
-    override def appArgs:List[String] = List("console-project")
-
-    def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
-      try {
-
-	// ExpectJ object with a timeout of 5s
-	implicit val shell = spawn(baseDir)
-
-	shell.expect(prompt)
-
-	conf.sbtActiveSubproject match {
-	  case Some(sub) => {
-            evalUnit("val p = subProjects.values.find(_.name == \"" + sub.name + "\").get.asInstanceOf[DefaultProject]")
-            // Fail fast if subproject was not found...
-            eval("p.name")
-	  }
-	  case None => {
-            evalUnit("val p = current")
-	  }
-	}
-
-	val name = eval("p.name")
-	val org = eval("p.organization")
-	val sbtVersion = eval("sbtVersion.value")
-	val projectVersion = eval("p.version")
-	val buildScalaVersion = eval("p.buildScalaVersion")
-	val compileDeps = evalList("(p.compileClasspath +++ p.fullClasspath(Configurations.Test)).get.toList.map(_.toString)")
-	val testDeps = evalList("(p.testClasspath).get.toList.map(_.toString)")
-	val runtimeDeps = evalList("(p.runClasspath  +++ p.fullClasspath(Configurations.Test)).get.toList.map(_.toString)")
-	val sourceRoots = evalList("(p.mainSourceRoots +++ p.testSourceRoots).get.toList.map(_.toString)")
-	val target = eval("p.outputPath.toString")
-
-	shell.send(":q\n")
-	shell.expectClose()
-	shell.stop()
-
-	import FileUtils._
-	val testDepFiles = maybeFiles(testDeps, baseDir)
-	val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
-	val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
-	val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
-	val f = new File(baseDir, target)
-	val targetDir = if (f.exists) { Some(toCanonFile(f)) } else { None }
-
-	Right(ExternalConfig(Some(name), sourceRootFiles,
-            runtimeDepFiles, compileDepFiles, testDepFiles,
-            targetDir))
-
-      } catch {
-	case e: expectj.TimeoutException => Left(e)
-	case e: Exception => Left(e)
-      }
-
-    }
-
-
-    private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
-    private def printIsolated(str: String) = "println(" + isolated(str) + ")\n"
-    private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
-    private val prompt: String = "scala>"
-
-    private def parseValues(input: String): Option[String] = {
-      val m = pattern.matcher(input);
-      if (m.find()) Some(m.group(1))
-      else None
-    }
-
-    private def eval(expr: String)(implicit shell: Spawn): String = {
-      shell.send(printIsolated(expr))
-      shell.expect(prompt)
-      parseValues(mostRecentStr) match {
-	case Some(s) => s
-	case _ => throw new RuntimeException("Failed to parse result of " + expr)
-      }
-    }
-
-    private def evalUnit(expr: String)(implicit shell: Spawn): Unit = {
-      shell.send(expr + "\n")
-      shell.expect(prompt)
-    }
-
-    private def evalList(expr: String)(implicit shell: Spawn): List[String] = {
-      shell.send(printIsolated(expr))
-      shell.expect(prompt)
-      parseValues(mostRecentStr) match {
-	case Some(s) if (s.startsWith("List(") && s.endsWith(")")) => {
-          (s.substring(5, s.length - 1)).split(", ").toList
-	}
-	case _ => throw new RuntimeException("Failed to parse result of " + expr)
-      }
-    }
-
-  }
-
-
-  private class Sbt10Style extends SbtInstance{
-
+  private class Sbt10Style(val subProj:Option[String]) extends SbtInstance{
     def versionName:String = "0.10"
-
     def jarName:String = "sbt-launch-0.10.1.jar"
+    override def appArgs:List[String] = List(
+      List("ensime","dump", subProj.getOrElse("root"), OutputFile).mkString(" "))
+  }
 
-    override def appArgs:List[String] = List("console-project")
+  def getConfig(sbt: SbtInstance, baseDir: File): Either[Throwable, ExternalConfig] = {
+    sbt.run(baseDir) match{
+      case Left(e) => Left(e)
+      case Right(json) => {
+	try{
+	  import net.liftweb.json._
+	  import net.liftweb.json.JsonAST._
+	  val obj = parse(json)
+	  implicit val formats = DefaultFormats
+	  val name = (obj \ "name").extract[String]
+	  val org = (obj \ "org").extract[String]
+	  val projectVersion = (obj \ "projectVersion").extract[String]
+	  val buildScalaVersion = (obj \ "buildScalaVersion").extract[String]
+	  val compileDeps = (obj \ "compileDeps").extract[List[String]]
+	  val testDeps = (obj \ "testDeps").extract[List[String]]
+	  val runtimeDeps = (obj \ "runtimeDeps").extract[List[String]]
+	  val sourceRoots = (obj \ "sourceRoots").extract[List[String]]
+	  val target = (obj \ "target").extract[String]
 
-    def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
-      try{
+	  val testDepFiles = maybeFiles(testDeps, baseDir)
+	  val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
+	  val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
+	  val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
+	  val targetFile = CanonFile(target)
 
-	implicit val shell = spawn(baseDir)
-
-	shell.expect(prompt)
-
-	conf.sbtActiveSubproject match {
-	  case Some(sub) => {
-	    evalUnit("val x = Extracted(structure, session, ProjectRef(new File(\"" + baseDir + "\"),\"" + sub.name + "\"))")
-	  }
-	  case None =>
-	    evalUnit("val x = Project.extract(currentState)")
+	  Right(ExternalConfig(Some(name), sourceRootFiles,
+	      runtimeDepFiles, compileDepFiles, testDepFiles,
+	      Some(targetFile)))
 	}
-
-	def taskResultAsList(key:String):List[String] = {
-	  parseAttributedFilesList(
-	    runTask(key).getOrElse("List()"))
-	}
-
-	def settingAsList(key:String):List[String] = {
-	  parseAttributedFilesList(
-	    getSetting(key).getOrElse("List()"))
-	}
-
-	val name = getSetting("name").getOrElse("NA")
-	val org = getSetting("organization").getOrElse("NA")
-	val projectVersion = getSetting("version").getOrElse("NA")
-	val buildScalaVersion = getSetting("scalaVersion").getOrElse("2.9.1")
-
-	val compileDeps = (
-	  taskResultAsList("unmanagedClasspath in Compile") ++ 
-	  taskResultAsList("managedClasspath in Compile") ++ 
-	  taskResultAsList("internalDependencyClasspath in Compile")
-	)
-	val testDeps = (
-	  taskResultAsList("unmanagedClasspath in Test") ++
-	  taskResultAsList("managedClasspath in Test") ++ 
-	  taskResultAsList("internalDependencyClasspath in Test") ++ 
-	  taskResultAsList("exportedProducts in Test")
-	)
-	val runtimeDeps = (
-	  taskResultAsList("unmanagedClasspath in Runtime") ++
-	  taskResultAsList("managedClasspath in Runtime") ++
-	  taskResultAsList("internalDependencyClasspath in Runtime") ++ 
-	  taskResultAsList("exportedProducts in Runtime")
-	)
-
-	val sourceRoots =  (
-	  settingAsList("sourceDirectories in Compile") ++
-	  settingAsList("sourceDirectories in Test")
-	)
-	val target = CanonFile(getSetting("classDirectory in Compile").getOrElse("./classes"))
-
-	shell.send(":quit\n")
-	shell.expectClose()
-	shell.stop()
-
-	import FileUtils._
-
-	val testDepFiles = maybeFiles(testDeps, baseDir)
-	val compileDepFiles = maybeFiles(compileDeps, baseDir) ++ testDepFiles
-	val runtimeDepFiles = maybeFiles(runtimeDeps, baseDir) ++ testDepFiles
-	val sourceRootFiles = maybeDirs(sourceRoots, baseDir)
-
-	Right(ExternalConfig(Some(name), sourceRootFiles,
-	    runtimeDepFiles, compileDepFiles, testDepFiles,
-	    Some(target)))
-
-      } catch {
-	case e: expectj.TimeoutException => Left(e)
-	case e => Left(e)
-      }
-
-    }
-
-    private def isolated(str: String) = expandedDelim + " + " + str + " + " + expandedDelim
-    private def println(str: String) = "println(" + str + ")"
-    private def ignoreErrors(str: String) = "try{" + str + "}catch{ case e => e }"
-    private def ln(str: String) = str + "\n"
-
-    private val pattern: Pattern = Pattern.compile(delim + "(.+?)" + delim)
-    private val prompt: String = "scala>"
-
-    private def parseValues(input: String): Option[String] = {
-      val m = pattern.matcher(input);
-      if (m.find()) Some(m.group(1))
-      else None
-    }
-
-    private def evalUnit(expr: String)(implicit shell: Spawn): Unit = {
-      shell.send(ln(expr))
-      shell.expect(prompt)
-      mostRecentStr
-    }
-
-    private def getSetting(setting: String)(implicit shell: Spawn): Option[String] = {
-      shell.send(ln(println(isolated("x.get(" + setting + ")"))))
-      shell.expect(prompt)
-      parseValues(mostRecentStr)
-    }
-
-    private def runTask(key: String)(implicit shell: Spawn): Option[String] = {
-      shell.send(ln(println(isolated("x.evalTask(" + key + ", currentState)"))))
-      shell.expect(prompt)
-      parseValues(mostRecentStr)
-    }
-
-    import scala.util.parsing.input._
-    import scala.util.parsing.combinator._
-    private object ListParser extends RegexParsers {
-      def listOpen = regex("([A-z]+)\\(".r)
-      def listClose = regex("\\)".r)
-      def attrOpen = regex("Attributed\\(".r)
-      def attrClose = regex("\\)".r)
-      def list = listOpen ~> repsep(file, ", ") <~ listClose
-      def file = (attrFile | unAttrFile)
-      def attrFile = attrOpen ~> unAttrFile <~ attrClose
-      def unAttrFile = regex("[^\\),]+".r)
-    }
-
-    private def parseAttributedFilesList(s: String):List[String] = {
-      val result: ListParser.ParseResult[List[String]] = ListParser.list(
-	new CharSequenceReader(s))
-      result match {
-	case ListParser.Success(value, next) => value
-	case ListParser.Failure(errMsg, next) => {
-	  System.err.println(errMsg)
-	  List()
-	}
-	case ListParser.Error(errMsg, next) => {
-	  System.err.println(errMsg)
-	  List()
+	catch{
+	  case e => Left(e)
 	}
       }
     }
   }
-
 
   def getConfig(baseDir: File, conf: FormatHandler): Either[Throwable, ExternalConfig] = {
-    val props = JavaProperties.load(new File(baseDir, "project/build.properties"))
-    val sbt11 = (new Sbt10Style(){
-	override def versionName:String = "0.11"
-	override def jarName:String = "sbt-launch-0.11.0.jar"
-      })
-    val sbt9 = (new Sbt10Style(){
-	override def versionName:String = "0.9"
-      })
-    props.get("sbt.version").orElse(conf.sbtVersion) match {
-      case Some(v:String) => {
-
-	if(v.startsWith("0.7")) (new Sbt7Style()).getConfig(baseDir, conf)
-
-	else if(v.startsWith("0.9")) sbt9.getConfig(baseDir, conf)
-
-	else if(v.startsWith("0.10")) (new Sbt10Style()).getConfig(baseDir, conf)
-
-	else if(v.startsWith("0.11")) sbt11.getConfig(baseDir, conf)
-
-	else {
-	  println("Unrecognized sbt version " + v + ". Guessing sbt-11...")
-	  sbt11.getConfig(baseDir, conf)
-	}
+    val subProj = conf.sbtActiveSubproject.map(_.name)
+    conf.sbtJar.flatMap(maybeFile(_, baseDir)) match{
+      case Some(jarFile) => {
+	val sbt = (new Sbt10Style(subProj){
+	    override def versionName:String = "Custom"
+	    override def pathToSbtJar:String = jarFile.getAbsolutePath
+	  })
+	getConfig(sbt, baseDir)
       }
       case None => {
-	println("No sbt version specified. Guessing sbt-11...")
-	sbt11.getConfig(baseDir, conf)
+	val props = JavaProperties.load(new File(baseDir, "project/build.properties"))
+	val sbt11 = (new Sbt10Style(subProj){
+	    override def versionName:String = "0.11"
+	    override def jarName:String = "sbt-launch-0.11.2.jar"
+	  })
+	val sbt10 = (new Sbt10Style(subProj){})
+	val sbt9 = (new Sbt10Style(subProj){
+	    override def versionName:String = "0.9"
+	  })
+	props.get("sbt.version") match {
+	  case Some(v:String) => {
+	    if(v.startsWith("0.7")) {
+	      println("Sbt 7 is no longer supported. Returning null config.")
+	      Right(ExternalConfig(None,List(),List(),List(),List(),None))
+	    }
+	    else if(v.startsWith("0.9")) getConfig(sbt9, baseDir)
+
+	    else if(v.startsWith("0.10")) getConfig(sbt10, baseDir)
+
+	    else if(v.startsWith("0.11")) getConfig(sbt11, baseDir)
+
+	    else {
+	      println("Unrecognized sbt version " + v + ". Guessing sbt-11...")
+	      getConfig(sbt11, baseDir)
+	    }
+	  }
+	  case None => {
+	    println("No sbt version specified. Guessing sbt-11...")
+	    getConfig(sbt11, baseDir)
+	  }
+	}
       }
     }
-  }
-
-
-
-  def main(args: Array[String]) {
-
-    //    println(sbt10.parseAttributedFilesList("List(Attributed(/home/aemon/src/misc/ensime/lib/org.scala-refactoring_2.9.0-0.3.0-SNAPSHOT.jar), Attributed(/home/aemon/src/misc/ensime/lib/critbit-0.0.4.jar), Attributed(/home/aemon/src/misc/ensime/project/boot/scala-2.9.1/lib/scala-library.jar), Attributed(/home/aemon/src/misc/ensime/project/boot/scala-2.9.1/lib/scala-compiler.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.ant/ant/jars/ant-1.8.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.ant/ant-launcher/jars/ant-launcher-1.8.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.1.0.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-ant-tasks/jars/maven-ant-tasks-2.1.0.jar), Attributed(/home/aemon/.ivy2/cache/ant/ant/jars/ant-1.6.5.jar), Attributed(/home/aemon/.ivy2/cache/classworlds/classworlds/jars/classworlds-1.1-alpha-2.jar), Attributed(/home/aemon/.ivy2/cache/org.codehaus.plexus/plexus-container-default/jars/plexus-container-default-1.0-alpha-9-stable-1.jar), Attributed(/home/aemon/.ivy2/cache/org.codehaus.plexus/plexus-utils/jars/plexus-utils-1.5.15.jar), Attributed(/home/aemon/.ivy2/cache/org.codehaus.plexus/plexus-interpolation/jars/plexus-interpolation-1.11.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-artifact/jars/maven-artifact-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-artifact-manager/jars/maven-artifact-manager-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-repository-metadata/jars/maven-repository-metadata-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-provider-api/jars/wagon-provider-api-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/backport-util-concurrent/backport-util-concurrent/jars/backport-util-concurrent-3.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-model/jars/maven-model-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-project/jars/maven-project-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-settings/jars/maven-settings-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-profile/jars/maven-profile-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-plugin-registry/jars/maven-plugin-registry-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven/maven-error-diagnostics/jars/maven-error-diagnostics-2.2.1.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-file/jars/wagon-file-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-lightweight/jars/wagon-http-lightweight-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-shared/jars/wagon-http-shared-1.0-beta-6.jar), Attributed(/home/aemon/.ivy2/cache/nekohtml/xercesMinimal/jars/xercesMinimal-1.9.6.2.jar), Attributed(/home/aemon/.ivy2/cache/nekohtml/nekohtml/jars/nekohtml-1.9.6.2.jar), Attributed(/home/aemon/.ivy2/cache/org.sonatype.tycho/org.eclipse.jdt.core/jars/org.eclipse.jdt.core-3.6.0.v_A58.jar), Attributed(/home/aemon/.ivy2/cache/org.scalariform/scalariform_2.9.0/jars/scalariform_2.9.0-0.1.0.jar), Attributed(/home/aemon/.ivy2/cache/net.sourceforge.expectj/expectj/jars/expectj-2.0.1.jar), Attributed(/home/aemon/.ivy2/cache/commons-logging/commons-logging/jars/commons-logging-1.1.1.jar), Attributed(/home/aemon/.ivy2/cache/asm/asm/jars/asm-3.2.jar), Attributed(/home/aemon/.ivy2/cache/asm/asm-commons/jars/asm-commons-3.2.jar), Attributed(/home/aemon/.ivy2/cache/asm/asm-tree/jars/asm-tree-3.2.jar))"))
-
-    //    println(sbt10.parseAttributedFilesList("List(/Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/scala, /Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/java, /Users/daniel/Local/ensime_2.9.1-0.7.RC1/target/scala-2.8.1.final/src_managed/main)"))
-
-    //    println(sbt10.parseAttributedFilesList("List(    /Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/scala,     /Users/daniel/Local/ensime_2.9.1-0.7.RC1/src/main/java,    /Users/daniel/Local/ensime_2.9.1-0.7.RC1/target/scala-2.8.1.final/src_managed/main)"))
 
 
   }

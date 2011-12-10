@@ -54,6 +54,12 @@ object EnsimeBuild extends Build {
     resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
     libraryDependencies <++= (scalaVersion) { scalaVersion =>
       val compilerVersion = scalaVersion
+      val json = scalaVersion match {
+	case v if v == TwoEightVersion => 
+	"net.liftweb" % "lift-json_2.8.2" % "2.4-M4"
+	case v if v == TwoNineVersion => 
+	"net.liftweb" % "lift-json_2.9.1" % "2.4-M4"
+      }
       val scalatest = scalaVersion match {
 	case v if v == TwoEightVersion => 
 	"org.scalatest" % "scalatest_2.8.2" % "1.5.1" % "test"
@@ -80,6 +86,7 @@ object EnsimeBuild extends Build {
 	"net.sourceforge.expectj" % "expectj" % "2.0.7" % "compile;runtime;test",
 	"asm" % "asm" % "3.2",
 	"asm" % "asm-commons" % "3.2",
+	json,
 	scalatest,
 	scalariform,
 	scalaRefactoring,

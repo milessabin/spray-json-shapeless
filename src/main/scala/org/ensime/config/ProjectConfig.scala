@@ -40,7 +40,7 @@ import scalariform.formatter.preferences._
 trait FormatHandler {
   def rootDir(): Option[String]
   def useSbt(): Boolean
-  def sbtVersion(): Option[String]
+  def sbtJar(): Option[String]
   def useMaven(): Boolean
   def useIvy(): Boolean
   def sbtActiveSubproject(): Option[SbtSubproject]
@@ -99,7 +99,7 @@ object ProjectConfig {
 
     def rootDir(): Option[String] = getStr(":root-dir")
     def useSbt(): Boolean = getBool(":use-sbt")
-    def sbtVersion(): Option[String] = getStr(":sbt-version")
+    def sbtJar(): Option[String] = getStr(":sbt-jar")
     def useMaven(): Boolean = getBool(":use-maven")
     def useIvy(): Boolean = getBool(":use-ivy")
     private def sbtSubprojects: List[Map[KeywordAtom, SExp]] = {

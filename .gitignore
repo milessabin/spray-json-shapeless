@@ -9,6 +9,7 @@
 *.aux
 *.fdb_latexmk
 *~
+*.json
 target/
 lib_managed/
 src_managed/
