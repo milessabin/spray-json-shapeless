@@ -37,21 +37,21 @@ ENSIME is the ENhanced Scala Interaction Mode for Emacs. It provides many featur
 
 \begin{itemize}
 \item Emacs 22 or later (23 is recommended)
-\item Unix(y) or Windows OS
+\item Linux, Mac OSX, Windows
 \item JVM Version 6
-\item Scala 2.8.1 compatible source and libraries (see appropriate ENSIME version)
+\item Scala 2.8.x or 2.9.x compatible project
 \end{itemize}
 
-\subsection{Standard Installation}
+\subsection{Getting Started}
 \label{sec:install}
 
 \noindent
 \textbf{scala-mode}:\\
-ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under misc/scala-tool-support/emacs/\\
+Although it's not required, ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under misc/scala-tool-support/emacs/\\
 
 \noindent
 \textbf{ensime-mode}:\\
-Download the latest ENSIME distribution from github.com at \begin{verbatim}http://github.com/aemoncannon/ensime/downloads\end{verbatim} Unpack the ENSIME distribution into a directory of your choosing, and add the following lines to your .emacs file:
+Download the latest ENSIME distribution from github.com at \begin{verbatim}http://github.com/aemoncannon/ensime/downloads\end{verbatim} Make sure you get the version that is appropriate for your Scala version. Unpack the ENSIME distribution into a directory of your choosing, and add the following lines to your .emacs file:
 
 \begin{mylisting}
 \begin{verbatim}
@@ -64,13 +64,20 @@ Download the latest ENSIME distribution from github.com at \begin{verbatim}http:
 ;; if you're not using the standard scala mode.
 (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
-;; MINI HOWTO: 
-;; Open .scala file. M-x ensime (once per project)
 \end{verbatim}
 \end{mylisting}
 
 
-Now you need to define a .ensime file for your project. See section \ref{sec:config}.
+\noindent
+\textbf{Create a .ensime config file}:\\
+See section \ref{sec:config}.\\
+
+
+\noindent
+\textbf{Finally...}\\
+
+\noindent
+Execute \emph{M-x ensime} from Emacs. Follow the instructions in the minibuffer to select your project. If you encounter any problems, see section \ref{sec:troubleshooting} for troubleshooting.
 
 
 
@@ -80,7 +87,36 @@ Now you need to define a .ensime file for your project. See section \ref{sec:con
 \subsection{Generating a Config File}
 \label{sec:config}
 
-ENSIME includes a wizard for automatically generating configuration files. In Emacs, execute \emph{M-x ensime-config-gen}. Then simply follow the directions in the mini-buffer to create a .ensime file for your project.  ENSIME will try to guess the type(sbt, mvn, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
+
+\subsubsection{Using sbt to Generate a Config File}
+
+\noindent
+First, you need to install the ENSIME sbt plugin. Add the following lines to your build.sbt:
+
+\begin{mylisting}
+\begin{verbatim}
+resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
+    
+addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "0.0.4-SNAPSHOT")
+\end{verbatim}
+\end{mylisting}
+
+\noindent
+Then, from an sbt shell, generate your ENSIME project:
+
+\begin{mylisting}
+\begin{verbatim}
+ensime gen
+\end{verbatim}
+\end{mylisting}
+
+\noindent
+A .ensime file should have been created in the root of your project.\\
+
+
+\subsubsection{Generating Configs for Other Project Types}
+
+ENSIME includes a wizard for automatically generating configuration files. In Emacs, execute \emph{M-x ensime-config-gen}. Then simply follow the directions in the mini-buffer to create a .ensime file for your project.  ENSIME will try to guess the type(mvn, custom, etc) of your project, based on the files and directory structure. If the config generator does a poor job for your project, please let us know so we can improve it. And of course you can still create the .ensime file for your project manually. See the section on the .ensime format below.
 
 \subsection{Notes on Specific Project Types}
 
@@ -88,7 +124,7 @@ ENSIME includes a wizard for automatically generating configuration files. In Em
 
 \noindent
 \textbf{Passing JVM arguments to SBT process at initialization time}:\\
-If you've configured ENSIME to read your SBT project configuration, ENSIME will launch an SBT process at startup. You can pass JVM arguments to this process using the SBT_OPTS environment variable. This may be useful for increasing memory limits for big projects.
+If you've configured ENSIME to read your SBT project configuration, ENSIME will launch an SBT process at startup. You can pass JVM arguments to this process using the SBT\_OPTS environment variable. This may be useful for increasing memory limits for big projects.
 
 \noindent
 \textbf{Inferior SBT}:\\
@@ -97,10 +133,6 @@ The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior 
 \noindent
 \textbf{Compile-on-Save}:\\
 If the configuration directive :sbt-compile-on-save is set to 't', ENSIME will invoke the 'compile' task in the inferior sbt process whenever you save a Scala buffer. Warning: This can eat up a lot of CPU.\\
-
-\noindent
-\textbf{Subprojects}:\\
-If your project is made up of subprojects, you must declare the existence of each subproject in the configuration file. See the :sbt-subprojects directive in section \ref{sec:configformat} for more information. ENSIME will then prompt you on startup for which subproject you'd like to work on. Note that there will be a separate instance of the ENSIME server process for each subproject you open.
 
 \subsubsection{Maven}
 
@@ -642,6 +674,7 @@ Start the automatic configuration file generator.
 
 
 \section{Troubleshooting}
+\label{sec:troubleshooting}
 
 \subsection{Diagnosing Issues}
 You may want to examine the contents of the \emph{*inferior-ensime-server*} buffer. This buffer collects the stdout and stderr of the server process, which is useful for debugging. If the compiler is in a broken state, you can restart it with M-x ensime-reload. Otherwise, if things are irreparably b0rked, you can always kill the \emph{*inferior-ensime-server*} buffer (which kills the server process) and restart ensime with M-x ensime. 

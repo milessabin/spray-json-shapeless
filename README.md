@@ -39,28 +39,32 @@ the ENhanced Scala Interaction Mode for Emacs
 ## System Requirements
 
 - Emacs 22 or later.
-- Unix-like OS or Windows.
+- Linux, Mac OSX, Windows
 - Java Runtime
-- A Scala 2.8.1 compatible project (see appropriate ENSIME build for your scala version)
+- A Scala 2.8.x or 2.9.x project
 
 
 ## Documentation
+
 - [The ENSIME User Manual](http://aemon.com/file_dump/ensime_manual.html)
+- [(Jump directly to 'Getting Started'...](http://aemon.com/file_dump/ensime_manual.html#install)
 
 
-## Quick Start
+
+## Getting Started
 
 __1) Install scala-mode__
 
-ENSIME is designed to compliment scala-mode (or any other scala language mode). scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/. The rest of the steps assume your scala-mode is installed and working correctly.
+Although it's not required, ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/.
 
-__2) Install ensime-mode__
+
+__2) Install the ENSIME Server__
 
 Download the ENSIME distribution from the github [downloads page](http://github.com/aemoncannon/ensime/downloads). Unpack the ENSIME distribution into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
 
-    ;; Load the ensime lisp code...
+    ;; load the ensime lisp code...
     (add-to-list 'load-path "ENSIME_ROOT/elisp/")
     (require 'ensime)
 
@@ -69,16 +73,23 @@ Add the following lines to your .emacs file:
     ;; if you're not using the standard scala mode.
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
-    ;; MINI HOWTO: 
-    ;; Open .scala file. M-x ensime (once per project)
+
+__3) If you are using sbt, install the ENSIME Sbt Plugin:
+
+You can add the following lines to your build.sbt:
+
+    resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
+    
+    addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "0.0.4-SNAPSHOT")
+
+Verify the plugin is working by executing the command at the sbt prompt as follows:
+    
+    ensime dump [root|SUB_PROJECT_NAME]
+
+You should see a JSON encoded description of your project printed to the console.
 
 
-__3) Verify Permissions__
-
-Verify that the startup script (usually bin/server.sh) has executable permissions.
-
-
-__4) Create Project__
+__3) Create Project__
 
 In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to create a .ensime file for your project.. 
 
