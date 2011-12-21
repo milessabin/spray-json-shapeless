@@ -106,7 +106,7 @@ Then, from an sbt shell, generate your ENSIME project:
 
 \begin{mylisting}
 \begin{verbatim}
-ensime gen
+ensime generate
 \end{verbatim}
 \end{mylisting}
 
@@ -184,6 +184,11 @@ The friendly name of your project. Will be displayed in the Emacs mode-line when
 \vspace{1 cm}
 
 \noindent
+{\bf :project-package} "...."\\
+The main scala package for your project. Used by ENSIME to populate the project outline view. 
+\vspace{1 cm}
+
+\noindent
 {\bf :server-root} "...."\\
 The absolute path to the root of your ENSIME distribution. By default this is inferred from the location of the ensime.el E-Lisp library.
 \vspace{1 cm}
@@ -256,12 +261,6 @@ Override the default ivy.xml location.
 \noindent
 {\bf :ivy-runtime-conf} "...."\\
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
-\vspace{1 cm}
-
-
-\noindent
-{\bf :project-package} "...."\\
-The main scala package for your project. Used by ENSIME to populate the project outline view. 
 \vspace{1 cm}
 
 

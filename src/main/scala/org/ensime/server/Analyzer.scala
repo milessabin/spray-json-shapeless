@@ -49,6 +49,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   extends Actor with RefactoringHandler {
 
   private val settings = new Settings(Console.println)
+  println("ExtraArgs: " + config.compilerArgs)
   settings.processArguments(config.compilerArgs, false)
   settings.usejavacp.value = false
 

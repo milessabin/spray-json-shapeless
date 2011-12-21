@@ -37,13 +37,15 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 import scalariform.formatter.preferences._
 
+import Sbt.SbtFormatHandler
+
 trait FormatHandler {
   def rootDir(): Option[String]
   def useSbt(): Boolean
   def sbtJar(): Option[String]
   def useMaven(): Boolean
   def useIvy(): Boolean
-  def sbtActiveSubproject(): Option[SbtSubproject]
+  def sbtActiveSubproject(): Option[SbtFormatHandler]
   def ivyRuntimeConf(): Option[String]
   def ivyCompileConf(): Option[String]
   def ivyTestConf(): Option[String]
@@ -63,75 +65,74 @@ trait FormatHandler {
   def extraBuilderArgs(): List[String]
 }
 
+
+trait SExpFormatHelper {
+
+  def m: Map[KeywordAtom, SExp]
+
+  def matchError(s:String) = {
+    System.err.println("Configuration Format Error: " + s)
+  }
+
+  def getStr(name: String): Option[String] = m.get(key(name)) match {
+    case Some(StringAtom(s)) => Some(s)
+    case None => None
+    case _ => matchError("Expecting a string value at key: " + name);None
+  }
+  def getInt(name: String): Option[Int] = m.get(key(name)) match {
+    case Some(IntAtom(i)) => Some(i)
+    case None => None
+    case _ => matchError("Expecting an integer value at key: " + name);None
+  }
+  def getBool(name: String): Boolean = m.get(key(name)) match {
+    case Some(TruthAtom()) => true
+    case None => false
+    case _ => matchError("Expecting a nil or t value at key: " + name);false
+  }
+  def getStrList(name: String): List[String] = m.get(key(name)) match {
+    case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
+    case None => List()
+    case _ => matchError("Expecting a list of string values at key: " + name);List()
+  }
+  def getRegexList(name: String): List[Regex] = m.get(key(name)) match {
+    case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value.r }.toList
+    case None => List()
+    case _ => matchError("Expecting a list of string-encoded regexps at key: " + name);List()
+  }
+
+}
+
 object ProjectConfig {
-  class SExpFormatHandler(config: SExpList) extends FormatHandler {
-    val m = config.toKeywordMap
 
-    def matchError(s:String) = {
-      System.err.println("Configuration Format Error: " + s)
-    }
 
-    private def getStr(name: String): Option[String] = m.get(key(name)) match {
-      case Some(StringAtom(s)) => Some(s)
-      case None => None
-      case _ => matchError("Expecting a string value at key: " + name);None
-    }
-    private def getInt(name: String): Option[Int] = m.get(key(name)) match {
-      case Some(IntAtom(i)) => Some(i)
-      case None => None
-      case _ => matchError("Expecting an integer value at key: " + name);None
-    }
-    private def getBool(name: String): Boolean = m.get(key(name)) match {
-      case Some(TruthAtom()) => true
-      case None => false
-      case _ => matchError("Expecting a nil or t value at key: " + name);false
-    }
-    private def getStrList(name: String): List[String] = m.get(key(name)) match {
-      case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
-      case None => List()
-      case _ => matchError("Expecting a list of string values at key: " + name);List()
-    }
-    private def getRegexList(name: String): List[Regex] = m.get(key(name)) match {
-      case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value.r }.toList
-      case None => List()
-      case _ => matchError("Expecting a list of string-encoded regexps at key: " + name);List()
-    }
+  class SExpFormatHandler(config: SExpList) extends FormatHandler with SExpFormatHelper {
+
+    override val m: Map[KeywordAtom, SExp] = config.toKeywordMap
 
     def rootDir(): Option[String] = getStr(":root-dir")
     def useSbt(): Boolean = getBool(":use-sbt")
     def sbtJar(): Option[String] = getStr(":sbt-jar")
     def useMaven(): Boolean = getBool(":use-maven")
     def useIvy(): Boolean = getBool(":use-ivy")
-    private def sbtSubprojects: List[Map[KeywordAtom, SExp]] = {
+    private def sbtSubprojects: List[SExpList] = {
       m.get(key(":sbt-subprojects")) match {
         case Some(SExpList(items)) =>
         items.flatMap {
-          case lst: SExpList => Some(lst.toKeywordMap)
+          case lst: SExpList => Some(lst)
           case _ => None
         }.toList
         case _ => List()
       }
     }
-    private def sbtSubproject(projectName: String): Option[SbtSubproject] = {
-      val proj = sbtSubprojects.find { ea =>
-        ea.get(key(":name")) match {
+    private def sbtSubproject(projectName: String): Option[SbtFormatHandler] = {
+      sbtSubprojects.find { ea =>
+        ea.toKeywordMap.get(key(":name")) match {
           case Some(StringAtom(str)) => str == projectName
           case _ => false
         }
-      }
-      proj match {
-        case Some(p) => {
-          Some(SbtSubproject(
-              p.get(key(":name")).getOrElse("NA").toString,
-              p.get(key(":deps")) match {
-		case Some(SExpList(items)) => items.map(_.toString).toList
-		case _ => List()
-              }))
-        }
-        case _ => None
-      }
+      }.map(Sbt.formatHandler(_))
     }
-    def sbtActiveSubproject(): Option[SbtSubproject] = {
+    def sbtActiveSubproject(): Option[SbtFormatHandler] = {
       getStr(":sbt-active-subproject") match {
         case Some(nm) => sbtSubproject(nm)
         case _ => None
