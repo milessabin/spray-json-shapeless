@@ -179,12 +179,12 @@ What follows is a description of all available configuration options. Required o
 \vspace{5 mm}
 
 \noindent
-{\bf :project-name} "...."\\
+{\bf :name} "...."\\
 The friendly name of your project. Will be displayed in the Emacs mode-line when connected to an ENSIME server. If no name is given, ENSIME will try to use an existing project name (only sbt, currently).
 \vspace{1 cm}
 
 \noindent
-{\bf :project-package} "...."\\
+{\bf :package} "...."\\
 The main scala package for your project. Used by ENSIME to populate the project outline view. 
 \vspace{1 cm}
 
@@ -193,22 +193,14 @@ The main scala package for your project. Used by ENSIME to populate the project 
 The absolute path to the root of your ENSIME distribution. By default this is inferred from the location of the ensime.el E-Lisp library.
 \vspace{1 cm}
 
-
 \noindent
 {\bf :server-cmd}  "...."\\
 The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
 \vspace{1 cm}
 
-
 \noindent
 {\bf :server-host} "...."\\
 The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
-\vspace{1 cm}
-
-
-\noindent
-{\bf :use-sbt} [t or nil]\\
-Assume a standard sbt directory structure. Look in default sbt locations for dependencies, sources, target, etc.
 \vspace{1 cm}
 
 \noindent
@@ -222,29 +214,9 @@ Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is
 \vspace{1 cm}
 
 \noindent
-{\bf :sbt-subprojects} ([sbt-subproject]*)\\
-Declare sbt subprojects. Each item in the list should be a property list with the following structure: (:name ``NAME''), where NAME is replaced with the proper name of the project. Contrary to previous versions of ENSIME, it is no longer necessary to declare subproject dependencies:
-\begin{mylisting}
-\begin{verbatim}
-(
-  :use-sbt t
-  :sbt-subprojects (
-     (:name "web")
-     (:name "core")
-  )
-)
-\end{verbatim}
-\end{mylisting}
-
-\vspace{5 mm}
-
-
-
-\noindent
 {\bf :use-maven} [t or nil]\\
 Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 \vspace{1 cm}
-
 
 \noindent
 {\bf :use-ivy} [t or nil]\\
@@ -263,42 +235,29 @@ Override the default ivy.xml location.
 Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
 \vspace{1 cm}
 
-
 \noindent
-{\bf :sources } ([directory or filename]*)\\
-Manually include source files by directory(recursively) or by filename. If directory is given, only .scala and .java files will be considered.
+{\bf :source-roots } ([directory]*)\\
+Specify the roots of your project's package directories.
 \vspace{1 cm}
 
-
 \noindent
-{\bf :compile-jars} ([directory or filename]*)\\
+{\bf :compile-deps} ([directory or filename]*)\\
 Manually include jars by directory(recursively) or by filename, to be included on the compile and runtime classpaths.
 \vspace{1 cm}
 
 \noindent
-{\bf :exclude-compile-jars} ([directory or filename]*)\\
-Manually exclude jars by directory(recursively) or by filename. These jars will be excluded from any classpath.
-\vspace{1 cm}
-
-
-\noindent
-{\bf :runtime-jars} ([directory or filename]*)\\
+{\bf :runtime-deps} ([directory or filename]*)\\
 Manually include jars by directory(recursively) or by filename, to be included only on the runtime classpath.
 \vspace{1 cm}
 
 \noindent
-{\bf :exclude-runtime-jars} ([directory or filename]*)\\
-Manually exclude jars by directory(recursively) or by filename. These jars will be excluded from the runtime classpath.
-\vspace{1 cm}
-
-\noindent
-{\bf :class-dirs} ([directory]*)\\
-Manually include directories of .class files, to be included on the compile and runtime classpaths.
+{\bf :test-deps} ([directory or filename]*)\\
+Manually include jars by directory(recursively) or by filename, to be included on the compile and runtime classpath.
 \vspace{1 cm}
 
 \noindent
 {\bf :target} directory\\
-Manually specify the target of the project build process. This directory will be included on the runtime classpath when debugging or using the repl, and will be pupulated by the incremental compiler. Will be created if it doesn't exist.
+Specify the target of the project build process. This directory will be included on the runtime classpath when debugging or using the repl, and will be pupulated by the incremental compiler. Will be created if it doesn't exist.
 \vspace{1 cm}
 
 \noindent
