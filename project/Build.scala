@@ -106,124 +106,124 @@ object EnsimeBuild extends Build {
 	releaseTask,
 	publishManualTask,
 
-	ensimeConfig := Map()
+	ensimeConfig := sexp()
 
       ))
-    }
-
-
-
-    val log = LogManager.defaultScreen
-
-    var stage = TaskKey[Unit]("stage", 
-      "Copy files into staging directory for a release.")
-    lazy val stageTask:Setting[sbt.Task[Unit]] = 
-    stage <<= (
-      dependencyClasspath in Runtime,
-      exportedProducts in Runtime,
-      scalaVersion) map { (depCP, exportedCP, scalaBuildVersion) =>
-
-      val distDir = "dist_" + scalaBuildVersion
-
-      delete(file(distDir))
-
-      log.info("Copying runtime environment to ./" + distDir + "....")
-      createDirectories(List(
-	  file(distDir), 
-	  file(distDir + "/bin"),
-	  file(distDir + "/lib"),
-	  file(distDir + "/elisp")))
-
-      // Copy the emacs lisp to dist
-      val elisp = root / "src" / "main" / "elisp" ** "*.el"
-      copy(elisp x flat(root / distDir / "elisp"))
-
-      // Copy the runtime jars
-      val deps = (depCP ++ exportedCP).map(_.data)
-      copy(deps x flat(root / distDir / "lib"))
-
-      // Grab all jars..
-      val cpLibs = (root / distDir / "lib" ** "*.jar").get.flatMap(
-	_.relativeTo(root / distDir))
-
-      def writeScript(classpath:String, from:String, to:String){
-	val tmplF = new File(from)
-	val tmpl = read(tmplF)
-	val s = tmpl.replace("<RUNTIME_CLASSPATH>", classpath)
-	val f = new File(to)
-	write(f, s)
-	f.setExecutable(true)
-      }
-
-      // Expand the server invocation script templates.
-      writeScript(cpLibs.mkString(":").replace("\\", "/"),
-	"./etc/scripts/server",
-	"./" + distDir + "/bin/server")
-
-      writeScript("\"" + cpLibs.mkString(";").replace("/", "\\") + "\"",
-	"./etc/scripts/server.bat",
-	"./" + distDir + "/bin/server.bat")
-
-      copy(root / "etc" ** "sbt-launch-*.jar" x flat(root / distDir / "bin"))
-
-      copyFile(root / "README.md", root / distDir / "README.md")
-      copyFile(root / "LICENSE", root / distDir / "LICENSE")
-    }
-
-
-    var dist = TaskKey[Unit]("dist", "Create the release package.")
-    lazy val distTask:Setting[sbt.Task[Unit]] = dist := {
-      println("The 'dist' task is deprecated. Use 'stage' to create release directory structure. Use 'release' to create the release archive.")
-      None
-    }
-
-
-    var release = TaskKey[Unit]("release", "Create the release package and tag the current commit.")
-    lazy val releaseTask:Setting[sbt.Task[Unit]] = 
-    release <<= (stage,version,scalaVersion) map {
-      (_,version,scalaBuildVersion) =>
-
-      val distDir = "dist_" + scalaBuildVersion
-      val modName = "ensime_" + scalaBuildVersion + "-" + version
-      val tagName = scalaBuildVersion + "-" + version
-
-      doSh("git tag -s v" + tagName + 
-	" -m 'Tag for release " + modName + "'") !! (log)
-
-      val initialDir = new File(".")
-      val archiveFile = new File(initialDir,
-	modName + ".tar.gz").getCanonicalPath
-      withTemporaryDirectory{ f =>
-	val releaseDir = new File(
-	  f.getAbsolutePath + "/" + 
-	  modName)
-	log.info("Copying ./" + distDir + " to temp directory: " + releaseDir)
-	doSh("cp -r ./" + distDir + " " + releaseDir)!!(log)
-	log.info("Compressing temp directory to " + archiveFile + "...")
-	doSh("tar -pcvzf " + archiveFile + " " + 
-	  modName, Some(f)) !! (log)
-	None
-      }
-      None
-    }
-
-
-    val publishManual = TaskKey[Unit]("publish-manual", "Publish the manual Create the release package.")
-    lazy val publishManualTask:Setting[sbt.Task[Unit]] = publishManual := {
-      log.info("Converting manual to html..")
-      val target = "/tmp/ensime_manual.html"
-      val cwd = Some(new File("etc"))
-      doSh("pdflatex manual.ltx", cwd)!!log
-      doSh("cat manual_head.html > " + target, cwd)!!log
-      doSh("tth -r -u -e2 -Lmanual < manual.ltx >> " + target, cwd)!!(log)
-      doSh("cat manual_tail.html >> " + target, cwd)!!log
-      log.info("Publishing manual to web...")
-      doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
-      doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
-      None     
-    }
-
-
-
-
   }
+
+
+
+  val log = LogManager.defaultScreen
+
+  var stage = TaskKey[Unit]("stage", 
+    "Copy files into staging directory for a release.")
+  lazy val stageTask:Setting[sbt.Task[Unit]] = 
+  stage <<= (
+    dependencyClasspath in Runtime,
+    exportedProducts in Runtime,
+    scalaVersion) map { (depCP, exportedCP, scalaBuildVersion) =>
+
+    val distDir = "dist_" + scalaBuildVersion
+
+    delete(file(distDir))
+
+    log.info("Copying runtime environment to ./" + distDir + "....")
+    createDirectories(List(
+	file(distDir), 
+	file(distDir + "/bin"),
+	file(distDir + "/lib"),
+	file(distDir + "/elisp")))
+
+    // Copy the emacs lisp to dist
+    val elisp = root / "src" / "main" / "elisp" ** "*.el"
+    copy(elisp x flat(root / distDir / "elisp"))
+
+    // Copy the runtime jars
+    val deps = (depCP ++ exportedCP).map(_.data)
+    copy(deps x flat(root / distDir / "lib"))
+
+    // Grab all jars..
+    val cpLibs = (root / distDir / "lib" ** "*.jar").get.flatMap(
+      _.relativeTo(root / distDir))
+
+    def writeScript(classpath:String, from:String, to:String){
+      val tmplF = new File(from)
+      val tmpl = read(tmplF)
+      val s = tmpl.replace("<RUNTIME_CLASSPATH>", classpath)
+      val f = new File(to)
+      write(f, s)
+      f.setExecutable(true)
+    }
+
+    // Expand the server invocation script templates.
+    writeScript(cpLibs.mkString(":").replace("\\", "/"),
+      "./etc/scripts/server",
+      "./" + distDir + "/bin/server")
+
+    writeScript("\"" + cpLibs.mkString(";").replace("/", "\\") + "\"",
+      "./etc/scripts/server.bat",
+      "./" + distDir + "/bin/server.bat")
+
+    copy(root / "etc" ** "sbt-launch-*.jar" x flat(root / distDir / "bin"))
+
+    copyFile(root / "README.md", root / distDir / "README.md")
+    copyFile(root / "LICENSE", root / distDir / "LICENSE")
+  }
+
+
+  var dist = TaskKey[Unit]("dist", "Create the release package.")
+  lazy val distTask:Setting[sbt.Task[Unit]] = dist := {
+    println("The 'dist' task is deprecated. Use 'stage' to create release directory structure. Use 'release' to create the release archive.")
+    None
+  }
+
+
+  var release = TaskKey[Unit]("release", "Create the release package and tag the current commit.")
+  lazy val releaseTask:Setting[sbt.Task[Unit]] = 
+  release <<= (stage,version,scalaVersion) map {
+    (_,version,scalaBuildVersion) =>
+
+    val distDir = "dist_" + scalaBuildVersion
+    val modName = "ensime_" + scalaBuildVersion + "-" + version
+    val tagName = scalaBuildVersion + "-" + version
+
+    doSh("git tag -s v" + tagName + 
+      " -m 'Tag for release " + modName + "'") !! (log)
+
+    val initialDir = new File(".")
+    val archiveFile = new File(initialDir,
+      modName + ".tar.gz").getCanonicalPath
+    withTemporaryDirectory{ f =>
+      val releaseDir = new File(
+	f.getAbsolutePath + "/" + 
+	modName)
+      log.info("Copying ./" + distDir + " to temp directory: " + releaseDir)
+      doSh("cp -r ./" + distDir + " " + releaseDir)!!(log)
+      log.info("Compressing temp directory to " + archiveFile + "...")
+      doSh("tar -pcvzf " + archiveFile + " " + 
+	modName, Some(f)) !! (log)
+      None
+    }
+    None
+  }
+
+
+  val publishManual = TaskKey[Unit]("publish-manual", "Publish the manual Create the release package.")
+  lazy val publishManualTask:Setting[sbt.Task[Unit]] = publishManual := {
+    log.info("Converting manual to html..")
+    val target = "/tmp/ensime_manual.html"
+    val cwd = Some(new File("etc"))
+    doSh("pdflatex manual.ltx", cwd)!!log
+    doSh("cat manual_head.html > " + target, cwd)!!log
+    doSh("tth -r -u -e2 -Lmanual < manual.ltx >> " + target, cwd)!!(log)
+    doSh("cat manual_tail.html >> " + target, cwd)!!log
+    log.info("Publishing manual to web...")
+    doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
+    doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
+    None     
+  }
+
+
+
+
+}
