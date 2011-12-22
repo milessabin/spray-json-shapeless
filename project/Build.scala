@@ -53,7 +53,7 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++ 
       Seq(
-	version := "0.8.0.RC3",
+	version := "0.9.0.RC1",
 	organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
@@ -187,7 +187,9 @@ object EnsimeBuild extends Build {
     val modName = "ensime_" + scalaBuildVersion + "-" + version
     val tagName = scalaBuildVersion + "-" + version
 
-    doSh("git tag -s v" + tagName + 
+    val shallWeTag = false
+    val tagArg = if(shallWeTag){ "-s" }else{ "" }
+    doSh("git tag " + tagArg + " v" + tagName + 
       " -m 'Tag for release " + modName + "'") !! (log)
 
     val initialDir = new File(".")
