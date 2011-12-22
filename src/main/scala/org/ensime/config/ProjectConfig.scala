@@ -428,7 +428,6 @@ object ProjectConfig {
     def extraBuilderArgs() = extraBuilderArgs_()
 
 
-
     val formatPrefs_ = new SymbolMapProp(
       m,
       ":formatting-prefs",
@@ -523,8 +522,10 @@ object ProjectConfig {
     {
       val deps = maybeFiles(conf.compileJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar )
+      println("Including compile jars: " + jars.mkString(","))
       compileDeps ++= jars
       val moreDeps = maybeFiles(conf.compileDeps, rootDir)
+      println("Including compile deps: " + moreDeps.mkString(","))
       compileDeps ++= moreDeps
     }
 
@@ -532,14 +533,17 @@ object ProjectConfig {
     {
       val deps = maybeFiles(conf.runtimeJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar )
+      println("Including compile jars: " + jars.mkString(","))
       runtimeDeps ++= jars
       val moreDeps = maybeFiles(conf.runtimeDeps, rootDir)
+      println("Including compile deps: " + moreDeps.mkString(","))
       runtimeDeps ++= moreDeps
     }
 
 
     {
       val moreDeps = maybeFiles(conf.testDeps, rootDir)
+      println("Including test deps: " + moreDeps.mkString(","))
       compileDeps ++= moreDeps
       runtimeDeps ++= moreDeps
     }
