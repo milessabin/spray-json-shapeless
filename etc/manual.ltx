@@ -97,7 +97,7 @@ First, you need to install the ENSIME sbt plugin. Add the following lines to you
 \begin{verbatim}
 resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
     
-addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "0.0.4-SNAPSHOT")
+addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "0.0.7-SNAPSHOT")
 \end{verbatim}
 \end{mylisting}
 
@@ -123,10 +123,6 @@ ENSIME includes a wizard for automatically generating configuration files. In Em
 \subsubsection{SBT}
 
 \noindent
-\textbf{Passing JVM arguments to SBT process at initialization time}:\\
-If you've configured ENSIME to read your SBT project configuration, ENSIME will launch an SBT process at startup. You can pass JVM arguments to this process using the SBT\_OPTS environment variable. This may be useful for increasing memory limits for big projects.
-
-\noindent
 \textbf{Inferior SBT}:\\
 The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior sbt session.\\
 
@@ -135,10 +131,6 @@ The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior 
 If the configuration directive :sbt-compile-on-save is set to 't', ENSIME will invoke the 'compile' task in the inferior sbt process whenever you save a Scala buffer. Warning: This can eat up a lot of CPU.\\
 
 \subsubsection{Maven}
-
-\noindent
-\textbf{Known limitations}:\\
-Currently ENSIME expects to find pom.xml in the root of the project.\\
 
 \noindent
 \textbf{Dependencies}:\\
