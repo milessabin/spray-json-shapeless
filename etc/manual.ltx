@@ -509,7 +509,7 @@ Inspect the package of the current source file.
 
 \noindent
 {\bf C-c C-v o}\\
-Inspect the package specified in .ensime as :project-package.
+Inspect the package specified in .ensime as :package.
 \vspace{5 mm}
 
 \noindent
@@ -726,14 +726,13 @@ At the application level, the s-expressions encode RPC calls, RPC responses, and
 # This is read from the .ensime file.
 (:swank-rpc
  (swank:init-project
-  (:project-package "org.ensime" :use-sbt t 
-   :root-dir "/home/aemon/src/misc/ensime/")) 2)
+  (:package "org.ensime" :root-dir "/home/aemon/src/misc/ensime/")) 2)
 
 # The acknowledges the message and sends some useful project info 
 # back to the client.
 (:return
  (:ok
-  (:project-name "ensime" :source-roots
+  (:name "ensime" :source-roots
 		 ("/home/aemon/src/misc/ensime/src/main/scala" 
 		 "/home/aemon/src/misc/ensime/src/main/java" 
 		 "/home/aemon/src/misc/ensime/src/test/scala"))) 2)

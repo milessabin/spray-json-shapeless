@@ -38,13 +38,13 @@ import scala.util.matching.Regex
 import scalariform.formatter.preferences._
 
 trait FormatHandler {
+
   def rootDir(): Option[String]
 
   def name(): Option[String]
   def pack(): Option[String]
   def version(): Option[String]
 
-  def sbtJar(): Option[String]
   def useMaven(): Boolean
   def useIvy(): Boolean
 
@@ -144,24 +144,116 @@ object ProjectConfig {
       mainproj ++ subproj
     }
 
-    def rootDir(): Option[String] = getStr(":root-dir")
-    def sbtJar(): Option[String] = getStr(":sbt-jar")
-    def useMaven(): Boolean = getBool(":use-maven")
-    def useIvy(): Boolean = getBool(":use-ivy")
 
-    def name(): Option[String] = getStr(":name")
-    def pack(): Option[String] = getStr(":package")
-    def version(): Option[String] = getStr(":version")
-    def compileDeps(): List[String] = getStrList(":compile-deps")
-    def runtimeDeps(): List[String] = getStrList(":runtime-deps")
-    def testDeps(): List[String] = getStrList(":test-deps")
-    def sourceRoots(): List[String] = getStrList(":source-roots")
-    def target(): Option[String] = getStr(":target")
 
-    def ivyRuntimeConf(): Option[String] = getStr(":ivy-runtime-conf")
-    def ivyCompileConf(): Option[String] = getStr(":ivy-compile-conf")
-    def ivyTestConf(): Option[String] = getStr(":ivy-test-conf")
-    def ivyFile(): Option[String] = getStr(":ivy-file")
+
+
+    lazy val rootDir() = new OptionalStringProp(
+      ":root-dir",
+      "The root directory of your project. This option should be filled in by your editor."
+    )
+
+    lazy val name() = new OptionalStringProp(
+      ":name",
+      "The short identifier for your project. Should be the same that you use when publishing. Will be displayed in the Emacs mode-line when connected to an ENSIME server.",
+      None,
+      Some(":project-name")
+    )
+
+    lazy val pack() = new OptionalStringProp(
+      ":package",
+      "The main package for your project. Used by ENSIME to populate the project outline view.",
+      None,
+      Some(":project-package")
+    )
+
+    lazy val version() = new OptionalStringProp(
+      ":version",
+      "The current, working version of your project."
+    )
+
+    lazy val useMaven() = new BooleanProp(
+      ":use-maven",
+      "Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed."
+    )
+
+    lazy val useIvy() = new BooleanProp(
+      ":use-ivy",
+      "Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed."
+    )
+
+    lazy val ivyFile() = new OptionalStringProp(
+      ":ivy-file",
+      "Override the default ivy.xml location.",
+      Some("filename")
+    )
+
+    lazy val ivyRuntimeConf() = new OptionalStringProp(
+      ":ivy-runtime-conf",
+      "Specify the names of dependency profiles to be used for runtime scenarios.",
+      Some("...")
+    )
+    lazy val ivyCompileConf() = new OptionalStringProp(
+      ":ivy-compile-conf",
+      "Specify the names of dependency profiles to be used for compile scenarios.",
+      Some("...")
+    )
+    lazy val ivyTestConf() = new OptionalStringProp(
+      ":ivy-test-conf",
+      "Specify the names of dependency profiles to be used for test scenarios.",
+      Some("...")
+    )
+
+    lazy val compileDeps() = new StringListProp(
+      ":compile-deps",
+      "A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.",
+      Some("([directory or filename]*)")
+    )
+
+    lazy val runtimeDeps() = new StringListProp(
+      ":runtime-deps",
+      "A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.",
+      Some("([directory or filename]*)")
+    )
+
+    lazy val testDeps() = new StringListProp(
+      ":test-deps",
+      "A list of jar files and class directories to include on the test classpath. No recursive expansion will be done.",
+      Some("([directory or filename]*)")
+    )
+
+    lazy val sourceRoots() = new StringListProp(
+      ":source-roots",
+      "A list of directories in which to start searching for source files.",
+      Some("(directory*)")
+    )
+
+    lazy val target() = new OptionalStringProp(
+      ":target",
+      "The root of the class output directory.",
+      Some("filename")
+    )
+
+    lazy val disableIndexOnStartup() = new BooleanProp(
+      ":disable-index-on-startup",
+      "Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality."
+    )
+
+    lazy val excludeFromIndex() = new StringListProp(
+      ":exclude-from-index",
+      """Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
+      \begin{mylisting}
+      \begin{verbatim}
+      :exclude-from-index ("com\\\\.sun\\\\..\*" "com\\\\.apple\\\\..\*")
+      \end{verbatim}
+      \end{mylisting}""",
+      Some("(directory*)")
+    )
+
+
+    def excludeFromIndex(): List[Regex] = getRegexList(":exclude-from-index")
+    def extraCompilerArgs(): List[String] = getStrList(":compiler-args")
+    def extraBuilderArgs(): List[String] = getStrList(":builder-args")
 
     def formatPrefs(): Map[Symbol, Any] = m.get(key(":formatting-prefs")) match {
       case Some(list: SExpList) => {
@@ -171,10 +263,7 @@ object ProjectConfig {
       }
       case _ => Map[Symbol, Any]()
     }
-    def disableIndexOnStartup(): Boolean = getBool(":disable-index-on-startup")
-    def excludeFromIndex(): List[Regex] = getRegexList(":exclude-from-index")
-    def extraCompilerArgs(): List[String] = getStrList(":compiler-args")
-    def extraBuilderArgs(): List[String] = getStrList(":builder-args")
+
 
   }
 
@@ -198,7 +287,6 @@ object ProjectConfig {
     val sourceRoots = new mutable.HashSet[CanonFile]
     val runtimeDeps = new mutable.HashSet[CanonFile]
     val compileDeps = new mutable.HashSet[CanonFile]
-    val classDirs = new mutable.HashSet[CanonFile]
     var target: Option[CanonFile] = None
     var projectName: Option[String] = None
 
@@ -290,8 +378,11 @@ object ProjectConfig {
       projectName,
       scalaLibraryJar,
       scalaCompilerJar,
-      rootDir, sourceRoots, runtimeDeps,
-      compileDeps, classDirs, target,
+      rootDir, 
+      sourceRoots, 
+      runtimeDeps,
+      compileDeps, 
+      target,
       formatPrefs,
       conf.disableIndexOnStartup,
       conf.excludeFromIndex,
@@ -364,7 +455,6 @@ class ProjectConfig(
   val sourceRoots: Iterable[CanonFile],
   val runtimeDeps: Iterable[CanonFile],
   val compileDeps: Iterable[CanonFile],
-  val classDirs: Iterable[CanonFile],
   val target: Option[CanonFile],
   formattingPrefsMap: Map[Symbol, Any],
   val disableIndexOnStartup: Boolean,
