@@ -193,7 +193,7 @@ object ProjectConfig {
       }
     }
 
-    val m: KeyMap = {
+    private val m: KeyMap = {
       val mainproj = config.toKeywordMap
       val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
       mainproj ++ subproj
