@@ -84,7 +84,6 @@ object EnsimeBuild extends Build {
 	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
 	    "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
 	    "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
-	    "net.sourceforge.expectj" % "expectj" % "2.0.7" % "compile;runtime;test",
 	    "asm" % "asm" % "3.2",
 	    "asm" % "asm-commons" % "3.2",
 	    scalatest,
