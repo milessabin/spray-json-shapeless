@@ -111,7 +111,7 @@ ensime generate
 \end{mylisting}
 
 \noindent
-A .ensime file should have been created in the root of your project.\\
+You should now have a .ensime file in the root of your project.\\
 
 
 \subsubsection{Generating Configs for Other Project Types}
@@ -178,124 +178,153 @@ What follows is a description of all available configuration options. Required o
 
 \vspace{5 mm}
 
-\noindent
-{\bf :name} "...."\\
-The friendly name of your project. Will be displayed in the Emacs mode-line when connected to an ENSIME server. If no name is given, ENSIME will try to use an existing project name (only sbt, currently).
-\vspace{1 cm}
+% Paste output of ProjectConfig.main here
 
 \noindent
-{\bf :package} "...."\\
-The main scala package for your project. Used by ENSIME to populate the project outline view. 
+{\bf :root-dir}  a filename\\
+The root directory of your project. This option should be filled in by your editor.
 \vspace{1 cm}
 
-\noindent
-{\bf :server-root} "...."\\
-The absolute path to the root of your ENSIME distribution. By default this is inferred from the location of the ensime.el E-Lisp library.
-\vspace{1 cm}
+
 
 \noindent
-{\bf :server-cmd}  "...."\\
-The command with which to invoke the ENSIME server. By default, this will be set to "bin/server.sh" on Unix systems and "bin/server.bat" on Windows.
+{\bf :name}  a string\\
+The short identifier for your project. Should be the same that you use when publishing. Will be displayed in the Emacs mode-line when connected to an ENSIME server.
 \vspace{1 cm}
 
-\noindent
-{\bf :server-host} "...."\\
-The host to connect to. Connecting to remote ENSIME servers is not currently supported (though it may work...)
-\vspace{1 cm}
+
 
 \noindent
-{\bf :sbt-jar} ``....'']\\
-Specify the path to your sbt jar. Absolute, or relative to the project root. If omitted, ENSIME will use one of its bundled jars.
+{\bf :package}  a string\\
+The main package for your project. Used by ENSIME to populate the project outline view.
 \vspace{1 cm}
 
-\noindent
-{\bf :sbt-compile-on-save} [t or nil]\\
-Should ENSIME issue a 'compile' command to sbt whenever you save a file? This is disabled by default as it consumes a lot of CPU.
-\vspace{1 cm}
+
 
 \noindent
-{\bf :use-maven} [t or nil]\\
+{\bf :version}  a string\\
+The current, working version of your project.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :use-maven}  [t or nil]\\
 Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 \vspace{1 cm}
 
+
+
 \noindent
-{\bf :use-ivy} [t or nil]\\
+{\bf :use-ivy}  [t or nil]\\
 Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.
 \vspace{1 cm}
 
+
+
 \noindent
-{\bf :ivy-file} filename\\
+{\bf :ivy-file}  a filename\\
 Override the default ivy.xml location.
 \vspace{1 cm}
 
-\noindent
-{\bf :ivy-compile-conf} "...."\\
-\noindent
-{\bf :ivy-runtime-conf} "...."\\
-Specify the names of dependency profiles to be used for compilation and runtime scenarios. Only necessary if you have custom configurations!
-\vspace{1 cm}
+
 
 \noindent
-{\bf :source-roots } ([directory]*)\\
-Specify the roots of your project's package directories.
+{\bf :ivy-runtime-conf}  a string\\
+Specify the names of dependency profiles to be used for runtime scenarios.
 \vspace{1 cm}
 
-\noindent
-{\bf :compile-deps} ([directory or filename]*)\\
-Manually include jars by directory(recursively) or by filename, to be included on the compile and runtime classpaths.
-\vspace{1 cm}
+
 
 \noindent
-{\bf :runtime-deps} ([directory or filename]*)\\
-Manually include jars by directory(recursively) or by filename, to be included only on the runtime classpath.
+{\bf :ivy-compile-conf}  a string\\
+Specify the names of dependency profiles to be used for compile scenarios.
 \vspace{1 cm}
 
-\noindent
-{\bf :test-deps} ([directory or filename]*)\\
-Manually include jars by directory(recursively) or by filename, to be included on the compile and runtime classpath.
-\vspace{1 cm}
+
 
 \noindent
-{\bf :target} directory\\
-Specify the target of the project build process. This directory will be included on the runtime classpath when debugging or using the repl, and will be pupulated by the incremental compiler. Will be created if it doesn't exist.
+{\bf :ivy-test-conf}  a string\\
+Specify the names of dependency profiles to be used for test scenarios.
 \vspace{1 cm}
 
-\noindent
-{\bf :compiler-args} (string*)\\
-Specify arguments that should be passed to ENSIME's internal compiler. For example, to enable two warnings in the compiler, you might use:
-\begin{mylisting}
-\begin{verbatim}
-:compiler-args ("-Ywarn-dead-code" "-Ywarn-shadowing")
-\end{verbatim}
-\end{mylisting}
-\vspace{1 cm}
+
 
 \noindent
-{\bf :builder-args} (string*)\\
-Specify arguments that should be passed to ENSIME's internal build compiler. See :compiler-args, above, for relavent example.
+{\bf :compile-deps}  ([directory or filename]*)\\
+A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.
 \vspace{1 cm}
 
+
+
 \noindent
-{\bf :disable-index-on-startup} [ t or nil]\\
+{\bf :runtime-deps}  ([directory or filename]*)\\
+A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :test-deps}  ([directory or filename]*)\\
+A list of jar files and class directories to include on the test classpath. No recursive expansion will be done.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :source-roots}  (directory*)\\
+A list of directories in which to start searching for source files.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :target}  filename\\
+The root of the class output directory.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :disable-index-on-startup}  [t or nil]\\
 Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality.
 \vspace{1 cm}
 
-\noindent
-{\bf :exclude-from-index } (regex-string*)\\
-Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
-\begin{mylisting}
-\begin{verbatim}
-:exclude-from-index ("com\\\\.sun\\\\..\*" "com\\\\.apple\\\\..\*")
-\end{verbatim}
-\end{mylisting}
-\vspace{5 mm}
+
 
 \noindent
-{\bf :formatting-prefs} ([:key value]*)\\
+{\bf :exclude-from-index}  (regex*)\\
+Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
+\begin{mylisting}
+\begin{verbatim}:exclude-from-index ("com\\\\.sun\\\\..\*" "com\\\\.apple\\\\..\*")\end{verbatim}
+\end{mylisting}
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :compiler-args}  (string*)\\
+Specify arguments that should be passed to ENSIME's internal compiler. For example, to enable two warnings in the compiler, you might use:
+\begin{mylisting}
+\begin{verbatim}:compiler-args ("-Ywarn-dead-code" "-Ywarn-shadowing")\end{verbatim}
+\end{mylisting}
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :builder-args}  (string*)\\
+Specify arguments that should be passed to ENSIME's internal builder.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :formatting-prefs}  (regex*)\\
 Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
 \vspace{1 cm}
 \begin{tabular}{|l|l|}
- \hline
+  \hline
   {\bf :alignParameters} & t or nil  \\ \hline
   {\bf :alignSingleLineCaseStatements} & t or nil  \\ \hline
   {\bf :alignSingleLineCaseStatements\_maxArrowIndent} & 1-100  \\ \hline
@@ -315,8 +344,8 @@ Customize the behavior of the source formatter. All Scalariform preferences are 
   {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline 
 \end{tabular}
 
-\vspace{5 mm}
-
+\vspace{1 cm}
+% End Paste
 
 \section{Usage}
 
