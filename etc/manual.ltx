@@ -258,8 +258,22 @@ A list of jar files and class directories to include on the compilation classpat
 
 
 \noindent
+{\bf :compile-jars}  ([directory or filename]*)\\
+A list of jar files and directories to search for jar files to include on the compilation classpath.
+\vspace{1 cm}
+
+
+
+\noindent
 {\bf :runtime-deps}  ([directory or filename]*)\\
 A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.
+\vspace{1 cm}
+
+
+
+\noindent
+{\bf :runtime-jars}  ([directory or filename]*)\\
+A list of jar files and directories to search for jar files to include on the runtime classpath.
 \vspace{1 cm}
 
 
@@ -320,7 +334,7 @@ Specify arguments that should be passed to ENSIME's internal builder.
 
 
 \noindent
-{\bf :formatting-prefs}  (regex*)\\
+{\bf :formatting-prefs}  ([keyword value]*)\\
 Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
 \vspace{1 cm}
 \begin{tabular}{|l|l|}

@@ -56,6 +56,8 @@ trait FormatHandler {
   def compileDeps(): List[String]
   def runtimeDeps(): List[String]
   def testDeps(): List[String]
+  def compileJars(): List[String]
+  def runtimeJars(): List[String]
   def sourceRoots(): List[String]
   def target(): Option[String]
 
@@ -158,7 +160,7 @@ object ProjectConfig {
   class SymbolMapProp(val m:KeyMap, val key:String, val desc:String, 
     val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
     def apply():Map[Symbol, Any] = getMap(key) ++ synonymKey.map(getMap(_)).getOrElse(Map[Symbol,Any]())
-    override def defaultTypeHint:String = "(regex*)"
+    override def defaultTypeHint:String = "([keyword value]*)"
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
@@ -317,6 +319,17 @@ object ProjectConfig {
     def compileDeps() = compileDeps_()
 
 
+
+    val compileJars_ = new StringListProp(
+      m,
+      ":compile-jars",
+      "A list of jar files and directories to search for jar files to include on the compilation classpath.",
+      Some("([directory or filename]*)")
+    )
+    props += compileJars_
+    def compileJars() = compileJars_()
+
+
     
     val runtimeDeps_ = new StringListProp(
       m,
@@ -328,6 +341,15 @@ object ProjectConfig {
     def runtimeDeps() = runtimeDeps_()
 
 
+    val runtimeJars_ = new StringListProp(
+      m,
+      ":runtime-jars",
+      "A list of jar files and directories to search for jar files to include on the runtime classpath.",
+      Some("([directory or filename]*)")
+    )
+    props += runtimeJars_
+    def runtimeJars() = runtimeJars_()
+
     
     val testDeps_ = new StringListProp(
       m,
@@ -337,7 +359,6 @@ object ProjectConfig {
     )
     props += testDeps_
     def testDeps() = testDeps_()
-
 
 
     val sourceRoots_ = new StringListProp(
@@ -500,26 +521,29 @@ object ProjectConfig {
     }
 
     {
-      val deps = maybeFiles(conf.runtimeDeps, rootDir)
-      val toInclude = expandRecursively(rootDir, deps, isValidJar )
-      println("Including " + toInclude.size + " dependencies.")
-      runtimeDeps ++= toInclude
+      val deps = maybeFiles(conf.compileJars, rootDir)
+      val jars = expandRecursively(rootDir, deps, isValidJar )
+      compileDeps ++= jars
+      val moreDeps = maybeFiles(conf.compileDeps, rootDir)
+      compileDeps ++= moreDeps
     }
 
-    {
-      val deps = maybeFiles(conf.compileDeps, rootDir)
-      val toInclude = expandRecursively(rootDir, deps, isValidJar )
-      println("Including " + toInclude.size + " dependencies.")
-      compileDeps ++= toInclude
-    }
 
     {
-      val deps = maybeFiles(conf.testDeps, rootDir)
-      val toInclude = expandRecursively(rootDir, deps, isValidJar )
-      println("Including " + toInclude.size + " dependencies.")
-      compileDeps ++= toInclude
-      runtimeDeps ++= toInclude
+      val deps = maybeFiles(conf.runtimeJars, rootDir)
+      val jars = expandRecursively(rootDir, deps, isValidJar )
+      runtimeDeps ++= jars
+      val moreDeps = maybeFiles(conf.runtimeDeps, rootDir)
+      runtimeDeps ++= moreDeps
     }
+
+
+    {
+      val moreDeps = maybeFiles(conf.testDeps, rootDir)
+      compileDeps ++= moreDeps
+      runtimeDeps ++= moreDeps
+    }
+
 
     {
       val dirs = maybeDirs(conf.sourceRoots, rootDir)
