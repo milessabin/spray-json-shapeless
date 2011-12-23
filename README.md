@@ -47,8 +47,6 @@ the ENhanced Scala Interaction Mode for Emacs
 ## Documentation
 
 - [The ENSIME User Manual](http://aemon.com/file_dump/ensime_manual.html)
-- [(Jump directly to 'Getting Started'...](http://aemon.com/file_dump/ensime_manual.html#install)
-
 
 
 ## Getting Started
@@ -74,19 +72,19 @@ Add the following lines to your .emacs file:
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
 
-__3) If you are using sbt, install the ENSIME Sbt Plugin:
+__3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.2)):
 
 You can add the following lines to your build.sbt:
 
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
     
-    addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "0.0.4-SNAPSHOT")
+    addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "VERSION")
 
-Verify the plugin is working by executing the command at the sbt prompt as follows:
+Replace VERSION with the latest version of the plugin, available on [the plugin's page](https://github.com/aemoncannon/ensime-sbt-cmd). Then, from an sbt shell, generate your ENSIME project:
     
-    ensime dump [root|SUB_PROJECT_NAME]
+    ensime generate
 
-You should see a JSON encoded description of your project printed to the console.
+You should now have a .ensime file in the root of your project. You can also specify ENSIME configuration settings from your sbt build file, check the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.1) for how to do that.
 
 
 __3) Create Project__
