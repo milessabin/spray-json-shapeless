@@ -74,17 +74,17 @@ Add the following lines to your .emacs file:
 
 __3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.2))__
 
-You can add the following lines to your project/plugins.sbt file:
+Add the following lines to your project/plugins.sbt file:
 
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
     
     addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "VERSION")
 
-Replace VERSION with the latest version of the plugin, available on [the plugin's page](https://github.com/aemoncannon/ensime-sbt-cmd). Then, from an sbt shell, generate your ENSIME project:
+Replace VERSION with the latest version of the plugin, available on [the plugin page](https://github.com/aemoncannon/ensime-sbt-cmd).  Then, from an sbt shell, generate your ENSIME project:
     
     ensime generate
 
-You should now have a .ensime file in the root of your project. You can also specify ENSIME configuration settings from your sbt build file, check the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.1) for how to do that.
+You should now have a .ensime file in the root of your project. There's no need to edit this file manually as you can now specify ENSIME settings directly your sbt build file. Check the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.1) for details.
 
 
 __5) Start ENSIME__
