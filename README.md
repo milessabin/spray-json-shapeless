@@ -74,7 +74,7 @@ Add the following lines to your .emacs file:
 
 __3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.2))__
 
-You can add the following lines to your build.sbt:
+You can add the following lines to your project/plugins.sbt file:
 
     resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
     
