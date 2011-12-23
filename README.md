@@ -72,7 +72,7 @@ Add the following lines to your .emacs file:
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
 
-__3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.2)):
+__3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.2))__
 
 You can add the following lines to your build.sbt:
 
@@ -87,15 +87,9 @@ Replace VERSION with the latest version of the plugin, available on [the plugin'
 You should now have a .ensime file in the root of your project. You can also specify ENSIME configuration settings from your sbt build file, check the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.1) for how to do that.
 
 
-__3) Create Project__
-
-In Emacs, execute M-x ensime-config-gen. Follow directions in the mini-buffer to create a .ensime file for your project.. 
-
-
 __5) Start ENSIME__
 
-Execute M-x ensime
-You only need to do this once per project.
+From inside Emacs, execute M-x ensime
 
 
 ## Developer Quick Start
