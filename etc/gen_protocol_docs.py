@@ -1,3 +1,20 @@
+import sys,os
+
+def print_verbatim(s):
+    print "\\begin{mylisting}"
+    print "\\begin{verbatim}"
+    print s
+    print "\\end{verbatim}"
+    print "\\end{mylisting}"
+
+def print_bold(s):
+    print "\\textbf{" + s + "}"
+
+def print_nl():
+    print "\\\\"
+
+def print_vspace(height):
+    print "\\vspace{" + height + "}"
 
 class FileReader:
 
@@ -32,11 +49,19 @@ class DataStructure:
             self.structure = self.structure + line[self.offset + 2:]
             line = next(fin)
 
+        self.summary = self.summary.lstrip().rstrip()
+        self.structure = self.structure.lstrip().rstrip()
+        self.name = self.name.lstrip().rstrip()
+
     def print_latex(self):
-        print self.name
+        print_bold(self.name)
+        print_nl()
         print self.summary
-        print self.structure
-        print "--------------------------------"
+        print_nl()
+        print_verbatim(self.structure)
+        print_nl()
+        print_vspace("5 mm")
+
 
 
 fin = (FileReader(open("../src/main/scala/org/ensime/protocol/SwankProtocol.scala")).lines())
