@@ -460,10 +460,16 @@ object ProjectConfig {
   }
 
   def main(args:Array[String]) {
-    val o = new SExpFormatHandler(SExpList(List())){}
-    for(prop <- o.props){
-      println("\n\n")
-      println(prop.manualEntry)
+    import java.io._
+    val out = new OutputStreamWriter(new FileOutputStream(args(0)))
+    try {
+      val o = new SExpFormatHandler(SExpList(List())){}
+      for(prop <- o.props){
+	out.write("\n\n")
+	out.write(prop.manualEntry)
+      }
+    } finally {
+      out.close()
     }
   }
 
@@ -496,7 +502,7 @@ object ProjectConfig {
 
     for (configurator <- externalConf) {
       configurator.getConfig(rootDir, conf) match {
-        case Right(ext) => {
+	case Right(ext) => {
           projectName = ext.projectName
 	  println("External Config found project name: " + ext.projectName)
 
@@ -511,11 +517,11 @@ object ProjectConfig {
 
           target = ext.target
 	  println("External Config found target: " + ext.target)
-        }
-        case Left(except) => {
+	}
+	case Left(except) => {
           System.err.println("Failed to load external project information. Reason:")
           except.printStackTrace(System.err)
-        }
+	}
       }
     }
 
@@ -557,7 +563,7 @@ object ProjectConfig {
 
     conf.target match {
       case Some(targetDir) => {
-        target = target.orElse(maybeDir(targetDir, rootDir))
+	target = target.orElse(maybeDir(targetDir, rootDir))
       }
       case _ =>
     }
@@ -574,8 +580,8 @@ object ProjectConfig {
     if (sourceRoots.isEmpty) {
       val f = new File("src")
       if (f.exists && f.isDirectory) {
-        println("Using default source root, 'src'.")
-        sourceRoots += f
+	println("Using default source root, 'src'.")
+	sourceRoots += f
       }
     }
 
@@ -605,7 +611,7 @@ object ProjectConfig {
   def verifyTargetDir(rootDir: File, target: Option[File], defaultTarget: File): Option[CanonFile] = {
     val targetDir = target match {
       case Some(f: File) => {
-        if (f.exists && f.isDirectory) { f } else { defaultTarget }
+	if (f.exists && f.isDirectory) { f } else { defaultTarget }
       }
       case None => defaultTarget
     }
@@ -613,10 +619,10 @@ object ProjectConfig {
       Some(targetDir)
     } else {
       try {
-        if (targetDir.mkdirs) Some(targetDir)
-        else None
+	if (targetDir.mkdirs) Some(targetDir)
+	else None
       } catch {
-        case e => None
+	case e => None
       }
     }
   }
@@ -634,17 +640,17 @@ object ProjectConfig {
     val javaHome = getJavaHome();
     javaHome match {
       case Some(javaHome) => {
-        if (System.getProperty("os.name").startsWith("Mac")) {
+	if (System.getProperty("os.name").startsWith("Mac")) {
           expandRecursively(
             new File("."),
             List(new File(javaHome, "../Classes")),
             isValidJar)
-        } else {
+	} else {
           expandRecursively(
             new File("."),
             List(new File(javaHome, "lib")),
             isValidJar)
-        }
+	}
       }
       case None => Set()
     }

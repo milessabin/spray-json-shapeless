@@ -61,6 +61,8 @@ class DataStructure:
         print_verbatim(self.structure)
         print_nl()
         print_vspace("5 mm")
+        print "\n"
+
 
 
 
