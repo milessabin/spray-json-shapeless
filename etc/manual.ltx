@@ -804,7 +804,16 @@ At the application level, the s-expressions encode RPC calls, RPC responses, and
 \end{verbatim}
 \end{mylisting}
 
-Rather than try to document all the calls and events available in ENSIME, which will inevitably drift out of sync over time, we refer you to the method handleRPCRequest in org.ensime.protocol.SwankProtocol, and the function ensime-dispatch-event in ensime.el for further details on the Swank protocol.
+\subsection{ENSIME Swank RPC}
+
+\subsubsection{Important Datastructures}
+
+Certain datastructures, such as the \emph{position} structure used to describe a source position, are re-used in many RPC calls. We document them first as it will simplify the understanding of the RPC calls themselves:
+
+
+\subsubsection{RPC Calls}
+
+
 
 \subsection{Other Protocols}
 
