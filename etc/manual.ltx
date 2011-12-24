@@ -111,7 +111,23 @@ ensime generate
 \end{mylisting}
 
 \noindent
-You should now have a .ensime file in the root of your project.\\
+You should now have a .ensime file in the root of your project. Instead of editing this file directly, if you need to adjust ENSIME configuration settings, you can change the value of the sbt setting \emph{ensime-config}. The value should be a lisp S-Expression, just like the .ensime configuration format. The ENSIME sbt plugin includes some helpers for building S-Expressions. For example, your Build.scala might include the following:
+
+\begin{mylisting}
+\begin{verbatim}
+import org.ensime.sbt.Plugin.Settings.ensimeConfig
+import org.ensime.sbt.util.SExp._
+
+ensimeConfig := sexp(
+  key(":compiler-args"), sexp("-Ywarn-dead-code", "-Ywarn-shadowing"),
+  key(":formatting-prefs"), sexp(
+    key(":alignParameters"), true
+  )
+)
+\end{verbatim}
+\end{mylisting}
+
+If you have multiple sbt subprojects, they may each specify different ensime-config values.
 
 
 \subsubsection{Generating Configs for Other Project Types}

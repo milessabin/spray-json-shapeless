@@ -44,16 +44,12 @@ object EnsimeBuild extends Build {
   val TwoNineVersion = "2.9.2-SNAPSHOT"
 
   lazy val project = {
-
-    import org.ensime.sbt.Plugin.Settings._
-    import org.ensime.sbt.util.SExp._
-
     Project(
       id = "ensime",
       base = file ("."),
       settings = Project.defaultSettings ++ 
       Seq(
-	version := "0.9.1.RC1",
+	version := "0.9.2.RC1",
 	organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
@@ -97,8 +93,12 @@ object EnsimeBuild extends Build {
 	distTask,
 	releaseTask,
 	publishManualTask,
-
-	ensimeConfig := sexp()
+	
+	{
+	  import org.ensime.sbt.Plugin.Settings.ensimeConfig
+	  import org.ensime.sbt.util.SExp._
+	  ensimeConfig := sexp()
+	}
 
       ))
   }
