@@ -411,7 +411,7 @@ trait SwankProtocol extends Protocol {
     callType match {
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:connection-info
        * Summary:
        *   Request connection information.
@@ -437,7 +437,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:init-project
        * Summary:
        *   Initialize the server with a project configuration. The
@@ -472,7 +472,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:peek-undo
        * Summary:
        *   The intention of this call is to preview the effect of an undo
@@ -498,7 +498,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:exec-undo
        * Summary:
        *   Execute a specific, server-side undo operation.
@@ -525,7 +525,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:repl-config
        * Summary:
        *   Get information necessary to launch a scala repl for this project.
@@ -545,7 +545,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:builder-init
        * Summary:
        *   Initialize the incremental builder and kick off a full rebuild.
@@ -563,7 +563,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:builder-update-files
        * Summary:
        *   Signal to the incremental builder that the given files
@@ -589,7 +589,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:builder-add-files
        * Summary:
        *   Signal to the incremental builder that the given files
@@ -615,7 +615,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:builder-remove-files
        * Summary:
        *   Signal to the incremental builder that the given files
@@ -641,7 +641,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:debug-config
        * Summary:
        *   Retrieve information necessary for starting a debugger. Also triggers
@@ -665,7 +665,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:debug-unit-info
        * Summary:
        *   Request the mangled Java name of the compilation unit that
@@ -697,7 +697,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:debug-class-locs-to-source-locs
        * Summary:
        *   Map from a Java location that the debugger refers to, to
@@ -730,7 +730,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:remove-file
        * Summary:
        *   Remove a file from consideration by the ENSIME analyzer.
@@ -753,7 +753,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:typecheck-file
        * Summary:
        *   Request immediate load and check the given source file.
@@ -776,7 +776,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:typecheck-all
        * Summary:
        *   Request immediate load and typecheck of all known sources.
@@ -794,7 +794,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:format-source
        * Summary:
        *   Run the source formatter the given source files. Writes
@@ -821,7 +821,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:public-symbol-search
        * Summary:
        *   Search top-level symbols (types and methods) for names that
@@ -848,7 +848,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:import-suggestions
        * Summary:
        *   Search top-level types for qualified names similar to the given
@@ -883,7 +883,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:scope-completion
        * Summary:
        *   Find possible completions for a name in the given scope.
@@ -914,7 +914,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:type-completion
        * Summary:
        *   Find possible completions for a member of the object at
@@ -944,7 +944,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:package-member-completion
        * Summary:
        *   Find possible completions for a given package path.
@@ -969,7 +969,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:call-completion
        * Summary:
        *   Lookup the type information of a specific method or function
@@ -1000,7 +1000,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:uses-of-symbol-at-point
        * Summary:
        *   Request all source locations where indicated symbol is used in
@@ -1027,7 +1027,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:type-by-id
        * Summary:
        *   Request description of the type with given type id.
@@ -1052,7 +1052,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:type-by-name
        * Summary:
        *   Lookup a type description by name.
@@ -1076,7 +1076,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:type-by-name-at-point
        * Summary:
        *   Lookup a type by name, in a specific source context.
@@ -1104,7 +1104,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:type-at-point
        * Summary:
        *   Lookup type of thing at given position.
@@ -1130,7 +1130,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:inspect-type-at-point
        * Summary:
        *   Lookup detailed type of thing at given position.
@@ -1157,7 +1157,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:inspect-type-by-id
        * Summary:
        *   Lookup detailed type description by id
@@ -1182,7 +1182,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:symbol-at-point
        * Summary:
        *   Get a description of the symbol at given location.
@@ -1208,7 +1208,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:inspect-package-by-path
        * Summary:
        *   Get a detailed description of the given package.
@@ -1234,7 +1234,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:prepare-refactor
        * Summary:
        *   Initiate a refactoring. The server will respond with a summary
@@ -1276,7 +1276,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:exec-refactor
        * Summary:
        *   Execute a refactoring, usually after user confirmation.
@@ -1302,7 +1302,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:cancel-refactor
        * Summary:
        *   Cancel a refactor that's been performed but not
@@ -1326,7 +1326,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:symbol-designations
        * Summary:
        *   Request the semantic classes of symbols in the given
@@ -1363,7 +1363,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:expand-selection
        * Summary:
        *   Given a start and end point in a file, expand the
@@ -1391,7 +1391,7 @@ trait SwankProtocol extends Protocol {
       }
 
       /**
-       * Doc:
+       * Doc RPC:
        *   swank:shutdown-server
        * Summary:
        *   Politely ask the server to shutdown.

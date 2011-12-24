@@ -1,3 +1,4 @@
+% NO_MANUAL_EDIT_WARNING
 \documentclass{article}
 
 \usepackage[utf8]{inputenc}
@@ -631,11 +632,13 @@ At the application level, the s-expressions encode RPC calls, RPC responses, and
 Certain datastructures, such as the \emph{position} structure used to describe a source position, are re-used in many RPC calls. We document them first as it will simplify the understanding of the RPC calls themselves:
 
 % Inserted by gen_manual.sh
-PROTOCOL_DOCUMENTATION  
+PROTOCOL_DATA_DOCUMENTATION  
 
 
 \subsubsection{RPC Calls}
 
+% Inserted by gen_manual.sh
+PROTOCOL_RPC_DOCUMENTATION  
 
 
 \subsection{Other Protocols}
