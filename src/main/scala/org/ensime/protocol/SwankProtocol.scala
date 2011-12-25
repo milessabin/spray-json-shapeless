@@ -151,7 +151,7 @@ trait SwankProtocol extends Protocol {
   /**
   * Protocol Version: 0.7.1
   * 
-  * Change Log:
+  * Protocol Change Log:
   *   0.7.1
   *     Remove superfluous status values for events such as :compiler-ready,
   *     :clear-scala-notes, etc.

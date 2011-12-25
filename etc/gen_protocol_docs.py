@@ -37,7 +37,20 @@ def read_until(fin,stop,offset):
         result = result + line[offset:]
         line = next(fin)
     return result.lstrip().rstrip()
+
+
+class ChangeLog:
+
+    def __init__(self, offset):
+        self.offset = offset
     
+    def read(self, fin):
+        off = self.offset + 2
+        self.log = read_until(fin,"*/",off)
+
+    def print_latex(self):
+        print self.log
+
 
 class DataStructure:
 
@@ -128,7 +141,7 @@ class RPCCall:
         print "\n"
 
 mode = sys.argv[1]
-assert mode in set(["data", "rpc", "version", "events"])
+assert mode in set(["data", "rpc", "version", "events", "changelog"])
 
 fin = (FileReader(open("../src/main/scala/org/ensime/protocol/SwankProtocol.scala")).lines())
 line = next(fin)
@@ -155,11 +168,20 @@ while line:
             handler.read(fin)
             handler.print_latex()
 
+    elif mode == "changelog":
+        i = line.find("Protocol Change Log:")
+        if i > -1:
+            handler = ChangeLog(i)
+            handler.read(fin)
+            handler.print_latex()
+
     elif mode == "version":
         key = "Protocol Version: "
         i = line.find("Protocol Version: ")
         if i > -1:
             print line[i + len(key):].rstrip()
+
+
 
 
     line = next(fin)

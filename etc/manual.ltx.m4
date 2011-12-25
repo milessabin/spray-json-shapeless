@@ -631,6 +631,13 @@ At the application level, the s-expressions encode RPC calls, RPC responses, and
 
 \subsection{ENSIME Swank RPC: Version PROTOCOL_VERSION}
 
+\subsubsection{Protocol Change Log}
+
+\begin{verbatim}
+PROTOCOL_CHANGE_LOG
+\end{verbatim}
+
+
 \subsubsection{Important Datastructures}
 
 Certain datastructures, such as the \emph{position} structure used to describe a source position, are re-used in many RPC calls. Implementors may wish to factor these structures out as classes or utility functions.
