@@ -641,10 +641,18 @@ PROTOCOL_DATA_DOCUMENTATION
 
 \subsubsection{RPC Calls}
 
-The ENSIME server understands all of the following RPC calls.
+The ENSIME server understands all of the following RPC calls:
 
 % Inserted by gen_manual.sh
 PROTOCOL_RPC_DOCUMENTATION  
+
+\subsubsection{Events}
+
+The ENSIME server will dispatch the following types of events:
+
+% Inserted by gen_manual.sh
+PROTOCOL_EVENTS_DOCUMENTATION  
+
 
 
 \subsection{Other Protocols}
