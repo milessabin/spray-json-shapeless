@@ -39,8 +39,31 @@ def read_until(fin,stop,offset):
     return result.lstrip().rstrip()
     
 
-
 class DataStructure:
+
+    def __init__(self, offset):
+        self.offset = offset
+    
+    def read(self, fin):
+        off = self.offset + 2
+        self.name = read_until(fin,"Summary:",off)
+        self.summary = read_until(fin,"Structure:",off)
+        self.structure = read_until(fin,"*/",off)
+
+    def print_latex(self):
+        print_bold(self.name)
+        print_nl()
+        print "\\begin{quote}"
+        print self.summary
+        print_nl()
+        print_verbatim(self.structure)
+        print "\\end{quote}"
+        print_vspace("5 mm")
+        print "\n"
+
+
+
+class Event:
 
     def __init__(self, offset):
         self.offset = offset
@@ -105,7 +128,7 @@ class RPCCall:
         print "\n"
 
 mode = sys.argv[1]
-assert mode == "data" or mode == "rpc" or mode == "version"
+assert mode in set(["data", "rpc", "version", "events"])
 
 fin = (FileReader(open("../src/main/scala/org/ensime/protocol/SwankProtocol.scala")).lines())
 line = next(fin)
@@ -122,6 +145,13 @@ while line:
         i = line.find("Doc RPC:")
         if i > -1:
             handler = RPCCall(i)
+            handler.read(fin)
+            handler.print_latex()
+
+    elif mode == "events":
+        i = line.find("Doc Event:")
+        if i > -1:
+            handler = Event(i)
             handler.read(fin)
             handler.print_latex()
 
