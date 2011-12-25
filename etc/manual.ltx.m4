@@ -17,6 +17,10 @@
 
 \maketitle
 
+\begin{center}
+\textbf{Last Updated}: MODIFIED_DATE
+\end{center}
+
 \newpage
 
 \tableofcontents
@@ -625,17 +629,19 @@ At the application level, the s-expressions encode RPC calls, RPC responses, and
 \end{verbatim}
 \end{mylisting}
 
-\subsection{ENSIME Swank RPC}
+\subsection{ENSIME Swank RPC: Version PROTOCOL_VERSION}
 
 \subsubsection{Important Datastructures}
 
-Certain datastructures, such as the \emph{position} structure used to describe a source position, are re-used in many RPC calls. We document them first as it will simplify the understanding of the RPC calls themselves:
+Certain datastructures, such as the \emph{position} structure used to describe a source position, are re-used in many RPC calls. Implementors may wish to factor these structures out as classes or utility functions.
 
 % Inserted by gen_manual.sh
 PROTOCOL_DATA_DOCUMENTATION  
 
 
 \subsubsection{RPC Calls}
+
+The ENSIME server understands all of the following RPC calls.
 
 % Inserted by gen_manual.sh
 PROTOCOL_RPC_DOCUMENTATION  

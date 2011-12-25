@@ -149,12 +149,10 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Change Log:
-   *
-   *   Version 0.7:
-   *     Rename swank:perform-refactor to swank:prepare-refactor.
-   *     Include status flag in return of swank:exec-refactor.
-   *
+   * Protocol Version: 0.7
+   * Change Log:
+   *   Rename swank:perform-refactor to swank:prepare-refactor.
+   *   Include status flag in return of swank:exec-refactor.
    */
 
 

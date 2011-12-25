@@ -54,9 +54,11 @@ class DataStructure:
     def print_latex(self):
         print_bold(self.name)
         print_nl()
+        print "\\begin{quote}"
         print self.summary
         print_nl()
         print_verbatim(self.structure)
+        print "\\end{quote}"
         print_vspace("5 mm")
         print "\n"
 
@@ -77,6 +79,8 @@ class RPCCall:
     def print_latex(self):
         print_bold(self.name)
         print_nl()
+
+        print "\\begin{quote}"
         print self.summary + "\\\\\\\\"
 
         print_bold("Arguments:")
@@ -96,29 +100,37 @@ class RPCCall:
 
         print_bold("Example Return:")
         print_verbatim(self.example_return)
+        print "\\end{quote}"
         print_vspace("5 mm")
         print "\n"
 
-
-assert sys.argv[1] == "data" or sys.argv[1] == "rpc"
+mode = sys.argv[1]
+assert mode == "data" or mode == "rpc" or mode == "version"
 
 fin = (FileReader(open("../src/main/scala/org/ensime/protocol/SwankProtocol.scala")).lines())
 line = next(fin)
 while line:
 
-    if sys.argv[1] == "data":
+    if mode == "data":
         i = line.find("Doc DataStructure:")
         if i > -1:
             handler = DataStructure(i)
             handler.read(fin)
             handler.print_latex()
 
-    if sys.argv[1] == "rpc":
+    elif mode == "rpc":
         i = line.find("Doc RPC:")
         if i > -1:
             handler = RPCCall(i)
             handler.read(fin)
             handler.print_latex()
+
+    elif mode == "version":
+        key = "Protocol Version: "
+        i = line.find("Protocol Version: ")
+        if i > -1:
+            print line[i + len(key):].rstrip()
+
 
     line = next(fin)
 
