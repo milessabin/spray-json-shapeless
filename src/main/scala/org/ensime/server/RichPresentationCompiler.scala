@@ -139,7 +139,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     	askReloadFile(p.source)
     	askOr(completePackageMember(path, prefix), t => List())
       }
-      case Some(SymbolContext(p, prefix, isConstructor)) => 	{
+      case Some(SymbolContext(p, prefix, isConstructor)) => {
     	askReloadFile(p.source)
     	askOr(completeSymbolAt(p, prefix, isConstructor), t => List())
       }
