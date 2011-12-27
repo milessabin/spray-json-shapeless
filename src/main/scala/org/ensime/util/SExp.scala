@@ -234,7 +234,7 @@ object SExp extends RegexParsers {
       val chars = new Array[Char](s.length)
       s.getChars(0, s.length, chars, 0)
       val r = new input.CharArrayReader(chars)
-      SExp.read(r)      
+      SExp.read(r)
     }
     def check(s:String, r:String) {
       assert(readStr(s).toString() == r, "Failed at: " + s)
