@@ -998,6 +998,36 @@ trait SwankProtocol extends Protocol {
         }
       }
 
+
+      /**
+      * Doc RPC:
+      *   swank:completions
+      * Summary:
+      *   Find viable completions at given point.
+      * Arguments:
+      *   String:Source filename, absolute or relative to the project.
+      *   Int:Character offset within that file.
+      * Return:
+      *   List of SymbolInfoLight: The possible completions.
+      * Example call:
+      *   (:swank-rpc (swank:completions
+      *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
+      *   22626) 42)
+      * Example return:
+      *   (:return (:ok ((:name "form" :type-sig "SExp" :type-id 10)
+      *   (:name "format" :type-sig "(String, <repeated>[Any]) => String"
+      *   :type-id 11 :is-callable t))) 42)
+      */
+      case "swank:completions" => {
+        form match {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
+            rpcTarget.rpcCompletionsAtPoint(file, point, callId)
+          }
+          case _ => oops
+        }
+      }
+
+
       /**
       * Doc RPC:
       *   swank:scope-completion

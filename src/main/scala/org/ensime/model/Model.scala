@@ -386,6 +386,13 @@ trait ModelBuilders { self: Global with Helpers =>
         isArrowType(tpe.underlying))
     }
 
+    def apply(m: TypeMember): SymbolInfoLight = {
+      new SymbolInfoLight(m.sym.nameString,
+        typeShortNameWithArgs(m.tpe),
+        cacheType(m.tpe),
+        isArrowType(m.tpe))
+    }
+
     def nullInfo() = {
       new SymbolInfoLight("NA", "NA", -1, false)
     }

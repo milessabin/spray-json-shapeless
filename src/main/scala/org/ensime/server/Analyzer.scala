@@ -176,6 +176,13 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     handleRefactorCancel(req, callId)
                   }
 
+                  case CompletionsReq(file: File, point: Int) => {
+                    val p = pos(file, point)
+                    reporter.disable()
+                    val syms = scalaCompiler.askCompletionsAt(p)
+                    project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
+                  }
+
                   case ScopeCompletionReq(file: File, point: Int,
                     prefix: String, constructor: Boolean) => {
                     val p = pos(file, point)

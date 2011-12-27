@@ -1,29 +1,29 @@
 /**
- *  Copyright (c) 2010, Aemon Cannon
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *      * Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *      * Redistributions in binary form must reproduce the above copyright
- *        notice, this list of conditions and the following disclaimer in the
- *        documentation and/or other materials provided with the distribution.
- *      * Neither the name of ENSIME nor the
- *        names of its contributors may be used to endorse or promote products
- *        derived from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
- *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+*  Copyright (c) 2010, Aemon Cannon
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions are met:
+*      * Redistributions of source code must retain the above copyright
+*        notice, this list of conditions and the following disclaimer.
+*      * Redistributions in binary form must reproduce the above copyright
+*        notice, this list of conditions and the following disclaimer in the
+*        documentation and/or other materials provided with the distribution.
+*      * Neither the name of ENSIME nor the
+*        names of its contributors may be used to endorse or promote products
+*        derived from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 package org.ensime.server
 import java.io.File
@@ -41,7 +41,7 @@ import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 
-trait RichCompilerControl extends CompilerControl with RefactoringControl {
+trait RichCompilerControl extends CompilerControl with RefactoringControl with CompletionContexts {
   self: RichPresentationCompiler =>
 
   def askOr[A](op: => A, handle: Throwable => A): A = {
@@ -51,10 +51,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
       def raiseMissing() = result raise new MissingResponse
     }
     result.get.fold(o => o, { t =>
-      System.err.println("[Error in RichCompilerControl]")
-      t.printStackTrace()
-      handle(t)
-    })
+	System.err.println("[Error in RichCompilerControl]")
+	t.printStackTrace()
+	handle(t)
+      })
   }
 
   def askOrLazy[A](op: => A, handle: Throwable => A): A = {
@@ -111,39 +111,60 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl {
     typeById(id).map { t => inspectType(t) }, t => None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = askOr({
-    inspectTypeAt(p)
-  }, t => None)
+      inspectTypeAt(p)
+    }, t => None)
 
-  def askCompletePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = askOr({
-    completePackageMember(path, prefix)
-  }, t => List())
+  def askCompletePackageMember(path: String, prefix: String): List[SymbolInfoLight] = askOr({
+      completePackageMember(path, prefix)
+    }, t => List())
 
   def askCompleteSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
     // Make sure new tree is loaded
     askReloadFile(p.source)
     askOr({
-      completeSymbolAt(p, prefix, constructor)
-    }, t => List())
+	completeSymbolAt(p, prefix, constructor)
+      }, t => List())
   }
 
-  def askCompleteMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
+  def askCompleteMemberAt(p: Position, prefix: String): List[SymbolInfoLight] = {
     askReloadFile(p.source)
     askOr({
-      completeMemberAt(p, prefix)
-    }, t => List())
+	completeMemberAt(p, prefix)
+      }, t => List())
+  }
+
+  def askCompletionsAt(p: Position): List[SymbolInfoLight] = {
+    completionContext(p) match{
+      case Some(PackageContext(path, prefix)) => {
+    	askReloadFile(p.source)
+    	askOr(completePackageMember(path, prefix), t => List())
+      }
+      case Some(SymbolContext(p, prefix, isConstructor)) => 	{
+    	askReloadFile(p.source)
+    	askOr(completeSymbolAt(p, prefix, isConstructor), t => List())
+      }
+      case Some(MemberContext(p, prefix)) => 	{
+    	askReloadFile(p.source)
+    	askOr(completeMemberAt(p, prefix), t => List())
+      }
+      case _ => {
+	System.err.println("Unrecognized completion context.")
+	List()
+      }
+    }
   }
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = askOr({
-    reloadAndTypeFiles(files)
-  }, t => ())
+      reloadAndTypeFiles(files)
+    }, t => ())
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] = askOr({
-    usesOfSymbolAtPoint(p).toList
-  }, t => List())
+      usesOfSymbolAtPoint(p).toList
+    }, t => List())
 
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = askOr({
-    symbolDesignationsInRegion(p, tpes)
-  }, t => SymbolDesignations("", List()))
+      symbolDesignationsInRegion(p, tpes)
+    }, t => SymbolDesignations("", List()))
 
   def askClearTypeCache() = clearTypeCache
 
@@ -159,8 +180,8 @@ class RichPresentationCompiler(
   var parent: Actor,
   var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, reporter)
-  with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
-  with RefactoringImpl with IndexerInterface with SemanticHighlighting {
+with Helpers with NamespaceTraversal with ModelBuilders with RichCompilerControl
+with RefactoringImpl with IndexerInterface with SemanticHighlighting {
 
   import ModelHelpers._
 
@@ -190,11 +211,11 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Remove symbols defined by files that no longer exist.
-   * Note that these symbols will not be collected by
-   * syncTopLevelSyms, since the units in question will
-   * never be reloaded again.
-   */
+  * Remove symbols defined by files that no longer exist.
+  * Note that these symbols will not be collected by
+  * syncTopLevelSyms, since the units in question will
+  * never be reloaded again.
+  */
   def removeAllDeleted() {
     allSources = allSources.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
@@ -237,7 +258,7 @@ class RichPresentationCompiler(
         members(sym) = m
       } catch {
         case e =>
-          System.err.println("Error: Omitting member " + sym + ": " + e)
+        System.err.println("Error: Omitting member " + sym + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -295,9 +316,9 @@ class RichPresentationCompiler(
     typeAt(p) match {
       case Left(t) => {
         Some(new TypeInspectInfo(
-          TypeInfo(t),
-          companionTypeOf(t).map(cacheType),
-          preparedMembers))
+            TypeInfo(t),
+            companionTypeOf(t).map(cacheType),
+            preparedMembers))
       }
       case Right(_) => None
     }
@@ -379,10 +400,10 @@ class RichPresentationCompiler(
   }
 
   /**
-   * Override scopeMembers to fix issues with finding method params
-   * and occasional exception in pre.memberType. Hopefully we can
-   * get these changes into Scala.
-   */
+  * Override scopeMembers to fix issues with finding method params
+  * and occasional exception in pre.memberType. Hopefully we can
+  * get these changes into Scala.
+  */
   def scopeMembers(pos: Position, prefix: String, matchEntire: Boolean, caseSens: Boolean): List[ScopeMember] = {
     wrapTypedTreeAt(pos) // to make sure context is entered
     locateContext(pos) match {
@@ -394,178 +415,179 @@ class RichPresentationCompiler(
             val ns = sym.nameString
             val accessible = context.isAccessible(sym, pre, false)
             if (accessible && ((matchEntire && ns == prefix) ||
-              (!matchEntire && caseSens && ns.startsWith(prefix)) ||
-              (!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
-              && !sym.nameString.contains("$") && !locals.contains(sym)) {
-              val member = new ScopeMember(
+		(!matchEntire && caseSens && ns.startsWith(prefix)) ||
+		(!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
+	      && !sym.nameString.contains("$") && !locals.contains(sym)) {
+	      val member = new ScopeMember(
                 sym,
                 sym.tpe,
                 accessible,
                 viaImport)
-              locals(sym) = member
+	      locals(sym) = member
             }
           } catch {
             case e: Exception => {
-              System.err.println("Error: Omitting scope member.")
-              e.printStackTrace(System.err)
-            }
+	    System.err.println("Error: Omitting scope member.")
+	    e.printStackTrace()
           }
-        }
-        var cx = context
-        while (cx != NoContext) {
-          for (sym <- cx.scope) {
-            addSymbol(sym, NoPrefix, EmptyTree)
-          }
-          if (cx.prefix != null) {
-            for (sym <- cx.prefix.members) {
-              addSymbol(sym, cx.prefix, EmptyTree)
-            }
-          }
-          cx = cx.outer
-        }
-        for (imp <- context.imports) {
-          val pre = imp.qual.tpe
-          val importedSyms = pre.members.flatMap(transformImport(
-            imp.tree.selectors, _))
-          for (sym <- importedSyms) {
-            addSymbol(sym, pre, imp.qual)
-          }
-        }
-        val result = locals.values.toList
-        result
-      }
-      case _ => List()
-    }
-  }
-
-  // TODO: 
-  // This hides the core implementation is Contexts.scala, which
-  // has been patched. Once this bug is fixed, we can get rid of 
-  // this workaround.
-  private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
-    case List() => List()
-    case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
-    case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
-      if (to == nme.WILDCARD) List()
-      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
-    case _ :: rest => transformImport(rest, sym)
-  }
-
-  protected def completePackageMember(path: String, prefix: String): Iterable[PackageMemberInfoLight] = {
-    packageSymFromPath(path) match {
-      case Some(sym) => {
-        val memberSyms = packageMembers(sym).filterNot { s =>
-          s == NoSymbol || s.nameString.contains("$")
-        }
-        memberSyms.flatMap { s =>
-          val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
-          if (name.startsWith(prefix)) {
-            Some(new PackageMemberInfoLight(name))
-          } else None
         }
       }
-      case _ => List()
-    }
-  }
-
-  protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
-    val caseSens = prefix != prefix.toLowerCase()
-    val names = scopeMembers(p, prefix, false, caseSens)
-    val result = new mutable.LinkedHashSet[SymbolInfoLight]
-    names.foreach { m =>
-      m match {
-        case ScopeMember(sym, tpe, true, _) => {
-          if (constructor) {
-            result ++= SymbolInfoLight.constructorSynonyms(sym)
-          } else {
-            result += SymbolInfoLight(sym, tpe)
-            result ++= SymbolInfoLight.applySynonyms(sym)
+      var cx = context
+      while (cx != NoContext) {
+        for (sym <- cx.scope) {
+          addSymbol(sym, NoPrefix, EmptyTree)
+        }
+        if (cx.prefix != null) {
+          for (sym <- cx.prefix.members) {
+	    addSymbol(sym, cx.prefix, EmptyTree)
           }
         }
-        case _ => {}
+        cx = cx.outer
       }
+      for (imp <- context.imports) {
+        val pre = imp.qual.tpe
+        val importedSyms = pre.members.flatMap(transformImport(
+	    imp.tree.selectors, _))
+        for (sym <- importedSyms) {
+          addSymbol(sym, pre, imp.qual)
+        }
+      }
+      val result = locals.values.toList
+      result
     }
-    result.toList.sortWith((a, b) => a.name.length <= b.name.length)
+    case _ => List()
   }
+}
 
-  protected def completeMemberAt(p: Position, prefix: String): List[NamedTypeMemberInfoLight] = {
-    val caseSens = prefix != prefix.toLowerCase()
-    val prefixUpper = prefix.toUpperCase()
-    val members = getMembersForTypeAt(p)
-    val visibleMembers = members.flatMap {
-      case tm @ TypeMember(sym, tpe, true, _, _) => {
-        val s = sym.nameString
-        if (((caseSens && s.startsWith(prefix)) ||
-          (!caseSens && s.toUpperCase().startsWith(prefixUpper))) &&
-          !(s == "this") &&
-          !(s == "→")) {
-          List(NamedTypeMemberInfoLight(tm))
+// TODO: 
+// This hides the core implementation is Contexts.scala, which
+// has been patched. Once this bug is fixed, we can get rid of 
+// this workaround.
+private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
+  case List() => List()
+  case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
+  case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
+  if (to == nme.WILDCARD) List()
+  else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+  case _ :: rest => transformImport(rest, sym)
+}
+
+protected def completePackageMember(path: String, prefix: String): List[SymbolInfoLight] = {
+  packageSymFromPath(path) match {
+    case Some(sym) => {
+      val memberSyms = packageMembers(sym).filterNot { s =>
+        s == NoSymbol || s.nameString.contains("$")
+      }
+      memberSyms.flatMap { s =>
+        val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
+        if (name.startsWith(prefix)) {
+          Some(new SymbolInfoLight(name, "NA", -1, false))
+        } else None
+      }.toList
+    }
+    case _ => List()
+  }
+}
+
+protected def completeSymbolAt(p: Position, prefix: String, constructor: Boolean): List[SymbolInfoLight] = {
+  val caseSens = prefix != prefix.toLowerCase()
+  val names = scopeMembers(p, prefix, false, caseSens)
+  val result = new mutable.LinkedHashSet[SymbolInfoLight]
+  names.foreach { m =>
+    m match {
+      case ScopeMember(sym, tpe, true, _) => {
+        if (constructor) {
+          result ++= SymbolInfoLight.constructorSynonyms(sym)
         } else {
-          List()
+          result += SymbolInfoLight(sym, tpe)
+          result ++= SymbolInfoLight.applySynonyms(sym)
         }
       }
-      case _ => List()
-    }.toList.sortWith((a, b) => a.name.length <= b.name.length)
-    visibleMembers
+      case _ => {}
+    }
   }
+  result.toList.sortWith((a, b) => a.name.length <= b.name.length)
+}
 
-  protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
-    symbolAt(p) match {
-      case Left(s) => {
-        val gi = new GlobalIndexes {
-          val global = RichPresentationCompiler.this
-          val sym = s.asInstanceOf[global.Symbol]
-          val cuIndexes = this.global.unitOfFile.values.map { u =>
-            CompilationUnitIndex(u.body)
-          }
-          val index = GlobalIndex(cuIndexes.toList)
-          val result = index.occurences(sym).map {
-            _.pos match {
-              case p: RangePosition => p
-              case p =>
-                new RangePosition(
-                  p.source, p.point, p.point, p.point)
-            }
+protected def completeMemberAt(p: Position, prefix: String): List[SymbolInfoLight] = {
+  val caseSens = prefix != prefix.toLowerCase()
+  val prefixUpper = prefix.toUpperCase()
+  val members = getMembersForTypeAt(p)
+  val visibleMembers = members.flatMap {
+    case tm @ TypeMember(sym, tpe, true, _, _) => {
+      val s = sym.nameString
+      if (((caseSens && s.startsWith(prefix)) ||
+          (!caseSens && s.toUpperCase().startsWith(prefixUpper))) &&
+        !(s == "this") &&
+        !(s == "→")) {
+        List(SymbolInfoLight(tm))
+      } else {
+        List()
+      }
+    }
+    case _ => List()
+  }.toList.sortWith((a, b) => a.name.length <= b.name.length)
+  visibleMembers
+}
+
+
+protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
+  symbolAt(p) match {
+    case Left(s) => {
+      val gi = new GlobalIndexes {
+        val global = RichPresentationCompiler.this
+        val sym = s.asInstanceOf[global.Symbol]
+        val cuIndexes = this.global.unitOfFile.values.map { u =>
+          CompilationUnitIndex(u.body)
+        }
+        val index = GlobalIndex(cuIndexes.toList)
+        val result = index.occurences(sym).map {
+          _.pos match {
+	    case p: RangePosition => p
+	    case p =>
+            new RangePosition(
+              p.source, p.point, p.point, p.point)
           }
         }
-        gi.result
       }
-      case Right(e) => List()
+      gi.result
     }
+    case Right(e) => List()
   }
+}
 
-  private var notifyWhenReady = false
+private var notifyWhenReady = false
 
-  override def isOutOfDate(): Boolean = {
-    if (notifyWhenReady && !super.isOutOfDate) {
-      parent ! FullTypeCheckCompleteEvent()
-      notifyWhenReady = false
-    }
-    super.isOutOfDate
+override def isOutOfDate(): Boolean = {
+  if (notifyWhenReady && !super.isOutOfDate) {
+    parent ! FullTypeCheckCompleteEvent()
+    notifyWhenReady = false
   }
+  super.isOutOfDate
+}
 
-  protected def setNotifyWhenReady() {
-    notifyWhenReady = true
+protected def setNotifyWhenReady() {
+  notifyWhenReady = true
+}
+
+protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
+  wrapReloadSources(sources.toList)
+  sources.foreach { s =>
+    wrapTypedTree(s, true)
   }
+}
 
-  protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
-    wrapReloadSources(sources.toList)
-    sources.foreach { s =>
-      wrapTypedTree(s, true)
-    }
-  }
+override def askShutdown() {
+  super.askShutdown()
+  parent = null
+  indexer = null
+}
 
-  override def askShutdown() {
-    super.askShutdown()
-    parent = null
-    indexer = null
-  }
+override def finalize() {
+  System.out.println("Finalizing Global instance.")
+}
 
-  override def finalize() {
-    System.out.println("Finalizing Global instance.")
-  }
-
-  /*
+/*
 * The following functions wrap up operations that interact with
 * the presentation compiler. The wrapping just helps with the
 * create response / compute / get result pattern.
@@ -574,35 +596,35 @@ class RichPresentationCompiler(
 * Work monad that will make it easier to compose the operations.
 */
 
-  def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
-    val result = new Response[A]
-    compute(result)
-    result.get.fold(o => o, handle)
+def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
+  val result = new Response[A]
+  compute(result)
+  result.get.fold(o => o, handle)
+}
+
+def wrapReloadPosition(p: Position): Unit =
+wrapReloadSource(p.source)
+
+def wrapReloadSource(source: SourceFile): Unit =
+wrapReloadSources(List(source))
+
+def wrapReloadSources(sources: List[SourceFile]): Unit = {
+  val superseeded = scheduler.dequeueAll {
+    case ri: ReloadItem if ri.sources == sources => Some(ri)
+    case _ => None
   }
+  superseeded.foreach(_.response.set())
+  wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
+}
 
-  def wrapReloadPosition(p: Position): Unit =
-    wrapReloadSource(p.source)
+def wrapTypeMembers(p: Position): List[Member] =
+wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
 
-  def wrapReloadSource(source: SourceFile): Unit =
-    wrapReloadSources(List(source))
+def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
+wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
 
-  def wrapReloadSources(sources: List[SourceFile]): Unit = {
-    val superseeded = scheduler.dequeueAll {
-      case ri: ReloadItem if ri.sources == sources => Some(ri)
-      case _ => None
-    }
-    superseeded.foreach(_.response.set())
-    wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
-  }
-
-  def wrapTypeMembers(p: Position): List[Member] =
-    wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
-
-  def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
-    wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
-
-  def wrapTypedTreeAt(position: Position): Tree =
-    wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
+def wrapTypedTreeAt(position: Position): Tree =
+wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
 
 }
 

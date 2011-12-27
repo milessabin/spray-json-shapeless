@@ -145,6 +145,10 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(ReloadAllReq(), callId)
   }
 
+  def rpcCompletionsAtPoint(f: String, point: Int, callId: Int) {
+    analyzer ! RPCRequestEvent(CompletionsReq(new File(f), point), callId)
+  }
+
   def rpcScopeCompletion(f: String, point: Int, prefix: String, constructor: Boolean, callId: Int) {
     analyzer ! RPCRequestEvent(ScopeCompletionReq(new File(f), point, prefix, constructor), callId)
   }
