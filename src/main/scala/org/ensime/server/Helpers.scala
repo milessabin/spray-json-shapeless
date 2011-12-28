@@ -35,6 +35,26 @@ trait Helpers { self: Global =>
   import definitions.{ ObjectClass, ScalaObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
   import scala.tools.nsc.symtab.Flags._
 
+
+  def applySynonyms(sym: Symbol): List[Symbol] = {
+    val members = if (sym.isModule || sym.isModuleClass) {
+      sym.tpe.members
+    } else if (sym.isClass || sym.isPackageClass) {
+      sym.companionModule.tpe.members
+    } else { List() }
+    members.filter { _.name.toString == "apply" }
+  }
+
+  def constructorSynonyms(sym: Symbol): List[Symbol] = {
+    val members = if (sym.isClass || sym.isPackageClass) {
+      sym.tpe.members
+    } else if (sym.isModule || sym.isModuleClass) {
+      sym.companionClass.tpe.members
+    } else { List() }
+    members.filter { _.isConstructor }
+  }
+
+
   def isArrowType(tpe: Type) = {
     tpe match {
       case _: MethodType => true
@@ -60,32 +80,32 @@ trait Helpers { self: Global =>
   }
 
   /**
-   * Convenience method to generate a String describing the type. Omit
-   * the package name. Include the arguments postfix.
-   *
-   * Used for type-names of symbol and member completions
-   */
+  * Convenience method to generate a String describing the type. Omit
+  * the package name. Include the arguments postfix.
+  *
+  * Used for type-names of symbol and member completions
+  */
   def typeShortNameWithArgs(tpe: Type): String = {
     if (isArrowType(tpe)) {
       (tpe.paramss.map { sect =>
-        "(" +
+          "(" +
           sect.map { p => typeShortNameWithArgs(p.tpe) }.mkString(", ") +
           ")"
-      }.mkString(" => ")
+	}.mkString(" => ")
         + " => " +
         typeShortNameWithArgs(tpe.finalResultType))
     } else {
       (typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
-        "[" +
-          tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
-          "]"
-      } else { "" }))
+            "[" +
+            tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
+            "]"
+	  } else { "" }))
     }
   }
 
   /**
-   * Generate qualified name, without args postfix.
-   */
+  * Generate qualified name, without args postfix.
+  */
   def typeFullName(tpe: Type): String = {
     def nestedClassName(sym: Symbol): String = {
       outerClass(sym) match {
@@ -177,8 +197,8 @@ trait Helpers { self: Global =>
     def filterAndSort(symbols: Iterable[Symbol]) = {
       val validSyms = symbols.filter { s =>
         s != EmptyPackage && !isRoot(s) &&
-          // This check is necessary to prevent infinite looping..
-          ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
+        // This check is necessary to prevent infinite looping..
+        ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
       }
       validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
     }
@@ -195,26 +215,26 @@ trait Helpers { self: Global =>
   def declaredAs(sym: Symbol): scala.Symbol = {
     import org.ensime.util.{ Symbols => S }
     if (sym.isMethod)
-      S.Method
+    S.Method
     else if (sym.isTrait)
-      S.Trait
+    S.Trait
     else if (sym.isTrait && sym.hasFlag(JAVA))
-      S.Interface
+    S.Interface
     else if (sym.isInterface)
-      S.Interface
+    S.Interface
     else if (sym.isModule)
-      S.Object
+    S.Object
     else if (sym.isModuleClass)
-      S.Object
+    S.Object
     else if (sym.isClass)
-      S.Class
+    S.Class
     else if (sym.isPackageClass)
-      S.Class
+    S.Class
 
     // check this last so objects are not
     // classified as fields
     else if (sym.isValue || sym.isVariable)
-      S.Field
+    S.Field
     else S.Nil
   }
 
@@ -245,7 +265,7 @@ trait Helpers { self: Global =>
       "  isGetter" -> sym.isGetter,
       "  isSetter" -> sym.isSetter,
       "  hasTraitFlag" -> sym.hasFlag(TRAIT)
-      )
-   }
+    )
+  }
 
 }

@@ -319,7 +319,7 @@ trait SwankProtocol extends Protocol {
 
   /**
   * Doc DataStructure:
-  *   SymbolInfoLight
+  *   CompletionInfo
   * Summary:
   *   An abbreviated symbol description.
   * Structure:
@@ -1008,7 +1008,7 @@ trait SwankProtocol extends Protocol {
       *   String:Source filename, absolute or relative to the project.
       *   Int:Character offset within that file.
       * Return:
-      *   List of SymbolInfoLight: The possible completions.
+      *   List of CompletionInfo: The possible completions.
       * Example call:
       *   (:swank-rpc (swank:completions
       *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
@@ -1665,7 +1665,7 @@ trait SwankProtocol extends Protocol {
     SExpList(values.map(ea => ea.asInstanceOf[SExp]))
   }
 
-  def toWF(value: SymbolInfoLight): SExp = {
+  def toWF(value: CompletionInfo): SExp = {
     SExp.propList(
       (":name", value.name),
       (":type-sig", value.tpeSig),

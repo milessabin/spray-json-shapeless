@@ -129,10 +129,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = 
   askOption(inspectTypeAt(p)).flatMap(os => os)
 
-  def askCompletePackageMember(path: String, prefix: String): List[SymbolInfoLight] = 
+  def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] = 
   askOption(completePackageMember(path, prefix)).getOrElse(List())
 
-  def askCompletionsAt(p: Position): List[SymbolInfoLight] = completionsAt(p)
+  def askCompletionsAt(p: Position): List[CompletionInfo] = completionsAt(p)
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = 
   askOption(reloadAndTypeFiles(files))
@@ -344,8 +344,8 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
     }
   }
 
-  protected def filterMembersByPrefix[T <: Member](members:List[T], prefix: String, 
-    matchEntire: Boolean, caseSens: Boolean):List[T] = members.filter{ m =>
+  protected def filterMembersByPrefix(members:List[Member], prefix: String, 
+    matchEntire: Boolean, caseSens: Boolean):List[Member] = members.filter{ m =>
     val prefixUpper = prefix.toUpperCase()
     val sym = m.sym
     val ns = sym.nameString

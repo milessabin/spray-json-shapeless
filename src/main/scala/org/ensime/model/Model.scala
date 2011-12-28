@@ -62,11 +62,12 @@ class SymbolInfo(
   val tpe: TypeInfo,
   val isCallable: Boolean) {}
 
-case class SymbolInfoLight(
+case class CompletionInfo(
   val name: String,
   val tpeSig: String,
   val tpeId: Int,
-  val isCallable: Boolean) {}
+  val isCallable: Boolean,
+  val relevance: Int) {}
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
@@ -341,60 +342,23 @@ trait ModelBuilders { self: Global with Helpers =>
 
   }
 
-  object SymbolInfoLight {
+  object CompletionInfo {
 
-    /**
-    *  Return symbol infos for any like-named constructors.
-    */
-    def constructorSynonyms(sym: Symbol): List[SymbolInfoLight] = {
-      val members = if (sym.isClass || sym.isPackageClass) {
-        sym.tpe.members
-      } else if (sym.isModule || sym.isModuleClass) {
-        sym.companionClass.tpe.members
-      } else { List() }
+    def apply(sym: Symbol, relevance: Int): CompletionInfo = 
+    CompletionInfo(sym, sym.tpe, relevance)
 
-      members.flatMap { member: Symbol =>
-        if (member.isConstructor) {
-          Some(SymbolInfoLight(sym, member.tpe))
-        } else { None }
-      }
-    }
-
-    /**
-    *  Return symbol infos for any like-named apply methods.
-    */
-    def applySynonyms(sym: Symbol): List[SymbolInfoLight] = {
-      val members = if (sym.isModule || sym.isModuleClass) {
-        sym.tpe.members
-      } else if (sym.isClass || sym.isPackageClass) {
-        sym.companionModule.tpe.members
-      } else { List() }
-      members.flatMap { member: Symbol =>
-        if (member.name.toString == "apply") {
-          Some(SymbolInfoLight(sym, member.tpe))
-        } else { None }
-      }
-    }
-
-    def apply(sym: Symbol): SymbolInfoLight = SymbolInfoLight(sym, sym.tpe)
-
-    def apply(sym: Symbol, tpe: Type): SymbolInfoLight = {
-      new SymbolInfoLight(
+    def apply(sym: Symbol, tpe: Type, relevance: Int): CompletionInfo = {
+      new CompletionInfo(
         sym.nameString,
         typeShortNameWithArgs(tpe),
         cacheType(tpe.underlying),
-        isArrowType(tpe.underlying))
-    }
-
-    def apply(m: TypeMember): SymbolInfoLight = {
-      new SymbolInfoLight(m.sym.nameString,
-        typeShortNameWithArgs(m.tpe),
-        cacheType(m.tpe),
-        isArrowType(m.tpe))
+        isArrowType(tpe.underlying),
+	relevance
+      )
     }
 
     def nullInfo() = {
-      new SymbolInfoLight("NA", "NA", -1, false)
+      new CompletionInfo("NA", "NA", -1, false, 0)
     }
   }
 
