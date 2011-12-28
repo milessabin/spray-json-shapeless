@@ -35,7 +35,6 @@ import org.ensime.model.CompletionInfo
 trait CompletionControl {
   self: RichPresentationCompiler =>
 
-
   def makeCompletions(
     prefix:String,
     sym: Symbol,
@@ -257,65 +256,6 @@ trait Completion { self: RichPresentationCompiler =>
       case _ => List()
     }
   }
-
-  //  def scopeMembers(pos: Position, prefix: String, matchEntire: Boolean, caseSens: Boolean): List[ScopeMember] = {
-  //    scopeMembers(pos) filter { sym =>
-  //   wrapTypedTreeAt(pos) // to make sure context is entered
-  //   locateContext(pos) match {
-  //     case Some(context) => {
-  //       val locals = new mutable.LinkedHashMap[Symbol, ScopeMember]
-  //       val prefixUpper = prefix.toUpperCase()
-  //       def addSymbol(sym: Symbol, pre: Type, viaImport: Tree) = {
-  //         try {
-  //           val ns = sym.nameString
-  //           val accessible = context.isAccessible(sym, pre, false)
-  //           if (accessible && ((matchEntire && ns == prefix) ||
-  // 	      (!matchEntire && caseSens && ns.startsWith(prefix)) ||
-  // 	      (!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
-  //             && !sym.nameString.contains("$") && !locals.contains(sym)) {
-  //             val member = new ScopeMember(
-  //               sym,
-  //               sym.tpe,
-  //               accessible,
-  //               viaImport)
-  //             locals(sym) = member
-  //           }
-  //         } catch {
-  //           case e: Exception => {
-  //           System.err.println("Error: Omitting scope member.")
-  //           e.printStackTrace()
-  //         }
-  //       }
-  //     }
-  //     var cx = context
-  //     while (cx != NoContext) {
-  //       for (sym <- cx.scope) {
-  //         addSymbol(sym, NoPrefix, EmptyTree)
-  //       }
-  //       if (cx.prefix != null) {
-  //         for (sym <- cx.prefix.members) {
-  //           addSymbol(sym, cx.prefix, EmptyTree)
-  //         }
-  //       }
-  //       cx = cx.outer
-  //     }
-  //     for (imp <- context.imports) {
-  //       val pre = imp.qual.tpe
-  //       val importedSyms = pre.members.flatMap(transformImport(
-  //           imp.tree.selectors, _))
-  //       for (sym <- importedSyms) {
-  //         addSymbol(sym, pre, imp.qual)
-  //       }
-  //     }
-  //     val result = locals.values.toList
-  //     result
-  //   }
-  //   case _ => List()
-  // }
-  // }
-
-  //    }
-  //  }
 
 }
 
