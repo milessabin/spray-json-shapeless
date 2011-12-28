@@ -160,14 +160,16 @@ trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
     procId: Int,
     tpe: scala.Symbol,
     params: immutable.Map[scala.Symbol, Any]): Either[RefactorFailure, RefactorEffect] = {
-    askOr(performRefactor(procId, tpe, params), t => Left(RefactorFailure(procId, t.toString)))
+    askOption(performRefactor(procId, tpe, params)).getOrElse(
+      Left(RefactorFailure(procId, "Refactor call failed")))
   }
 
   def askExecRefactor(
     procId: Int,
     tpe: scala.Symbol,
     effect: RefactorEffect): Either[RefactorFailure, RefactorResult] = {
-    askOr(execRefactor(procId, tpe, effect), t => Left(RefactorFailure(procId, t.toString)))
+    askOption(execRefactor(procId, tpe, effect)).getOrElse(
+      Left(RefactorFailure(procId, "Refactor exec call failed.")))
   }
 
 }

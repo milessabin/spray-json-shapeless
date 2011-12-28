@@ -1028,66 +1028,6 @@ trait SwankProtocol extends Protocol {
       }
 
 
-      /**
-      * Doc RPC:
-      *   swank:scope-completion
-      * Summary:
-      *   Find possible completions for a name in the given scope.
-      * Arguments:
-      *   String:Source filename, absolute or relative to the project.
-      *   Int:Character offset within that file.
-      *   String:The prefix of the name we are looking for.
-      *   Bool:Are we looking for a constructor? (a name following 'new').
-      * Return:
-      *   List of SymbolInfoLight: The possible completions.
-      * Example call:
-      *   (:swank-rpc (swank:scope-completion
-      *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
-      *   22624 "fo" nil) 42)
-      * Example return:
-      *   (:return (:ok ((:name "form" :type-sig "SExp" :type-id 10)
-      *   (:name "format" :type-sig "(String, <repeated>[Any]) => String"
-      *   :type-id 11 :is-callable t))) 42)
-      */
-      case "swank:scope-completion" => {
-        form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
-            StringAtom(prefix) :: BooleanAtom(constructor) :: body) => {
-            rpcTarget.rpcScopeCompletion(file, point, prefix, constructor, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      /**
-      * Doc RPC:
-      *   swank:type-completion
-      * Summary:
-      *   Find possible completions for a member of the object at
-      *   the given point.
-      * Arguments:
-      *   String:A Scala source filename, absolute or relative to the project.
-      *   Int:Character offset of the owning object within that file.
-      *   String:The prefix of the member name we are looking for.
-      * Return:
-      *   List of SymbolInfoLight: The possible completions.
-      * Example call:
-      *   (:swank-rpc (swank:type-completion "SwankProtocol.scala"
-      *   24392 "rpcTypeC") 42)
-      * Example return:
-      *   (:return (:ok ((:name "rpcTypeCompletion"
-      *   :type-sig "(String, Int, String, Int) => Unit"
-      *   :type-id 75 :is-callable t))) 42)
-      */
-      case "swank:type-completion" => {
-        form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
-            StringAtom(prefix) :: body) => {
-            rpcTarget.rpcTypeCompletion(file, point, prefix, callId)
-          }
-          case _ => oops
-        }
-      }
 
       /**
       * Doc RPC:

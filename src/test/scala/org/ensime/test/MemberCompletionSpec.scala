@@ -15,12 +15,12 @@ class MemberCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
-	    "dude",
+	    "dude.toStr ",
 	    "val horse = 2",
 	    "}",
 	    "}"
 	  ))
-	val mems = cc.askCompleteMemberAt(src.position(4,3), "toStr")
+	val mems = cc.askCompletionsAt(src.position(4,10))
 	mems.exists(s => s.name == "toString") should be(true)
       }
     }
@@ -32,12 +32,12 @@ class MemberCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
-	    "this",
+	    "this.mai ",
 	    "val horse = 2",
 	    "}",
 	    "}"
 	  ))
-	val mems = cc.askCompleteMemberAt(src.position(4,2), "mai")
+	val mems = cc.askCompletionsAt(src.position(4,8))
 	mems.exists(s => s.name == "main") should be(true)
       }
     }

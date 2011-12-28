@@ -183,21 +183,6 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
                   }
 
-                  case ScopeCompletionReq(file: File, point: Int,
-                    prefix: String, constructor: Boolean) => {
-                    val p = pos(file, point)
-                    reporter.disable()
-                    val syms = scalaCompiler.askCompleteSymbolAt(p, prefix, constructor)
-                    project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
-                  }
-
-                  case TypeCompletionReq(file: File, point: Int, prefix: String) => {
-                    val p = pos(file, point)
-                    reporter.disable()
-                    val members = scalaCompiler.askCompleteMemberAt(p, prefix)
-                    project ! RPCResultEvent(toWF(members.map(toWF)), callId)
-                  }
-
                   case ImportSuggestionsReq(_, _, _, _) => {
                     indexer ! rpcReq
                   }

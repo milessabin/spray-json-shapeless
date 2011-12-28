@@ -15,12 +15,12 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
-	    "  ",
+	    "du ",
 	    "val horse = 2",
 	    "}",
 	    "}"
 	  ))
-	val syms = cc.askCompleteSymbolAt(src.position(4,1), "du", false)
+	val syms = cc.askCompletionsAt(src.position(4,2))
 	syms.exists(s => s.name == "dude") should be(true)
       }
     }
@@ -32,12 +32,12 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main(args:Array[String]){",
 	    "val dude = 1",
-	    "  ",
+	    "ar ",
 	    "val horse = 1",
 	    "}",
 	    "}"
 	  ))
-	val syms = cc.askCompleteSymbolAt(src.position(4,1), "ar", false)
+	val syms = cc.askCompletionsAt(src.position(4,2))
 	syms.exists(s => s.name == "args") should be(true)
       }
     }
@@ -49,11 +49,11 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
-	    "  ",
+	    "du ",
 	    "}",
 	    "}"
 	  ))
-	val syms = cc.askCompleteSymbolAt(src.position(4,1), "du", false)
+	val syms = cc.askCompletionsAt(src.position(4,2))
 	expectFailure("I suspect the context does not extend to the closing brace.",
 	  "I work around this in Emacs by temporarily inserting '()'",
 	  "immediately after the completion point."){()=>
@@ -70,12 +70,12 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
-	    "  ",
+	    "Ve ",
 	    "val horse = 1",
 	    "}",
 	    "}"
 	  ))
-	val syms = cc.askCompleteSymbolAt(src.position(4,1), "Ve", false)
+	val syms = cc.askCompletionsAt(src.position(4,1))
 	syms.exists(s => s.name == "Vector") should be(true)
       }
     }
@@ -89,10 +89,10 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 
 	    "class B extends A {",
 	    " def bar: Unit = {",
-	    "  ",
+	    "fo ",
 	    "  "
 	  ))
-	val syms = cc.askCompleteSymbolAt(src.position(6,1), "fo", false)
+	val syms = cc.askCompletionsAt(src.position(6,1))
 	expectFailure("'no context found' exception is expected. Not sure",
 	  "yet what's causing the problem."
 	){()=>
@@ -109,16 +109,13 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "object Test1{",
 	    "def main{",
 	    "val dude = 1",
-	    "  ",
+	    "Ha ",
 	    "val horse = 1",
 	    "}",
 	    "}"
 	  ))
-	val syms1 = cc.askCompleteSymbolAt(src.position(4,1), "Ha", false)
+	val syms1 = cc.askCompletionsAt(src.position(4,2))
 	syms1.exists(s => s.name == "HashSet") should be(true)
-
-	val syms2 = cc.askCompleteSymbolAt(src.position(4,1), "Vec", false)
-	syms2.exists(s => s.name == "Vector") should be(true)
       }
     }
 
@@ -143,13 +140,13 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "class Foo{",
 	    "def main{",
 	    "val dude = 1",
-	    "  ",
+	    "Ba ",
 	    "val horse = 1",
 	    "}",
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src1, src2))
-	val syms = cc.askCompleteSymbolAt(src2.position(4,1), "Ba", false)
+	val syms = cc.askCompletionsAt(src2.position(4,2))
 	syms.exists(s => s.name == "Bar") should be(true)
       }
     }
@@ -173,13 +170,13 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "class Foo{",
 	    "def main{",
 	    "val dude = 1",
-	    "  ",
+	    "Ba ",
 	    "val horse = 1",
 	    "}",
 	    "}"
 	  ))
 	cc.askReloadAndTypeFiles(List(src1, src2))
-	val syms = cc.askCompleteSymbolAt(src2.position(4,1), "Ba", false)
+	val syms = cc.askCompletionsAt(src2.position(4,2))
 	syms.exists(s => s.name == "Bar") should be(true)
       }
     }
