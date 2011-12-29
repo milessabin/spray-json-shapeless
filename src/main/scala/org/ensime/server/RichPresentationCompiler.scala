@@ -132,7 +132,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] = 
   askOption(completePackageMember(path, prefix)).getOrElse(List())
 
-  def askCompletionsAt(p: Position): List[CompletionInfo] = completionsAt(p)
+  def askCompletionsAt(p: Position): CompletionInfoList = completionsAt(p)
 
   def askReloadAndTypeFiles(files: Iterable[SourceFile]) = 
   askOption(reloadAndTypeFiles(files))

@@ -21,7 +21,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	val syms = cc.askCompletionsAt(src.position(4,2))
-	syms.exists(s => s.name == "dude") should be(true)
+	syms.completions.exists(s => s.name == "dude") should be(true)
       }
     }
 
@@ -38,7 +38,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	val syms = cc.askCompletionsAt(src.position(4,2))
-	syms.exists(s => s.name == "args") should be(true)
+	syms.completions.exists(s => s.name == "args") should be(true)
       }
     }
 
@@ -57,7 +57,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	expectFailure("I suspect the context does not extend to the closing brace.",
 	  "I work around this in Emacs by temporarily inserting '()'",
 	  "immediately after the completion point."){()=>
-	  syms.exists(s => s.name == "dude") should be(true)
+	  syms.completions.exists(s => s.name == "dude") should be(true)
 	}
 
       }
@@ -76,7 +76,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	val syms = cc.askCompletionsAt(src.position(4,1))
-	syms.exists(s => s.name == "Vector") should be(true)
+	syms.completions.exists(s => s.name == "Vector") should be(true)
       }
     }
 
@@ -96,7 +96,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	expectFailure("'no context found' exception is expected. Not sure",
 	  "yet what's causing the problem."
 	){()=>
-	  syms.exists(s => s.name == "foo") should be(true)
+	  syms.completions.exists(s => s.name == "foo") should be(true)
 	}
       }
     }
@@ -115,7 +115,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	    "}"
 	  ))
 	val syms1 = cc.askCompletionsAt(src.position(4,2))
-	syms1.exists(s => s.name == "HashSet") should be(true)
+	syms1.completions.exists(s => s.name == "HashSet") should be(true)
       }
     }
 
@@ -147,7 +147,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	  ))
 	cc.askReloadAndTypeFiles(List(src1, src2))
 	val syms = cc.askCompletionsAt(src2.position(4,2))
-	syms.exists(s => s.name == "Bar") should be(true)
+	syms.completions.exists(s => s.name == "Bar") should be(true)
       }
     }
 
@@ -177,7 +177,7 @@ class SymbolCompletionSpec extends Spec with ShouldMatchers{
 	  ))
 	cc.askReloadAndTypeFiles(List(src1, src2))
 	val syms = cc.askCompletionsAt(src2.position(4,2))
-	syms.exists(s => s.name == "Bar") should be(true)
+	syms.completions.exists(s => s.name == "Bar") should be(true)
       }
     }
 

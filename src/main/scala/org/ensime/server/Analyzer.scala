@@ -179,8 +179,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   case CompletionsReq(file: File, point: Int) => {
                     val p = pos(file, point)
                     reporter.disable()
-                    val syms = scalaCompiler.askCompletionsAt(p)
-                    project ! RPCResultEvent(toWF(syms.map(toWF)), callId)
+                    val info = scalaCompiler.askCompletionsAt(p)
+                    project ! RPCResultEvent(toWF(info), callId)
                   }
 
                   case ImportSuggestionsReq(_, _, _, _) => {

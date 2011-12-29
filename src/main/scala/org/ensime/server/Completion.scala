@@ -26,6 +26,7 @@
 */
 
 package org.ensime.server
+import org.ensime.model.CompletionInfoList
 import scala.tools.nsc.util.{ Position, RangePosition, SourceFile, BatchSourceFile }
 import org.ensime.util.Arrays
 import scala.tools.nsc.interactive.{ Response, CompilerControl, Global }
@@ -71,7 +72,7 @@ trait CompletionControl {
     }
   }
 
-  def completionsAt(p: Position): List[CompletionInfo] = {
+  def completionsAt(p: Position): CompletionInfoList = {
 
     def makeAll(
       x: Response[List[Member]],
@@ -105,35 +106,34 @@ trait CompletionControl {
       buff.toList
     }
 
-    val results = completionContext(p) match {
+    val (prefix, results) = completionContext(p) match {
       case Some(PackageContext(path, prefix)) => {
 	askReloadFile(p.source)
-	askCompletePackageMember(path, prefix)
+	(prefix, askCompletePackageMember(path, prefix))
       }
       case Some(SymbolContext(p, prefix, isConstructor)) => {
 	askReloadFile(p.source)
 	val x = new Response[List[Member]]
 	askScopeCompletion(p, x)
-	makeAll(x, prefix, isConstructor)
+	(prefix, makeAll(x, prefix, isConstructor))
       }
       case Some(MemberContext(p, prefix)) => {
 	askReloadFile(p.source)
 	val x = new Response[List[Member]]
 	askTypeCompletion(p, x)
-	makeAll(x, prefix, false)
+	(prefix, makeAll(x, prefix, false))
       }
       case _ => {
 	System.err.println("Unrecognized completion context.")
-	List()
+	("", List())
       }
     }
 
-    results.sortWith({(c1,c2) =>
+    CompletionInfoList(prefix, results.sortWith({(c1,c2) =>
 	c1.relevance > c2.relevance ||
 	(c1.relevance == c2.relevance &&
 	  c1.name.length < c2.name.length)
-      })
-
+      }))
   }
 
   private val ident = "[a-zA-Z0-9]"
