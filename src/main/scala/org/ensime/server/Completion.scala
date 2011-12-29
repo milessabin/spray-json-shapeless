@@ -128,11 +128,16 @@ trait CompletionControl {
       }
     }
 
-    results.sortWith((c1,c2) => c1.relevance > c2.relevance)
+    results.sortWith({(c1,c2) =>
+	c1.relevance > c2.relevance ||
+	(c1.relevance == c2.relevance &&
+	  c1.name.length < c2.name.length)
+      })
+
   }
 
-  private val ident = "[A-z0-9]"
-  private val nonIdent = "[^A-z0-9]"
+  private val ident = "[a-zA-Z0-9]"
+  private val nonIdent = "[^a-zA-Z0-9]"
   private val ws = "[ \n\r\t]"
 
   trait CompletionContext {}
@@ -157,9 +162,8 @@ trait CompletionControl {
     "(", ident, "*)$").mkString.r
 
   private val nameFollowingSyntaxRE =
-  List("[!:=>\\(\\[,;\\}\\{\n+*/\\^&~%\\-]",
-    ws, "*",
-    "(", ident, "*)$").mkString.r
+  List("[!:=>\\(,;\\}\\[\\{\n+*/\\^&~%\\-]",
+    ws, "*","(", ident, "*)$").mkString.r
 
   case class SymbolContext(p: Position, prefix: String,
     isConstructor: Boolean) extends CompletionContext
@@ -169,7 +173,8 @@ trait CompletionControl {
       nameFollowingReservedRE.findFirstMatchIn(preceding)) match {
       case Some(m) => {
 	println("Matched symbol context.")
-	Some(SymbolContext(p, m.group(1), false))
+	val prefix = m.group(1)
+	Some(SymbolContext(p, prefix, false))
       }
       case None => None
     }
@@ -184,7 +189,8 @@ trait CompletionControl {
     constructorNameRE.findFirstMatchIn(preceding) match {
       case Some(m) => {
 	println("Matched constructor context.")
-	Some(SymbolContext(p, m.group(1), true))
+	val prefix = m.group(1)
+	Some(SymbolContext(p, prefix, true))
       }
       case None => None
     }
