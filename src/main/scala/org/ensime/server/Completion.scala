@@ -43,16 +43,18 @@ trait CompletionControl {
     isConstructor: Boolean,
     inherited: Boolean,
     viaView: Symbol): List[CompletionInfo] = {
-    
+
     var score = 0
     if(sym.nameString.startsWith(prefix)) score += 10
     if(!inherited) score += 10
+    if(!sym.isPackage) score += 10
+    if(!sym.isType) score += 10
+    if(sym.isLocal) score += 10
+    if(sym.isPublic) score += 10
     if(viaView == NoSymbol) score += 10
     if(sym.owner != definitions.AnyClass &&
       sym.owner != definitions.AnyRefClass &&
       sym.owner != definitions.ObjectClass) score += 30
-    if(!sym.isPackage) score += 10
-    if(sym.isLocal) score += 10
 
     if(isMember){
       List(CompletionInfo(sym, tpe, score))
