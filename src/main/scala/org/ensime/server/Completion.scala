@@ -136,8 +136,8 @@ trait CompletionControl {
       }))
   }
 
-  private val ident = "[a-zA-Z0-9]"
-  private val nonIdent = "[^a-zA-Z0-9]"
+  private val ident = "[a-zA-Z0-9_]"
+  private val nonIdent = "[^a-zA-Z0-9_]"
   private val ws = "[ \n\r\t]"
 
   trait CompletionContext {}
