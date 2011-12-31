@@ -37,18 +37,18 @@ trait Helpers { self: Global =>
 
 
   def applySynonyms(sym: Symbol): List[Symbol] = {
-    val members = if (sym.isModule || sym.isModuleClass) {
+    val members = if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
       sym.tpe.members
-    } else if (sym.isClass || sym.isPackageClass) {
+    } else if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass || sym.isCaseClass) {
       sym.companionModule.tpe.members
     } else { List() }
     members.filter { _.name.toString == "apply" }
   }
 
   def constructorSynonyms(sym: Symbol): List[Symbol] = {
-    val members = if (sym.isClass || sym.isPackageClass) {
+    val members = if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass || sym.isCaseClass) {
       sym.tpe.members
-    } else if (sym.isModule || sym.isModuleClass) {
+    } else if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
       sym.companionClass.tpe.members
     } else { List() }
     members.filter { _.isConstructor }

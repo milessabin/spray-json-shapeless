@@ -52,7 +52,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   catch {
     case fi: FailedInterrupt =>
     fi.getCause() match {
-      case e @ InvalidCompanions(c1, c2) =>
+      case e @ InvalidCompanions(c1, c2) => 
       richReporter.warning(c1.pos, e.getMessage)
       None
       case e: InterruptedException =>
@@ -172,7 +172,6 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
 
   override val debugIDE: Boolean = true
   override val verboseIDE: Boolean = true
-
   private val newTopLevelSyms = new mutable.LinkedHashSet[Symbol]
 
   def activeUnits(): List[CompilationUnit] = {
@@ -275,203 +274,203 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
       }
       case None => {
         System.err.println("ERROR: Failed to get any type information :(  ")
-        List()
-      }
-    }
-  }
-
-  protected def inspectType(tpe: Type): TypeInspectInfo = {
-    new TypeInspectInfo(
-      TypeInfo(tpe),
-      companionTypeOf(tpe).map(cacheType),
-      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
-  }
-
-  protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
-    val members = getMembersForTypeAt(p)
-    val preparedMembers = prepareSortedInterfaceInfo(members)
-    typeAt(p).map{ t =>
-      new TypeInspectInfo(
-        TypeInfo(t),
-        companionTypeOf(t).map(cacheType),
-        preparedMembers)
-    }
-  }
-
-  private def typeOfTree(t: Tree): Option[Type] = {
-    var tree = t
-    tree = tree match {
-      case Select(qual, name) if tree.tpe == ErrorType => {
-        qual
-      }
-      case t: ImplDef if t.impl != null => {
-        t.impl
-      }
-      case t: ValOrDefDef if t.tpt != null => {
-        t.tpt
-      }
-      case t: ValOrDefDef if t.rhs != null => {
-        t.rhs
-      }
-      case t => t
-    }
-    if (tree.tpe != null) {
-      Some(tree.tpe)
-    } else {
-      None
-    }
-  }
-
-  protected def typeAt(p: Position): Option[Type] = {
-    val tree = wrapTypedTreeAt(p)
-    typeOfTree(tree)
-  }
-
-  protected def typeByName(name: String): Option[Type] = {
-    def maybeType(sym: Symbol) = sym match {
-      case NoSymbol => None
-      case sym: Symbol => Some(sym.tpe)
-      case _ => None
-    }
-    try {
-      if (name.endsWith("$")) {
-        maybeType(definitions.getModule(name.substring(0, name.length - 1)))
-      } else {
-        maybeType(definitions.getClass(name))
-      }
-    } catch {
-      case e => None
-    }
-  }
-
-  protected def filterMembersByPrefix(members:List[Member], prefix: String, 
-    matchEntire: Boolean, caseSens: Boolean):List[Member] = members.filter{ m =>
-    val prefixUpper = prefix.toUpperCase()
-    val sym = m.sym
-    val ns = sym.nameString
-    (((matchEntire && ns == prefix) ||
-	(!matchEntire && caseSens && ns.startsWith(prefix)) ||
-	(!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
-      && !sym.nameString.contains("$"))
-  }
-
-  protected def symbolAt(p: Position): Option[Symbol] = {
-    p.source.file
-    val tree = wrapTypedTreeAt(p)
-    if (tree.symbol != null) {
-      Some(tree.symbol)
-    } else {
-      None
-    }
-  }
-
-  // TODO: 
-  // This hides the core implementation is Contexts.scala, which
-  // has been patched. Once this bug is fixed, we can get rid of 
-  // this workaround.
-  private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
-    case List() => List()
-    case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
-    case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
-    if (to == nme.WILDCARD) List()
-    else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
-    case _ :: rest => transformImport(rest, sym)
-  }
-
-  protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
-    symbolAt(p) match {
-      case Some(s) => {
-	val gi = new GlobalIndexes {
-          val global = RichPresentationCompiler.this
-          val sym = s.asInstanceOf[global.Symbol]
-          val cuIndexes = this.global.unitOfFile.values.map { u =>
-            CompilationUnitIndex(u.body)
-          }
-          val index = GlobalIndex(cuIndexes.toList)
-          val result = index.occurences(sym).map {
-            _.pos match {
-              case p: RangePosition => p
-              case p =>
-              new RangePosition(
-		p.source, p.point, p.point, p.point)
-            }
-          }
+          List()
 	}
-	gi.result
       }
-      case None => List()
     }
-  }
 
-  private var notifyWhenReady = false
-
-  override def isOutOfDate(): Boolean = {
-    if (notifyWhenReady && !super.isOutOfDate) {
-      parent ! FullTypeCheckCompleteEvent()
-      notifyWhenReady = false
+    protected def inspectType(tpe: Type): TypeInspectInfo = {
+      new TypeInspectInfo(
+	TypeInfo(tpe),
+	companionTypeOf(tpe).map(cacheType),
+	prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
     }
-    super.isOutOfDate
-  }
 
-  protected def setNotifyWhenReady() {
-    notifyWhenReady = true
-  }
-
-  protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
-    wrapReloadSources(sources.toList)
-    sources.foreach { s =>
-      wrapTypedTree(s, true)
+    protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
+      val members = getMembersForTypeAt(p)
+      val preparedMembers = prepareSortedInterfaceInfo(members)
+      typeAt(p).map{ t =>
+	new TypeInspectInfo(
+          TypeInfo(t),
+          companionTypeOf(t).map(cacheType),
+          preparedMembers)
+      }
     }
-  }
 
-  override def askShutdown() {
-    super.askShutdown()
-    parent = null
-    indexer = null
-  }
-
-  override def finalize() {
-    System.out.println("Finalizing Global instance.")
-  }
-
-  /*
-  * The following functions wrap up operations that interact with
-  * the presentation compiler. The wrapping just helps with the
-  * create response / compute / get result pattern.
-  *
-  * These units of work should probably be wrapped up into a
-  * Work monad that will make it easier to compose the operations.
-  */
-
-  def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
-    val result = new Response[A]
-    compute(result)
-    result.get.fold(o => o, handle)
-  }
-
-  def wrapReloadPosition(p: Position): Unit =
-  wrapReloadSource(p.source)
-
-  def wrapReloadSource(source: SourceFile): Unit =
-  wrapReloadSources(List(source))
-
-  def wrapReloadSources(sources: List[SourceFile]): Unit = {
-    val superseeded = scheduler.dequeueAll {
-      case ri: ReloadItem if ri.sources == sources => Some(ri)
-      case _ => None
+    private def typeOfTree(t: Tree): Option[Type] = {
+      var tree = t
+      tree = tree match {
+	case Select(qual, name) if tree.tpe == ErrorType => {
+          qual
+	}
+	case t: ImplDef if t.impl != null => {
+          t.impl
+	}
+	case t: ValOrDefDef if t.tpt != null => {
+          t.tpt
+	}
+	case t: ValOrDefDef if t.rhs != null => {
+          t.rhs
+	}
+	case t => t
+      }
+      if (tree.tpe != null) {
+	Some(tree.tpe)
+      } else {
+	None
+      }
     }
-    superseeded.foreach(_.response.set())
-    wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
+
+    protected def typeAt(p: Position): Option[Type] = {
+      val tree = wrapTypedTreeAt(p)
+      typeOfTree(tree)
+    }
+
+    protected def typeByName(name: String): Option[Type] = {
+      def maybeType(sym: Symbol) = sym match {
+	case NoSymbol => None
+	case sym: Symbol => Some(sym.tpe)
+	case _ => None
+      }
+      try {
+	if (name.endsWith("$")) {
+          maybeType(definitions.getModule(name.substring(0, name.length - 1)))
+	} else {
+          maybeType(definitions.getClass(name))
+	}
+      } catch {
+	case e => None
+      }
+    }
+
+    protected def filterMembersByPrefix(members:List[Member], prefix: String, 
+      matchEntire: Boolean, caseSens: Boolean):List[Member] = members.filter{ m =>
+      val prefixUpper = prefix.toUpperCase()
+      val sym = m.sym
+      val ns = sym.nameString
+      (((matchEntire && ns == prefix) ||
+	  (!matchEntire && caseSens && ns.startsWith(prefix)) ||
+	  (!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
+	&& !sym.nameString.contains("$"))
+    }
+
+    protected def symbolAt(p: Position): Option[Symbol] = {
+      p.source.file
+      val tree = wrapTypedTreeAt(p)
+      if (tree.symbol != null) {
+	Some(tree.symbol)
+      } else {
+	None
+      }
+    }
+
+    // TODO: 
+    // This hides the core implementation is Contexts.scala, which
+    // has been patched. Once this bug is fixed, we can get rid of 
+    // this workaround.
+    private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
+      case List() => List()
+      case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
+      case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
+      if (to == nme.WILDCARD) List()
+      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
+      case _ :: rest => transformImport(rest, sym)
+    }
+
+    protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
+      symbolAt(p) match {
+	case Some(s) => {
+	  val gi = new GlobalIndexes {
+            val global = RichPresentationCompiler.this
+            val sym = s.asInstanceOf[global.Symbol]
+            val cuIndexes = this.global.unitOfFile.values.map { u =>
+              CompilationUnitIndex(u.body)
+            }
+            val index = GlobalIndex(cuIndexes.toList)
+            val result = index.occurences(sym).map {
+              _.pos match {
+		case p: RangePosition => p
+		case p =>
+		new RangePosition(
+		  p.source, p.point, p.point, p.point)
+              }
+            }
+	  }
+	  gi.result
+	}
+	case None => List()
+      }
+    }
+
+    private var notifyWhenReady = false
+
+    override def isOutOfDate(): Boolean = {
+      if (notifyWhenReady && !super.isOutOfDate) {
+	parent ! FullTypeCheckCompleteEvent()
+	notifyWhenReady = false
+      }
+      super.isOutOfDate
+    }
+
+    protected def setNotifyWhenReady() {
+      notifyWhenReady = true
+    }
+
+    protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
+      wrapReloadSources(sources.toList)
+      sources.foreach { s =>
+	wrapTypedTree(s, true)
+      }
+    }
+
+    override def askShutdown() {
+      super.askShutdown()
+      parent = null
+      indexer = null
+    }
+
+    override def finalize() {
+      System.out.println("Finalizing Global instance.")
+    }
+
+    /*
+    * The following functions wrap up operations that interact with
+    * the presentation compiler. The wrapping just helps with the
+    * create response / compute / get result pattern.
+    *
+    * These units of work should probably be wrapped up into a
+    * Work monad that will make it easier to compose the operations.
+    */
+
+    def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
+      val result = new Response[A]
+      compute(result)
+      result.get.fold(o => o, handle)
+    }
+
+    def wrapReloadPosition(p: Position): Unit =
+    wrapReloadSource(p.source)
+
+    def wrapReloadSource(source: SourceFile): Unit =
+    wrapReloadSources(List(source))
+
+    def wrapReloadSources(sources: List[SourceFile]): Unit = {
+      val superseeded = scheduler.dequeueAll {
+	case ri: ReloadItem if ri.sources == sources => Some(ri)
+	case _ => None
+      }
+      superseeded.foreach(_.response.set())
+      wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
+    }
+
+    def wrapTypeMembers(p: Position): List[Member] =
+    wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
+
+    def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
+    wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
+
+    def wrapTypedTreeAt(position: Position): Tree =
+    wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
+
   }
-
-  def wrapTypeMembers(p: Position): List[Member] =
-  wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
-
-  def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
-  wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)
-
-  def wrapTypedTreeAt(position: Position): Tree =
-  wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
-
-}
 

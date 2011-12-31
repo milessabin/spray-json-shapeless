@@ -71,9 +71,9 @@ object EnsimeBuild extends Build {
 	  }
 	  val scalaRefactoring = scalaVersion match {
 	    case v if v == TwoEightVersion => 
-	    "org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala.ifs.hsr.ch/hudson/job/Scala-Refactoring-2.8.2-SNAPSHOT/ws/org.scala-refactoring.library/target/org.scala-refactoring_2.8.2-SNAPSHOT-0.3.0-SNAPSHOT.jar"
+	    "org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala-tools.org/repo-snapshots/org/scala-refactoring/org.scala-refactoring_2.8.3-SNAPSHOT/0.3.0-SNAPSHOT/org.scala-refactoring_2.8.3-SNAPSHOT-0.3.0-20111227.074430-50.jar"
 	    case v if v == TwoNineVersion => 
-	    "org.scala-refactoring" % "org.scala-refactoring_2.9.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala.ifs.hsr.ch/hudson/job/Scala-Refactoring-2.9.2-SNAPSHOT/ws/org.scala-refactoring.library/target/org.scala-refactoring_2.9.2-SNAPSHOT-0.3.0-SNAPSHOT.jar"
+	    "org.scala-refactoring" % "org.scala-refactoring_2.9.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala-tools.org/repo-snapshots/org/scala-refactoring/org.scala-refactoring_2.9.2-SNAPSHOT/0.3.0-SNAPSHOT/org.scala-refactoring_2.9.2-SNAPSHOT-0.3.0-20111227.121032-170.jar"
 	  }
 	  Seq(
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",

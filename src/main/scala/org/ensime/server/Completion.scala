@@ -40,8 +40,7 @@ trait CompletionControl {
     prefix:String,
     sym: Symbol,
     tpe: Type,
-    isMember:Boolean,
-    isConstructor: Boolean,
+    constructing: Boolean,
     inherited: Boolean,
     viaView: Symbol): List[CompletionInfo] = {
 
@@ -57,18 +56,14 @@ trait CompletionControl {
       sym.owner != definitions.AnyRefClass &&
       sym.owner != definitions.ObjectClass) score += 30
 
-    if(isMember){
-      List(CompletionInfo(sym, tpe, score))
+    val infos = List(CompletionInfo(sym, tpe, score))
+    if(constructing){
+      val constructorSyns = constructorSynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
+      infos ++ constructorSyns
     }
     else{
-      if (isConstructor) {
-	constructorSynonyms(sym).map{ 
-	  c => CompletionInfo(sym, c.tpe, score) }
-      } else {
-	val applySyns = applySynonyms(sym).map{ 
-	  c => CompletionInfo(sym, c.tpe, score) }
-	List(CompletionInfo(sym, tpe, score)) ++ applySyns
-      }
+      val applySyns = applySynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
+      infos ++ applySyns
     }
   }
 
@@ -77,7 +72,7 @@ trait CompletionControl {
     def makeAll(
       x: Response[List[Member]],
       prefix: String,
-      isConstructor: Boolean): List[CompletionInfo] = {
+      constructing: Boolean): List[CompletionInfo] = {
       val caseSense = prefix != prefix.toLowerCase()
       val buff = new LinkedHashSet[CompletionInfo]()
       do {
@@ -87,14 +82,12 @@ trait CompletionControl {
 	      m match{
 		case m @ ScopeMember(sym, tpe, true, viaView) => {
 		  if(!sym.isConstructor){
-		    buff ++= makeCompletions(prefix, sym, tpe, false, 
-		      isConstructor, false, NoSymbol)
+		    buff ++= makeCompletions(prefix, sym, tpe, constructing, false, NoSymbol)
 		  }
 		}
 		case m @ TypeMember(sym, tpe, true, inherited, viaView) => {
 		  if(!sym.isConstructor){
-                    buff ++= makeCompletions(prefix, sym, tpe, true, 
-		      false, inherited, viaView)
+                    buff ++= makeCompletions(prefix, sym, tpe, constructing, inherited, viaView)
 		  }
 		}
 		case _ => 
@@ -111,17 +104,17 @@ trait CompletionControl {
 	askReloadFile(p.source)
 	(prefix, askCompletePackageMember(path, prefix))
       }
-      case Some(SymbolContext(p, prefix, isConstructor)) => {
+      case Some(SymbolContext(p, prefix, constructing)) => {
 	askReloadFile(p.source)
 	val x = new Response[List[Member]]
 	askScopeCompletion(p, x)
-	(prefix, makeAll(x, prefix, isConstructor))
+	(prefix, makeAll(x, prefix, constructing))
       }
-      case Some(MemberContext(p, prefix)) => {
+      case Some(MemberContext(p, prefix, constructing)) => {
 	askReloadFile(p.source)
 	val x = new Response[List[Member]]
 	askTypeCompletion(p, x)
-	(prefix, makeAll(x, prefix, false))
+	(prefix, makeAll(x, prefix, constructing))
       }
       case _ => {
 	System.err.println("Unrecognized completion context.")
@@ -130,10 +123,10 @@ trait CompletionControl {
     }
 
     CompletionInfoList(prefix, results.sortWith({(c1,c2) =>
-	c1.relevance > c2.relevance ||
-	(c1.relevance == c2.relevance &&
-	  c1.name.length < c2.name.length)
-      }))
+	  c1.relevance > c2.relevance ||
+	  (c1.relevance == c2.relevance &&
+	    c1.name.length < c2.name.length)
+	}))
   }
 
   private val ident = "[a-zA-Z0-9_]"
@@ -142,7 +135,7 @@ trait CompletionControl {
 
   trait CompletionContext {}
 
-  private val packRE = "^.*?(?:package|import)[ ]+((?:[a-z0-9]+\\.)*)([A-z0-9]*)$".r
+  private val packRE = ("^.*?(?:package|import)[ ]+((?:[a-z0-9]+\\.)*)(" + ident + "*)$").r
   case class PackageContext(path: String, prefix: String) extends CompletionContext
   def packageContext(preceding: String): Option[PackageContext] = {
     if (packRE.findFirstMatchIn(preceding).isDefined) {
@@ -165,32 +158,21 @@ trait CompletionControl {
   List("[!:=>\\(,;\\}\\[\\{\n+*/\\^&~%\\-]",
     ws, "*","(", ident, "*)$").mkString.r
 
+  private val constructorNameRE =
+  List("(?:", nonIdent, "|", ws, ")","(?:new)", ws, "+",
+    "(", ident, "*)$").mkString.r
+
   case class SymbolContext(p: Position, prefix: String,
-    isConstructor: Boolean) extends CompletionContext
+    constructing: Boolean) extends CompletionContext
   def symContext(p: Position, preceding: String): Option[SymbolContext] = {
     nameFollowingWhiteSpaceRE.findFirstMatchIn(preceding).orElse(
       nameFollowingSyntaxRE.findFirstMatchIn(preceding)).orElse(
       nameFollowingReservedRE.findFirstMatchIn(preceding)) match {
       case Some(m) => {
 	println("Matched symbol context.")
+	val constructing = constructorNameRE.findFirstMatchIn(preceding).isDefined
 	val prefix = m.group(1)
-	Some(SymbolContext(p, prefix, false))
-      }
-      case None => None
-    }
-  }
-
-  private val constructorNameRE =
-  List("(?:", nonIdent, "|", ws, ")",
-    "(?:new)", ws, "+",
-    "(", ident, "*)$").mkString.r
-
-  def constructContext(p: Position, preceding: String): Option[SymbolContext] = {
-    constructorNameRE.findFirstMatchIn(preceding) match {
-      case Some(m) => {
-	println("Matched constructor context.")
-	val prefix = m.group(1)
-	Some(SymbolContext(p, prefix, true))
+	Some(SymbolContext(p, prefix, constructing))
       }
       case None => None
     }
@@ -204,11 +186,14 @@ trait CompletionControl {
   }
 
   private val memberRE = "([\\. ]+)([^\\. ]*)$".r
-  case class MemberContext(p: Position, prefix: String) extends CompletionContext
+  private val memberConstructorRE = ("new ((?:[a-z0-9]+\\.)*)(" + ident + "*)$").r
+  case class MemberContext(p: Position, prefix: String, constructing: Boolean) extends CompletionContext
+
   def memberContext(p: Position, preceding: String): Option[MemberContext] = {
     memberRE.findFirstMatchIn(preceding) match {
       case Some(m) => {
-	println("Matched member context.")
+	val constructing = memberConstructorRE.findFirstMatchIn(preceding).isDefined
+	println("Matched member context. Constructing? " + constructing)
 	val dot = m.group(1)
 	val prefix = m.group(2)
 
@@ -222,11 +207,12 @@ trait CompletionControl {
 	// Move point back to target of method selection.
 	val newP = p.withSource(src, 0).withPoint(p.point - prefix.length - dot.length)
 
-	Some(MemberContext(newP, prefix))
+	Some(MemberContext(newP, prefix, constructing))
       }
       case None => None
     }
   }
+
 
   protected def completionContext(p: Position): Option[CompletionContext] = {
     val src = p.source
@@ -237,7 +223,6 @@ trait CompletionControl {
     println("Line: " + line)
     println("Preceding: " + preceding)
     packageContext(preceding).
-    orElse(constructContext(p, preceding)).
     orElse(symContext(p, preceding)).
     orElse(memberContext(p, preceding))
   }
