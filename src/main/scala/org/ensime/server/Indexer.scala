@@ -1,7 +1,7 @@
 /**
 *  Copyright (c) 2010, Aemon Cannon
 *  All rights reserved.
-*  
+*
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions are met:
 *      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
 *      * Neither the name of ENSIME nor the
 *        names of its contributors may be used to endorse or promote products
 *        derived from this software without specific prior written permission.
-*  
+*
 *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -215,36 +215,35 @@ trait Indexing extends StringSimilarity {
       val key = keyword.toLowerCase()
       val caseSens = !keyword.equals(key)
       trie.traverseWithPrefix(key, {(r: SymbolSearchResult) =>
-	  if(!caseSens || r.name.contains(keyword)){
-	    resultSet += r
-	  }
-	})
+        if(!caseSens || r.name.contains(keyword)){
+          resultSet += r
+        }
+      })
     }
 
     if (keywords.size() > 1) {
       for (keyword <- keywords.tail) {
         val key = keyword.toLowerCase()
-	val caseSens = !keyword.equals(key)
-	if(resultSet.size() > BruteForceThresh){
+        val caseSens = !keyword.equals(key)
+        if(resultSet.size() > BruteForceThresh) {
           val results = new HashSet[SymbolSearchResult]
           trie.traverseWithPrefix(key, {(r: SymbolSearchResult) =>
-	      if(resultSet.contains(r) &&
-		(!caseSens || r.name.contains(keyword))){
-		results += r
-	      }
-	    })
+            if(resultSet.contains(r) &&
+               (!caseSens || r.name.contains(keyword))) {
+                 results += r
+            }
+          })
           resultSet = results
-	}
-	else{
-	  val results = new HashSet[SymbolSearchResult]
-	  for(r <- resultSet){
-	    if(r.name.toLowerCase().contains(key) &&
-	      (!caseSens || r.name.contains(keyword))){
-	      results += r
-	    }
-	  }
+        } else {
+          val results = new HashSet[SymbolSearchResult]
+          for(r <- resultSet) {
+            if(r.name.toLowerCase().contains(key) &&
+               (!caseSens || r.name.contains(keyword))){
+                 results += r
+            }
+          }
           resultSet = results
-	}
+        }
       }
     }
 
@@ -299,17 +298,61 @@ trait Indexing extends StringSimilarity {
     else 'class
   }
 
-  private def include(name: String, excludes: Iterable[Regex]): Boolean = {
-    for(exclude <- excludes) {
-      if(exclude.findFirstIn(name) != None) {
-        return false
-      }
+  private def include(name: String,
+                      includes: Iterable[Regex],
+                      excludes: Iterable[Regex]): Boolean = {
+    if(includes.isEmpty || includes.exists(_.findFirstIn(name) != None)) {
+      excludes.forall(_.findFirstIn(name) == None)
+    } else {
+      false
     }
-    true
   }
 
-  def buildStaticIndex(files: Iterable[File], excludes: Iterable[Regex]) {
+  def buildStaticIndex(files: Iterable[File],
+                       includes: Iterable[Regex],
+                       excludes: Iterable[Regex]) {
     val t = System.currentTimeMillis()
+
+    sealed abstract trait IndexEvent
+    case class ClassEvent(name: String, location: String, flags: Int) extends IndexEvent
+    case class MethodEvent(className: String, name: String, location: String, flags: Int) extends IndexEvent
+    case object StopEvent extends IndexEvent
+
+    class IndexWorkQueue extends Actor {
+      def act() {
+        loop {
+          receive {
+            case ClassEvent(name: String, location: String, flags: Int) => {
+              val i = name.lastIndexOf(".")
+              val localName = if (i > -1) name.substring(i + 1) else name
+              val value = new TypeSearchResult(name,
+                                               localName,
+                                               declaredAs(name, flags),
+                                               Some((location, -1)))
+              insertSuffixes(name, value)
+            }
+            case MethodEvent(className: String, name: String, location: String, flags: Int) => {
+              val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+              val revisedClassName = if (isStatic) className + "$"
+                                     else className
+              val lookupKey = revisedClassName + "." + name
+              val value = new MethodSearchResult(lookupKey,
+                                                 name,
+                                                 'method,
+                                                 Some((location, -1)),
+                                                 revisedClassName)
+              insertSuffixes(lookupKey, value)
+            }
+            case StopEvent => {
+              reply(StopEvent)
+              exit()
+            }
+          }
+        }
+      }
+    }
+    val indexWorkQ = new IndexWorkQueue
+    indexWorkQ.start
 
     val handler = new ClassHandler {
       var classCount = 0
@@ -317,49 +360,31 @@ trait Indexing extends StringSimilarity {
       var validClass = false
       override def onClass(name: String, location: String, flags: Int) {
         val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-        if (isPublic && Indexer.isValidType(name) && include(name, excludes)) {
-          validClass = true
-          val i = name.lastIndexOf(".")
-          val localName = if (i > -1) name.substring(i + 1) else name
-          val value = new TypeSearchResult(
-            name,
-            localName,
-            declaredAs(name, flags),
-            Some((location, -1)))
-          insertSuffixes(name, value)
+        validClass = (isPublic && Indexer.isValidType(name) && include(name, includes, excludes))
+        if(validClass) {
+          indexWorkQ ! ClassEvent(name, location, flags)
           classCount += 1
-        } else validClass = false
+        }
       }
-      override def onMethod(className: String, name: String,
-        location: String, flags: Int) {
+      override def onMethod(className: String, name: String, location: String, flags: Int) {
         val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
         if (validClass && isPublic && Indexer.isValidMethod(name)) {
-          val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
-          val revisedClassName = if (isStatic) className + "$"
-          else className
-          val lookupKey = revisedClassName + "." + name
-          val value = new MethodSearchResult(
-            lookupKey,
-            name,
-            'method,
-            Some((location, -1)),
-            revisedClassName)
-          insertSuffixes(lookupKey, value)
+          indexWorkQ ! MethodEvent(className, name, location, flags)
           methodCount += 1
         }
       }
     }
 
-    println("Indexing classpath...")
-    ClassIterator.find(files.toList, handler)
+    println("Updated: Indexing classpath...")
+    ClassIterator.find(files, handler)
     val elapsed = System.currentTimeMillis() - t
+    indexWorkQ !? StopEvent
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
     println("Indexed " + handler.classCount + " classes with " + handler.methodCount + " methods.")
     onIndexingComplete()
   }
 
   def onIndexingComplete()
-
 }
 
 class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor with Indexing {
@@ -381,7 +406,9 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
             exit('stop)
           }
           case RebuildStaticIndexReq() => {
-            buildStaticIndex(config.allFilesOnClasspath, config.excludeFromIndex)
+            buildStaticIndex(config.allFilesOnClasspath,
+                             config.onlyIncludeInIndex,
+                             config.excludeFromIndex)
           }
           case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
             syms.foreach { info =>
@@ -449,7 +476,7 @@ object IndexTest extends Indexing {
     import java.util.Scanner
     val in = new Scanner(System.in)
     val name = in.nextLine()
-    buildStaticIndex(files, List())
+    buildStaticIndex(files, List(), List())
     for (l <- getImportSuggestions(args, 5)) {
       for (s <- l) {
         println(s.name)
