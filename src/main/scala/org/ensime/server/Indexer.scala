@@ -312,8 +312,47 @@ trait Indexing extends StringSimilarity {
                        includes: Iterable[Regex],
                        excludes: Iterable[Regex]) {
     val t = System.currentTimeMillis()
-    val indexBuilder = new IndexBuilder
-    indexBuilder.start
+
+    sealed abstract trait IndexEvent
+    case class ClassEvent(name: String, location: String, flags: Int) extends IndexEvent
+    case class MethodEvent(className: String, name: String, location: String, flags: Int) extends IndexEvent
+    case object StopEvent extends IndexEvent
+
+    class IndexWorkQueue extends Actor {
+      def act() {
+        loop {
+          receive {
+            case ClassEvent(name: String, location: String, flags: Int) => {
+              val i = name.lastIndexOf(".")
+              val localName = if (i > -1) name.substring(i + 1) else name
+              val value = new TypeSearchResult(name,
+                                               localName,
+                                               declaredAs(name, flags),
+                                               Some((location, -1)))
+              insertSuffixes(name, value)
+            }
+            case MethodEvent(className: String, name: String, location: String, flags: Int) => {
+              val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+              val revisedClassName = if (isStatic) className + "$"
+                                     else className
+              val lookupKey = revisedClassName + "." + name
+              val value = new MethodSearchResult(lookupKey,
+                                                 name,
+                                                 'method,
+                                                 Some((location, -1)),
+                                                 revisedClassName)
+              insertSuffixes(lookupKey, value)
+            }
+            case StopEvent => {
+              reply(StopEvent)
+              exit()
+            }
+          }
+        }
+      }
+    }
+    val indexWorkQ = new IndexWorkQueue
+    indexWorkQ.start
 
     val handler = new ClassHandler {
       var classCount = 0
@@ -323,14 +362,14 @@ trait Indexing extends StringSimilarity {
         val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
         validClass = (isPublic && Indexer.isValidType(name) && include(name, includes, excludes))
         if(validClass) {
-          indexBuilder ! ClassEvent(name, location, flags)
+          indexWorkQ ! ClassEvent(name, location, flags)
           classCount += 1
         }
       }
       override def onMethod(className: String, name: String, location: String, flags: Int) {
         val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
         if (validClass && isPublic && Indexer.isValidMethod(name)) {
-          indexBuilder ! MethodEvent(className, name, location, flags)
+          indexWorkQ ! MethodEvent(className, name, location, flags)
           methodCount += 1
         }
       }
@@ -339,54 +378,14 @@ trait Indexing extends StringSimilarity {
     println("Updated: Indexing classpath...")
     ClassIterator.find(files, handler)
     val elapsed = System.currentTimeMillis() - t
-    indexBuilder !? StopEvent
+    indexWorkQ !? StopEvent
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
     println("Indexed " + handler.classCount + " classes with " + handler.methodCount + " methods.")
     onIndexingComplete()
   }
 
   def onIndexingComplete()
-
-  sealed abstract trait IndexEvent
-  case class ClassEvent(name: String, location: String, flags: Int) extends IndexEvent
-  case class MethodEvent(className: String, name: String, location: String, flags: Int) extends IndexEvent
-  case object StopEvent extends IndexEvent
-
-  class IndexBuilder extends Actor {
-    def act() {
-      loop {
-        receive {
-          case ClassEvent(name: String, location: String, flags: Int) => {
-            val i = name.lastIndexOf(".")
-            val localName = if (i > -1) name.substring(i + 1) else name
-            val value = new TypeSearchResult(name,
-                                             localName,
-                                             declaredAs(name, flags),
-                                             Some((location, -1)))
-            insertSuffixes(name, value)
-          }
-          case MethodEvent(className: String, name: String, location: String, flags: Int) => {
-            val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
-            val revisedClassName = if (isStatic) className + "$"
-                                   else className
-            val lookupKey = revisedClassName + "." + name
-            val value = new MethodSearchResult(lookupKey,
-                                               name,
-                                               'method,
-                                               Some((location, -1)),
-                                               revisedClassName)
-            insertSuffixes(lookupKey, value)
-          }
-          case StopEvent => {
-            reply(StopEvent)
-            exit()
-          }
-        }
-      }
-    }
-  }
 }
-
 
 class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor with Indexing {
 
