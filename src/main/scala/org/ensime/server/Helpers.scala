@@ -39,14 +39,14 @@ trait Helpers { self: Global =>
   def applySynonyms(sym: Symbol): List[Symbol] = {
     val members = if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
       sym.tpe.members
-    } else if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass || sym.isCaseClass) {
+    } else if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass) {
       sym.companionModule.tpe.members
     } else { List() }
     members.filter { _.name.toString == "apply" }
   }
 
   def constructorSynonyms(sym: Symbol): List[Symbol] = {
-    val members = if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass || sym.isCaseClass) {
+    val members = if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass) {
       sym.tpe.members
     } else if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
       sym.companionClass.tpe.members
