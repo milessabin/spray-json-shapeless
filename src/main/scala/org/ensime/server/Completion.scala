@@ -57,6 +57,7 @@ trait CompletionControl {
       sym.owner != definitions.ObjectClass) score += 30
 
     val infos = List(CompletionInfo(sym, tpe, score))
+    
     if(constructing){
       val constructorSyns = constructorSynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
       infos ++ constructorSyns
@@ -75,27 +76,36 @@ trait CompletionControl {
       constructing: Boolean): List[CompletionInfo] = {
       val caseSense = prefix != prefix.toLowerCase()
       val buff = new LinkedHashSet[CompletionInfo]()
-      do {
-	for (members <- x.get.left.toOption) {
-          askOption[Unit]{
-            for (m <- filterMembersByPrefix(members, prefix, false, caseSense)) {
-	      m match{
-		case m @ ScopeMember(sym, tpe, true, viaView) => {
-		  if(!sym.isConstructor){
-		    buff ++= makeCompletions(prefix, sym, tpe, constructing, false, NoSymbol)
-		  }
-		}
-		case m @ TypeMember(sym, tpe, true, inherited, viaView) => {
-		  if(!sym.isConstructor){
-                    buff ++= makeCompletions(prefix, sym, tpe, constructing, inherited, viaView)
-		  }
-		}
-		case _ => 
-              }
+      var members = List[Member]()
+      do { 
+	x.get match{
+	  case Left(mems) => members ++= mems
+	  case _ => {}
+	}
+      }
+      while (!x.isComplete)
+      println("Found " + members.size + " members.")
+
+      askOption[Unit]{
+	val filtered = filterMembersByPrefix(members, prefix, false, caseSense)
+	println("Filtered down to " + filtered.size + ".")
+        for (m <- filtered) {
+	  m match{
+	    case m @ ScopeMember(sym, tpe, accessible, viaView) => {
+	      if(!sym.isConstructor){
+		buff ++= makeCompletions(prefix, sym, tpe, constructing, false, NoSymbol)
+	      }
 	    }
+	    case m @ TypeMember(sym, tpe, accessible, inherited, viaView) => {
+	      if(!sym.isConstructor){
+                buff ++= makeCompletions(prefix, sym, tpe, constructing, inherited, viaView)
+	      }
+	    }
+	    case _ => 
           }
 	}
-      } while (!x.isComplete)
+      }
+      println("Returning final list of " + buff.size + ".")
       buff.toList
     }
 
