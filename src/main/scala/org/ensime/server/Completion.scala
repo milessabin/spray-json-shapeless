@@ -160,7 +160,7 @@ trait CompletionControl {
 
   private val nameFollowingReservedRE =
   List("(?:", nonIdent, "|", ws, ")",
-    "(?:else|case|new|with|extends|yield|return|throw)",
+    "(?:else|case|new|with|extends|yield|return|throw|do)",
     ws, "+",
     "(", ident, "*)$").mkString.r
 
@@ -172,20 +172,55 @@ trait CompletionControl {
   List("(?:", nonIdent, "|", ws, ")","(?:new)", ws, "+",
     "(", ident, "*)$").mkString.r
 
+  private val nameFollowingControl =
+  List("(?:for|while)", ws, "*", "\\((.*?)\\)", ws, "*",
+    "(", ident, "*)$").mkString.r
+
+
+  // Ignores the reality of comment and string parsing
+  private def paren_balanced(s:String):Boolean = {
+    var i = 0
+    var p = 0
+    while(i < s.length){
+      val ch = s.charAt(i)
+      if(ch == '(') p += 1
+      else if(ch == ')') p -= 1
+      i+=1
+    }
+    p == 0
+  }
+
   case class SymbolContext(p: Position, prefix: String,
     constructing: Boolean) extends CompletionContext
   def symContext(p: Position, preceding: String): Option[SymbolContext] = {
-    nameFollowingWhiteSpaceRE.findFirstMatchIn(preceding).orElse(
-      nameFollowingSyntaxRE.findFirstMatchIn(preceding)).orElse(
-      nameFollowingReservedRE.findFirstMatchIn(preceding)) match {
-      case Some(m) => {
-	println("Matched symbol context.")
-	val constructing = constructorNameRE.findFirstMatchIn(preceding).isDefined
-	val prefix = m.group(1)
-	Some(SymbolContext(p, prefix, constructing))
-      }
-      case None => None
+    var mo = nameFollowingWhiteSpaceRE.findFirstMatchIn(preceding)
+    for(m <- mo){
+      println("Matched sym after ws context.")
+      return Some(SymbolContext(p, m.group(1), false))
     }
+    mo = nameFollowingSyntaxRE.findFirstMatchIn(preceding)
+    for(m <- mo){
+      println("Matched sym following syntax context.")
+      return Some(SymbolContext(p, m.group(1), false))
+    }
+    mo = constructorNameRE.findFirstMatchIn(preceding)
+    for(m <- mo){ 
+      println("Matched constructing context.")
+      return Some(SymbolContext(p, m.group(1), true))
+    }
+    mo = nameFollowingReservedRE.findFirstMatchIn(preceding)
+    for(m <- mo){
+      println("Matched sym following reserved context.")
+      return Some(SymbolContext(p, m.group(1), false))
+    }
+    mo = nameFollowingControl.findFirstMatchIn(preceding)
+    for(m <- mo){
+      if(paren_balanced(m.group(1))){
+	println("Matched sym following control structure context.")
+	return Some(SymbolContext(p, m.group(2), false))
+      }
+    }
+    None
   }
 
   private def spliceSource(s: SourceFile, start: Int, end: Int,
@@ -200,7 +235,7 @@ trait CompletionControl {
   case class MemberContext(p: Position, prefix: String, constructing: Boolean) extends CompletionContext
 
   def memberContext(p: Position, preceding: String): Option[MemberContext] = {
-    memberRE.findFirstMatchIn(preceding) match {
+    memberRE.findFirstMatchIn(preceding) match { 
       case Some(m) => {
 	val constructing = memberConstructorRE.findFirstMatchIn(preceding).isDefined
 	println("Matched member context. Constructing? " + constructing)
