@@ -58,7 +58,7 @@ trait CompletionControl {
 
     val infos = List(CompletionInfo(sym, tpe, score))
     
-    if(constructing){
+    if(constructing) {
       val constructorSyns = constructorSynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
       infos ++ constructorSyns
     }
@@ -173,12 +173,12 @@ trait CompletionControl {
     "(", ident, "*)$").mkString.r
 
   private val nameFollowingControl =
-  List("(?:for|while)", ws, "*", "\\((.*?)\\)", ws, "*",
+  List("(?:for|while|if)", ws, "*", "\\((.*?)\\)", ws, "*",
     "(", ident, "*)$").mkString.r
 
 
   // Ignores the reality of comment and string parsing
-  private def paren_balanced(s:String):Boolean = {
+  private def parenBalanced(s:String):Boolean = {
     var i = 0
     var p = 0
     while(i < s.length){
@@ -194,28 +194,33 @@ trait CompletionControl {
     constructing: Boolean) extends CompletionContext
   def symContext(p: Position, preceding: String): Option[SymbolContext] = {
     var mo = nameFollowingWhiteSpaceRE.findFirstMatchIn(preceding)
-    for(m <- mo){
+    if(mo.isDefined){
+      val m = mo.get
       println("Matched sym after ws context.")
       return Some(SymbolContext(p, m.group(1), false))
     }
     mo = nameFollowingSyntaxRE.findFirstMatchIn(preceding)
-    for(m <- mo){
+    if(mo.isDefined){
+      val m = mo.get
       println("Matched sym following syntax context.")
       return Some(SymbolContext(p, m.group(1), false))
     }
     mo = constructorNameRE.findFirstMatchIn(preceding)
-    for(m <- mo){ 
+    if(mo.isDefined){
+      val m = mo.get
       println("Matched constructing context.")
       return Some(SymbolContext(p, m.group(1), true))
     }
     mo = nameFollowingReservedRE.findFirstMatchIn(preceding)
-    for(m <- mo){
+    if(mo.isDefined){
+      val m = mo.get
       println("Matched sym following reserved context.")
       return Some(SymbolContext(p, m.group(1), false))
     }
     mo = nameFollowingControl.findFirstMatchIn(preceding)
-    for(m <- mo){
-      if(paren_balanced(m.group(1))){
+    if(mo.isDefined){
+      val m = mo.get
+      if(parenBalanced(m.group(1))){
 	println("Matched sym following control structure context.")
 	return Some(SymbolContext(p, m.group(2), false))
       }
@@ -226,7 +231,7 @@ trait CompletionControl {
   private def spliceSource(s: SourceFile, start: Int, end: Int,
     replacement: String): SourceFile = {
     new BatchSourceFile(s.file,
-      Arrays.splice(s.content, start, end,
+      Arrays.splice(s.content, start, end, 
 	replacement.toArray))
   }
 

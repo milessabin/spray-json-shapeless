@@ -49,7 +49,7 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++ 
       Seq(
-	version := "0.9.3.RC2",
+	version := "0.9.3.RC3",
 	organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
