@@ -152,7 +152,7 @@ object EnsimeBuild extends Build {
       "./etc/scripts/server",
       "./" + distDir + "/bin/server")
 
-    writeScript("\"" + cpLibs.mkString(";").replace("/", "\\") + "\"",
+    writeScript("\"" + cpLibs.map{lib => "%~dp0/../" + lib}.mkString(";").replace("/", "\\") + "\"",
       "./etc/scripts/server.bat",
       "./" + distDir + "/bin/server.bat")
 
