@@ -31,4 +31,7 @@ test_projects/sbt-deps
 test_projects/anti-xml
 test_projects/rogue
 
+sublime*
+.ensime_port
+
 src/main/scala/org/ensime/server/Test.scala

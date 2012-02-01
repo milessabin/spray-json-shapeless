@@ -431,6 +431,11 @@ trait SwankProtocol extends Protocol {
    *   (
    *   :severity //Symbol: One of 'error, 'warn, 'info.
    *   :msg //String: Text of the compiler message.
+   *   :beg //Int: Zero-based offset of beginning of region
+   *   :end //Int: Zero-based offset of end of region
+   *   :line //Int: Line number of region
+   *   :col //Int: Column offset of region
+   *   :file //String: Filename of source file
    *   )
    */
 
