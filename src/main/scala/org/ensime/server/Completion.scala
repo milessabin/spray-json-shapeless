@@ -164,13 +164,19 @@ trait CompletionControl {
 
   trait CompletionContext {}
 
-  private val packRE = ("^.*?(?:package|import)[ ]+((?:[a-z0-9]+\\.)*)(" + ident + "*)$").r
+  private val packRE = ("^.*?(?:package|import)[ ]+((?:[a-z0-9]+\\.)*)(?:(" + ident + "*)|\\{.*?(" + ident + "*))$").r
   case class PackageContext(path: String, prefix: String) extends CompletionContext
   def packageContext(preceding: String): Option[PackageContext] = {
     if (packRE.findFirstMatchIn(preceding).isDefined) {
       val m = packRE.findFirstMatchIn(preceding).get
-      println("Matched package context: " + m.group(1) + "," + m.group(2))
-      Some(PackageContext(m.group(1), m.group(2)))
+      if(m.group(2) != null){
+	println("Matched package context: " + m.group(1) + "," + m.group(2))
+	Some(PackageContext(m.group(1), m.group(2)))
+      }
+      else{
+	println("Matched package context: " + m.group(1) + "," + m.group(3))
+	Some(PackageContext(m.group(1), m.group(3)))
+      }
     } else None
   }
 

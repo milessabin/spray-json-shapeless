@@ -57,13 +57,16 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       None
       case e: InterruptedException =>
       Thread.currentThread().interrupt()
+      e.printStackTrace()
       System.err.println("interrupted exception in askOption")
       None
       case e =>
+      e.printStackTrace()
       System.err.println("Error during askOption", e)
       None
     }
     case e =>
+    e.printStackTrace()
     System.err.println("Error during askOption", e)
     None
   }
