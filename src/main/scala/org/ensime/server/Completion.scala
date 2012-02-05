@@ -27,11 +27,12 @@
 
 package org.ensime.server
 import org.ensime.model.CompletionInfoList
+import scala.collection.mutable.HashMap
 import scala.tools.nsc.util.{ Position, RangePosition, SourceFile, BatchSourceFile }
 import org.ensime.util.Arrays
 import scala.tools.nsc.interactive.{ Response, CompilerControl, Global }
 import scala.collection.mutable.{ ListBuffer, LinkedHashSet }
-import org.ensime.model.CompletionInfo
+import org.ensime.model.{ CompletionInfo, SymbolSearchResult }
 
 trait CompletionControl {
   self: RichPresentationCompiler =>
@@ -57,7 +58,7 @@ trait CompletionControl {
       sym.owner != definitions.ObjectClass) score += 30
 
     val infos = List(CompletionInfo(sym, tpe, score))
-    
+
     if(constructing) {
       val constructorSyns = constructorSynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
       infos ++ constructorSyns
@@ -68,7 +69,21 @@ trait CompletionControl {
     }
   }
 
-  def completionsAt(p: Position): CompletionInfoList = {
+  def completionsAt(p: Position, maxResultsArg: Int): CompletionInfoList = {
+    
+    val maxResults = if(maxResultsArg == 0) Int.MaxValue else maxResultsArg
+
+    def makeTypeSearchCompletions(prefix:String):List[CompletionInfo] = {
+      val req = TypeCompletionsReq(prefix, maxResults)
+      indexer !?(1000, req) match {
+	case Some(syms:List[SymbolSearchResult]) => {
+	  syms.map{ s =>
+	    new CompletionInfo(s.localName, s.name, -1, false, 40, Some(s.name))
+	  }
+	}
+	case None => List()
+      }
+    }
 
     def makeAll(
       x: Response[List[Member]],
@@ -105,20 +120,24 @@ trait CompletionControl {
           }
 	}
       }
-      println("Returning final list of " + buff.size + ".")
       buff.toList
     }
 
     val (prefix, results) = completionContext(p) match {
       case Some(PackageContext(path, prefix)) => {
 	askReloadFile(p.source)
-	(prefix, askCompletePackageMember(path, prefix))
+	val typeSearchSyms = if(path.isEmpty()){
+	  makeTypeSearchCompletions(prefix)
+	} else List()
+	(prefix, 
+	  askCompletePackageMember(path, prefix) ++ 
+	  typeSearchSyms)
       }
       case Some(SymbolContext(p, prefix, constructing)) => {
 	askReloadFile(p.source)
 	val x = new Response[List[Member]]
 	askScopeCompletion(p, x)
-	(prefix, makeAll(x, prefix, constructing))
+	(prefix,  makeAll(x, prefix, constructing))
       }
       case Some(MemberContext(p, prefix, constructing)) => {
 	askReloadFile(p.source)
@@ -136,7 +155,7 @@ trait CompletionControl {
 	  c1.relevance > c2.relevance ||
 	  (c1.relevance == c2.relevance &&
 	    c1.name.length < c2.name.length)
-	}))
+	}).take(maxResults))
   }
 
   private val ident = "[a-zA-Z0-9_]"
@@ -165,7 +184,7 @@ trait CompletionControl {
     "(", ident, "*)$").mkString.r
 
   private val nameFollowingSyntaxRE =
-  List("[!:=>\\(,;\\}\\[\\{\n+*/\\^&~%\\-]",
+  List("([!:=>\\(,;\\}\\[\\{\n+*/\\^&~%\\-])",
     ws, "*","(", ident, "*)$").mkString.r
 
   private val constructorNameRE =
@@ -203,7 +222,7 @@ trait CompletionControl {
     if(mo.isDefined){
       val m = mo.get
       println("Matched sym following syntax context.")
-      return Some(SymbolContext(p, m.group(1), false))
+      return Some(SymbolContext(p, m.group(2), false))
     }
     mo = constructorNameRE.findFirstMatchIn(preceding)
     if(mo.isDefined){
@@ -292,7 +311,7 @@ trait Completion { self: RichPresentationCompiler =>
         memberSyms.flatMap { s =>
           val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
           if (name.startsWith(prefix)) {
-            Some(new CompletionInfo(name, "NA", -1, false, 20))
+            Some(new CompletionInfo(name, "NA", -1, false, 50, None))
           } else None
         }.toList
       }

@@ -135,31 +135,31 @@ object ProjectConfig {
   }
 
   class OptionalStringProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
+    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
     def apply():Option[String] = getStr(key).orElse(synonymKey.flatMap(getStr(_)))
     override def defaultTypeHint:String = "a string"
   }
 
   class BooleanProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
+    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
     def apply():Boolean = getBool(key) || synonymKey.map(getBool(_)).getOrElse(false)
     override def defaultTypeHint:String = "[t or nil]"
   }
 
   class StringListProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
+    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
     def apply():List[String] = getStrList(key) ++ synonymKey.map(getStrList(_)).getOrElse(List[String]())
     override def defaultTypeHint:String = "(string*)"
   }
 
   class RegexListProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
+    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
     def apply():List[Regex] = getRegexList(key) ++ synonymKey.map(getRegexList(_)).getOrElse(List[Regex]())
     override def defaultTypeHint:String = "(regex*)"
   }
 
   class SymbolMapProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String] = None, val synonymKey:Option[String] = None) extends Prop{
+    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
     def apply():Map[Symbol, Any] = getMap(key) ++ synonymKey.map(getMap(_)).getOrElse(Map[Symbol,Any]())
     override def defaultTypeHint:String = "([keyword value]*)"
   }
@@ -206,7 +206,8 @@ object ProjectConfig {
       m,
       ":root-dir",
       "The root directory of your project. This option should be filled in by your editor.",
-      Some("a filename")
+      Some("a filename"),
+      None
     )
     props += rootDir_
     def rootDir() = rootDir_()
@@ -240,7 +241,8 @@ object ProjectConfig {
     val version_ = new OptionalStringProp(
       m,
       ":version",
-      "The current, working version of your project."
+      "The current, working version of your project.",
+      None,None
     )
     props += version_
     def version() = version_()
@@ -250,7 +252,8 @@ object ProjectConfig {
     val useMaven_ = new BooleanProp(
       m,
       ":use-maven",
-      "Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed."
+      "Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
+      None,None
     )
     props += useMaven_
     def useMaven() = useMaven_()
@@ -260,7 +263,8 @@ object ProjectConfig {
     val useIvy_ = new BooleanProp(
       m,
       ":use-ivy",
-      "Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed."
+      "Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
+      None,None
     )
     props += useIvy_
     def useIvy() = useIvy_()
@@ -272,7 +276,7 @@ object ProjectConfig {
       m,
       ":ivy-file",
       "Override the default ivy.xml location.",
-      Some("a filename")
+      Some("a filename"),None
     )
     props += ivyFile_
     def ivyFile() = ivyFile_()
@@ -282,7 +286,8 @@ object ProjectConfig {
     val ivyRuntimeConf_ = new OptionalStringProp(
       m,
       ":ivy-runtime-conf",
-      "Specify the names of dependency profiles to be used for runtime scenarios."
+      "Specify the names of dependency profiles to be used for runtime scenarios.",
+      None,None
     )
     props += ivyRuntimeConf_
     def ivyRuntimeConf() = ivyRuntimeConf_()
@@ -292,7 +297,8 @@ object ProjectConfig {
     val ivyCompileConf_ = new OptionalStringProp(
       m,
       ":ivy-compile-conf",
-      "Specify the names of dependency profiles to be used for compile scenarios."
+      "Specify the names of dependency profiles to be used for compile scenarios.",
+      None,None
     )
     props += ivyCompileConf_
     def ivyCompileConf() = ivyCompileConf_()
@@ -303,7 +309,8 @@ object ProjectConfig {
     val ivyTestConf_ = new OptionalStringProp(
       m,
       ":ivy-test-conf",
-      "Specify the names of dependency profiles to be used for test scenarios."
+      "Specify the names of dependency profiles to be used for test scenarios.",
+      None,None
     )
     props += ivyTestConf_
     def ivyTestConf() = ivyTestConf_()
@@ -314,7 +321,8 @@ object ProjectConfig {
       m,
       ":compile-deps",
       "A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.",
-      Some("([directory or filename]*)")
+      Some("([directory or filename]*)"),
+      None
     )
     props += compileDeps_
     def compileDeps() = compileDeps_()
@@ -325,7 +333,8 @@ object ProjectConfig {
       m,
       ":compile-jars",
       "A list of jar files and directories to search for jar files to include on the compilation classpath.",
-      Some("([directory or filename]*)")
+      Some("([directory or filename]*)"),
+      None
     )
     props += compileJars_
     def compileJars() = compileJars_()
@@ -336,7 +345,8 @@ object ProjectConfig {
       m,
       ":runtime-deps",
       "A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.",
-      Some("([directory or filename]*)")
+      Some("([directory or filename]*)"),
+      None
     )
     props += runtimeDeps_
     def runtimeDeps() = runtimeDeps_()
@@ -346,7 +356,8 @@ object ProjectConfig {
       m,
       ":runtime-jars",
       "A list of jar files and directories to search for jar files to include on the runtime classpath.",
-      Some("([directory or filename]*)")
+      Some("([directory or filename]*)"),
+      None
     )
     props += runtimeJars_
     def runtimeJars() = runtimeJars_()
@@ -356,7 +367,8 @@ object ProjectConfig {
       m,
       ":test-deps",
       "A list of jar files and class directories to include on the test classpath. No recursive expansion will be done.",
-      Some("([directory or filename]*)")
+      Some("([directory or filename]*)"),
+      None
     )
     props += testDeps_
     def testDeps() = testDeps_()
@@ -366,7 +378,8 @@ object ProjectConfig {
       m,
       ":source-roots",
       "A list of directories in which to start searching for source files.",
-      Some("(directory*)")
+      Some("(directory*)"),
+      None
     )
     props += sourceRoots_
     def sourceRoots() = sourceRoots_()
@@ -377,7 +390,8 @@ object ProjectConfig {
       m,
       ":target",
       "The root of the class output directory.",
-      Some("filename")
+      Some("filename"),
+      None
     )
     props += target_
     def target() = target_()
@@ -387,7 +401,8 @@ object ProjectConfig {
     val disableIndexOnStartup_ = new BooleanProp(
       m,
       ":disable-index-on-startup",
-      "Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality."
+      "Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality.",
+      None,None
     )
     props += disableIndexOnStartup_
     def disableIndexOnStartup() = disableIndexOnStartup_()
@@ -400,7 +415,8 @@ object ProjectConfig {
       \begin{mylisting}
       \begin{verbatim}:only-include-in-index ("my\\.project\\.packages\\.\*" "important\\.dependency\\..\*")\end{verbatim}
       \end{mylisting}
-      This option can be used in conjunction with 'exclude-from-index' - the result when both are given is that the exclusion expressions are applied to the names that pass the inclusion filter."""
+      This option can be used in conjunction with 'exclude-from-index' - the result when both are given is that the exclusion expressions are applied to the names that pass the inclusion filter.""",
+      None,None
     )
     props += onlyIncludeInIndex_
     def onlyIncludeInIndex() = onlyIncludeInIndex_()
@@ -414,7 +430,7 @@ object ProjectConfig {
       \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
       \end{mylisting}
       This option can be used in conjunction with 'only-include-in-index' - the result when both are given is that the exclusion expressions are applied to the classes that pass the inclusion filter.
-"""
+""",None,None
     )
     props += excludeFromIndex_
     def excludeFromIndex() = excludeFromIndex_()
@@ -426,7 +442,7 @@ object ProjectConfig {
       """Specify arguments that should be passed to ENSIME's internal compiler. For example, to enable two warnings in the compiler, you might use:
       \begin{mylisting}
       \begin{verbatim}:compiler-args ("-Ywarn-dead-code" "-Ywarn-shadowing")\end{verbatim}
-      \end{mylisting}"""
+      \end{mylisting}""",None,None
     )
     props += extraCompilerArgs_
     def extraCompilerArgs() = extraCompilerArgs_()
@@ -436,7 +452,8 @@ object ProjectConfig {
     val extraBuilderArgs_ = new StringListProp(
       m,
       ":builder-args",
-      """Specify arguments that should be passed to ENSIME's internal builder."""
+      """Specify arguments that should be passed to ENSIME's internal builder.""",
+      None,None
     )
     props += extraBuilderArgs_
     def extraBuilderArgs() = extraBuilderArgs_()
@@ -467,7 +484,8 @@ object ProjectConfig {
       {\bf :spaceInsideParentheses} & t or nil  \\ \hline
       {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
       \end{tabular}
-      """
+      """,
+      None,None
     )
     props += formatPrefs_
     def formatPrefs() = formatPrefs_()

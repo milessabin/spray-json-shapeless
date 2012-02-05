@@ -20,7 +20,7 @@ class MemberCompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	val mems = cc.askCompletionsAt(src.position(4,10))
+	val mems = cc.askCompletionsAt(src.position(4,10), 0)
 	mems.completions.exists(s => s.name == "toString") should be(true)
       }
     }
@@ -37,7 +37,7 @@ class MemberCompletionSpec extends Spec with ShouldMatchers{
 	    "}",
 	    "}"
 	  ))
-	val mems = cc.askCompletionsAt(src.position(4,8))
+	val mems = cc.askCompletionsAt(src.position(4,8), 0)
 	mems.completions.exists(s => s.name == "main") should be(true)
       }
     }

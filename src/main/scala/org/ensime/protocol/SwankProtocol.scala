@@ -44,7 +44,7 @@ object SwankProtocol extends SwankProtocol {}
 trait SwankProtocol extends Protocol {
 
   val ServerName: String = "ENSIME-ReferenceServer"
-  val ProtocolVersion: String = "0.7"
+  val ProtocolVersion: String = "0.7.3"
 
   import SwankProtocol._
   import ProtocolConst._
@@ -146,9 +146,12 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Version: 0.7.2
+   * Protocol Version: 0.7.3
    *
    * Protocol Change Log:
+   *   0.7.3
+   *     Add optional 'toInsert' key to CompletionInfo
+   *     Add optional a max results argument to swank:completions call
    *   0.7.2
    *     Get rid of scope and type completion in favor of unified
    *     swank:completions call.
@@ -327,6 +330,8 @@ trait SwankProtocol extends Protocol {
    *   :type-sig //String:The type signature of this symbol.
    *   :type-id //Int:A type id.
    *   :is-callable //Bool:Is this symbol a method or function?
+   *   :to-insert //String|Nil:The representation that should be 
+   *     written to the buffer.
    *   )
    */
 
@@ -1018,12 +1023,14 @@ trait SwankProtocol extends Protocol {
        * Arguments:
        *   String:Source filename, absolute or relative to the project.
        *   Int:Character offset within that file.
+       *   Int:Max number of completions to return. Value of zero denotes
+       *     no limit.
        * Return:
-       *   CompletionInfoList: The list of complections
+       *   CompletionInfoList: The list of completions
        * Example call:
        *   (:swank-rpc (swank:completions
        *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
-       *   22626) 42)
+       *   22626 0) 42)
        * Example return:
        *   (:return (:ok (:prefix "form" :completions
        *   ((:name "form" :type-sig "SExp" :type-id 10)
@@ -1032,8 +1039,9 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:completions" => {
         form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
-            rpcTarget.rpcCompletionsAtPoint(file, point, callId)
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: 
+	    IntAtom(maxResults) :: body) => {
+            rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, callId)
           }
           case _ => oops
         }
@@ -1679,7 +1687,8 @@ trait SwankProtocol extends Protocol {
       (":name", value.name),
       (":type-sig", value.tpeSig),
       (":type-id", value.tpeId),
-      (":is-callable", value.isCallable))
+      (":is-callable", value.isCallable),
+      (":to-insert", value.toInsert.map(strToSExp).getOrElse('nil)))
   }
 
   def toWF(value: CompletionInfoList): SExp = {

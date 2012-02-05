@@ -54,6 +54,7 @@ import org.objectweb.asm.Opcodes;
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
+case class TypeCompletionsReq(prefix: String, maxResults: Int)
 case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 
@@ -417,6 +418,10 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
           }
           case RemoveSymbolsReq(syms: Iterable[String]) => {
             syms.foreach { s => removeSuffixes(s) }
+          }
+          case TypeCompletionsReq(prefix: String, maxResults: Int) => {
+            val suggestions = getImportSuggestions(List(prefix), maxResults).flatten
+            sender ! suggestions
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {

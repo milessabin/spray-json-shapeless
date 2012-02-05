@@ -145,8 +145,8 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(ReloadAllReq(), callId)
   }
 
-  def rpcCompletionsAtPoint(f: String, point: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(CompletionsReq(new File(f), point), callId)
+  def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int, callId: Int) {
+    analyzer ! RPCRequestEvent(CompletionsReq(new File(f), point, maxResults), callId)
   }
 
   def rpcPackageMemberCompletion(path: String, prefix: String, callId: Int) {

@@ -67,7 +67,8 @@ case class CompletionInfo(
   val tpeSig: String,
   val tpeId: Int,
   val isCallable: Boolean,
-  val relevance: Int) {}
+  val relevance: Int,
+  val toInsert: Option[String]) {}
 
 case class CompletionInfoList(
   val prefix: String,
@@ -357,12 +358,13 @@ trait ModelBuilders { self: Global with Helpers =>
         typeShortNameWithArgs(tpe),
         cacheType(tpe.underlying),
         isArrowType(tpe.underlying),
-	relevance
+	relevance,
+	None
       )
     }
 
     def nullInfo() = {
-      new CompletionInfo("NA", "NA", -1, false, 0)
+      new CompletionInfo("NA", "NA", -1, false, 0, None)
     }
   }
 
