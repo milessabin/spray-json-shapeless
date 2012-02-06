@@ -69,7 +69,7 @@ trait CompletionControl {
     }
   }
 
-  def completionsAt(p: Position, maxResultsArg: Int): CompletionInfoList = {
+  def completionsAt(p: Position, maxResultsArg: Int, caseSens: Boolean): CompletionInfoList = {
     
     val maxResults = if(maxResultsArg == 0) Int.MaxValue else maxResultsArg
 
@@ -89,7 +89,6 @@ trait CompletionControl {
       x: Response[List[Member]],
       prefix: String,
       constructing: Boolean): List[CompletionInfo] = {
-      val caseSense = prefix != prefix.toLowerCase()
       val buff = new LinkedHashSet[CompletionInfo]()
       var members = List[Member]()
       do { 
@@ -102,7 +101,7 @@ trait CompletionControl {
       println("Found " + members.size + " members.")
 
       askOption[Unit]{
-	val filtered = filterMembersByPrefix(members, prefix, false, caseSense)
+	val filtered = filterMembersByPrefix(members, prefix, false, caseSens)
 	println("Filtered down to " + filtered.size + ".")
         for (m <- filtered) {
 	  m match{

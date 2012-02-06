@@ -151,6 +151,7 @@ trait SwankProtocol extends Protocol {
    * Protocol Change Log:
    *   0.7.4
    *     Add optional 'owner-type-id' key to SymbolInfo
+   *     Add optional 'case-sens' option to swank:completions call
    *   0.7.3
    *     Add optional 'to-insert' key to CompletionInfo
    *     Add optional a max results argument to swank:completions call
@@ -1028,6 +1029,8 @@ trait SwankProtocol extends Protocol {
        *   Int:Character offset within that file.
        *   Int:Max number of completions to return. Value of zero denotes
        *     no limit.
+       *   Bool:If non-nil, only return prefixes that match the case of the
+       *     prefix.
        * Return:
        *   CompletionInfoList: The list of completions
        * Example call:
@@ -1043,8 +1046,8 @@ trait SwankProtocol extends Protocol {
       case "swank:completions" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) :: 
-	    IntAtom(maxResults) :: body) => {
-            rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, callId)
+	    IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
+            rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, caseSens, callId)
           }
           case _ => oops
         }

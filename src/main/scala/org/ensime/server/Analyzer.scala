@@ -176,10 +176,10 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     handleRefactorCancel(req, callId)
                   }
 
-                  case CompletionsReq(file: File, point: Int, maxResults: Int) => {
+                  case CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean) => {
                     val p = pos(file, point)
                     reporter.disable()
-                    val info = scalaCompiler.askCompletionsAt(p, maxResults)
+                    val info = scalaCompiler.askCompletionsAt(p, maxResults, caseSens)
                     project ! RPCResultEvent(toWF(info), callId)
                   }
 
