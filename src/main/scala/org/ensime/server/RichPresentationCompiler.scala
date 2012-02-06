@@ -52,7 +52,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   catch {
     case fi: FailedInterrupt =>
     fi.getCause() match {
-      case e @ InvalidCompanions(c1, c2) => 
+      case e @ InvalidCompanions(c1, c2) =>
       richReporter.warning(c1.pos, e.getMessage)
       None
       case e: InterruptedException =>

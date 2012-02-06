@@ -44,7 +44,7 @@ object SwankProtocol extends SwankProtocol {}
 trait SwankProtocol extends Protocol {
 
   val ServerName: String = "ENSIME-ReferenceServer"
-  val ProtocolVersion: String = "0.7.3"
+  val ProtocolVersion: String = "0.7.4"
 
   import SwankProtocol._
   import ProtocolConst._
@@ -146,11 +146,13 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Version: 0.7.3
+   * Protocol Version: 0.7.4
    *
    * Protocol Change Log:
+   *   0.7.4
+   *     Add optional 'owner-type-id' key to SymbolInfo
    *   0.7.3
-   *     Add optional 'toInsert' key to CompletionInfo
+   *     Add optional 'to-insert' key to CompletionInfo
    *     Add optional a max results argument to swank:completions call
    *   0.7.2
    *     Get rid of scope and type completion in favor of unified
@@ -316,6 +318,7 @@ trait SwankProtocol extends Protocol {
    *   :type //TypeInfo:The type of this symbol.
    *   :decl-pos //Position:Source location of this symbol's declaration.
    *   :is-callable //Bool:Is this symbol a method or function?
+   *   :owner-type-id //Int: (optional) Type id of owner type.
    *   )
    */
 
@@ -1706,7 +1709,9 @@ trait SwankProtocol extends Protocol {
       (":name", value.name),
       (":type", toWF(value.tpe)),
       (":decl-pos", value.declPos),
-      (":is-callable", value.isCallable))
+      (":is-callable", value.isCallable),
+      (":owner-type-id", value.ownerTypeId.map(intToSExp).getOrElse('nil))
+    )
   }
 
   def toWF(value: FileRange): SExp = {

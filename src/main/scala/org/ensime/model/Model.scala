@@ -60,7 +60,8 @@ class SymbolInfo(
   val name: String,
   val declPos: Position,
   val tpe: TypeInfo,
-  val isCallable: Boolean) {}
+  val isCallable: Boolean,
+  val ownerTypeId: Option[Int]) {}
 
 case class CompletionInfo(
   val name: String,
@@ -334,15 +335,20 @@ trait ModelBuilders { self: Global with Helpers =>
       } else {
         sym.nameString
       }
+      val ownerTpe = if(sym.owner != NoSymbol && sym.owner.tpe != NoType) {
+	Some(sym.owner.tpe)
+     } else None
       new SymbolInfo(
         name,
         sym.pos,
         TypeInfo(sym.tpe),
-        isArrowType(sym.tpe))
+        isArrowType(sym.tpe),
+	ownerTpe.map(cacheType)
+      )
     }
 
     def nullInfo() = {
-      new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo, false)
+      new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo, false, None)
     }
 
   }
