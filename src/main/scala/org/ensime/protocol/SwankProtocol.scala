@@ -1455,7 +1455,7 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
-       *   swank:debug-break
+       *   swank:debug-set-break
        * Summary:
        *   Add a breakpoint
        * Arguments:
@@ -1464,14 +1464,37 @@ trait SwankProtocol extends Protocol {
        * Return:
        *   None
        * Example call:
-       *   (:swank-rpc (swank:debug-break "hello.scala" 12) 42)
+       *   (:swank-rpc (swank:debug-set-break "hello.scala" 12) 42)
        * Example return:
        *   (:return (:ok t) 42)
        */
-      case "swank:debug-break" => {
+      case "swank:debug-set-break" => {
         form match {
           case SExpList(head :: StringAtom(filename) :: IntAtom(line) :: body) => {
             rpcTarget.rpcDebugBreak(filename, line, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-list-breaks
+       * Summary:
+       *   Get a list of all breakpoints set so far.
+       * Arguments:
+       *   None
+       * Return:
+       *   List of (String,Int):A list of file,line-number pairs.
+       * Example call:
+       *   (:swank-rpc (swank:debug-list-breaks) 42)
+       * Example return:
+       *   (:return (("hello.scala" 1)("hello.scala"23)) 42)
+       */
+      case "swank:debug-list-breaks" => {
+        form match {
+          case SExpList(head :: body) => {
+            rpcTarget.rpcDebugListBreaks(callId)
           }
           case _ => oops
         }
