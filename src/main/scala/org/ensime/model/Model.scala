@@ -75,6 +75,9 @@ case class CompletionInfoList(
   val prefix: String,
   val completions: List[CompletionInfo]) {}
 
+case class BreakpointList(
+  val locations: List[(String,Int)]) {}
+
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
 class NamedTypeMemberInfoLight(override val name: String, val tpeSig: String, val tpeId: Int, val isCallable: Boolean) extends EntityInfo(name, List()) {}

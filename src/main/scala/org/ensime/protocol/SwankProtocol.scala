@@ -1477,9 +1477,11 @@ trait SwankProtocol extends Protocol {
         }
       }
 
+
+
       /**
        * Doc RPC:
-       *   swank:debug-list-breaks
+       *   swank:debug-list-breakpoints
        * Summary:
        *   Get a list of all breakpoints set so far.
        * Arguments:
@@ -1487,14 +1489,38 @@ trait SwankProtocol extends Protocol {
        * Return:
        *   List of (String,Int):A list of file,line-number pairs.
        * Example call:
-       *   (:swank-rpc (swank:debug-list-breaks) 42)
+       *   (:swank-rpc (swank:debug-list-breakpoints) 42)
        * Example return:
        *   (:return (("hello.scala" 1)("hello.scala"23)) 42)
        */
-      case "swank:debug-list-breaks" => {
+      case "swank:debug-list-breakpoints" => {
         form match {
           case SExpList(head :: body) => {
             rpcTarget.rpcDebugListBreaks(callId)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc RPC:
+       *   swank:debug-continue
+       * Summary:
+       *   Resume execution of the VM.
+       * Arguments:
+       *   None
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-continue) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-continue" => {
+        form match {
+          case SExpList(head :: body) => {
+            rpcTarget.rpcDebugContinue(callId)
           }
           case _ => oops
         }
@@ -1755,6 +1781,13 @@ trait SwankProtocol extends Protocol {
       case _ => SExp(key(":debug-event"))
     }
 
+  }
+
+
+  def toWF(bps: BreakpointList): SExp = {
+    SExp(bps.locations.map{ loc =>
+	SExp(loc._1, loc._2)
+      })
   }
 
   def toWF(config: ProjectConfig): SExp = {

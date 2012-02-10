@@ -189,6 +189,7 @@ trait ProtocolConversions {
   def toWF(evt: ClearAllNotesEvent): WireFormat
   def toWF(evt: DebugEvent): WireFormat
 
+  def toWF(config: BreakpointList): WireFormat
   def toWF(config: ProjectConfig): WireFormat
   def toWF(config: ReplConfig): WireFormat
   def toWF(value: Boolean): WireFormat
