@@ -28,7 +28,6 @@
 package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
-import org.ensime.debug.ProjectDebugInfo
 import org.ensime.model._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
@@ -75,14 +74,8 @@ trait RPCTarget { self: Project =>
     sendRPCReturn(toWF(config.replConfig), callId)
   }
 
-  def rpcDebugConfig(callId: Int) {
-    debugInfo = Some(new ProjectDebugInfo(config))
-    sendRPCReturn(toWF(config.debugConfig), callId)
-  }
-
   def rpcBuilderInit(callId: Int) {
-    val b = getOrStartBuilder
-    b ! RPCRequestEvent(RebuildAllReq(), callId)
+    getOrStartBuilder ! RPCRequestEvent(RebuildAllReq(), callId)
   }
 
   def rpcBuilderAddFiles(filenames: Iterable[String], callId: Int) {
@@ -103,32 +96,31 @@ trait RPCTarget { self: Project =>
     b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
   }
 
-  def rpcDebugUnitInfo(sourceName: String, line: Int, packPrefix: String, callId: Int) {
-    val info = debugInfo.getOrElse(new ProjectDebugInfo(config))
-    debugInfo = Some(info)
-    val unit = info.findUnit(sourceName, line, packPrefix)
-    unit match {
-      case Some(unit) => {
-        sendRPCReturn(toWF(unit), callId)
-      }
-      case None => {
-        sendRPCReturn(toWF(false), callId)
-      }
-    }
-  }
-
-  def rpcDebugClassLocsToSourceLocs(pairs: Iterable[(String, Int)], callId: Int) {
-    val info = debugInfo.getOrElse(new ProjectDebugInfo(config))
-    debugInfo = Some(info)
-    sendRPCReturn(
-      toWF(info.debugClassLocsToSourceLocs(pairs)),
-      callId)
-  }
-
   def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes:List[Symbol], callId: Int) {
     val file: File = new File(f)
     analyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
   }
+
+  def rpcDebugStartVM(commandLine: String, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugStartVMReq(commandLine), callId)
+  }
+  def rpcDebugStopVM(callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugStopVMReq(), callId)
+  }
+  def rpcDebugBreak(file: String, line: Int, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugBreakReq(file, line), callId)
+  }
+  def rpcDebugNext(threadId: Long, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugNextReq(threadId), callId)
+  }
+  def rpcDebugStep(threadId: Long, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugStepReq(threadId), callId)
+  }
+  def rpcDebugStepOut(threadId: Long, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugStepOutReq(threadId), callId)
+  }
+
+
 
   def rpcTypecheckFile(f: String, callId: Int) {
     val file: File = new File(f)

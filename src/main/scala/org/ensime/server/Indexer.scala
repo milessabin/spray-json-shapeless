@@ -393,7 +393,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
   import protocol._
 
   override def onIndexingComplete(){
-    project ! IndexerReadyEvent()
+    project ! AsyncEvent(toWF(IndexerReadyEvent()))
   }
 
   def act() {

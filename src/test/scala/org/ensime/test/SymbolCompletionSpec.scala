@@ -3,7 +3,6 @@ import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.test.util.Helpers._
 
-
 class SymbolCompletionSpec extends Spec with ShouldMatchers{
 
   describe("Symbol Completion") {

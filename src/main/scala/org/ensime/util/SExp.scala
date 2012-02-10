@@ -195,6 +195,10 @@ object SExp extends RegexParsers {
     IntAtom(value)
   }
 
+  implicit def longToSExp(value: Long): SExp = {
+    IntAtom(value.toInt)
+  }
+
   implicit def boolToSExp(value: Boolean): SExp = {
     if (value) {
       TruthAtom()

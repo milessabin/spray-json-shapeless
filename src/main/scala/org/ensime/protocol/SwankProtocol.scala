@@ -28,8 +28,7 @@
 package org.ensime.protocol
 
 import java.io._
-import org.ensime.config.{ ProjectConfig, DebugConfig, ReplConfig }
-import org.ensime.debug.{ DebugUnit, DebugSourceLinePairs }
+import org.ensime.config.{ ProjectConfig, ReplConfig }
 import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
@@ -43,8 +42,11 @@ object SwankProtocol extends SwankProtocol {}
 
 trait SwankProtocol extends Protocol {
 
-  val ServerName: String = "ENSIME-ReferenceServer"
-  val ProtocolVersion: String = "0.7.4"
+  class ConnectionInfo {
+    val pid = None
+    val serverName: String = "ENSIME-ReferenceServer"
+    val protocolVersion: String = "0.7.4"
+  }
 
   import SwankProtocol._
   import ProtocolConst._
@@ -96,13 +98,6 @@ trait SwankProtocol extends Protocol {
     } else {
       throw new IllegalStateException("Empty message read from socket!")
     }
-  }
-
-  def sendBackgroundMessage(code: Int, detail: Option[String]) {
-    sendMessage(SExp(
-      key(":background-message"),
-      code,
-      detail.map(strToSExp).getOrElse(NilAtom())))
   }
 
   def handleIncomingMessage(msg: Any) {
@@ -334,7 +329,7 @@ trait SwankProtocol extends Protocol {
    *   :type-sig //String:The type signature of this symbol.
    *   :type-id //Int:A type id.
    *   :is-callable //Bool:Is this symbol a method or function?
-   *   :to-insert //String|Nil:The representation that should be 
+   *   :to-insert //String|Nil:The representation that should be
    *     written to the buffer.
    *   )
    */
@@ -561,7 +556,7 @@ trait SwankProtocol extends Protocol {
        *     (
        *     :name  //String:An identifying name for this server implementation.
        *     )
-       *     :version //String:The version of the protocol this server supports.
+       *   :version //String:The version of the protocol this server supports.
        *   )
        * Example call:
        *   (:swank-rpc (swank:connection-info) 42)
@@ -570,7 +565,7 @@ trait SwankProtocol extends Protocol {
        *   :version "0.7")) 42)
        */
       case "swank:connection-info" => {
-        sendConnectionInfo(callId)
+        sendRPCReturn(toWF(new ConnectionInfo()), callId)
       }
 
       /**
@@ -779,95 +774,6 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
-       *   swank:debug-config
-       * Summary:
-       *   Retrieve information necessary for starting a debugger. Also triggers
-       *   the creation of internal debug datastructures (mappings between Scala
-       *   source locations and mangled Java names)
-       * Arguments:
-       *   None
-       * Return:
-       *   (
-       *   :classpath //String:Classpath string formatted for passing to JDB.
-       *   :sourcepath //String:Sourcepath string formatted for passing to JDB.
-       *   )
-       * Example call:
-       *   (:swank-rpc (swank:debug-config) 42)
-       * Example return:
-       *   (:return (:ok (:classpath "lib1.jar:lib2.jar:lib3.jar" :sourcepath
-       *   "/ensime/src/main/scala:/other/misc/src") 42)
-       */
-      case "swank:debug-config" => {
-        rpcTarget.rpcDebugConfig(callId)
-      }
-
-      /**
-       * Doc RPC:
-       *   swank:debug-unit-info
-       * Summary:
-       *   Request the mangled Java name of the compilation unit that
-       *   results from the Scala code at the given source location.
-       * Arguments:
-       *   String:The filename of the Scala source location.
-       *   Int:A zero-indexed character offset into the file.
-       * Return:
-       *   (
-       *   :full-name //String:The qualified name of the unit.
-       *   :package //String:The package of the unit.
-       *   :start-line //Int:Source line stored in debug info of .class file.
-       *   :end-line //Int:Source line stored in debug info of .class file.
-       *   )
-       * Example call:
-       *   (:swank-rpc (swank:debug-unit-info "Server.scala" 47 ) 42)
-       * Example return:
-       *   (:return (:ok (:full-name "org.ensime.server.Server$" :package ""
-       *    :start-line 37 :end-line 103)) 42)
-       */
-      case "swank:debug-unit-info" => {
-        form match {
-          case SExpList(head :: StringAtom(sourceName) ::
-            IntAtom(line) :: StringAtom(packPrefix) :: body) => {
-            rpcTarget.rpcDebugUnitInfo(sourceName, line, packPrefix, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      /**
-       * Doc RPC:
-       *   swank:debug-class-locs-to-source-locs
-       * Summary:
-       *   Map from a Java location that the debugger refers to, to
-       *   a Scala source location.
-       * Arguments:
-       *   List of (String Int):The String is a filename and Int is a line in
-       *     that file.
-       * Return:
-       *   List of (String Int):The String is a filename and Int is a line in
-       *     that file.
-       * Example call:
-       *   (:swank-rpc (swank:debug-class-locs-to-source-locs
-       *   (("org.ensime.server.Server$" 49))) 42)
-       * Example return:
-       *   (:return (:ok (("Server.scala" 49))) 42)
-       */
-      case "swank:debug-class-locs-to-source-locs" => {
-        form match {
-          case SExpList(head :: SExpList(pairs) :: body) => {
-            val nameLinePairs = pairs.flatMap {
-              case SExpList((classname: StringAtom) :: (line: IntAtom) :: body) => {
-                Some(classname.toString, line.value)
-              }
-              case _ => Some("", -1)
-            }
-            rpcTarget.rpcDebugClassLocsToSourceLocs(nameLinePairs, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      /**
-       * Doc RPC:
        *   swank:remove-file
        * Summary:
        *   Remove a file from consideration by the ENSIME analyzer.
@@ -1045,8 +951,8 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:completions" => {
         form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: 
-	    IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
+            IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
             rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, caseSens, callId)
           }
           case _ => oops
@@ -1502,6 +1408,150 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:debug-start
+       * Summary:
+       *   Start a new debug session.
+       * Arguments:
+       *   String:The commandline to pass to the debugger. Of the form:
+       *     "package.ClassName arg1 arg2....."
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-start "org.hello.HelloWorld arg") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-start" => {
+        form match {
+          case SExpList(head :: StringAtom(commandLine) :: body) => {
+            rpcTarget.rpcDebugStartVM(commandLine, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-stop
+       * Summary:
+       *   Stop the debug session
+       * Arguments:
+       *   None
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-stop) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-stop" => {
+        form match {
+          case SExpList(head :: body) => {
+            rpcTarget.rpcDebugStopVM(callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-break
+       * Summary:
+       *   Add a breakpoint
+       * Arguments:
+       *   String:The file in which to set the breakpoint.
+       *   Int:The breakpoint line.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-break "hello.scala" 12) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-break" => {
+        form match {
+          case SExpList(head :: StringAtom(filename) :: IntAtom(line) :: body) => {
+            rpcTarget.rpcDebugBreak(filename, line, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-step
+       * Summary:
+       *   Step the given thread to the next line. Step into
+       *     function calls.
+       * Arguments:
+       *   String:The thread-id to step.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-step "982398123") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-step" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: body) => {
+            rpcTarget.rpcDebugStep(threadId.toLong, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-next
+       * Summary:
+       *   Step the given thread to the next line. Do not
+       *     step into function calls.
+       * Arguments:
+       *   String:The thread-id to step.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-next "982398123") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-next" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: body) => {
+            rpcTarget.rpcDebugNext(threadId.toLong, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-step-out
+       * Summary:
+       *   Step the given thread to the next line. Step out of
+       *     the current function to the calling frame if necessary.
+       * Arguments:
+       *   String:The thread-id to step.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-step-out "982398123") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-step-out" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: body) => {
+            rpcTarget.rpcDebugStepOut(threadId.toLong, callId:Int)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc RPC:
        *   swank:shutdown-server
        * Summary:
        *   Politely ask the server to shutdown.
@@ -1551,6 +1601,13 @@ trait SwankProtocol extends Protocol {
     }
   }
 
+  def sendEvent(value: WireFormat) {
+    value match {
+      case sexp: SExp => { sendMessage(sexp) }
+      case _ => throw new IllegalStateException("Not a SExp: " + value)
+    }
+  }
+
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     sendMessage(SExp(
       key(":return"),
@@ -1566,35 +1623,6 @@ trait SwankProtocol extends Protocol {
         key(":reader-error"),
         code,
         detail.map(strToSExp).getOrElse(NilAtom())))
-  }
-
-  /*
-	  * A sexp describing the server configuration, per the Swank standard.
-	  */
-  def sendConnectionInfo(callId: Int) = {
-    val info = SExp(
-      key(":pid"), 'nil,
-      key(":implementation"),
-      SExp(
-        key(":name"), ServerName),
-      key(":version"), ProtocolVersion)
-    sendRPCReturn(info, callId)
-  }
-
-  def sendCompilerReady() = sendMessage(SExp(key(":compiler-ready")))
-
-  def sendFullTypeCheckComplete() = sendMessage(SExp(key(":full-typecheck-finished")))
-
-  def sendIndexerReady() = sendMessage(SExp(key(":indexer-ready")))
-
-  def sendNotes(lang: scala.Symbol, notes: NoteList) {
-    if (lang == 'scala) sendMessage(SExp(key(":scala-notes"), toWF(notes)))
-    else if (lang == 'java) sendMessage(SExp(key(":java-notes"), toWF(notes)))
-  }
-
-  def sendClearAllNotes(lang: scala.Symbol) {
-    if (lang == 'scala) sendMessage(SExp(key(":clear-all-scala-notes")))
-    else if (lang == 'java) sendMessage(SExp(key(":clear-all-java-notes")))
   }
 
   object SExpConversion {
@@ -1623,6 +1651,89 @@ trait SwankProtocol extends Protocol {
 
   import SExpConversion._
 
+  def toWF(info: ConnectionInfo): SExp = {
+    SExp(
+      key(":pid"), 'nil,
+      key(":implementation"),
+      SExp(key(":name"), info.serverName),
+      key(":version"), info.protocolVersion)
+  }
+
+  def toWF(evt: SendBackgroundMessageEvent): SExp = {
+    SExp(key(":background-message"), evt.code,
+      evt.detail.map(strToSExp).getOrElse(NilAtom()))
+  }
+
+  def toWF(evt: AnalyzerReadyEvent): SExp = {
+    SExp(key(":compiler-ready"))
+  }
+
+  def toWF(evt: FullTypeCheckCompleteEvent): SExp = {
+    SExp(key(":full-typecheck-finished"))
+  }
+
+  def toWF(evt: IndexerReadyEvent): SExp = {
+    SExp(key(":indexer-ready"))
+  }
+
+  def toWF(evt: NewNotesEvent): SExp = {
+    if (evt.lang == 'scala) SExp(key(":scala-notes"), toWF(evt.notelist))
+    else SExp(key(":java-notes"), toWF(evt.notelist))
+  }
+
+  def toWF(evt: ClearAllNotesEvent): SExp = {
+    if (evt.lang == 'scala) SExp(key(":clear-all-scala-notes"))
+    else SExp(key(":clear-all-java-notes"))
+  }
+
+  def toWF(evt: DebugEvent): SExp = {
+    evt match {
+      case DebugStepEvent(threadId: Long, (filename, line)) => {
+        SExp(key(":debug-event"), 
+	  SExp(key(":type"), 'step,
+	  key(":thread-id"), threadId.toString, 
+	  key(":file"), filename, 
+	  key(":line"), line))
+      }
+      case DebugBreakEvent(threadId: Long, (filename, line)) => {
+        SExp(key(":debug-event"), 
+	  SExp(key(":type"), 'break,
+	  key(":thread-id"), threadId.toString, 
+	  key(":file"), filename, 
+	  key(":line"), line))
+      }
+      case DebugVMDeathEvent() => {
+        SExp(key(":debug-event"), 
+	  SExp(key(":type"), 'death))
+      }
+      case DebugVMStartEvent() => {
+        SExp(key(":debug-event"), 
+	  SExp(key(":type"), 'start))
+      }
+      case DebugVMDisconnectEvent() => {
+        SExp(key(":debug-event"), 
+	  SExp(key(":type"), 'disconnect))
+      }
+      case DebugExceptionEvent(e: String) => {
+        SExp(key(":debug-event"), 
+	  SExp(key(":type"), 'exception,
+	  key(":exception"), e))
+      }
+      case DebugThreadStartEvent(threadId: Long) => {
+        SExp(key(":debug-event"), 	  
+	  SExp(key(":type"), 'threadStart,
+	  key(":thread-id"), threadId.toString))
+      }
+      case DebugThreadDeathEvent(threadId: Long) => {
+        SExp(key(":debug-event"), 	  
+	  SExp(key(":type"), 'threadDeath,
+	    key(":thread-id"), threadId.toString))
+      }
+      case _ => SExp(key(":debug-event"))
+    }
+
+  }
+
   def toWF(config: ProjectConfig): SExp = {
     SExp(
       key(":project-name"), config.name.map(StringAtom).getOrElse('nil),
@@ -1631,20 +1742,6 @@ trait SwankProtocol extends Protocol {
 
   def toWF(config: ReplConfig): SExp = {
     SExp.propList((":classpath", strToSExp(config.classpath)))
-  }
-
-  def toWF(config: DebugConfig): SExp = {
-    SExp.propList(
-      (":classpath", strToSExp(config.classpath)),
-      (":sourcepath", strToSExp(config.sourcepath)))
-  }
-
-  def toWF(unit: DebugUnit): SExp = {
-    SExp.propList(
-      (":full-name", strToSExp(unit.classQualName)),
-      (":package", strToSExp(unit.packageName)),
-      (":start-line", intToSExp(unit.startLine)),
-      (":end-line", intToSExp(unit.endLine)))
   }
 
   def toWF(value: Boolean): SExp = {
@@ -1658,10 +1755,6 @@ trait SwankProtocol extends Protocol {
 
   def toWF(value: String): SExp = {
     StringAtom(value)
-  }
-
-  def toWF(value: DebugSourceLinePairs): SExp = {
-    SExpList(value.pairs.map { p => SExp(p._1, p._2) })
   }
 
   def toWF(note: Note): SExp = {
@@ -1713,8 +1806,7 @@ trait SwankProtocol extends Protocol {
       (":type", toWF(value.tpe)),
       (":decl-pos", value.declPos),
       (":is-callable", value.isCallable),
-      (":owner-type-id", value.ownerTypeId.map(intToSExp).getOrElse('nil))
-    )
+      (":owner-type-id", value.ownerTypeId.map(intToSExp).getOrElse('nil)))
   }
 
   def toWF(value: FileRange): SExp = {

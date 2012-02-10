@@ -73,7 +73,8 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
   settings.processArguments(config.builderArgs, false)
   private val reporter = new PresentationReporter(new ReportHandler{
       override def messageUser(str:String){
-	project ! SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))
+	project ! AsyncEvent(toWF(
+	  SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))))
       }
     })
   private val bm: BuildManager = new IncrementalBuildManager(settings, reporter)
@@ -93,13 +94,13 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
               req match {
 
                 case RebuildAllReq() => {
-                  project ! SendBackgroundMessageEvent(
-		    MsgBuildingEntireProject, Some("Building entire project. Please wait..."))
+                  project ! AsyncEvent(toWF(SendBackgroundMessageEvent(
+		    MsgBuildingEntireProject, Some("Building entire project. Please wait..."))))
                   val files = config.sourceFilenames.map(s => AbstractFile.getFile(s))
                   reporter.reset
                   bm.addSourceFiles(files)
-                  project ! SendBackgroundMessageEvent(
-		    MsgBuildComplete, Some("Build complete."))
+                  project ! AsyncEvent(toWF(SendBackgroundMessageEvent(
+		    MsgBuildComplete, Some("Build complete."))))
                   val result = toWF(reporter.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
                 }
