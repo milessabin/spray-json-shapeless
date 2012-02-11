@@ -89,6 +89,19 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   private var undoCounter = 0
   private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]
 
+  def sendRPCError(code: Int, detail: Option[String], callId:Int){
+    this ! RPCErrorEvent(code,detail,callId)
+  }
+  def sendRPCError(detail: String, callId:Int){
+    sendRPCError(ProtocolConst.ErrExceptionInRPC,Some(detail),callId)
+  }
+
+  def bgMessage(msg: String){
+    this ! AsyncEvent(protocol.toWF(SendBackgroundMessageEvent(
+      ProtocolConst.MsgMisc, 
+      Some(msg))))
+  }
+
   def act() {
     println("Project waiting for init...")
     loop {

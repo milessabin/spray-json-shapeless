@@ -45,6 +45,7 @@ object ProtocolConst {
 
   val MsgBuildingEntireProject = 103
   val MsgBuildComplete = 104
+  val MsgMisc = 105
 
   val ErrExceptionInDebugger = 200
   val ErrExceptionInRPC = 201

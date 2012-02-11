@@ -444,7 +444,7 @@ class Indexer(project: Project, protocol: ProtocolConversions, config: ProjectCo
                 System.err.println("Error handling RPC: " +
                   e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent(ErrExceptionInIndexer,
+                project.sendRPCError(ErrExceptionInIndexer,
                   Some("Error occurred in indexer. Check the server log."),
                   callId)
               }

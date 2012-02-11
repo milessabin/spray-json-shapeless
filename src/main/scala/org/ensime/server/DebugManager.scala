@@ -1,31 +1,33 @@
 /**
- *  Copyright (c) 2010, Aemon Cannon
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *      * Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *      * Redistributions in binary form must reproduce the above copyright
- *        notice, this list of conditions and the following disclaimer in the
- *        documentation and/or other materials provided with the distribution.
- *      * Neither the name of ENSIME nor the
- *        names of its contributors may be used to endorse or promote products
- *        derived from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
- *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+*  Copyright (c) 2010, Aemon Cannon
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions are met:
+*      * Redistributions of source code must retain the above copyright
+*        notice, this list of conditions and the following disclaimer.
+*      * Redistributions in binary form must reproduce the above copyright
+*        notice, this list of conditions and the following disclaimer in the
+*        documentation and/or other materials provided with the distribution.
+*      * Neither the name of ENSIME nor the
+*        names of its contributors may be used to endorse or promote products
+*        derived from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 package org.ensime.server
+import com.sun.jdi.request.BreakpointRequest
+import com.sun.jdi.request.EventRequest
 import com.sun.jdi.request.StepRequest
 import java.io.File
 import java.io.InputStream
@@ -76,10 +78,38 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
   }
 
   def vmOptions(): List[String] = {
-    List("-cp", config.debugClasspath)
+    List("-classpath", config.debugClasspath)
   }
 
   private var maybeVM: Option[VM] = None
+
+  private def handleWithVM(action: (VM => Unit)) = {
+    (for (vm <- maybeVM) yield {
+      }).getOrElse {
+      System.err.println("No VM under debug!")
+    }
+  }
+  private def handleRPCWithVM(callId: Int)(action: (VM => Unit)) = {
+    (for (vm <- maybeVM) yield {
+	action(vm)
+      }).getOrElse {
+      project ! RPCResultEvent(toWF(false), callId)
+      System.err.println("No VM under debug!")
+    }
+  }
+  private def handleRPCWithVMAndThread(callId: Int, threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
+    (for (vm <- maybeVM) yield {
+	(for (thread <- vm.threadById(threadId)) yield {
+            action(vm, thread)
+	  }).getOrElse {
+          System.err.println("Couldn't find thread: " + threadId)
+          project ! RPCResultEvent(toWF(false), callId)
+	}
+      }).getOrElse {
+      System.err.println("No VM under debug!")
+      project ! RPCResultEvent(toWF(false), callId)
+    }
+  }
 
   def act() {
     loop {
@@ -110,23 +140,23 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
               case e: StepEvent => {
                 val loc = toScalaLoc(e.location())
                 project ! AsyncEvent(toWF(DebugBreakEvent(
-                  e.thread().uniqueID(), loc)))
+                      e.thread().uniqueID(), loc)))
               }
               case e: BreakpointEvent => {
                 val loc = toScalaLoc(e.location())
                 project ! AsyncEvent(toWF(DebugBreakEvent(
-                  e.thread().uniqueID(), loc)))
+                      e.thread().uniqueID(), loc)))
               }
               case e: ExceptionEvent => {
                 project ! AsyncEvent(toWF(DebugExceptionEvent(e.toString)))
               }
               case e: ThreadDeathEvent => {
                 project ! AsyncEvent(toWF(DebugThreadDeathEvent(
-                  e.thread().uniqueID())))
+                      e.thread().uniqueID())))
               }
               case e: ThreadStartEvent => {
                 project ! AsyncEvent(toWF(DebugThreadStartEvent(
-                  e.thread().uniqueID())))
+                      e.thread().uniqueID())))
               }
               case e: AccessWatchpointEvent => {}
               case e: ClassPrepareEvent => {
@@ -151,64 +181,58 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   val connector = Bootstrap.virtualMachineManager().defaultConnector
                   val arguments = connector.defaultArguments()
                   //arguments.get("home").setValue(jreHome);
-		  val opts = arguments.get("options").value
-		  val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
+                  val opts = arguments.get("options").value
+                  val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
                   arguments.get("options").setValue(allVMOpts)
                   arguments.get("main").setValue(commandLine)
-                  //arguments.get("suspend").setValue("true");
+                  arguments.get("suspend").setValue("true")
                   //arguments.get("quote").setValue("\"");
                   //arguments.get("vmexec").setValue("java");
-                  println("Debugger vm args: " + allVMOpts)
+                  println("Using Connector: " + connector.name +
+                    " : " + connector.description())
+                  println("Connector class: " + connector.getClass.getName())
+                  println("Debugger VM args: " + allVMOpts)
                   println("Debugger program args: " + commandLine)
                   val vm = connector.launch(arguments)
+
                   maybeVM = Some(new VM(vm))
                   project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugStopVMReq() => {
-                  for (vm <- maybeVM) {
+                  handleRPCWithVM(callId) { vm =>
                     vm.dispose()
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
-                  maybeVM = None
-                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugContinueReq() => {
-                  for (vm <- maybeVM) {
+                  handleRPCWithVM(callId) { vm =>
                     vm.resume()
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
-                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
-                case DebugBreakReq(file: String, line: Int) => {
-                  for (
-                    vm <- maybeVM;
-                    loc <- vm.location(file, line)
-                  ) {
-                    val request = vm.erm.createBreakpointRequest(loc)
-                    request.enable();
+                case DebugBreakReq(filepath: String, line: Int) => {
+                  val file = CanonFile(filepath)
+                  handleRPCWithVM(callId) { vm =>
+                    vm.setBreakpoint(file, line)
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
-                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugListBreaksReq() => {
                   import scala.collection.JavaConversions._
-                  maybeVM match {
-                    case Some(vm) => {
-                      val breaks = BreakpointList(vm.erm.breakpointRequests().map { b =>
-                        toScalaLoc(b.location())
-                      }.toList)
-                      project ! RPCResultEvent(toWF(breaks), callId)
-                    }
-                    case _ => project ! RPCResultEvent(toWF(false), callId)
+                  handleRPCWithVM(callId) { vm =>
+                    val breaks = BreakpointList(
+		      vm.activeBreakpoints.toList)
+                    project ! RPCResultEvent(toWF(breaks), callId)
                   }
                 }
 
                 case DebugNextReq(threadId: Long) => {
-                  for (
-                    vm <- maybeVM;
-                    thread <- vm.threadById(threadId)
-                  ) {
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
                     val request = vm.erm.createStepRequest(
                       thread,
                       StepRequest.STEP_LINE,
@@ -216,15 +240,13 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                     request.addCountFilter(1);
                     request.enable();
                     vm.vm.resume();
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
-                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugStepReq(threadId: Long) => {
-                  for (
-                    vm <- maybeVM;
-                    thread <- vm.threadById(threadId)
-                  ) {
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
                     val request = vm.erm.createStepRequest(
                       thread,
                       StepRequest.STEP_LINE,
@@ -232,15 +254,13 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                     request.addCountFilter(1);
                     request.enable();
                     vm.vm.resume();
+                    project ! RPCResultEvent(toWF(true), callId)
                   }
-                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugStepOutReq(threadId: Long) => {
-                  for (
-                    vm <- maybeVM;
-                    thread <- vm.threadById(threadId)
-                  ) {
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
                     val request = vm.erm.createStepRequest(
                       thread,
                       StepRequest.STEP_LINE,
@@ -249,33 +269,31 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                     request.enable();
                     vm.vm.resume();
                   }
-                  project ! RPCResultEvent(toWF(true), callId)
                 }
-
               }
             } catch {
               case e: Exception =>
-                {
-                  System.err.println("Error handling RPC:")
-                  e.printStackTrace()
-                  project ! RPCErrorEvent(ErrExceptionInDebugger,
-                    Some("Error occurred in Debug Manager. Check the server log."),
-                    callId)
-                }
+              {
+                System.err.println("Error handling RPC:")
+                e.printStackTrace()
+                project.sendRPCError(ErrExceptionInDebugger,
+                  Some("Error occurred in Debug Manager. Check the server log."),
+                  callId)
+              }
             }
           }
           case other =>
-            {
-              println("Debug Manager: WTF, what's " + other)
-            }
+          {
+            println("Debug Manager: WTF, what's " + other)
+          }
         }
 
       } catch {
         case e: Exception =>
-          {
-            System.err.println("Error at Debug Manager message loop:")
-            e.printStackTrace()
-          }
+        {
+          System.err.println("Error at Debug Manager message loop:")
+          e.printStackTrace()
+        }
       }
     }
   }
@@ -285,17 +303,59 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
   }
 
   private class VM(val vm: VirtualMachine) {
+    //    vm.setDebugTraceMode(VirtualMachine.TRACE_ALL)
     val evtQ = new VMEventManager(vm.eventQueue())
     evtQ.start()
     val erm = vm.eventRequestManager();
+    {
+      val req = erm.createClassPrepareRequest()
+      req.setSuspendPolicy(EventRequest.SUSPEND_NONE)
+      req.enable()
+    }
+    {
+      val req = erm.createThreadStartRequest()
+      req.setSuspendPolicy(EventRequest.SUSPEND_NONE)
+      req.enable()
+    }
+    {
+      val req = erm.createThreadDeathRequest()
+      req.setSuspendPolicy(EventRequest.SUSPEND_NONE)
+      req.enable()
+    }
+    {
+      val req = erm.createExceptionRequest(null, false, true)
+      req.setSuspendPolicy(EventRequest.SUSPEND_ALL)
+      req.enable()
+    }
     val fileToUnits = HashMap[String, HashSet[ReferenceType]]()
+    val pendingBreakpoints = HashMap[String, HashSet[(String, Int)]]()
+    val activeBreakpoints = HashSet[(String, Int)]()
     val process = vm.process();
     val outputMon = new MonitorOutput(process.getErrorStream());
+    outputMon.start
     val inputMon = new MonitorOutput(process.getInputStream());
+    inputMon.start
 
     def resume() {
       println("VM: resume")
       vm.resume()
+    }
+
+    def setBreakpoint(file: CanonFile, line: Int): Boolean = {
+      (for (loc <- location(file, line)) yield {
+          println("Setting breakpoint at: " + loc)
+          val request = erm.createBreakpointRequest(loc)
+          request.setSuspendPolicy(EventRequest.SUSPEND_ALL)
+          request.enable();
+          removePendingBreakpoint(file, line)
+	  activeBreakpoints += ((file.getAbsolutePath, line))
+          project.bgMessage("Set breakpoint at: " + file + " : " + line)
+          true
+	}).getOrElse {
+        project.bgMessage("Location not loaded. Set pending breakpoint.")
+        addPendingBreakpoint(file, line)
+        false
+      }
     }
 
     def typeAdded(t: ReferenceType) {
@@ -304,11 +364,16 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         val types = fileToUnits.get(key).getOrElse(HashSet[ReferenceType]())
         types += t
         fileToUnits(key) = types
+        val pending = HashMap() ++ pendingBreakpoints
+        for (breaks <- pending.get(key)) {
+          for (bp <- breaks) {
+            setBreakpoint(CanonFile(bp._1), bp._2)
+          }
+        }
       } catch {
         case e: AbsentInformationException =>
-          println("No location information available for: " + t.name())
+        println("No location information available for: " + t.name())
       }
-      println("Loaded location info for:" + t.name())
     }
 
     def initLocationMap() = {
@@ -318,16 +383,40 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       }
     }
 
-    def location(file: String, line: Int): Option[Location] = {
+    def location(file: CanonFile, line: Int): Option[Location] = {
       import scala.collection.JavaConversions._
       val buf = ListBuffer[Location]()
-      for (types <- fileToUnits.get(file)) {
-        println("Found types: " + types)
+      val key = file.getName
+      for (types <- fileToUnits.get(key)) {
         for (t <- types) {
-          buf ++= t.locationsOfLine(line)
+	    for(m <- t.methods()){
+	      try{buf ++= m.locationsOfLine(line)} catch {case _ =>
+		print("no debug info for: " + m)
+	      }
+	    }
+	    try{buf ++= t.locationsOfLine(line)} catch {case _ =>
+	      print("no debug info for: " + t)
+	    }
         }
       }
+      println("Found locations: " + buf)
       buf.headOption
+    }
+
+    def addPendingBreakpoint(file: CanonFile, line: Int) {
+      val key = file.getName
+      val breaks = pendingBreakpoints.getOrElse(key, HashSet())
+      breaks.add((file.getAbsolutePath, line))
+      pendingBreakpoints(key) = breaks
+      println("Pending for key: " + key + " : " + breaks)
+    }
+    def removePendingBreakpoint(file: CanonFile, line: Int) {
+      val key = file.getName
+      if (pendingBreakpoints.contains(key)) {
+        val breaks = pendingBreakpoints.getOrElse(key, HashSet())
+        breaks.remove((file.getAbsolutePath, line))
+        pendingBreakpoints(key) = breaks
+      }
     }
 
     def threadById(id: Long): Option[ThreadReference] = {
@@ -352,36 +441,42 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
           while (it.hasNext()) {
             val evt = it.nextEvent();
             println("VM Event:" + evt.toString)
-            actor {
-              DebugManager.this ! evt
+            evt match {
+              case e: VMDisconnectEvent => {
+              finished = true
+            }
+            case _ => {
+
             }
           }
-        } while (!finished);
-      } catch {
-        case t: Throwable => t.printStackTrace();
-      }
+          actor { DebugManager.this ! evt }
+        }
+      } while (!finished);
+    } catch {
+      case t: Throwable => t.printStackTrace();
     }
   }
+}
 
-  private class MonitorOutput(val inStream: InputStream) extends Thread {
-    val in = new InputStreamReader(inStream)
-    val out = new OutputStreamWriter(System.out);
-    override def run() {
-      try {
-        var i = 0;
-        val buf = new Array[Char](256);
+private class MonitorOutput(val inStream: InputStream) extends Thread {
+  val in = new InputStreamReader(inStream)
+  val out = new OutputStreamWriter(System.out);
+  override def run() {
+    try {
+      var i = 0;
+      val buf = new Array[Char](256);
+      i = in.read(buf, 0, buf.length)
+      while (i >= 0) {
+        out.write(buf, 0, i);
         i = in.read(buf, 0, buf.length)
-        while (i >= 0) {
-          out.write(buf, 0, i);
-          i = in.read(buf, 0, buf.length)
-        }
-      } catch {
-        case t: Throwable => {
-          t.printStackTrace();
-        }
       }
+    } catch {
+      case t: Throwable => {
+      t.printStackTrace();
     }
   }
+}
+}
 
 }
 

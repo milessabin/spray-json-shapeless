@@ -90,8 +90,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   import scalaCompiler._
 
   def act() {
-    project ! AsyncEvent(toWF(SendBackgroundMessageEvent(
-      MsgInitializingAnalyzer, Some("Initializing Analyzer. Please wait..."))))
+    project.bgMessage("Initializing Analyzer. Please wait...")
 
     println("Initing Indexer...")
     indexer.start
@@ -130,7 +129,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
           case rpcReq @ RPCRequestEvent(req: Any, callId: Int) => {
             try {
               if (awaitingInitialCompile) {
-                project ! RPCErrorEvent(ErrAnalyzerNotReady,
+                project.sendRPCError(ErrAnalyzerNotReady,
                   Some("Analyzer is not ready! Please wait."), callId)
               } else {
 
@@ -154,7 +153,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case ReloadFileReq(file: File) => {
                     if (!file.exists()) {
-                      project ! RPCErrorEvent(ErrFileDoesNotExist,
+                      project.sendRPCError(ErrFileDoesNotExist,
                         Some(file.getPath()), callId)
                     } else {
                       if (file.getAbsolutePath().endsWith(".java")) {
@@ -300,7 +299,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               case e => {
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent(ErrExceptionInAnalyzer,
+                project.sendRPCError(ErrExceptionInAnalyzer,
                   Some("Error occurred in Analyzer. Check the server log."), callId)
               }
             }
