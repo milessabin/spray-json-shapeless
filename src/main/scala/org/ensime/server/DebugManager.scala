@@ -225,7 +225,8 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   import scala.collection.JavaConversions._
                   handleRPCWithVM(callId) { vm =>
                     val breaks = BreakpointList(
-		      vm.activeBreakpoints.toList)
+		      vm.activeBreakpoints.toList ++
+		      vm.pendingBreakpoints)
                     project ! RPCResultEvent(toWF(breaks), callId)
                   }
                 }
@@ -327,14 +328,18 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       req.setSuspendPolicy(EventRequest.SUSPEND_ALL)
       req.enable()
     }
-    val fileToUnits = HashMap[String, HashSet[ReferenceType]]()
-    val pendingBreakpoints = HashMap[String, HashSet[(String, Int)]]()
+    private val fileToUnits = HashMap[String, HashSet[ReferenceType]]()
+    private val pendingBreaksBySourceName = HashMap[String, HashSet[(String, Int)]]()
     val activeBreakpoints = HashSet[(String, Int)]()
-    val process = vm.process();
-    val outputMon = new MonitorOutput(process.getErrorStream());
+    private val process = vm.process();
+    private val outputMon = new MonitorOutput(process.getErrorStream());
     outputMon.start
-    val inputMon = new MonitorOutput(process.getInputStream());
+    private val inputMon = new MonitorOutput(process.getInputStream());
     inputMon.start
+
+    def pendingBreakpoints:List[(String, Int)] = {
+      pendingBreaksBySourceName.values.flatten.toList
+    }
 
     def resume() {
       println("VM: resume")
@@ -364,7 +369,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         val types = fileToUnits.get(key).getOrElse(HashSet[ReferenceType]())
         types += t
         fileToUnits(key) = types
-        val pending = HashMap() ++ pendingBreakpoints
+        val pending = HashMap() ++ pendingBreaksBySourceName
         for (breaks <- pending.get(key)) {
           for (bp <- breaks) {
             setBreakpoint(CanonFile(bp._1), bp._2)
@@ -405,17 +410,17 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
 
     def addPendingBreakpoint(file: CanonFile, line: Int) {
       val key = file.getName
-      val breaks = pendingBreakpoints.getOrElse(key, HashSet())
+      val breaks = pendingBreaksBySourceName.getOrElse(key, HashSet())
       breaks.add((file.getAbsolutePath, line))
-      pendingBreakpoints(key) = breaks
+      pendingBreaksBySourceName(key) = breaks
       println("Pending for key: " + key + " : " + breaks)
     }
     def removePendingBreakpoint(file: CanonFile, line: Int) {
       val key = file.getName
-      if (pendingBreakpoints.contains(key)) {
-        val breaks = pendingBreakpoints.getOrElse(key, HashSet())
+      if (pendingBreaksBySourceName.contains(key)) {
+        val breaks = pendingBreaksBySourceName.getOrElse(key, HashSet())
         breaks.remove((file.getAbsolutePath, line))
-        pendingBreakpoints(key) = breaks
+        pendingBreaksBySourceName(key) = breaks
       }
     }
 
