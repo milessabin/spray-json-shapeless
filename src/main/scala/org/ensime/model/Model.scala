@@ -30,8 +30,11 @@ import scala.collection.mutable.{ HashMap, ArrayBuffer }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.symtab.{ Symbols, Types }
 import scala.tools.nsc.util.{ NoPosition, Position }
+import org.ensime.util.CanonFile
 
 abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
+
+case class SourcePosition(file: CanonFile, line: Int)
 
 class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
@@ -75,8 +78,10 @@ case class CompletionInfoList(
   val prefix: String,
   val completions: List[CompletionInfo]) {}
 
+
+case class Breakpoint(pos: SourcePosition)
 case class BreakpointList(
-  val locations: List[(String,Int)]) {}
+  val locations: List[Breakpoint]) {}
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 

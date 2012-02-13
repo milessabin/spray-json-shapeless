@@ -1453,6 +1453,8 @@ trait SwankProtocol extends Protocol {
         }
       }
 
+
+
       /**
        * Doc RPC:
        *   swank:debug-set-break
@@ -1470,7 +1472,8 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:debug-set-break" => {
         form match {
-          case SExpList(head :: StringAtom(filename) :: IntAtom(line) :: body) => {
+          case SExpList(head :: StringAtom(filename) :: 
+	    IntAtom(line) :: body) => {
             rpcTarget.rpcDebugBreak(filename, line, callId)
           }
           case _ => oops
@@ -1481,17 +1484,68 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:debug-clear-break
+       * Summary:
+       *   Clear a breakpoint
+       * Arguments:
+       *   String:The file from which to clear the breakpoint.
+       *   Int:The breakpoint line.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-clear "hello.scala" 12) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-clear-break" => {
+        form match {
+          case SExpList(head :: StringAtom(filename) :: 
+	    IntAtom(line) :: body) => {
+            rpcTarget.rpcDebugClearBreak(filename, line, callId)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc RPC:
+       *   swank:debug-clear-all-breaks
+       * Summary:
+       *   Clear all breakpoints
+       * Arguments:
+       *   None
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-clear-all-breaks) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-clear-all-breaks" => {
+        form match {
+          case SExpList(head :: body) => {
+            rpcTarget.rpcDebugClearAllBreaks(callId)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc RPC:
        *   swank:debug-list-breakpoints
        * Summary:
        *   Get a list of all breakpoints set so far.
        * Arguments:
        *   None
        * Return:
-       *   List of (String,Int):A list of file,line-number pairs.
+       *   List of Position:A list of positions
        * Example call:
        *   (:swank-rpc (swank:debug-list-breakpoints) 42)
        * Example return:
-       *   (:return (("hello.scala" 1)("hello.scala"23)) 42)
+       *   (:return ((:file "hello.scala" :line 1)
+       *   (:file "hello.scala" :line 23)) 42)
        */
       case "swank:debug-list-breakpoints" => {
         form match {
@@ -1737,19 +1791,19 @@ trait SwankProtocol extends Protocol {
 
   def toWF(evt: DebugEvent): SExp = {
     evt match {
-      case DebugStepEvent(threadId: Long, (filename, line)) => {
+      case DebugStepEvent(threadId: Long, pos: SourcePosition) => {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'step,
 	  key(":thread-id"), threadId.toString, 
-	  key(":file"), filename, 
-	  key(":line"), line))
+	  key(":file"), pos.file.getAbsolutePath, 
+	  key(":line"), pos.line))
       }
-      case DebugBreakEvent(threadId: Long, (filename, line)) => {
+      case DebugBreakEvent(threadId: Long, pos: SourcePosition) => {
         SExp(key(":debug-event"), 
-	  SExp(key(":type"), 'break,
+	  SExp(key(":type"), 'breakpoint,
 	  key(":thread-id"), threadId.toString, 
-	  key(":file"), filename, 
-	  key(":line"), line))
+	  key(":file"), pos.file.getAbsolutePath, 
+	  key(":line"), pos.line))
       }
       case DebugVMDeathEvent() => {
         SExp(key(":debug-event"), 
@@ -1783,11 +1837,15 @@ trait SwankProtocol extends Protocol {
 
   }
 
+  def toWF(bp: Breakpoint): SExp = {
+    SExp(
+      key(":file"), bp.pos.file.getAbsolutePath,
+      key(":line"), bp.pos.line
+    )
+  }
 
   def toWF(bps: BreakpointList): SExp = {
-    SExp(bps.locations.map{ loc =>
-	SExp(loc._1, loc._2)
-      })
+    SExp(bps.locations.map{ toWF(_) })
   }
 
   def toWF(config: ProjectConfig): SExp = {

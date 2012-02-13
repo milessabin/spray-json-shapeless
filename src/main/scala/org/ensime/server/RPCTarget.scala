@@ -113,6 +113,12 @@ trait RPCTarget { self: Project =>
   def rpcDebugBreak(file: String, line: Int, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugBreakReq(file, line), callId)
   }
+  def rpcDebugClearBreak(file: String, line: Int, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugClearBreakReq(file, line), callId)
+  }
+  def rpcDebugClearAllBreaks(callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugClearAllBreaksReq(), callId)
+  }
   def rpcDebugListBreaks(callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugListBreaksReq(), callId)
   }
