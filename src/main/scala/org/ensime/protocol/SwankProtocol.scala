@@ -1559,7 +1559,7 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
-       *   swank:debug-continue
+       *   swank:debug-run
        * Summary:
        *   Resume execution of the VM.
        * Arguments:
@@ -1567,18 +1567,42 @@ trait SwankProtocol extends Protocol {
        * Return:
        *   None
        * Example call:
-       *   (:swank-rpc (swank:debug-continue) 42)
+       *   (:swank-rpc (swank:debug-run) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-run" => {
+        form match {
+          case SExpList(head :: body) => {
+            rpcTarget.rpcDebugRun(callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-continue
+       * Summary:
+       *   Resume execution of the VM.
+       * Arguments:
+       *   String:The thread-id to continue.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-continue "1") 42)
        * Example return:
        *   (:return (:ok t) 42)
        */
       case "swank:debug-continue" => {
         form match {
-          case SExpList(head :: body) => {
-            rpcTarget.rpcDebugContinue(callId)
+          case SExpList(head :: StringAtom(threadId) :: body) => {
+            rpcTarget.rpcDebugContinue(threadId.toLong, callId)
           }
           case _ => oops
         }
       }
+
 
       /**
        * Doc RPC:
@@ -1817,10 +1841,12 @@ trait SwankProtocol extends Protocol {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'disconnect))
       }
-      case DebugExceptionEvent(e: String) => {
+      case DebugExceptionEvent(e: String, threadId: Long) => {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'exception,
-	  key(":exception"), e))
+	  key(":exception"), threadId.toString,
+	  key(":thread-id"), e
+	))
       }
       case DebugThreadStartEvent(threadId: Long) => {
         SExp(key(":debug-event"), 	  
@@ -1845,7 +1871,10 @@ trait SwankProtocol extends Protocol {
   }
 
   def toWF(bps: BreakpointList): SExp = {
-    SExp(bps.locations.map{ toWF(_) })
+    SExp(
+      key(":active"), SExpList(bps.active.map{ toWF(_) }), 
+      key(":pending"), SExpList(bps.pending.map{ toWF(_) })
+    )
   }
 
   def toWF(config: ProjectConfig): SExp = {

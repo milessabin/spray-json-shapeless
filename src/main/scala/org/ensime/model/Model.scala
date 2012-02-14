@@ -80,8 +80,7 @@ case class CompletionInfoList(
 
 
 case class Breakpoint(pos: SourcePosition)
-case class BreakpointList(
-  val locations: List[Breakpoint]) {}
+case class BreakpointList(val active: List[Breakpoint], val pending: List[Breakpoint])
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 

@@ -107,8 +107,11 @@ trait RPCTarget { self: Project =>
   def rpcDebugStopVM(callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugStopVMReq(), callId)
   }
-  def rpcDebugContinue(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugContinueReq(), callId)
+  def rpcDebugRun(callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugRunReq(), callId)
+  }
+  def rpcDebugContinue(threadId: Long, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugContinueReq(threadId), callId)
   }
   def rpcDebugBreak(file: String, line: Int, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugBreakReq(file, line), callId)

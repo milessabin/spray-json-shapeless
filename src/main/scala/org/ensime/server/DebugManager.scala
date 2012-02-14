@@ -54,13 +54,14 @@ case class DebuggerShutdownEvent()
 
 case class DebugStartVMReq(commandLine: String)
 case class DebugStopVMReq()
+case class DebugRunReq()
+case class DebugContinueReq(threadId: Long)
 case class DebugNextReq(threadId: Long)
 case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
 case class DebugClearAllBreaksReq()
-case class DebugContinueReq()
 case class DebugListBreaksReq()
 
 abstract class DebugEvent
@@ -69,7 +70,7 @@ case class DebugBreakEvent(threadId: Long, pos: SourcePosition) extends DebugEve
 case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
-case class DebugExceptionEvent(e: String) extends DebugEvent
+case class DebugExceptionEvent(e: String, threadId: Long) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 
@@ -78,12 +79,13 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
   import protocol._
 
   def locToPos(loc: Location): Option[SourcePosition] = {
-    val set = sourceMap(loc.sourceName())
-    if (set.size > 1) {
-      System.err.println("Warning, ambiguous source name: " +
-        loc.sourceName())
-    }
-    set.headOption.map(f => SourcePosition(f, loc.lineNumber))
+    (for (set <- sourceMap.get(loc.sourceName())) yield {
+      if (set.size > 1) {
+        System.err.println("Warning, ambiguous source name: " +
+          loc.sourceName())
+      }
+      set.headOption.map(f => SourcePosition(f, loc.lineNumber))
+    }).getOrElse(None)
   }
 
   private val sourceMap = HashMap[String, HashSet[CanonFile]]()
@@ -96,6 +98,70 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     }
   }
   rebuildSourceMap()
+
+  def tryPendingBreaksForSourcename(sourcename: String) {
+    for (breaks <- pendingBreaksBySourceName.get(sourcename)) {
+      val toTry = HashSet() ++ breaks
+      for (bp <- toTry) {
+        setBreakpoint(bp.pos.file, bp.pos.line)
+      }
+    }
+  }
+
+  def setBreakpoint(file: CanonFile, line: Int): Boolean = {
+    if ((for (vm <- maybeVM) yield {
+      vm.setBreakpoint(file, line)
+    }).getOrElse { false }) {
+      activeBreakpoints.add(Breakpoint(SourcePosition(file, line)))
+      true
+    } else {
+      addPendingBreakpoint(Breakpoint(SourcePosition(file, line)))
+      false
+    }
+  }
+
+  def clearBreakpoint(file: CanonFile, line: Int) {
+    val clearBp = Breakpoint(SourcePosition(file, line))
+    for (bps <- pendingBreaksBySourceName.get(file.getName)) {
+      bps.retain { _ != clearBp }
+    }
+    val toRemove = activeBreakpoints.filter { _ == clearBp }
+    for (vm <- maybeVM) {
+      vm.clearBreakpoints(toRemove)
+    }
+    activeBreakpoints --= toRemove
+  }
+
+  def clearAllBreakpoints() {
+    pendingBreaksBySourceName.clear()
+    activeBreakpoints.clear()
+    for (vm <- maybeVM) {
+      vm.clearAllBreakpoints()
+    }
+  }
+
+  def moveActiveBreaksToPending() {
+    for (bp <- activeBreakpoints) {
+      addPendingBreakpoint(bp)
+    }
+    activeBreakpoints.clear()
+  }
+
+  def addPendingBreakpoint(bp: Breakpoint) {
+    val file = bp.pos.file
+    val breaks = pendingBreaksBySourceName.get(file.getName).getOrElse(HashSet())
+    breaks.add(bp)
+    pendingBreaksBySourceName(file.getName) = breaks
+  }
+
+  private val activeBreakpoints = HashSet[Breakpoint]()
+  private val pendingBreaksBySourceName = new HashMap[String, HashSet[Breakpoint]] {
+    override def default(key: String) = new HashSet()
+  }
+
+  def pendingBreakpoints: List[Breakpoint] = {
+    pendingBreaksBySourceName.values.flatten.toList
+  }
 
   def vmOptions(): List[String] = {
     List("-classpath", config.debugClasspath)
@@ -151,10 +217,12 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
               }
               case e: VMDeathEvent => {
                 maybeVM = None
+                moveActiveBreaksToPending()
                 project ! AsyncEvent(toWF(DebugVMDeathEvent()))
               }
               case e: VMDisconnectEvent => {
                 maybeVM = None
+                moveActiveBreaksToPending()
                 project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
               }
               case e: StepEvent => {
@@ -162,21 +230,23 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   project ! AsyncEvent(toWF(DebugStepEvent(
                     e.thread().uniqueID(), pos)))
                 }) getOrElse {
-                  System.err.println("Step position not found: " + 
-		    e.location())
+                  System.err.println("Step position not found: " +
+                    e.location().sourceName() + " : " + e.location().lineNumber())
                 }
               }
               case e: BreakpointEvent => {
                 (for (pos <- locToPos(e.location())) yield {
                   project ! AsyncEvent(toWF(DebugBreakEvent(
-                  e.thread().uniqueID(), pos)))
+                    e.thread().uniqueID(), pos)))
                 }) getOrElse {
-                  System.err.println("Break position not found: " + 
-		    e.location())
+                  System.err.println("Break position not found: " +
+                    e.location().sourceName() + " : " + e.location().lineNumber())
                 }
               }
               case e: ExceptionEvent => {
-                project ! AsyncEvent(toWF(DebugExceptionEvent(e.toString)))
+                project ! AsyncEvent(toWF(DebugExceptionEvent(
+                  e.toString,
+                  e.thread().uniqueID())))
               }
               case e: ThreadDeathEvent => {
                 project ! AsyncEvent(toWF(DebugThreadDeathEvent(
@@ -234,56 +304,54 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   }
                 }
 
-                case DebugContinueReq() => {
+                case DebugRunReq() => {
                   handleRPCWithVM(callId) { vm =>
                     vm.resume()
                     project ! RPCResultEvent(toWF(true), callId)
                   }
                 }
 
+                case DebugContinueReq(threadId) => {
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
+                      vm.resume()
+                      project ! RPCResultEvent(toWF(true), callId)
+                  }
+                }
+
                 case DebugBreakReq(filepath: String, line: Int) => {
                   val file = CanonFile(filepath)
-                  handleRPCWithVM(callId) { vm =>
-                    vm.setBreakpoint(file, line)
-                    project ! RPCResultEvent(toWF(true), callId)
+                  if (!setBreakpoint(file, line)) {
+                    project.bgMessage("Location not loaded. Set pending breakpoint.")
                   }
+                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugClearBreakReq(filepath: String, line: Int) => {
                   val file = CanonFile(filepath)
-                  handleRPCWithVM(callId) { vm =>
-                    vm.clearBreakpoint(file, line)
-                    project ! RPCResultEvent(toWF(true), callId)
-                  }
+                  clearBreakpoint(file, line)
+                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugClearAllBreaksReq() => {
-                  handleRPCWithVM(callId) { vm =>
-                    vm.clearAllBreakpoints()
-                    project ! RPCResultEvent(toWF(true), callId)
-                  }
+                  clearAllBreakpoints()
+                  project ! RPCResultEvent(toWF(true), callId)
                 }
 
                 case DebugListBreaksReq() => {
                   import scala.collection.JavaConversions._
-                  handleRPCWithVM(callId) { vm =>
-                    val breaks = BreakpointList(
-                      vm.activeBreakpoints.toList ++
-                        vm.pendingBreakpoints)
-                    project ! RPCResultEvent(toWF(breaks), callId)
-                  }
+                  val breaks = BreakpointList(
+                    activeBreakpoints.toList,
+                    pendingBreakpoints)
+                  project ! RPCResultEvent(toWF(breaks), callId)
                 }
 
                 case DebugNextReq(threadId: Long) => {
                   handleRPCWithVMAndThread(callId, threadId) {
                     (vm, thread) =>
-                      val request = vm.erm.createStepRequest(
-                        thread,
+                      vm.newStepRequest(thread,
                         StepRequest.STEP_LINE,
-                        StepRequest.STEP_OVER);
-                      request.addCountFilter(1);
-                      request.enable();
-                      vm.vm.resume();
+                        StepRequest.STEP_OVER)
                       project ! RPCResultEvent(toWF(true), callId)
                   }
                 }
@@ -291,13 +359,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 case DebugStepReq(threadId: Long) => {
                   handleRPCWithVMAndThread(callId, threadId) {
                     (vm, thread) =>
-                      val request = vm.erm.createStepRequest(
-                        thread,
+                      vm.newStepRequest(thread,
                         StepRequest.STEP_LINE,
-                        StepRequest.STEP_INTO);
-                      request.addCountFilter(1);
-                      request.enable();
-                      vm.vm.resume();
+                        StepRequest.STEP_INTO)
                       project ! RPCResultEvent(toWF(true), callId)
                   }
                 }
@@ -305,13 +369,10 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 case DebugStepOutReq(threadId: Long) => {
                   handleRPCWithVMAndThread(callId, threadId) {
                     (vm, thread) =>
-                      val request = vm.erm.createStepRequest(
-                        thread,
+                      vm.newStepRequest(thread,
                         StepRequest.STEP_LINE,
-                        StepRequest.STEP_OUT);
-                      request.addCountFilter(1);
-                      request.enable();
-                      vm.vm.resume();
+                        StepRequest.STEP_OUT)
+                      project ! RPCResultEvent(toWF(true), callId)
                   }
                 }
               }
@@ -347,7 +408,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
   }
 
   private class VM(val vm: VirtualMachine) {
-      import scala.collection.JavaConversions._
+    import scala.collection.JavaConversions._
 
     //    vm.setDebugTraceMode(VirtualMachine.TRACE_ALL)
     val evtQ = new VMEventManager(vm.eventQueue())
@@ -374,59 +435,51 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       req.enable()
     }
     private val fileToUnits = HashMap[String, HashSet[ReferenceType]]()
-    private val pendingBreaksBySourceName = 
-    HashMap[String, HashSet[Breakpoint]]()
-    val activeBreakpoints = HashSet[Breakpoint]()
     private val process = vm.process();
     private val outputMon = new MonitorOutput(process.getErrorStream());
     outputMon.start
     private val inputMon = new MonitorOutput(process.getInputStream());
     inputMon.start
 
-    def pendingBreakpoints: List[Breakpoint] = {
-      pendingBreaksBySourceName.values.flatten.toList
-    }
-
     def resume() {
-      println("VM: resume")
       vm.resume()
     }
 
-    def clearBreakpoint(file: CanonFile, line: Int) {
-      for(bps <- pendingBreaksBySourceName.get(file.getName)){
-	bps.retain{ bp => bp.pos.file != file || bp.pos.line != line }
-      }
-      val toRemove = activeBreakpoints.filter{ bp => 
-	bp.pos.file == file && bp.pos.line == line}
-      for(bp <- toRemove){
-	for(req <- erm.breakpointRequests()){
-	  val pos = locToPos(req.location())
-	  if(pos == bp.pos) req.disable()
-	}
-      }
-      activeBreakpoints --= toRemove
+    def newStepRequest(thread: ThreadReference, stride: Int, depth: Int) {
+      erm.deleteEventRequests(erm.stepRequests)
+      val request = erm.createStepRequest(
+        thread,
+        stride,
+        depth)
+      request.addCountFilter(1)
+      request.enable()
+      vm.resume()
     }
 
-    def clearAllBreakpoints() {
-      pendingBreaksBySourceName.clear()
-      activeBreakpoints.clear()
-      erm.deleteAllBreakpoints()
-    }
-
-    def setBreakpoint(file: CanonFile, line: Int) {
+    def setBreakpoint(file: CanonFile, line: Int): Boolean = {
       (for (loc <- location(file, line)) yield {
-        println("Setting breakpoint at: " + loc)
         val request = erm.createBreakpointRequest(loc)
         request.setSuspendPolicy(EventRequest.SUSPEND_ALL)
         request.enable();
-        removePendingBreakpoint(file, line)
-        activeBreakpoints += Breakpoint(SourcePosition(file, line))
         project.bgMessage("Set breakpoint at: " + file + " : " + line)
         true
-      }).getOrElse {
-        project.bgMessage("Location not loaded. Set pending breakpoint.")
-        addPendingBreakpoint(file, line)
-        false
+      }).getOrElse { false }
+    }
+
+    def clearAllBreakpoints() {
+      erm.deleteAllBreakpoints()
+    }
+
+    def clearBreakpoints(bps: Iterable[Breakpoint]) {
+      for (bp <- bps) {
+        for (
+          req <- erm.breakpointRequests();
+          pos <- locToPos(req.location())
+        ) {
+          if (pos == bp.pos) {
+            req.disable()
+          }
+        }
       }
     }
 
@@ -436,12 +489,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         val types = fileToUnits.get(key).getOrElse(HashSet[ReferenceType]())
         types += t
         fileToUnits(key) = types
-        val pending = HashMap() ++ pendingBreaksBySourceName
-        for (breaks <- pending.get(key)) {
-          for (bp <- breaks) {
-            setBreakpoint(bp.pos.file, bp.pos.line)
-          }
-        }
+        tryPendingBreaksForSourcename(key)
       } catch {
         case e: AbsentInformationException =>
           println("No location information available for: " + t.name())
@@ -475,30 +523,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       buf.headOption
     }
 
-    def addPendingBreakpoint(file: CanonFile, line: Int) {
-      val key = file.getName
-      val breaks = pendingBreaksBySourceName.getOrElse(key, HashSet())
-      breaks.add(Breakpoint(SourcePosition(file, line)))
-      pendingBreaksBySourceName(key) = breaks
-      println("Pending for key: " + key + " : " + breaks)
-    }
-
-    def removePendingBreakpoint(file: CanonFile, line: Int) {
-      val key = file.getName
-      if (pendingBreaksBySourceName.contains(key)) {
-        val breaks = pendingBreaksBySourceName.getOrElse(key, HashSet())
-        breaks.remove(Breakpoint(SourcePosition(file, line)))
-        pendingBreaksBySourceName(key) = breaks
-      }
-    }
-
     def threadById(id: Long): Option[ThreadReference] = {
       vm.allThreads().find(t => t.uniqueID == id)
     }
 
-    def dispose() {
+    def dispose() = try {
       evtQ.finished = true
       vm.dispose()
+    } catch {
+      case e: VMDisconnectedException => {}
     }
 
   }
@@ -517,9 +550,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
               case e: VMDisconnectEvent => {
                 finished = true
               }
-              case _ => {
-
-              }
+              case _ => {}
             }
             actor { DebugManager.this ! evt }
           }
@@ -549,6 +580,5 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       }
     }
   }
-
 }
 
