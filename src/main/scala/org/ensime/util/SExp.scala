@@ -253,7 +253,6 @@ object SExp extends RegexParsers {
     check("(a b c\n() nil(nil\n t))", "(a b c () nil (nil t))")
     check("(nildude)", "(nildude)")
 
-
     assert(readStr("t\n").toScala == true, "t should be true!")
     assert(readStr("t\n\t").toScala == true, "t should be true!")
     assert(readStr("t\n\t").toScala == true, "t should be true!")
