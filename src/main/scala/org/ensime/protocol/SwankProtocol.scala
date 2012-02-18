@@ -1408,6 +1408,30 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:debug-active-vm
+       * Summary:
+       *   Is a there an active vm? if so return a description.
+       * Arguments:
+       *   None
+       * Return:
+       *   Nil | A short description of the current vm.
+       * Example call:
+       *   (:swank-rpc (swank:debug-active-vm) 42)
+       * Example return:
+       *   (:return (:ok nil) 42)
+       */
+      case "swank:debug-active-vm" => {
+        form match {
+          case SExpList(head :: body) => {
+            rpcTarget.rpcDebugActiveVM(callId)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc RPC:
        *   swank:debug-start
        * Summary:
        *   Start a new debug session.
@@ -1671,6 +1695,29 @@ trait SwankProtocol extends Protocol {
         form match {
           case SExpList(head :: StringAtom(threadId) :: body) => {
             rpcTarget.rpcDebugStepOut(threadId.toLong, callId:Int)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-value-for-name
+       * Summary:
+       *   Get the current binding for the given name.
+       * Arguments:
+       *   String:The thread-id to step.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-value-for-name "thread-2" "apple") 42)
+       * Example return:
+       *   (:return (:ok "23") 42)
+       */
+      case "swank:debug-value-for-name" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: StringAtom(name) :: body) => {
+            rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId:Int)
           }
           case _ => oops
         }

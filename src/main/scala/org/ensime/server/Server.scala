@@ -59,7 +59,7 @@ object Server {
             System.out.flush();
             while (true) {
               try {
-                val socket = listener.accept()
+                 val socket = listener.accept()
                 println("Got connection, creating handler...")
                 val handler = new SocketHandler(socket, protocol, project)
                 handler.start()
