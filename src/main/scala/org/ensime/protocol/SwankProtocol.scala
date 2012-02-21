@@ -1825,6 +1825,68 @@ trait SwankProtocol extends Protocol {
 
   import SExpConversion._
 
+  def toWF(obj: DebugValue): SExp = {
+    obj match{
+      case obj:DebugPrimitiveValue => toWF(obj)
+      case obj:DebugObjectReference => toWF(obj)
+      case obj:DebugArrayReference => toWF(obj)
+    }
+  }
+
+  def toWF(obj: DebugPrimitiveValue): SExp = {
+    SExp(
+      key(":value"), obj.value,
+      key(":type-name"),obj.typeName,
+      key(":thread-id"),obj.threadId)
+  }
+  def toWF(obj: DebugObjectField): SExp = {
+    SExp(
+      key(":index"), obj.index,
+      key(":name"),obj.name,
+      key(":value"), obj.value.map(toWF).getOrElse(NilAtom()),
+      key(":object-id"),obj.objectId)
+  }
+  def toWF(obj: DebugObjectReference): SExp = {
+    SExp(
+      key(":fields"), SExpList(obj.fields.map(toWF)),
+      key(":type-name"),obj.typeName,
+      key(":thread-id"),obj.threadId,
+      key(":object-id"),obj.objectId)
+  }
+  def toWF(obj: DebugArrayReference): SExp = {
+    SExp(
+      key(":length"), obj.length,
+      key(":type-name"),obj.typeName,
+      key(":element-type-name"),obj.elementTypeName,
+      key(":thread-id"),obj.threadId,
+      key(":object-id"),obj.objectId)
+  }
+  def toWF(obj: DebugStackLocal): SExp = {
+    SExp(
+      key(":name"), obj.name,
+      key(":value"), obj.value.map(toWF).getOrElse(NilAtom()))
+  }
+
+  def toWF(obj: DebugStackFrame): SExp = {
+    SExp(
+      key(":locals"), SExpList(obj.locals.map(toWF)),
+      key(":num-args"),obj.numArguments,
+      key(":pc-location"),toWF(obj.pcLocation),
+      key(":this-object-id"),obj.thisObjectId)
+  }
+
+  def toWF(obj: DebugBacktrace): SExp = {
+    SExp(
+      key(":frames"), SExpList(obj.frames.map(toWF)),    
+      key(":thread-id"), obj.threadId)
+  }
+
+  def toWF(pos: SourcePosition): SExp = {
+    SExp(
+      key(":file"), pos.file.getAbsolutePath(),
+      key(":line"), pos.line)
+  }
+
   def toWF(info: ConnectionInfo): SExp = {
     SExp(
       key(":pid"), 'nil,

@@ -82,6 +82,57 @@ case class CompletionInfoList(
 case class Breakpoint(pos: SourcePosition)
 case class BreakpointList(val active: List[Breakpoint], val pending: List[Breakpoint])
 
+trait DebugValue{
+  def typeName:String;
+  def threadId:Long
+}
+
+case class DebugPrimitiveValue(
+  val value: String,
+  val typeName: String,
+  val threadId: Long
+) extends DebugValue
+
+case class DebugObjectField(
+  val index: Int,
+  val name: String,
+  val value: Option[DebugValue],
+  val objectId: Long
+)
+
+case class DebugObjectReference(
+  val fields: List[DebugObjectField],
+  val typeName: String,
+  val objectId: Long,
+  val threadId: Long
+) extends DebugValue
+
+case class DebugArrayReference(
+  val length: Int,
+  val typeName: String,
+  val elementTypeName: String,
+  val threadId: Long,
+  val objectId: Long
+) extends DebugValue
+
+case class DebugStackLocal(
+  val name: String,
+  val value: Option[DebugValue]
+)
+
+case class DebugStackFrame(
+  val locals: List[DebugStackLocal],
+  val numArguments: Int,
+  val pcLocation: SourcePosition,
+  val thisObjectId: Long
+)
+
+case class DebugBacktrace(
+  val frames: List[DebugStackFrame],
+  val threadId: Long
+)
+
+
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 
 class NamedTypeMemberInfoLight(override val name: String, val tpeSig: String, val tpeId: Int, val isCallable: Boolean) extends EntityInfo(name, List()) {}

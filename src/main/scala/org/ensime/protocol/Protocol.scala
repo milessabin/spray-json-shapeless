@@ -190,6 +190,19 @@ trait ProtocolConversions {
   def toWF(evt: ClearAllNotesEvent): WireFormat
   def toWF(evt: DebugEvent): WireFormat
 
+  def toWF(obj: DebugValue): WireFormat
+  def toWF(evt: DebugPrimitiveValue): WireFormat
+  def toWF(evt: DebugObjectField): WireFormat
+  def toWF(evt: DebugObjectReference): WireFormat
+  def toWF(evt: DebugArrayReference): WireFormat
+  def toWF(evt: DebugStackLocal): WireFormat
+  def toWF(evt: DebugStackFrame): WireFormat
+  def toWF(evt: DebugBacktrace): WireFormat
+
+  def toWF(pos: SourcePosition): WireFormat
+
+  
+
   def toWF(config: BreakpointList): WireFormat
   def toWF(config: ProjectConfig): WireFormat
   def toWF(config: ReplConfig): WireFormat
