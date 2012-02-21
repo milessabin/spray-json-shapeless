@@ -609,9 +609,26 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       value.`type`().name(),
       thread.uniqueID())
 
+    def makeDebugStr(value: StringReference, thread: ThreadReference): 
+    DebugStringReference = {
+          DebugStringReference(
+	    value.value().toString().take(50),
+            {
+              var i = -1
+              value.referenceType().fields().map { f =>
+		i += 1
+                DebugObjectField(i, f.name(), None, value.uniqueID)
+              }.toList
+            },
+            value.referenceType().name(),
+            value.uniqueID(),
+            thread.uniqueID())
+    }
+
     def makeDebugValue(value: Value, thread: ThreadReference): DebugValue = {
       value match {
         case value: ArrayReference => makeDebugArr(value, thread)
+        case value: StringReference => makeDebugStr(value, thread)
         case value: ObjectReference => makeDebugObj(value, thread)
         case value: PrimitiveValue => makeDebugPrim(value, thread)
       }

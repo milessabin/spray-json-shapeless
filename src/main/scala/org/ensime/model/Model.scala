@@ -107,6 +107,14 @@ case class DebugObjectReference(
   val threadId: Long
 ) extends DebugValue
 
+case class DebugStringReference(
+  val stringValue: String,
+  val fields: List[DebugObjectField],
+  val typeName: String,
+  val objectId: Long,
+  val threadId: Long
+) extends DebugValue
+
 case class DebugArrayReference(
   val length: Int,
   val typeName: String,
