@@ -27,8 +27,7 @@
 
 package org.ensime.server
 import java.io.File
-import org.ensime.util.CanonFile
-import org.ensime.util.FileUtils
+import org.ensime.util._
 import scala.collection.{ immutable, mutable }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
@@ -47,11 +46,12 @@ trait RefactorProcedure {
   val refactorType: scala.Symbol
 }
 trait RefactorEffect extends RefactorProcedure {
-  val changes: Iterable[Change]
+  val changes: Iterable[FileEdit]
 }
 trait RefactorResult extends RefactorProcedure {
   val touched: Iterable[File]
 }
+
 
 abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
 
@@ -73,7 +73,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
               case Right(modifications) => Right(new RefactorEffect {
                 val procedureId = procId
                 val refactorType = tpe
-                val changes = modifications
+                val changes = modifications.map(FileEdit.fromChange)
               })
               case Left(error) => Left(RefactorFailure(procId, error.cause))
             }
@@ -106,7 +106,7 @@ trait RefactoringHandler { self: Analyzer =>
         } 
         else { // Execute the refactoring immediately..
           project ! AddUndo("Refactoring of type: " + req.refactorType.toString,
-            FileUtils.inverseChanges(effect.changes))
+            FileUtils.inverseEdits(effect.changes))
           val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
           result match {
             case Right(result) => {
@@ -128,7 +128,7 @@ trait RefactoringHandler { self: Analyzer =>
       case Some(effect) => {
         project ! AddUndo(
           "Refactoring of type: " + req.refactorType.toString,
-          FileUtils.inverseChanges(effect.changes))
+          FileUtils.inverseEdits(effect.changes))
         val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
         result match {
           case Right(result) => {
@@ -240,7 +240,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     Right(new RefactorEffect {
       val procedureId = procId
       val refactorType = tpe
-      val changes = modifications
+      val changes = modifications.map(FileEdit.fromChange)
     })
   }
 

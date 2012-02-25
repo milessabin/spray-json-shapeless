@@ -35,7 +35,6 @@ import org.ensime.util._
 import scala.actors._
 import scala.actors.Actor._
 import scala.tools.nsc.{ Settings }
-import scala.tools.refactoring.common.Change
 import scala.collection.mutable.{ LinkedHashMap }
 
 case class SendBackgroundMessageEvent(code: Int, detail: Option[String])
@@ -69,8 +68,8 @@ case class CallCompletionReq(id: Int)
 case class TypeAtPointReq(file: File, point: Int)
 case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol])
 
-case class AddUndo(summary: String, changes: List[Change])
-case class Undo(id: Int, summary: String, changes: Iterable[Change])
+case class AddUndo(summary: String, changes: List[FileEdit])
+case class Undo(id: Int, summary: String, changes: List[FileEdit])
 case class UndoResult(id: Int, touched: Iterable[File])
 
 class Project(val protocol: Protocol) extends Actor with RPCTarget {
@@ -132,9 +131,9 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
   }
 
-  protected def addUndo(sum: String, changes: Iterable[Change]) {
+  protected def addUndo(sum: String, changes: Iterable[FileEdit]) {
     undoCounter += 1
-    undos(undoCounter) = Undo(undoCounter, sum, changes)
+    undos(undoCounter) = Undo(undoCounter, sum, changes.toList)
   }
 
   protected def peekUndo(): Either[String, Undo] = {

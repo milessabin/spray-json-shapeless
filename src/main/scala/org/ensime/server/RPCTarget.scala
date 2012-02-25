@@ -36,7 +36,8 @@ import scala.actors._
 import scala.actors.Actor._
 import scala.collection.immutable
 import scala.tools.nsc.io.AbstractFile
-import scala.tools.refactoring.common.Change
+import scala.tools.nsc.util.BatchSourceFile
+import scala.tools.refactoring.common.{TextChange,Change}
 import scalariform.astselect.AstSelector
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
@@ -241,14 +242,15 @@ trait RPCTarget { self: Project =>
       val changeList = files.map { f =>
         FileUtils.readFile(f) match {
           case Right(contents) => {
-            val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
-            Change(AbstractFile.getFile(f), 0, contents.length, formatted)
+            val formatted = ScalaFormatter.format(
+	      contents, config.formattingPrefs)
+            TextEdit(f, 0, contents.length, formatted)
           }
           case Left(e) => throw e
         }
       }
       addUndo("Formatted source of " + filenames.mkString(", ") + ".",
-        FileUtils.inverseChanges(changeList))
+        FileUtils.inverseEdits(changeList))
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>

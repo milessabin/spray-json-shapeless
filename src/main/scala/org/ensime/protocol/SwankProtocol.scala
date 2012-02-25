@@ -36,7 +36,6 @@ import org.ensime.util._
 import org.ensime.util.SExp._
 import scala.actors._
 import scala.tools.nsc.util.{ Position, RangePosition }
-import scala.tools.refactoring.common.Change
 import scala.util.parsing.input
 
 object SwankProtocol extends SwankProtocol {}
@@ -1904,9 +1903,9 @@ trait SwankProtocol extends Protocol {
         })))
   }
 
-  private def changeToWF(ch: Change): SExp = {
+  private def changeToWF(ch: FileEdit): SExp = {
     SExp.propList(
-      (":file", ch.file.path),
+      (":file", ch.file.getCanonicalPath()),
       (":text", ch.text),
       (":from", ch.from),
       (":to", ch.to))
