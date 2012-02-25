@@ -82,15 +82,13 @@ case class CompletionInfoList(
 case class Breakpoint(pos: SourcePosition)
 case class BreakpointList(val active: List[Breakpoint], val pending: List[Breakpoint])
 
-trait DebugValue{
+sealed trait DebugValue{
   def typeName:String;
-  def threadId:Long
 }
 
 case class DebugPrimitiveValue(
   val value: String,
-  val typeName: String,
-  val threadId: Long
+  val typeName: String
 ) extends DebugValue
 
 case class DebugObjectField(
@@ -103,23 +101,20 @@ case class DebugObjectField(
 case class DebugObjectReference(
   val fields: List[DebugObjectField],
   val typeName: String,
-  val objectId: Long,
-  val threadId: Long
+  val objectId: Long
 ) extends DebugValue
 
 case class DebugStringReference(
   val stringValue: String,
   val fields: List[DebugObjectField],
   val typeName: String,
-  val objectId: Long,
-  val threadId: Long
+  val objectId: Long
 ) extends DebugValue
 
 case class DebugArrayReference(
   val length: Int,
   val typeName: String,
   val elementTypeName: String,
-  val threadId: Long,
   val objectId: Long
 ) extends DebugValue
 

@@ -58,6 +58,7 @@ case class DebugNextReq(threadId: Long)
 case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugValueForNameReq(threadId: Long, name: String)
+case class DebugValueForFieldReq(objectId: Long, name: String)
 case class DebugActiveVMReq()
 case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
@@ -183,7 +184,8 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       System.err.println("No VM under debug!")
     }
   }
-  private def handleRPCWithVMAndThread(callId: Int, threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
+  private def handleRPCWithVMAndThread(callId: Int, 
+    threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
     (for (vm <- maybeVM) yield {
       (for (thread <- vm.threadById(threadId)) yield {
         action(vm, thread)
@@ -383,14 +385,39 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 }
 
                 case DebugValueForNameReq(threadId: Long, name: String) => {
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.valueForName(thread, name) match {
-                        case Some(value) =>
-                          project ! RPCResultEvent(toWF(value), callId)
-                        case None =>
-                          project ! RPCResultEvent(toWF(false), callId)
-                      }
+                  try {
+                    handleRPCWithVMAndThread(callId, threadId) {
+                      (vm, thread) =>
+                        vm.valueForName(thread, name) match {
+                          case Some(value) =>
+                            project ! RPCResultEvent(toWF(value), callId)
+                          case None =>
+                            project ! RPCResultEvent(toWF(false), callId)
+                        }
+                    }
+                  } catch {
+                    case e: AbsentInformationException => {
+                      e.printStackTrace()
+                      project ! RPCResultEvent(toWF(false), callId)
+                    }
+                  }
+                }
+                case DebugValueForFieldReq(objectId: Long, name: String) => {
+                  try {
+                    handleRPCWithVM(callId) {
+                      (vm) =>
+                        vm.valueForField(objectId, name) match {
+                          case Some(value) =>
+                            project ! RPCResultEvent(toWF(value), callId)
+                          case None =>
+                            project ! RPCResultEvent(toWF(false), callId)
+                        }
+                    }
+                  } catch {
+                    case e: AbsentInformationException => {
+                      e.printStackTrace()
+                      project ! RPCResultEvent(toWF(false), callId)
+                    }
                   }
                 }
               }
@@ -468,6 +495,17 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     outputMon.start
     private val inputMon = new MonitorOutput(process.getInputStream());
     inputMon.start
+    private val savedObjects = new HashMap[Long, ObjectReference]()
+
+    private def remember(value: Value): Value = {
+      value match {
+        case v: ObjectReference => {
+          savedObjects(v.uniqueID) = v
+          v
+        }
+        case _ => value
+      }
+    }
 
     def resume() {
       vm.resume()
@@ -577,20 +615,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       }
     }
 
-    def makeDebugArr(value: ArrayReference, thread: ThreadReference): DebugArrayReference = {
-      DebugArrayReference(
-        value.length,
-        value.referenceType().name,
-        value.referenceType().asInstanceOf[ArrayType].componentTypeName(),
-        thread.uniqueID,
-        value.uniqueID)
-    }
-
     private def makeFields(
-      tpeIn: ReferenceType, 
-      obj: ObjectReference, 
-      thread: ThreadReference): 
-    List[DebugObjectField] = {
+      tpeIn: ReferenceType,
+      obj: ObjectReference): List[DebugObjectField] = {
       tpeIn match {
         case tpeIn: ClassType => {
           var fields = List[DebugObjectField]()
@@ -599,15 +626,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
             var i = -1
             fields = tpe.fields().map { f =>
               i += 1
-	      val value = obj.getValue(f)
+              val value = obj.getValue(f)
               DebugObjectField(
-		i, f.name(),
+                i, f.name(),
                 f.typeName(),
-		value match{
-		  case v:PrimitiveValue => 
-		  Some(makeDebugPrim(v,thread))
-		  case _ => None
-		})
+                value match {
+                  case v: PrimitiveValue =>
+                    Some(makeDebugPrim(v))
+                  case _ => None
+                })
             }.toList ++ fields
             tpe = tpe.superclass
           }
@@ -617,67 +644,95 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       }
     }
 
-    def makeDebugObj(value: ObjectReference, thread: ThreadReference): DebugObjectReference = {
-      DebugObjectReference(
-	makeFields(value.referenceType(), value, thread),
-        value.referenceType().name(),
-        value.uniqueID(),
-        thread.uniqueID())
+    private def fieldByName(obj: ObjectReference, name: String): Option[Field] = {
+      val tpeIn = obj.referenceType
+      tpeIn match {
+        case tpeIn: ClassType => {
+          var result: Option[Field] = None
+          var tpe = tpeIn
+          while (tpe != null && result.isEmpty) {
+            for (f <- tpe.fields()) {
+              if (f.name() == name) result = Some(f)
+            }
+            tpe = tpe.superclass
+          }
+          result
+        }
+        case _ => None
+      }
     }
 
-    def makeDebugPrim(value: PrimitiveValue, thread: ThreadReference): DebugPrimitiveValue = DebugPrimitiveValue(
-      valueToString(value),
-      value.`type`().name(),
-      thread.uniqueID())
+    def makeDebugObj(value: ObjectReference): DebugObjectReference = {
+      DebugObjectReference(
+        makeFields(value.referenceType(), value),
+        value.referenceType().name(),
+        value.uniqueID())
+    }
 
-    def makeDebugStr(value: StringReference, thread: ThreadReference): DebugStringReference = {
+    def makeDebugStr(value: StringReference): DebugStringReference = {
       DebugStringReference(
         value.value().toString().take(50),
-	makeFields(value.referenceType(), value, thread),
+        makeFields(value.referenceType(), value),
         value.referenceType().name(),
-        value.uniqueID(),
-        thread.uniqueID())
+        value.uniqueID())
     }
 
-    def makeDebugValue(value: Value, thread: ThreadReference): DebugValue = {
+    def makeDebugArr(value: ArrayReference): DebugArrayReference = {
+      DebugArrayReference(
+        value.length,
+        value.referenceType().name,
+        value.referenceType().asInstanceOf[ArrayType].componentTypeName(),
+        value.uniqueID)
+    }
+
+    def makeDebugPrim(value: PrimitiveValue): DebugPrimitiveValue = DebugPrimitiveValue(
+      valueToString(value),
+      value.`type`().name())
+
+    def makeDebugValue(value: Value): DebugValue = {
       value match {
-        case value: ArrayReference => makeDebugArr(value, thread)
-        case value: StringReference => makeDebugStr(value, thread)
-        case value: ObjectReference => makeDebugObj(value, thread)
-        case value: PrimitiveValue => makeDebugPrim(value, thread)
+        case value: ArrayReference => makeDebugArr(value)
+        case value: StringReference => makeDebugStr(value)
+        case value: ObjectReference => makeDebugObj(value)
+        case value: PrimitiveValue => makeDebugPrim(value)
       }
     }
 
     def valueForName(thread: ThreadReference, name: String): Option[DebugValue] = {
-      stackValueNamed(thread, name).orElse(objectFieldValueNamed(thread, name))
+      val stackFrame = thread.frame(0)
+      val objRef = stackFrame.thisObject();
+      stackValueNamed(thread, name).orElse(
+        fieldByName(objRef, name).flatMap { f =>
+          Some(objRef.getValue(f))
+        }).map { v =>
+          makeDebugValue(remember(v))
+        }
     }
 
-    def stackValueNamed(thread: ThreadReference, name: String): Option[DebugValue] = {
-      var result: Option[DebugValue] = None
+    def valueForField(objectId: Long, name: String): Option[DebugValue] = {
+      (for (
+        obj <- savedObjects.get(objectId);
+        f <- fieldByName(obj, name)
+      ) yield {
+        remember(obj.getValue(f))
+      }).map(makeDebugValue(_))
+    }
+
+    private def stackValueNamed(thread: ThreadReference, name: String): Option[Value] = {
+      var result: Option[Value] = None
       var i = 0
       while (result.isEmpty && i < thread.frameCount) {
         val stackFrame = thread.frame(i)
         val visVars = stackFrame.visibleVariables()
         visVars.find(_.name() == name) match {
           case Some(visibleVar) => {
-            result = Some(makeDebugValue(stackFrame.getValue(visibleVar), thread))
+            result = Some(stackFrame.getValue(visibleVar))
           }
           case _ =>
         }
         i += 1
       }
       result
-    }
-
-    def objectFieldValueNamed(thread: ThreadReference, name: String): Option[DebugValue] = {
-      val stackFrame = thread.frame(0)
-      val objRef = stackFrame.thisObject();
-      val refType = objRef.referenceType();
-      val objFields = refType.allFields();
-      objFields.find(_.name() == name) match {
-        case Some(field) => Some(makeDebugValue(objRef.getValue(field), thread))
-        case None => None
-      }
     }
 
     def dispose() = try {

@@ -1705,7 +1705,8 @@ trait SwankProtocol extends Protocol {
        * Summary:
        *   Get the current binding for the given name.
        * Arguments:
-       *   String:The thread-id to step.
+       *   String: The thread-id in which to search.
+       *   String: The name to search for.
        * Return:
        *   None
        * Example call:
@@ -1717,6 +1718,30 @@ trait SwankProtocol extends Protocol {
         form match {
           case SExpList(head :: StringAtom(threadId) :: StringAtom(name) :: body) => {
             rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId:Int)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-value-for-field
+       * Summary:
+       *   Get the value bound to the given name in the given object instance.
+       * Arguments:
+       *   String: The unique id of the object to search.
+       *   String: The name of the field to search for.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-value-for-field "obj-22" "name") 42)
+       * Example return:
+       *   (:return (:ok "Horatio Hornblower") 42)
+       */
+      case "swank:debug-value-for-field" => {
+        form match {
+          case SExpList(head :: StringAtom(objectId) :: StringAtom(name) :: body) => {
+            rpcTarget.rpcDebugValueForField(objectId.toLong, name, callId:Int)
           }
           case _ => oops
         }
@@ -1836,8 +1861,8 @@ trait SwankProtocol extends Protocol {
     SExp(
       key(":val-type"), 'prim,
       key(":value"), obj.value,
-      key(":type-name"),obj.typeName,
-      key(":thread-id"),obj.threadId)
+      key(":type-name"),obj.typeName
+    )
   }
   def toWF(obj: DebugObjectField): SExp = {
     SExp(
@@ -1851,8 +1876,7 @@ trait SwankProtocol extends Protocol {
       key(":val-type"), 'obj,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"),obj.typeName,
-      key(":thread-id"),obj.threadId,
-      key(":object-id"),obj.objectId)
+      key(":object-id"),obj.objectId.toString)
   }
   def toWF(obj: DebugStringReference): SExp = {
     SExp(
@@ -1860,8 +1884,7 @@ trait SwankProtocol extends Protocol {
       key(":string-value"),obj.stringValue,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"),obj.typeName,
-      key(":thread-id"),obj.threadId,
-      key(":object-id"),obj.objectId)
+      key(":object-id"),obj.objectId.toString)
   }
   def toWF(obj: DebugArrayReference): SExp = {
     SExp(
@@ -1869,8 +1892,7 @@ trait SwankProtocol extends Protocol {
       key(":length"), obj.length,
       key(":type-name"),obj.typeName,
       key(":element-type-name"),obj.elementTypeName,
-      key(":thread-id"),obj.threadId,
-      key(":object-id"),obj.objectId)
+      key(":object-id"),obj.objectId.toString)
   }
   def toWF(obj: DebugStackLocal): SExp = {
     SExp(
@@ -1883,13 +1905,13 @@ trait SwankProtocol extends Protocol {
       key(":locals"), SExpList(obj.locals.map(toWF)),
       key(":num-args"),obj.numArguments,
       key(":pc-location"),toWF(obj.pcLocation),
-      key(":this-object-id"),obj.thisObjectId)
+      key(":this-object-id"),obj.thisObjectId.toString)
   }
 
   def toWF(obj: DebugBacktrace): SExp = {
     SExp(
       key(":frames"), SExpList(obj.frames.map(toWF)),    
-      key(":thread-id"), obj.threadId)
+      key(":thread-id"), obj.threadId.toString)
   }
 
   def toWF(pos: SourcePosition): SExp = {
