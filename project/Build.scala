@@ -54,6 +54,8 @@ object EnsimeBuild extends Build {
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
 	resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
+	resolvers += "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
+	resolvers += "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
 	resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
 	libraryDependencies <++= (scalaVersion) { scalaVersion =>
 	  val compilerVersion = scalaVersion
@@ -69,12 +71,12 @@ object EnsimeBuild extends Build {
 	    case v if v == TwoNineVersion => 
 	    "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test"
 	  }
-	  val scalaRefactoring = scalaVersion match {
-	    case v if v == TwoEightVersion => 
-	    "org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala-tools.org/repo-snapshots/org/scala-refactoring/org.scala-refactoring_2.8.3-SNAPSHOT/0.3.0-SNAPSHOT/org.scala-refactoring_2.8.3-SNAPSHOT-0.3.0-20111227.074430-50.jar"
-	    case v if v == TwoNineVersion => 
-	    "org.scala-refactoring" % "org.scala-refactoring_2.9.2-SNAPSHOT" % "0.3.0-SNAPSHOT" from "http://scala-tools.org/repo-snapshots/org/scala-refactoring/org.scala-refactoring_2.9.2-SNAPSHOT/0.3.0-SNAPSHOT/org.scala-refactoring_2.9.2-SNAPSHOT-0.3.0-20111227.121032-170.jar"
-	  }
+	  // val scalaRefactoring = scalaVersion match {
+	  //   case v if v == TwoEightVersion => 
+	  //   "org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.4.0-SNAPSHOT" % "compile;runtime;test"
+	  //   case v if v == TwoNineVersion => 
+	  //   "org.scala-refactoring" % "org.scala-refactoring" % "0.4.0-SNAPSHOT" % "compile;runtime;test"
+	  // }
 	  Seq(
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
 	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
@@ -84,7 +86,7 @@ object EnsimeBuild extends Build {
 	    "asm" % "asm-commons" % "3.2",
 	    scalatest,
 	    scalariform,
-	    scalaRefactoring,
+//	    scalaRefactoring,
 	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
 	  )},
 	scalacOptions ++= Seq("-g:vars","-deprecation"),
