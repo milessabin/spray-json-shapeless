@@ -399,7 +399,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 {
                   System.err.println("Error handling RPC:")
                   e.printStackTrace()
-		  moveActiveBreaksToPending()
+                  moveActiveBreaksToPending()
                   project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
                   project.sendRPCError(ErrExceptionInDebugger,
                     Some("VM is disconnected!"), callId)
@@ -577,9 +577,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       }
     }
 
-
-    def makeDebugArr(value: ArrayReference, thread: ThreadReference): 
-    DebugArrayReference = {
+    def makeDebugArr(value: ArrayReference, thread: ThreadReference): DebugArrayReference = {
       DebugArrayReference(
         value.length,
         value.referenceType().name,
@@ -588,41 +586,57 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         value.uniqueID)
     }
 
-    def makeDebugObj(value: ObjectReference, thread: ThreadReference): 
-    DebugObjectReference = {
-          DebugObjectReference(
-            {
-              var i = -1
-              value.referenceType().fields().map { f =>
-		i += 1
-                DebugObjectField(i, f.name(), None, value.uniqueID)
-              }.toList
-            },
-            value.referenceType().name(),
-            value.uniqueID(),
-            thread.uniqueID())
+    private def makeFields(
+      tpeIn: ReferenceType, 
+      obj: ObjectReference, 
+      thread: ThreadReference): 
+    List[DebugObjectField] = {
+      tpeIn match {
+        case tpeIn: ClassType => {
+          var fields = List[DebugObjectField]()
+          var tpe = tpeIn
+          while (tpe != null) {
+            var i = -1
+            fields = tpe.fields().map { f =>
+              i += 1
+	      val value = obj.getValue(f)
+              DebugObjectField(
+		i, f.name(),
+                f.typeName(),
+		value match{
+		  case v:PrimitiveValue => 
+		  Some(makeDebugPrim(v,thread))
+		  case _ => None
+		})
+            }.toList ++ fields
+            tpe = tpe.superclass
+          }
+          fields
+        }
+        case _ => List()
+      }
     }
 
-    def makeDebugPrim(value: PrimitiveValue, thread: ThreadReference): 
-    DebugPrimitiveValue = DebugPrimitiveValue(
+    def makeDebugObj(value: ObjectReference, thread: ThreadReference): DebugObjectReference = {
+      DebugObjectReference(
+	makeFields(value.referenceType(), value, thread),
+        value.referenceType().name(),
+        value.uniqueID(),
+        thread.uniqueID())
+    }
+
+    def makeDebugPrim(value: PrimitiveValue, thread: ThreadReference): DebugPrimitiveValue = DebugPrimitiveValue(
       valueToString(value),
       value.`type`().name(),
       thread.uniqueID())
 
-    def makeDebugStr(value: StringReference, thread: ThreadReference): 
-    DebugStringReference = {
-          DebugStringReference(
-	    value.value().toString().take(50),
-            {
-              var i = -1
-              value.referenceType().fields().map { f =>
-		i += 1
-                DebugObjectField(i, f.name(), None, value.uniqueID)
-              }.toList
-            },
-            value.referenceType().name(),
-            value.uniqueID(),
-            thread.uniqueID())
+    def makeDebugStr(value: StringReference, thread: ThreadReference): DebugStringReference = {
+      DebugStringReference(
+        value.value().toString().take(50),
+	makeFields(value.referenceType(), value, thread),
+        value.referenceType().name(),
+        value.uniqueID(),
+        thread.uniqueID())
     }
 
     def makeDebugValue(value: Value, thread: ThreadReference): DebugValue = {

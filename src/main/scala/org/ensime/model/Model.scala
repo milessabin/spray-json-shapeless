@@ -96,8 +96,8 @@ case class DebugPrimitiveValue(
 case class DebugObjectField(
   val index: Int,
   val name: String,
-  val value: Option[DebugValue],
-  val objectId: Long
+  val typeName: String,
+  val value: Option[DebugValue]
 )
 
 case class DebugObjectReference(

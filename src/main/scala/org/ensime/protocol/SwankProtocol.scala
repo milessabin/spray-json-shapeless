@@ -1830,10 +1830,12 @@ trait SwankProtocol extends Protocol {
       case obj:DebugPrimitiveValue => toWF(obj)
       case obj:DebugObjectReference => toWF(obj)
       case obj:DebugArrayReference => toWF(obj)
+      case obj:DebugStringReference => toWF(obj)
     }
   }
   def toWF(obj: DebugPrimitiveValue): SExp = {
     SExp(
+      key(":val-type"), 'prim,
       key(":value"), obj.value,
       key(":type-name"),obj.typeName,
       key(":thread-id"),obj.threadId)
@@ -1843,10 +1845,11 @@ trait SwankProtocol extends Protocol {
       key(":index"), obj.index,
       key(":name"),obj.name,
       key(":value"), obj.value.map(toWF).getOrElse(NilAtom()),
-      key(":object-id"),obj.objectId)
+      key(":type-name"),obj.typeName)
   }
   def toWF(obj: DebugObjectReference): SExp = {
     SExp(
+      key(":val-type"), 'obj,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"),obj.typeName,
       key(":thread-id"),obj.threadId,
@@ -1854,6 +1857,7 @@ trait SwankProtocol extends Protocol {
   }
   def toWF(obj: DebugStringReference): SExp = {
     SExp(
+      key(":val-type"), 'str,
       key(":string-value"),obj.stringValue,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"),obj.typeName,
@@ -1862,6 +1866,7 @@ trait SwankProtocol extends Protocol {
   }
   def toWF(obj: DebugArrayReference): SExp = {
     SExp(
+      key(":val-type"), 'arr,
       key(":length"), obj.length,
       key(":type-name"),obj.typeName,
       key(":element-type-name"),obj.elementTypeName,
