@@ -1708,7 +1708,7 @@ trait SwankProtocol extends Protocol {
        *   String: The thread-id in which to search.
        *   String: The name to search for.
        * Return:
-       *   None
+       *   A DebugValue
        * Example call:
        *   (:swank-rpc (swank:debug-value-for-name "thread-2" "apple") 42)
        * Example return:
@@ -1732,7 +1732,7 @@ trait SwankProtocol extends Protocol {
        *   String: The unique id of the object to search.
        *   String: The name of the field to search for.
        * Return:
-       *   None
+       *   A DebugValue
        * Example call:
        *   (:swank-rpc (swank:debug-value-for-field "obj-22" "name") 42)
        * Example return:
@@ -1746,6 +1746,32 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+
+      /**
+       * Doc RPC:
+       *   swank:debug-value-for-index
+       * Summary:
+       *   Get the value at the given offset in the array specified by object id
+       * Arguments:
+       *   String: The unique id of the object to search.
+       *   Int: The index of the element to return
+       * Return:
+       *   A DebugValue
+       * Example call:
+       *   (:swank-rpc (swank:debug-value-for-index "obj-22" 0) 42)
+       * Example return:
+       *   (:return (:ok "Captain Bracegirdle") 42)
+       */
+      case "swank:debug-value-for-index" => {
+        form match {
+          case SExpList(head :: StringAtom(objectId) :: IntAtom(index) :: body) => {
+            rpcTarget.rpcDebugValueForIndex(objectId.toLong, index, callId:Int)
+          }
+          case _ => oops
+        }
+      }
+
 
 
       /**

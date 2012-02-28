@@ -379,7 +379,7 @@ object ProjectConfig {
       ":source-roots",
       "A list of directories in which to start searching for source files.",
       Some("(directory*)"),
-      None
+      Some(":sources")
     )
     props += sourceRoots_
     def sourceRoots() = sourceRoots_()

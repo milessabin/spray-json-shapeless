@@ -59,6 +59,7 @@ case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugValueForNameReq(threadId: Long, name: String)
 case class DebugValueForFieldReq(objectId: Long, name: String)
+case class DebugValueForIndexReq(objectId: Long, index: Int)
 case class DebugActiveVMReq()
 case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
@@ -184,7 +185,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       System.err.println("No VM under debug!")
     }
   }
-  private def handleRPCWithVMAndThread(callId: Int, 
+  private def handleRPCWithVMAndThread(callId: Int,
     threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
     (for (vm <- maybeVM) yield {
       (for (thread <- vm.threadById(threadId)) yield {
@@ -420,6 +421,26 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                     }
                   }
                 }
+
+                case DebugValueForIndexReq(objectId: Long, index: Int) => {
+                  try {
+                    handleRPCWithVM(callId) {
+                      (vm) =>
+                        vm.valueForIndex(objectId, index) match {
+                          case Some(value) =>
+                            project ! RPCResultEvent(toWF(value), callId)
+                          case None =>
+                            project ! RPCResultEvent(toWF(false), callId)
+                        }
+                    }
+                  } catch {
+                    case e: AbsentInformationException => {
+                      e.printStackTrace()
+                      project ! RPCResultEvent(toWF(false), callId)
+                    }
+                  }
+                }
+
               }
             } catch {
               case e: VMDisconnectedException =>
@@ -715,6 +736,13 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         f <- fieldByName(obj, name)
       ) yield {
         remember(obj.getValue(f))
+      }).map(makeDebugValue(_))
+    }
+
+    def valueForIndex(objectId: Long, index: Int): Option[DebugValue] = {
+      (savedObjects.get(objectId) match {
+        case Some(arr: ArrayReference) => Some(remember(arr.getValue(index)))
+        case None => None
       }).map(makeDebugValue(_))
     }
 
