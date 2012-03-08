@@ -266,7 +266,6 @@ object SExp extends RegexParsers {
     assert(readStr("nil\n\t").toScala == false, "nil should be false!")
     assert(readStr("nil ").toScala == false, "nil should be false!")
     assert(readStr("nil").toScala == false, "nil should be false!")
-
     val map = readStr("(:use-sbt t :dude 1212)") match{
       case ls:SExpList => ls.toKeywordMap()
     }

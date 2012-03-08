@@ -86,6 +86,11 @@ sealed trait DebugValue{
   def typeName:String;
 }
 
+
+case class DebugNullValue(
+  val typeName: String
+) extends DebugValue
+
 case class DebugPrimitiveValue(
   val value: String,
   val typeName: String

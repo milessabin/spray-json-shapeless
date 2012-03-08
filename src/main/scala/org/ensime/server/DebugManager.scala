@@ -710,8 +710,11 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       valueToString(value),
       value.`type`().name())
 
+    def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
+
     def makeDebugValue(value: Value): DebugValue = {
-      value match {
+      if (value == null) makeDebugNull()
+      else value match {
         case value: ArrayReference => makeDebugArr(value)
         case value: StringReference => makeDebugStr(value)
         case value: ObjectReference => makeDebugObj(value)
@@ -722,12 +725,16 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     def valueForName(thread: ThreadReference, name: String): Option[DebugValue] = {
       val stackFrame = thread.frame(0)
       val objRef = stackFrame.thisObject();
-      stackValueNamed(thread, name).orElse(
-        fieldByName(objRef, name).flatMap { f =>
-          Some(objRef.getValue(f))
-        }).map { v =>
-          makeDebugValue(remember(v))
-        }
+      if (name == "this") {
+        Some(makeDebugValue(remember(objRef)))
+      } else {
+        stackValueNamed(thread, name).orElse(
+          fieldByName(objRef, name).flatMap { f =>
+            Some(objRef.getValue(f))
+          }).map { v =>
+            makeDebugValue(remember(v))
+          }
+      }
     }
 
     def valueForField(objectId: Long, name: String): Option[DebugValue] = {

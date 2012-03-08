@@ -1881,7 +1881,14 @@ trait SwankProtocol extends Protocol {
       case obj:DebugObjectReference => toWF(obj)
       case obj:DebugArrayReference => toWF(obj)
       case obj:DebugStringReference => toWF(obj)
+      case obj:DebugNullValue => toWF(obj)
     }
+  }
+  def toWF(obj: DebugNullValue): SExp = {
+    SExp(
+      key(":val-type"), 'null,
+      key(":type-name"),obj.typeName
+    )
   }
   def toWF(obj: DebugPrimitiveValue): SExp = {
     SExp(
