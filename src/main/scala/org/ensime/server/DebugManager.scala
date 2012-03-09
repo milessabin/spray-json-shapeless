@@ -60,6 +60,7 @@ case class DebugStepOutReq(threadId: Long)
 case class DebugValueForNameReq(threadId: Long, name: String)
 case class DebugValueForFieldReq(objectId: Long, name: String)
 case class DebugValueForIndexReq(objectId: Long, index: Int)
+case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
 case class DebugActiveVMReq()
 case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
@@ -79,6 +80,10 @@ case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 class DebugManager(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor {
 
   import protocol._
+
+  def ignoreErr[E <: Exception, T](action: => T, orElse: => T): T = {
+    try { action } catch { case e: E => orElse }
+  }
 
   def locToPos(loc: Location): Option[SourcePosition] = {
     (for (set <- sourceMap.get(loc.sourceName())) yield {
@@ -403,6 +408,20 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                     }
                   }
                 }
+                case DebugBacktraceReq(threadId: Long, index: Int, count: Int) => {
+                  try {
+                    handleRPCWithVMAndThread(callId, threadId) {
+                      (vm, thread) =>
+                        val bt = vm.backtrace(thread, index, count)
+                        project ! RPCResultEvent(toWF(bt), callId)
+                    }
+                  } catch {
+                    case e: AbsentInformationException => {
+                      e.printStackTrace()
+                      project ! RPCResultEvent(toWF(false), callId)
+                    }
+                  }
+                }
                 case DebugValueForFieldReq(objectId: Long, name: String) => {
                   try {
                     handleRPCWithVM(callId) {
@@ -710,6 +729,25 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       valueToString(value),
       value.`type`().name())
 
+    def makeStackFrame(frame: StackFrame): DebugStackFrame = {
+      val locals = ignoreErr({
+        frame.visibleVariables.map { v =>
+          DebugStackLocal(v.name, Some(makeDebugValue(frame.getValue(v))))
+        }.toList
+      }, List())
+
+      val numArgs = ignoreErr(frame.getArgumentValues().length,0)
+      val methodName = ignoreErr(frame.location.method().name(),"Method")
+      val className = ignoreErr(frame.location.declaringType().name(),"Class")
+      val pcLocation = locToPos(frame.location).getOrElse(
+        SourcePosition(
+          CanonFile(
+            frame.location.sourcePath()),
+          frame.location.lineNumber))
+      val thisObj = ignoreErr(frame.thisObject().uniqueID, -1)
+      DebugStackFrame(locals, numArgs, className, methodName, pcLocation, thisObj)
+    }
+
     def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
 
     def makeDebugValue(value: Value): DebugValue = {
@@ -751,6 +789,17 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         case Some(arr: ArrayReference) => Some(remember(arr.getValue(index)))
         case None => None
       }).map(makeDebugValue(_))
+    }
+
+    def backtrace(thread: ThreadReference, index: Int, count: Int): DebugBacktrace = {
+      val frames = ListBuffer[DebugStackFrame]()
+      var i = index
+      while (i < thread.frameCount && (count == -1 || i < count)) {
+        val stackFrame = thread.frame(i)
+        frames += makeStackFrame(thread.frame(i))
+        i += 1
+      }
+      DebugBacktrace(frames.toList, thread.uniqueID())
     }
 
     private def stackValueNamed(thread: ThreadReference, name: String): Option[Value] = {

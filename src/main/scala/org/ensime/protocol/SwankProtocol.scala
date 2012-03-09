@@ -1773,6 +1773,33 @@ trait SwankProtocol extends Protocol {
       }
 
 
+      /**
+       * Doc RPC:
+       *   swank:debug-backtrace
+       * Summary:
+       *   Get a detailed backtrace for the given thread
+       * Arguments:
+       *   Int: The index of the first backtrace. The 0th frame is the
+       *     currently executing frame.
+       *   Int: The number of frames to return. -1 denotes _all_ frames.
+       * Return:
+       *   A DebugBacktrace
+       * Example call:
+       *   (:swank-rpc (swank:debug-backtrace "thread-23" 0 2) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-backtrace" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: 
+	    IntAtom(index) :: IntAtom(count) :: body) => {
+            rpcTarget.rpcDebugBacktrace(threadId.toLong, index, count, callId)
+          }
+          case _ => oops
+        }
+      }
+
+
 
       /**
        * Doc RPC:
@@ -1927,6 +1954,7 @@ trait SwankProtocol extends Protocol {
       key(":element-type-name"),obj.elementTypeName,
       key(":object-id"),obj.objectId.toString)
   }
+
   def toWF(obj: DebugStackLocal): SExp = {
     SExp(
       key(":name"), obj.name,
@@ -1937,6 +1965,8 @@ trait SwankProtocol extends Protocol {
     SExp(
       key(":locals"), SExpList(obj.locals.map(toWF)),
       key(":num-args"),obj.numArguments,
+      key(":class-name"), obj.className,
+      key(":method-name"), obj.methodName,
       key(":pc-location"),toWF(obj.pcLocation),
       key(":this-object-id"),obj.thisObjectId.toString)
   }

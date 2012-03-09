@@ -131,6 +131,8 @@ case class DebugStackLocal(
 case class DebugStackFrame(
   val locals: List[DebugStackLocal],
   val numArguments: Int,
+  val className: String,
+  val methodName: String,
   val pcLocation: SourcePosition,
   val thisObjectId: Long
 )

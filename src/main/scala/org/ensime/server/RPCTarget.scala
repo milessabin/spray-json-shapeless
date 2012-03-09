@@ -144,6 +144,9 @@ trait RPCTarget { self: Project =>
   def rpcDebugValueForIndex(objectId: Long, index:Int, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueForIndexReq(objectId,index), callId)
   }
+  def rpcDebugBacktrace(threadId: Long, index:Int, count: Int, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugBacktraceReq(threadId,index,count), callId)
+  }
   def rpcDebugActiveVM(callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugActiveVMReq(), callId)
   }
