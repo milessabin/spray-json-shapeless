@@ -216,64 +216,76 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
             exit('stop)
           }
           case evt: com.sun.jdi.event.Event => {
-            evt match {
-              case e: VMStartEvent => {
-                for (vm <- maybeVM) {
-                  vm.initLocationMap()
+            try {
+              evt match {
+                case e: VMStartEvent => {
+                  for (vm <- maybeVM) {
+                    vm.initLocationMap()
+                  }
+                  project ! AsyncEvent(toWF(DebugVMStartEvent()))
                 }
-                project ! AsyncEvent(toWF(DebugVMStartEvent()))
-              }
-              case e: VMDeathEvent => {
-                maybeVM = None
-                moveActiveBreaksToPending()
-                project ! AsyncEvent(toWF(DebugVMDeathEvent()))
-              }
-              case e: VMDisconnectEvent => {
-                maybeVM = None
-                moveActiveBreaksToPending()
-                project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
-              }
-              case e: StepEvent => {
-                (for (pos <- locToPos(e.location())) yield {
-                  project ! AsyncEvent(toWF(DebugStepEvent(
-                    e.thread().uniqueID(), pos)))
-                }) getOrElse {
-                  System.err.println("Step position not found: " +
-                    e.location().sourceName() + " : " + e.location().lineNumber())
+                case e: VMDeathEvent => {
+                  maybeVM = None
+                  moveActiveBreaksToPending()
+                  project ! AsyncEvent(toWF(DebugVMDeathEvent()))
                 }
-              }
-              case e: BreakpointEvent => {
-                (for (pos <- locToPos(e.location())) yield {
-                  project ! AsyncEvent(toWF(DebugBreakEvent(
-                    e.thread().uniqueID(), pos)))
-                }) getOrElse {
-                  System.err.println("Break position not found: " +
-                    e.location().sourceName() + " : " + e.location().lineNumber())
+                case e: VMDisconnectEvent => {
+                  maybeVM = None
+                  moveActiveBreaksToPending()
+                  project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
                 }
-              }
-              case e: ExceptionEvent => {
-                project ! AsyncEvent(toWF(DebugExceptionEvent(
-                  e.toString,
-                  e.thread().uniqueID())))
-              }
-              case e: ThreadDeathEvent => {
-                project ! AsyncEvent(toWF(DebugThreadDeathEvent(
-                  e.thread().uniqueID())))
-              }
-              case e: ThreadStartEvent => {
-                project ! AsyncEvent(toWF(DebugThreadStartEvent(
-                  e.thread().uniqueID())))
-              }
-              case e: AccessWatchpointEvent => {}
-              case e: ClassPrepareEvent => {
-                for (vm <- maybeVM) {
-                  vm.typeAdded(e.referenceType())
+                case e: StepEvent => {
+                  (for (pos <- locToPos(e.location())) yield {
+                    project ! AsyncEvent(toWF(DebugStepEvent(
+                      e.thread().uniqueID(), pos)))
+                  }) getOrElse {
+                    System.err.println("Step position not found: " +
+                      e.location().sourceName() + " : " + e.location().lineNumber())
+                  }
                 }
+                case e: BreakpointEvent => {
+                  (for (pos <- locToPos(e.location())) yield {
+                    project ! AsyncEvent(toWF(DebugBreakEvent(
+                      e.thread().uniqueID(), pos)))
+                  }) getOrElse {
+                    System.err.println("Break position not found: " +
+                      e.location().sourceName() + " : " + e.location().lineNumber())
+                  }
+                }
+                case e: ExceptionEvent => {
+                  project ! AsyncEvent(toWF(DebugExceptionEvent(
+                    e.toString,
+                    e.thread().uniqueID())))
+                }
+                case e: ThreadDeathEvent => {
+                  project ! AsyncEvent(toWF(DebugThreadDeathEvent(
+                    e.thread().uniqueID())))
+                }
+                case e: ThreadStartEvent => {
+                  project ! AsyncEvent(toWF(DebugThreadStartEvent(
+                    e.thread().uniqueID())))
+                }
+                case e: AccessWatchpointEvent => {}
+                case e: ClassPrepareEvent => {
+                  for (vm <- maybeVM) {
+                    vm.typeAdded(e.referenceType())
+                  }
+                }
+                case e: ClassUnloadEvent => {}
+                case e: MethodEntryEvent => {}
+                case e: MethodExitEvent => {}
+                case _ => {}
               }
-              case e: ClassUnloadEvent => {}
-              case e: MethodEntryEvent => {}
-              case e: MethodExitEvent => {}
-              case _ => {}
+
+            } catch {
+              case e: VMDisconnectedException =>
+                {
+                  System.err.println("Error handling DebugEvent:")
+                  e.printStackTrace()
+                  moveActiveBreaksToPending()
+                  project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
+                  maybeVM = None
+                }
             }
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
@@ -736,9 +748,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         }.toList
       }, List())
 
-      val numArgs = ignoreErr(frame.getArgumentValues().length,0)
-      val methodName = ignoreErr(frame.location.method().name(),"Method")
-      val className = ignoreErr(frame.location.declaringType().name(),"Class")
+      val numArgs = ignoreErr(frame.getArgumentValues().length, 0)
+      val methodName = ignoreErr(frame.location.method().name(), "Method")
+      val className = ignoreErr(frame.location.declaringType().name(), "Class")
       val pcLocation = locToPos(frame.location).getOrElse(
         SourcePosition(
           CanonFile(
