@@ -59,6 +59,7 @@ case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugValueForNameReq(threadId: Long, name: String)
 case class DebugValueForFieldReq(objectId: Long, name: String)
+case class DebugValueForIdReq(objectId: Long)
 case class DebugValueForIndexReq(objectId: Long, index: Int)
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
 case class DebugActiveVMReq()
@@ -434,6 +435,24 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                     }
                   }
                 }
+                case DebugValueForIdReq(objectId: Long) => {
+                  try {
+                    handleRPCWithVM(callId) {
+                      (vm) =>
+                        vm.valueForId(objectId) match {
+                          case Some(value) =>
+                            project ! RPCResultEvent(toWF(value), callId)
+                          case None =>
+                            project ! RPCResultEvent(toWF(false), callId)
+                        }
+                    }
+                  } catch {
+                    case e: AbsentInformationException => {
+                      e.printStackTrace()
+                      project ! RPCResultEvent(toWF(false), callId)
+                    }
+                  }
+                }
                 case DebugValueForFieldReq(objectId: Long, name: String) => {
                   try {
                     handleRPCWithVM(callId) {
@@ -744,7 +763,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     def makeStackFrame(frame: StackFrame): DebugStackFrame = {
       val locals = ignoreErr({
         frame.visibleVariables.map { v =>
-          DebugStackLocal(v.name, Some(makeDebugValue(frame.getValue(v))))
+          DebugStackLocal(v.name, Some(makeDebugValue(
+		remember(frame.getValue(v))
+	      )))
         }.toList
       }, List())
 
@@ -784,6 +805,12 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
           }).map { v =>
             makeDebugValue(remember(v))
           }
+      }
+    }
+
+    def valueForId(objectId: Long): Option[DebugValue] = {
+      savedObjects.get(objectId).map {
+        obj => makeDebugValue(remember(obj))
       }
     }
 

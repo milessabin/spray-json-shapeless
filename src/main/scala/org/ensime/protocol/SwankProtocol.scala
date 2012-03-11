@@ -1725,6 +1725,29 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:debug-value-for-id
+       * Summary:
+       *   Get the current binding for the given object id.
+       * Arguments:
+       *   String: The object id to look up.
+       * Return:
+       *   A DebugValue
+       * Example call:
+       *   (:swank-rpc (swank:debug-value-for-id "obj-1") 42)
+       * Example return:
+       *   (:return (:ok "23") 42)
+       */
+      case "swank:debug-value-for-id" => {
+        form match {
+          case SExpList(head :: StringAtom(objectId) :: body) => {
+            rpcTarget.rpcDebugValueForId(objectId.toLong, callId:Int)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
        *   swank:debug-value-for-field
        * Summary:
        *   Get the value bound to the given name in the given object instance.
