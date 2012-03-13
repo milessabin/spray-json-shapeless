@@ -1,29 +1,29 @@
 /**
- *  Copyright (c) 2010, Aemon Cannon
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *      * Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *      * Redistributions in binary form must reproduce the above copyright
- *        notice, this list of conditions and the following disclaimer in the
- *        documentation and/or other materials provided with the distribution.
- *      * Neither the name of ENSIME nor the
- *        names of its contributors may be used to endorse or promote products
- *        derived from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
- *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+*  Copyright (c) 2010, Aemon Cannon
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions are met:
+*      * Redistributions of source code must retain the above copyright
+*        notice, this list of conditions and the following disclaimer.
+*      * Redistributions in binary form must reproduce the above copyright
+*        notice, this list of conditions and the following disclaimer in the
+*        documentation and/or other materials provided with the distribution.
+*      * Neither the name of ENSIME nor the
+*        names of its contributors may be used to endorse or promote products
+*        derived from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 package org.ensime.config
 import java.io.File
@@ -75,7 +75,7 @@ object ProjectConfig {
   import SExp.{ key => keyword }
 
   trait Prop {
-    def key: String
+    def keyName: String
     def desc: String
     def typeHint: Option[String]
     def synonymKey: Option[String]
@@ -83,11 +83,13 @@ object ProjectConfig {
 
     def defaultTypeHint: String = "NA"
 
+    def key: KeywordAtom = KeywordAtom(keyName)
+
     def manualEntry: String = {
       val tpe = typeHint.getOrElse(defaultTypeHint)
       List(
         """\noindent""",
-        """{\bf """ + key + "}  " + tpe + """\\""",
+        """{\bf """ + keyName + "}  " + tpe + """\\""",
         desc,
         """\vspace{1 cm}""").mkString("\n")
     }
@@ -130,33 +132,33 @@ object ProjectConfig {
     }
   }
 
-  class OptionalStringProp(val key: String, val desc: String,
+  class OptionalStringProp(val keyName: String, val desc: String,
     val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Option[String] = getStr(m, key).orElse(synonymKey.flatMap(getStr(m, _)))
+    def apply(m: KeyMap): Option[String] = getStr(m, keyName).orElse(synonymKey.flatMap(getStr(m, _)))
     override def defaultTypeHint: String = "a string"
   }
 
-  class BooleanProp(val key: String, val desc: String,
+  class BooleanProp(val keyName: String, val desc: String,
     val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Boolean = getBool(m, key) || synonymKey.map(getBool(m, _)).getOrElse(false)
+    def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.map(getBool(m, _)).getOrElse(false)
     override def defaultTypeHint: String = "[t or nil]"
   }
 
-  class StringListProp(val key: String, val desc: String,
+  class StringListProp(val keyName: String, val desc: String,
     val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): List[String] = getStrList(m, key) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
+    def apply(m: KeyMap): List[String] = getStrList(m, keyName) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
     override def defaultTypeHint: String = "(string*)"
   }
 
-  class RegexListProp(val key: String, val desc: String,
+  class RegexListProp(val keyName: String, val desc: String,
     val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): List[Regex] = getRegexList(m, key) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
+    def apply(m: KeyMap): List[Regex] = getRegexList(m, keyName) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
     override def defaultTypeHint: String = "(regex*)"
   }
 
-  class SymbolMapProp(val key: String, val desc: String,
+  class SymbolMapProp(val keyName: String, val desc: String,
     val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, key) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
+    def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, keyName) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
     override def defaultTypeHint: String = "([keyword value]*)"
   }
 
@@ -165,10 +167,10 @@ object ProjectConfig {
     private def subprojects(m: KeyMap): List[KeyMap] = {
       m.get(key(":subprojects")) match {
         case Some(SExpList(items)) =>
-          items.flatMap {
-            case lst: SExpList => Some(lst.toKeywordMap)
-            case _ => None
-          }.toList
+        items.flatMap {
+          case lst: SExpList => Some(lst.toKeywordMap)
+          case _ => None
+        }.toList
         case _ => List()
       }
     }
@@ -179,7 +181,8 @@ object ProjectConfig {
         (primary, secondary) match {
           case (Some(s1: SExp), None) => s1
           case (None, Some(s2: SExp)) => s2
-          case (Some(SExpList(items1)), Some(SExpList(items2))) => SExpList(items1 ++ items2)
+          case (Some(SExpList(items1)), Some(SExpList(items2))) => 
+	  SExpList(items1 ++ items2)
           case (Some(s1: SExp), Some(s2: SExp)) => s2
           case _ => NilAtom()
         }
@@ -189,45 +192,42 @@ object ProjectConfig {
         main + ((key, merge(main.get(key), dep.get(key))))
       }
 
-      List(key(":source-roots"),
-        key(":runtime-deps"),
-        key(":compile-deps"),
-        key(":test-deps")).foldLeft(main)(withMerged)
+      List(
+	sourceRoots_.key,
+        runtimeDeps_.key,
+        compileDeps_.key,
+        testDeps_.key
+      ).foldLeft(main)(withMerged)
     }
 
-    private def subproject(m: KeyMap, projectName: String): Option[KeyMap] = {
+    private def subproject(m: KeyMap, moduleName: String): Option[KeyMap] = {
       val main = subprojects(m).find { ea =>
-        ea.get(key(":name")) match {
-          case Some(StringAtom(str)) => str == projectName
+        ea.get(moduleName_.key) match {
+          case Some(StringAtom(str)) => str == moduleName
           case _ => false
         }
       }
       main.map { p: KeyMap =>
-        val deps = (p.get(key(":dependent-projects")) match {
-          case Some(names: SExpList) => names.map(_.toString)
-          case _ => List()
-        }).flatMap { subproject(m, _)}
+        val deps = (p.get(dependsOnModules_.key) match {
+            case Some(names: SExpList) => names.map(_.toString)
+            case _ => List()
+          }).flatMap { subproject(m, _)}
         deps.foldLeft(p)(mergeWithDependency)
       }
     }
 
 
     private def activeSubprojectKeyMap(main: KeyMap): Option[KeyMap] = {
-      main.get(key(":active-subproject")) match {
+      main.get(activeSubproject_.key) match {
         case Some(StringAtom(nm)) => subproject(main, nm)
         case _ => None
       }
     }
 
-    private val m: KeyMap = {
-      val mainproj = config.toKeywordMap
-      val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
-      mainproj ++ subproj
-    }
 
-    val props = scala.collection.mutable.ListBuffer[Prop]()
+    lazy val props = scala.collection.mutable.ListBuffer[Prop]()
 
-    val rootDir_ = new OptionalStringProp(
+    lazy val rootDir_ = new OptionalStringProp(
       ":root-dir",
       "The root directory of your project. This option should be filled in by your editor.",
       Some("a filename"),
@@ -235,7 +235,7 @@ object ProjectConfig {
     props += rootDir_
     def rootDir() = rootDir_(m)
 
-    val name_ = new OptionalStringProp(
+    lazy val name_ = new OptionalStringProp(
       ":name",
       "The short identifier for your project. Should be the same that you use when publishing. Will be displayed in the Emacs mode-line when connected to an ENSIME server.",
       None,
@@ -243,7 +243,7 @@ object ProjectConfig {
     props += name_
     def name() = name_(m)
 
-    val pack_ = new OptionalStringProp(
+    lazy val pack_ = new OptionalStringProp(
       ":package",
       "The main package for your project. Used by ENSIME to populate the project outline view.",
       None,
@@ -251,56 +251,80 @@ object ProjectConfig {
     props += pack_
     def pack() = pack_(m)
 
-    val version_ = new OptionalStringProp(
+    lazy val moduleName_ = new OptionalStringProp(
+      ":module-name",
+      "The canonical module-name of this project.",
+      None, None)
+    props += moduleName_
+    def moduleName() = moduleName_(m)
+
+    lazy val activeSubproject_ = new OptionalStringProp(
+      ":active-subproject",
+      "The module-name of the subproject which is currently selected.",
+      None, None)
+    props += activeSubproject_
+    def activeSubproject() = activeSubproject_(m)
+
+
+    lazy val dependsOnModules_ = new StringListProp(
+      ":depends-on-modules",
+      "A list of module-names on which this project depends.",
+      Some("(module-name*)"),
+      None)
+    props += dependsOnModules_
+    def dependsOnModules() = dependsOnModules_(m)
+
+
+    lazy val version_ = new OptionalStringProp(
       ":version",
       "The current, working version of your project.",
       None, None)
     props += version_
     def version() = version_(m)
 
-    val useMaven_ = new BooleanProp(
+    lazy val useMaven_ = new BooleanProp(
       ":use-maven",
       "Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
       None, None)
     props += useMaven_
     def useMaven() = useMaven_(m)
 
-    val useIvy_ = new BooleanProp(
+    lazy val useIvy_ = new BooleanProp(
       ":use-ivy",
       "Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
       None, None)
     props += useIvy_
     def useIvy() = useIvy_(m)
 
-    val ivyFile_ = new OptionalStringProp(
+    lazy val ivyFile_ = new OptionalStringProp(
       ":ivy-file",
       "Override the default ivy.xml location.",
       Some("a filename"), None)
     props += ivyFile_
     def ivyFile() = ivyFile_(m)
 
-    val ivyRuntimeConf_ = new OptionalStringProp(
+    lazy val ivyRuntimeConf_ = new OptionalStringProp(
       ":ivy-runtime-conf",
       "Specify the names of dependency profiles to be used for runtime scenarios.",
       None, None)
     props += ivyRuntimeConf_
     def ivyRuntimeConf() = ivyRuntimeConf_(m)
 
-    val ivyCompileConf_ = new OptionalStringProp(
+    lazy val ivyCompileConf_ = new OptionalStringProp(
       ":ivy-compile-conf",
       "Specify the names of dependency profiles to be used for compile scenarios.",
       None, None)
     props += ivyCompileConf_
     def ivyCompileConf() = ivyCompileConf_(m)
 
-    val ivyTestConf_ = new OptionalStringProp(
+    lazy val ivyTestConf_ = new OptionalStringProp(
       ":ivy-test-conf",
       "Specify the names of dependency profiles to be used for test scenarios.",
       None, None)
     props += ivyTestConf_
     def ivyTestConf() = ivyTestConf_(m)
 
-    val compileDeps_ = new StringListProp(
+    lazy val compileDeps_ = new StringListProp(
       ":compile-deps",
       "A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.",
       Some("([directory or filename]*)"),
@@ -308,7 +332,7 @@ object ProjectConfig {
     props += compileDeps_
     def compileDeps() = compileDeps_(m)
 
-    val compileJars_ = new StringListProp(
+    lazy val compileJars_ = new StringListProp(
       ":compile-jars",
       "A list of jar files and directories to search for jar files to include on the compilation classpath.",
       Some("([directory or filename]*)"),
@@ -316,7 +340,7 @@ object ProjectConfig {
     props += compileJars_
     def compileJars() = compileJars_(m)
 
-    val runtimeDeps_ = new StringListProp(
+    lazy val runtimeDeps_ = new StringListProp(
       ":runtime-deps",
       "A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.",
       Some("([directory or filename]*)"),
@@ -324,7 +348,7 @@ object ProjectConfig {
     props += runtimeDeps_
     def runtimeDeps() = runtimeDeps_(m)
 
-    val runtimeJars_ = new StringListProp(
+    lazy val runtimeJars_ = new StringListProp(
       ":runtime-jars",
       "A list of jar files and directories to search for jar files to include on the runtime classpath.",
       Some("([directory or filename]*)"),
@@ -332,7 +356,7 @@ object ProjectConfig {
     props += runtimeJars_
     def runtimeJars() = runtimeJars_(m)
 
-    val testDeps_ = new StringListProp(
+    lazy val testDeps_ = new StringListProp(
       ":test-deps",
       "A list of jar files and class directories to include on the test classpath. No recursive expansion will be done.",
       Some("([directory or filename]*)"),
@@ -340,7 +364,7 @@ object ProjectConfig {
     props += testDeps_
     def testDeps() = testDeps_(m)
 
-    val sourceRoots_ = new StringListProp(
+    lazy val sourceRoots_ = new StringListProp(
       ":source-roots",
       "A list of directories in which to start searching for source files.",
       Some("(directory*)"),
@@ -348,7 +372,7 @@ object ProjectConfig {
     props += sourceRoots_
     def sourceRoots() = sourceRoots_(m)
 
-    val target_ = new OptionalStringProp(
+    lazy val target_ = new OptionalStringProp(
       ":target",
       "The root of the class output directory.",
       Some("filename"),
@@ -356,14 +380,14 @@ object ProjectConfig {
     props += target_
     def target() = target_(m)
 
-    val disableIndexOnStartup_ = new BooleanProp(
+    lazy val disableIndexOnStartup_ = new BooleanProp(
       ":disable-index-on-startup",
       "Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality.",
       None, None)
     props += disableIndexOnStartup_
     def disableIndexOnStartup() = disableIndexOnStartup_(m)
 
-    val onlyIncludeInIndex_ = new RegexListProp(
+    lazy val onlyIncludeInIndex_ = new RegexListProp(
       ":only-include-in-index",
       """Only classes that match one of the given regular expressions will be added to the index. If this is omitted, all classes will be added. This can be used to reduce memory usage and speed up loading. For example:
       \begin{mylisting}
@@ -374,7 +398,7 @@ object ProjectConfig {
     props += onlyIncludeInIndex_
     def onlyIncludeInIndex() = onlyIncludeInIndex_(m)
 
-    val excludeFromIndex_ = new RegexListProp(
+    lazy val excludeFromIndex_ = new RegexListProp(
       ":exclude-from-index",
       """Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
       \begin{mylisting}
@@ -385,7 +409,7 @@ object ProjectConfig {
     props += excludeFromIndex_
     def excludeFromIndex() = excludeFromIndex_(m)
 
-    val extraCompilerArgs_ = new StringListProp(
+    lazy val extraCompilerArgs_ = new StringListProp(
       ":compiler-args",
       """Specify arguments that should be passed to ENSIME's internal compiler. For example, to enable two warnings in the compiler, you might use:
       \begin{mylisting}
@@ -394,14 +418,14 @@ object ProjectConfig {
     props += extraCompilerArgs_
     def extraCompilerArgs() = extraCompilerArgs_(m)
 
-    val extraBuilderArgs_ = new StringListProp(
+    lazy val extraBuilderArgs_ = new StringListProp(
       ":builder-args",
       """Specify arguments that should be passed to ENSIME's internal builder.""",
       None, None)
     props += extraBuilderArgs_
     def extraBuilderArgs() = extraBuilderArgs_(m)
 
-    val formatPrefs_ = new SymbolMapProp(
+    lazy val formatPrefs_ = new SymbolMapProp(
       ":formatting-prefs",
       """Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
       \vspace{1 cm}
@@ -429,7 +453,16 @@ object ProjectConfig {
       None, None)
     props += formatPrefs_
     def formatPrefs() = formatPrefs_(m)
+
+
+    private lazy val m: KeyMap = {
+      val mainproj = config.toKeywordMap
+      val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
+      mainproj ++ subproj
+    }
+
   }
+
 
   def main(args: Array[String]) {
     import java.io._
@@ -446,9 +479,9 @@ object ProjectConfig {
   }
 
   /**
-   * Create a ProjectConfig instance from the given
-   * SExp property list.
-   */
+  * Create a ProjectConfig instance from the given
+  * SExp property list.
+  */
   def fromSExp(sexp: SExp): Either[Throwable,ProjectConfig] = {
     try{
       sexp match{
@@ -456,7 +489,10 @@ object ProjectConfig {
 	case _ => Left(new RuntimeException("Expected a SExpList."))
       }
     }
-    catch{ case e:Throwable => Left(e) }
+    catch{ case e:Throwable => 
+      e.printStackTrace()
+      Left(e) 
+    }
   }
 
   def load(conf: FormatHandler): ProjectConfig = {
@@ -516,10 +552,10 @@ object ProjectConfig {
     {
       val deps = maybeFiles(conf.runtimeJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar)
-      println("Including compile jars: " + jars.mkString(","))
+      println("Including runtime jars: " + jars.mkString(","))
       runtimeDeps ++= jars
       val moreDeps = maybeFiles(conf.runtimeDeps, rootDir)
-      println("Including compile deps: " + moreDeps.mkString(","))
+      println("Including runtime deps: " + moreDeps.mkString(","))
       runtimeDeps ++= moreDeps
     }
 
@@ -644,50 +680,50 @@ class ProjectConfig(
   val extraBuilderArgs: Iterable[String]) {
 
   val formattingPrefs = formattingPrefsMap.
-    foldLeft(FormattingPreferences()) { (fp, p) =>
-      p match {
-        case ('alignParameters, value: Boolean) =>
-          fp.setPreference(AlignParameters, value)
-        case ('alignSingleLineCaseStatements, value: Boolean) =>
-          fp.setPreference(AlignSingleLineCaseStatements, value)
-        case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
-          fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
-        case ('compactStringConcatenation, value: Boolean) =>
-          fp.setPreference(CompactStringConcatenation, value)
-        case ('doubleIndentClassDeclaration, value: Boolean) =>
-          fp.setPreference(DoubleIndentClassDeclaration, value)
-        case ('formatXml, value: Boolean) =>
-          fp.setPreference(FormatXml, value)
-        case ('indentLocalDefs, value: Boolean) =>
-          fp.setPreference(IndentLocalDefs, value)
-        case ('indentPackageBlocks, value: Boolean) =>
-          fp.setPreference(IndentPackageBlocks, value)
-        case ('indentSpaces, value: Int) =>
-          fp.setPreference(IndentSpaces, value)
-        case ('indentWithTabs, value: Boolean) =>
-          fp.setPreference(IndentWithTabs, value)
-        case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
-          fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
-        case ('preserveDanglingCloseParenthesis, value: Boolean) =>
-          fp.setPreference(PreserveDanglingCloseParenthesis, value)
-        case ('preserveSpaceBeforeArguments, value: Boolean) =>
-          fp.setPreference(PreserveSpaceBeforeArguments, value)
-        case ('spaceInsideBrackets, value: Boolean) =>
-          fp.setPreference(SpaceInsideBrackets, value)
-        case ('spaceInsideParentheses, value: Boolean) =>
-          fp.setPreference(SpaceInsideParentheses, value)
-        case ('spaceBeforeColon, value: Boolean) =>
-          fp.setPreference(SpaceBeforeColon, value)
-        case ('spacesWithinPatternBinders, value: Boolean) =>
-          fp.setPreference(SpacesWithinPatternBinders, value)
-        case ('rewriteArrowSymbols, value: Boolean) =>
-          fp.setPreference(RewriteArrowSymbols, value)
-        case (name, _) => {
-          System.err.println("Oops, unrecognized formatting option: " + name)
-          fp
-        }
+  foldLeft(FormattingPreferences()) { (fp, p) =>
+    p match {
+      case ('alignParameters, value: Boolean) =>
+      fp.setPreference(AlignParameters, value)
+      case ('alignSingleLineCaseStatements, value: Boolean) =>
+      fp.setPreference(AlignSingleLineCaseStatements, value)
+      case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
+      fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
+      case ('compactStringConcatenation, value: Boolean) =>
+      fp.setPreference(CompactStringConcatenation, value)
+      case ('doubleIndentClassDeclaration, value: Boolean) =>
+      fp.setPreference(DoubleIndentClassDeclaration, value)
+      case ('formatXml, value: Boolean) =>
+      fp.setPreference(FormatXml, value)
+      case ('indentLocalDefs, value: Boolean) =>
+      fp.setPreference(IndentLocalDefs, value)
+      case ('indentPackageBlocks, value: Boolean) =>
+      fp.setPreference(IndentPackageBlocks, value)
+      case ('indentSpaces, value: Int) =>
+      fp.setPreference(IndentSpaces, value)
+      case ('indentWithTabs, value: Boolean) =>
+      fp.setPreference(IndentWithTabs, value)
+      case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
+      fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
+      case ('preserveDanglingCloseParenthesis, value: Boolean) =>
+      fp.setPreference(PreserveDanglingCloseParenthesis, value)
+      case ('preserveSpaceBeforeArguments, value: Boolean) =>
+      fp.setPreference(PreserveSpaceBeforeArguments, value)
+      case ('spaceInsideBrackets, value: Boolean) =>
+      fp.setPreference(SpaceInsideBrackets, value)
+      case ('spaceInsideParentheses, value: Boolean) =>
+      fp.setPreference(SpaceInsideParentheses, value)
+      case ('spaceBeforeColon, value: Boolean) =>
+      fp.setPreference(SpaceBeforeColon, value)
+      case ('spacesWithinPatternBinders, value: Boolean) =>
+      fp.setPreference(SpacesWithinPatternBinders, value)
+      case ('rewriteArrowSymbols, value: Boolean) =>
+      fp.setPreference(RewriteArrowSymbols, value)
+      case (name, _) => {
+        System.err.println("Oops, unrecognized formatting option: " + name)
+        fp
       }
     }
+  }
 
   def scalaJars: Set[CanonFile] = Set(scalaCompilerJar, scalaLibraryJar)
 
