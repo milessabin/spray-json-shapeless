@@ -177,19 +177,22 @@ object ProjectConfig {
 
     private def mergeWithDependency(main: KeyMap, dep: KeyMap): KeyMap = {
 
-      def merge(primary: Option[SExp], secondary: Option[SExp]): SExp = {
+      def merge(primary: Option[SExp], secondary: Option[SExp]): Option[SExp] = {
         (primary, secondary) match {
-          case (Some(s1: SExp), None) => s1
-          case (None, Some(s2: SExp)) => s2
+          case (Some(s1: SExp), None) => Some(s1)
+          case (None, Some(s2: SExp)) => Some(s2)
           case (Some(SExpList(items1)), Some(SExpList(items2))) => 
-	  SExpList(items1 ++ items2)
-          case (Some(s1: SExp), Some(s2: SExp)) => s2
-          case _ => NilAtom()
+	  Some(SExpList(items1 ++ items2))
+          case (Some(s1: SExp), Some(s2: SExp)) => Some(s2)
+          case _ => None
         }
       }
 
       def withMerged(m: KeyMap, key: KeywordAtom): KeyMap = {
-        main + ((key, merge(main.get(key), dep.get(key))))
+	merge(m.get(key), dep.get(key)) match{
+	  case Some(sexp) => m + ((key, sexp))
+	  case None => m
+	}
       }
 
       List(

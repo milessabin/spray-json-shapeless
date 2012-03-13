@@ -3,7 +3,9 @@ import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.config.ProjectConfig
 import org.ensime.util.SExp
+import org.ensime.util.FileUtils._
 import org.ensime.util.CanonFile
+
 
 
 class ProjectConfigSpec extends Spec with ShouldMatchers{
@@ -21,7 +23,7 @@ class ProjectConfigSpec extends Spec with ShouldMatchers{
 
   describe("ProjectConfigSpec") {
 
-    it("should parse a simple name right") {
+    it("should parse a simple name correctly") {
       assert(parse("(:name \"dude\")").name.get == "dude")
     }
 
@@ -31,42 +33,50 @@ class ProjectConfigSpec extends Spec with ShouldMatchers{
 
     it("should respect active-subproject") {
       val conf = parse(List(
-	"(",
-	"  :subprojects (",
-	"     (",
-	"     :name \"Hello\"",
-	"     )",
-	"     (",
-	"     :name \"Goodbye\"",
-	"     )",
-	"  )",
-	"  :active-subproject \"Hello\"",
-	")"
-      ))
-      assert(conf.name.get == "Hello")
+	  "(",
+	  "  :subprojects (",
+	  "     (",
+	  "     :name \"Hello\"",
+	  "     :module-name \"A\"",
+	  "     )",
+	  "     (",
+	  "     :name \"Goodbye\"",
+	  "     :module-name \"B\"",
+	  "     )",
+	  "  )",
+	  "  :active-subproject \"B\"",
+	  ")"
+	))
+      assert(conf.name.get == "Goodbye")
     }
 
     it("should correctly merge dependency") {
-      val conf = parse(List(
-	"(",
-	"  :subprojects (",
-	"     (",
-	"     :name \"A\"",
-	"     :source-roots (\"a-src\")",
-	"     )",
-	"     (",
-	"     :name \"B\"",
-	"     :source-roots (\"b-src\")",
-	"     :dependent-subprojects (\"A\")",
-	"     )",
-	"  )",
-	"  :active-subproject \"B\"",
-	")"
-      ))
-      assert(conf.name.get == "B")
-      println(conf.sourceFilenames)
-      assert(conf.sourceRoots.toSet.contains(CanonFile("a-src")))
-      assert(conf.sourceRoots.toSet.contains(CanonFile("b-src")))
+      withTemporaryDirectory{ dir =>
+	val root1 = CanonFile(createUniqueDirectory(dir))
+	val root2 = CanonFile(createUniqueDirectory(dir))
+	val conf = parse(List(
+	    "(",
+	    "  :subprojects (",
+	    "     (",
+	    "     :name \"Proj A\"",
+	    "     :module-name \"A\"",
+	    "     :source-roots (\"" + root1 + "\")",
+	    "     )",
+	    "     (",
+	    "     :name \"Proj B\"",
+	    "     :module-name \"B\"",
+	    "     :source-roots (\"" + root2 + "\")",
+	    "     :depends-on-modules (\"A\")",
+	    "     )",
+	    "  )",
+	    "  :active-subproject \"B\"",
+	    ")"
+	  ))
+	assert(conf.name.get == "Proj B")
+	println(conf.sourceRoots)
+	assert(conf.sourceRoots.toSet.contains(root1))
+	assert(conf.sourceRoots.toSet.contains(root2))
+      }
     }
 
   }
