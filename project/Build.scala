@@ -40,7 +40,6 @@ object EnsimeBuild extends Build {
 
   val root = Path(".")
 
-  val TwoEightVersion = "2.8.3-SNAPSHOT"
   val TwoNineVersion = "2.9.2-SNAPSHOT"
 
   lazy val project = {
@@ -52,7 +51,7 @@ object EnsimeBuild extends Build {
 	version := "0.9.3.RC3",
 	organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
-	crossScalaVersions := Seq(TwoEightVersion, TwoNineVersion),
+	crossScalaVersions := Seq(TwoNineVersion),
 	resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
 	resolvers += "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
 	resolvers += "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
@@ -60,23 +59,13 @@ object EnsimeBuild extends Build {
 	libraryDependencies <++= (scalaVersion) { scalaVersion =>
 	  val compilerVersion = scalaVersion
 	  val scalatest = scalaVersion match {
-	    case v if v == TwoEightVersion => 
-	    "org.scalatest" % "scalatest_2.8.2" % "1.5.1" % "test"
 	    case v if v == TwoNineVersion => 
 	    "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test"
 	  }
 	  val scalariform = scalaVersion match {
-	    case v if v == TwoEightVersion => 
-	    "org.scalariform" % "scalariform_2.8.3-SNAPSHOT" % "0.1.1" % "compile;runtime;test"
 	    case v if v == TwoNineVersion => 
 	    "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test"
 	  }
-	  // val scalaRefactoring = scalaVersion match {
-	  //   case v if v == TwoEightVersion => 
-	  //   "org.scala-refactoring" % "org.scala-refactoring_2.8.2-SNAPSHOT" % "0.4.0-SNAPSHOT" % "compile;runtime;test"
-	  //   case v if v == TwoNineVersion => 
-	  //   "org.scala-refactoring" % "org.scala-refactoring" % "0.4.0-SNAPSHOT" % "compile;runtime;test"
-	  // }
 	  Seq(
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
 	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
@@ -86,7 +75,6 @@ object EnsimeBuild extends Build {
 	    "asm" % "asm-commons" % "3.2",
 	    scalatest,
 	    scalariform,
-//	    scalaRefactoring,
 	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
 	  )},
 	scalacOptions ++= Seq("-deprecation"),
