@@ -76,8 +76,6 @@ __3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [ma
 
 Add the following lines to your project/plugins.sbt file:
 
-    resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
-    
     addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "VERSION")
 
 Replace VERSION with the latest version of the plugin, available on [the plugin page](https://github.com/aemoncannon/ensime-sbt-cmd).  Then, from an sbt shell, generate your ENSIME project:

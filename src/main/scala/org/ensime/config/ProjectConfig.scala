@@ -25,7 +25,6 @@
 *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 package org.ensime.config
 import java.io.File
 import org.ensime.util._
@@ -69,398 +68,369 @@ trait FormatHandler {
   def extraBuilderArgs(): List[String]
 }
 
-
 object ProjectConfig {
 
   type KeyMap = Map[KeywordAtom, SExp]
 
-  import SExp.{key => keyword}
-
+  import SExp.{ key => keyword }
 
   trait Prop {
-    def m:KeyMap
-    def key:String
-    def desc:String
-    def typeHint:Option[String]
-    def synonymKey:Option[String]
-    def apply():Any
+    def keyName: String
+    def desc: String
+    def typeHint: Option[String]
+    def synonymKey: Option[String]
+    def apply(m:KeyMap): Any
 
-    def defaultTypeHint:String = "NA"
+    def defaultTypeHint: String = "NA"
 
-    def manualEntry:String = {
+    def key: KeywordAtom = KeywordAtom(keyName)
+
+    def manualEntry: String = {
       val tpe = typeHint.getOrElse(defaultTypeHint)
       List(
-	"""\noindent""",
-	"""{\bf """ + key + "}  " + tpe + """\\""",
-	desc,
-	"""\vspace{1 cm}""").mkString("\n")
+        """\noindent""",
+        """{\bf """ + keyName + "}  " + tpe + """\\""",
+        desc,
+        """\vspace{1 cm}""").mkString("\n")
     }
 
-    def matchError(s:String) = {
+    def matchError(s: String) = {
       System.err.println("Configuration Format Error: " + s)
     }
-    def getStr(name: String): Option[String] = m.get(keyword(name)) match {
+    def getStr(m: KeyMap, name: String): Option[String] = m.get(keyword(name)) match {
       case Some(StringAtom(s)) => Some(s)
       case None => None
-      case _ => matchError("Expecting a string value at key: " + name);None
+      case _ => matchError("Expecting a string value at key: " + name); None
     }
-    def getInt(name: String): Option[Int] = m.get(keyword(name)) match {
+    def getInt(m: KeyMap, name: String): Option[Int] = m.get(keyword(name)) match {
       case Some(IntAtom(i)) => Some(i)
       case None => None
-      case _ => matchError("Expecting an integer value at key: " + name);None
+      case _ => matchError("Expecting an integer value at key: " + name); None
     }
-    def getBool(name: String): Boolean = m.get(keyword(name)) match {
+    def getBool(m: KeyMap, name: String): Boolean = m.get(keyword(name)) match {
       case Some(TruthAtom()) => true
       case None => false
-      case _ => matchError("Expecting a nil or t value at key: " + name);false
+      case _ => matchError("Expecting a nil or t value at key: " + name); false
     }
-    def getStrList(name: String): List[String] = m.get(keyword(name)) match {
+    def getStrList(m: KeyMap, name: String): List[String] = m.get(keyword(name)) match {
       case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
       case None => List()
-      case _ => matchError("Expecting a list of string values at key: " + name);List()
+      case _ => matchError("Expecting a list of string values at key: " + name); List()
     }
-    def getRegexList(name: String): List[Regex] = m.get(keyword(name)) match {
+    def getRegexList(m: KeyMap, name: String): List[Regex] = m.get(keyword(name)) match {
       case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value.r }.toList
       case None => List()
-      case _ => matchError("Expecting a list of string-encoded regexps at key: " + name);List()
+      case _ => matchError("Expecting a list of string-encoded regexps at key: " + name); List()
     }
-    def getMap(name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
+    def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
       case Some(list: SExpList) => {
-	list.toKeywordMap.map {
+        list.toKeywordMap.map {
           case (KeywordAtom(key), sexp: SExp) => (Symbol(key.substring(1)), sexp.toScala)
-	}
+        }
       }
       case _ => Map[Symbol, Any]()
     }
   }
 
-  class OptionalStringProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
-    def apply():Option[String] = getStr(key).orElse(synonymKey.flatMap(getStr(_)))
-    override def defaultTypeHint:String = "a string"
+  class OptionalStringProp(val keyName: String, val desc: String,
+    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+    def apply(m: KeyMap): Option[String] = getStr(m, keyName).orElse(synonymKey.flatMap(getStr(m, _)))
+    override def defaultTypeHint: String = "a string"
   }
 
-  class BooleanProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
-    def apply():Boolean = getBool(key) || synonymKey.map(getBool(_)).getOrElse(false)
-    override def defaultTypeHint:String = "[t or nil]"
+  class BooleanProp(val keyName: String, val desc: String,
+    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+    def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.map(getBool(m, _)).getOrElse(false)
+    override def defaultTypeHint: String = "[t or nil]"
   }
 
-  class StringListProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
-    def apply():List[String] = getStrList(key) ++ synonymKey.map(getStrList(_)).getOrElse(List[String]())
-    override def defaultTypeHint:String = "(string*)"
+  class StringListProp(val keyName: String, val desc: String,
+    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+    def apply(m: KeyMap): List[String] = getStrList(m, keyName) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
+    override def defaultTypeHint: String = "(string*)"
   }
 
-  class RegexListProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
-    def apply():List[Regex] = getRegexList(key) ++ synonymKey.map(getRegexList(_)).getOrElse(List[Regex]())
-    override def defaultTypeHint:String = "(regex*)"
+  class RegexListProp(val keyName: String, val desc: String,
+    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+    def apply(m: KeyMap): List[Regex] = getRegexList(m, keyName) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
+    override def defaultTypeHint: String = "(regex*)"
   }
 
-  class SymbolMapProp(val m:KeyMap, val key:String, val desc:String,
-    val typeHint:Option[String], val synonymKey:Option[String]) extends Prop{
-    def apply():Map[Symbol, Any] = getMap(key) ++ synonymKey.map(getMap(_)).getOrElse(Map[Symbol,Any]())
-    override def defaultTypeHint:String = "([keyword value]*)"
+  class SymbolMapProp(val keyName: String, val desc: String,
+    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+    def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, keyName) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
+    override def defaultTypeHint: String = "([keyword value]*)"
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
 
-
-    private def subprojects(m: KeyMap): List[SExpList] = {
+    private def subprojects(m: KeyMap): List[KeyMap] = {
       m.get(key(":subprojects")) match {
         case Some(SExpList(items)) =>
         items.flatMap {
-          case lst: SExpList => Some(lst)
+          case lst: SExpList => Some(lst.toKeywordMap)
           case _ => None
         }.toList
         case _ => List()
       }
     }
 
-    private def subproject(m: KeyMap, projectName: String): Option[SExpList] = {
-      subprojects(m).find { ea =>
-        ea.toKeywordMap.get(key(":name")) match {
-          case Some(StringAtom(str)) => str == projectName
+    private def mergeWithDependency(main: KeyMap, dep: KeyMap): KeyMap = {
+
+      def merge(primary: Option[SExp], secondary: Option[SExp]): Option[SExp] = {
+        (primary, secondary) match {
+          case (Some(s1: SExp), None) => Some(s1)
+          case (None, Some(s2: SExp)) => Some(s2)
+          case (Some(SExpList(items1)), Some(SExpList(items2))) => 
+	  Some(SExpList(items1 ++ items2))
+          case (Some(s1: SExp), Some(s2: SExp)) => Some(s2)
+          case _ => None
+        }
+      }
+
+      def withMerged(m: KeyMap, key: KeywordAtom): KeyMap = {
+	merge(m.get(key), dep.get(key)) match{
+	  case Some(sexp) => m + ((key, sexp))
+	  case None => m
+	}
+      }
+
+      List(
+	sourceRoots_.key,
+        runtimeDeps_.key,
+        compileDeps_.key,
+        testDeps_.key
+      ).foldLeft(main)(withMerged)
+    }
+
+    private def subproject(m: KeyMap, moduleName: String): Option[KeyMap] = {
+      val main = subprojects(m).find { ea =>
+        ea.get(moduleName_.key) match {
+          case Some(StringAtom(str)) => str == moduleName
           case _ => false
         }
       }
+      main.map { p: KeyMap =>
+        val deps = (p.get(dependsOnModules_.key) match {
+            case Some(names: SExpList) => names.map(_.toString)
+            case _ => List()
+          }).flatMap { subproject(m, _)}
+        deps.foldLeft(p)(mergeWithDependency)
+      }
     }
 
+
     private def activeSubprojectKeyMap(main: KeyMap): Option[KeyMap] = {
-      main.get(key(":active-subproject")) match {
-        case Some(StringAtom(nm)) => subproject(main, nm).map(_.toKeywordMap)
+      main.get(activeSubproject_.key) match {
+        case Some(StringAtom(nm)) => subproject(main, nm)
         case _ => None
       }
     }
 
-    private val m: KeyMap = {
-      val mainproj = config.toKeywordMap
-      val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
-      mainproj ++ subproj
-    }
 
-    val props = scala.collection.mutable.ListBuffer[Prop]()
+    lazy val props = scala.collection.mutable.ListBuffer[Prop]()
 
-    val rootDir_ = new OptionalStringProp(
-      m,
+    lazy val rootDir_ = new OptionalStringProp(
       ":root-dir",
       "The root directory of your project. This option should be filled in by your editor.",
       Some("a filename"),
-      None
-    )
+      None)
     props += rootDir_
-    def rootDir() = rootDir_()
+    def rootDir() = rootDir_(m)
 
-
-
-    val name_ = new OptionalStringProp(
-      m,
+    lazy val name_ = new OptionalStringProp(
       ":name",
       "The short identifier for your project. Should be the same that you use when publishing. Will be displayed in the Emacs mode-line when connected to an ENSIME server.",
       None,
-      Some(":project-name")
-    )
+      Some(":project-name"))
     props += name_
-    def name() = name_()
+    def name() = name_(m)
 
-
-
-    val pack_ = new OptionalStringProp(
-      m,
+    lazy val pack_ = new OptionalStringProp(
       ":package",
       "The main package for your project. Used by ENSIME to populate the project outline view.",
       None,
-      Some(":project-package")
-    )
+      Some(":project-package"))
     props += pack_
-    def pack() = pack_()
+    def pack() = pack_(m)
+
+    lazy val moduleName_ = new OptionalStringProp(
+      ":module-name",
+      "The canonical module-name of this project.",
+      None, None)
+    props += moduleName_
+    def moduleName() = moduleName_(m)
+
+    lazy val activeSubproject_ = new OptionalStringProp(
+      ":active-subproject",
+      "The module-name of the subproject which is currently selected.",
+      None, None)
+    props += activeSubproject_
+    def activeSubproject() = activeSubproject_(m)
 
 
+    lazy val dependsOnModules_ = new StringListProp(
+      ":depends-on-modules",
+      "A list of module-names on which this project depends.",
+      Some("(module-name*)"),
+      None)
+    props += dependsOnModules_
+    def dependsOnModules() = dependsOnModules_(m)
 
-    val version_ = new OptionalStringProp(
-      m,
+
+    lazy val version_ = new OptionalStringProp(
       ":version",
       "The current, working version of your project.",
-      None,None
-    )
+      None, None)
     props += version_
-    def version() = version_()
+    def version() = version_(m)
 
-
-
-    val useMaven_ = new BooleanProp(
-      m,
+    lazy val useMaven_ = new BooleanProp(
       ":use-maven",
       "Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
-      None,None
-    )
+      None, None)
     props += useMaven_
-    def useMaven() = useMaven_()
+    def useMaven() = useMaven_(m)
 
-
-
-    val useIvy_ = new BooleanProp(
-      m,
+    lazy val useIvy_ = new BooleanProp(
       ":use-ivy",
       "Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
-      None,None
-    )
+      None, None)
     props += useIvy_
-    def useIvy() = useIvy_()
+    def useIvy() = useIvy_(m)
 
-
-
-
-    val ivyFile_ = new OptionalStringProp(
-      m,
+    lazy val ivyFile_ = new OptionalStringProp(
       ":ivy-file",
       "Override the default ivy.xml location.",
-      Some("a filename"),None
-    )
+      Some("a filename"), None)
     props += ivyFile_
-    def ivyFile() = ivyFile_()
+    def ivyFile() = ivyFile_(m)
 
-
-
-    val ivyRuntimeConf_ = new OptionalStringProp(
-      m,
+    lazy val ivyRuntimeConf_ = new OptionalStringProp(
       ":ivy-runtime-conf",
       "Specify the names of dependency profiles to be used for runtime scenarios.",
-      None,None
-    )
+      None, None)
     props += ivyRuntimeConf_
-    def ivyRuntimeConf() = ivyRuntimeConf_()
+    def ivyRuntimeConf() = ivyRuntimeConf_(m)
 
-
-
-    val ivyCompileConf_ = new OptionalStringProp(
-      m,
+    lazy val ivyCompileConf_ = new OptionalStringProp(
       ":ivy-compile-conf",
       "Specify the names of dependency profiles to be used for compile scenarios.",
-      None,None
-    )
+      None, None)
     props += ivyCompileConf_
-    def ivyCompileConf() = ivyCompileConf_()
+    def ivyCompileConf() = ivyCompileConf_(m)
 
-
-
-
-    val ivyTestConf_ = new OptionalStringProp(
-      m,
+    lazy val ivyTestConf_ = new OptionalStringProp(
       ":ivy-test-conf",
       "Specify the names of dependency profiles to be used for test scenarios.",
-      None,None
-    )
+      None, None)
     props += ivyTestConf_
-    def ivyTestConf() = ivyTestConf_()
+    def ivyTestConf() = ivyTestConf_(m)
 
-
-
-    val compileDeps_ = new StringListProp(
-      m,
+    lazy val compileDeps_ = new StringListProp(
       ":compile-deps",
       "A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.",
       Some("([directory or filename]*)"),
-      None
-    )
+      None)
     props += compileDeps_
-    def compileDeps() = compileDeps_()
+    def compileDeps() = compileDeps_(m)
 
-
-
-    val compileJars_ = new StringListProp(
-      m,
+    lazy val compileJars_ = new StringListProp(
       ":compile-jars",
       "A list of jar files and directories to search for jar files to include on the compilation classpath.",
       Some("([directory or filename]*)"),
-      None
-    )
+      None)
     props += compileJars_
-    def compileJars() = compileJars_()
+    def compileJars() = compileJars_(m)
 
-
-
-    val runtimeDeps_ = new StringListProp(
-      m,
+    lazy val runtimeDeps_ = new StringListProp(
       ":runtime-deps",
       "A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.",
       Some("([directory or filename]*)"),
-      None
-    )
+      None)
     props += runtimeDeps_
-    def runtimeDeps() = runtimeDeps_()
+    def runtimeDeps() = runtimeDeps_(m)
 
-
-    val runtimeJars_ = new StringListProp(
-      m,
+    lazy val runtimeJars_ = new StringListProp(
       ":runtime-jars",
       "A list of jar files and directories to search for jar files to include on the runtime classpath.",
       Some("([directory or filename]*)"),
-      None
-    )
+      None)
     props += runtimeJars_
-    def runtimeJars() = runtimeJars_()
+    def runtimeJars() = runtimeJars_(m)
 
-
-    val testDeps_ = new StringListProp(
-      m,
+    lazy val testDeps_ = new StringListProp(
       ":test-deps",
       "A list of jar files and class directories to include on the test classpath. No recursive expansion will be done.",
       Some("([directory or filename]*)"),
-      None
-    )
+      None)
     props += testDeps_
-    def testDeps() = testDeps_()
+    def testDeps() = testDeps_(m)
 
-
-    val sourceRoots_ = new StringListProp(
-      m,
+    lazy val sourceRoots_ = new StringListProp(
       ":source-roots",
       "A list of directories in which to start searching for source files.",
       Some("(directory*)"),
       Some(":sources")
     )
+
     props += sourceRoots_
-    def sourceRoots() = sourceRoots_()
+    def sourceRoots() = sourceRoots_(m)
 
-
-
-    val target_ = new OptionalStringProp(
-      m,
+    lazy val target_ = new OptionalStringProp(
       ":target",
       "The root of the class output directory.",
       Some("filename"),
-      None
-    )
+      None)
     props += target_
-    def target() = target_()
+    def target() = target_(m)
 
-
-
-    val disableIndexOnStartup_ = new BooleanProp(
-      m,
+    lazy val disableIndexOnStartup_ = new BooleanProp(
       ":disable-index-on-startup",
       "Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality.",
-      None,None
-    )
+      None, None)
     props += disableIndexOnStartup_
-    def disableIndexOnStartup() = disableIndexOnStartup_()
+    def disableIndexOnStartup() = disableIndexOnStartup_(m)
 
-
-    val onlyIncludeInIndex_ = new RegexListProp(
-      m,
+    lazy val onlyIncludeInIndex_ = new RegexListProp(
       ":only-include-in-index",
       """Only classes that match one of the given regular expressions will be added to the index. If this is omitted, all classes will be added. This can be used to reduce memory usage and speed up loading. For example:
       \begin{mylisting}
       \begin{verbatim}:only-include-in-index ("my\\.project\\.packages\\.\*" "important\\.dependency\\..\*")\end{verbatim}
       \end{mylisting}
       This option can be used in conjunction with 'exclude-from-index' - the result when both are given is that the exclusion expressions are applied to the names that pass the inclusion filter.""",
-      None,None
-    )
+      None, None)
     props += onlyIncludeInIndex_
-    def onlyIncludeInIndex() = onlyIncludeInIndex_()
+    def onlyIncludeInIndex() = onlyIncludeInIndex_(m)
 
-
-    val excludeFromIndex_ = new RegexListProp(
-      m,
+    lazy val excludeFromIndex_ = new RegexListProp(
       ":exclude-from-index",
       """Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
       \begin{mylisting}
       \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
       \end{mylisting}
       This option can be used in conjunction with 'only-include-in-index' - the result when both are given is that the exclusion expressions are applied to the classes that pass the inclusion filter.
-""",None,None
-    )
+      """, None, None)
     props += excludeFromIndex_
-    def excludeFromIndex() = excludeFromIndex_()
+    def excludeFromIndex() = excludeFromIndex_(m)
 
-
-    val extraCompilerArgs_ = new StringListProp(
-      m,
+    lazy val extraCompilerArgs_ = new StringListProp(
       ":compiler-args",
       """Specify arguments that should be passed to ENSIME's internal compiler. For example, to enable two warnings in the compiler, you might use:
       \begin{mylisting}
       \begin{verbatim}:compiler-args ("-Ywarn-dead-code" "-Ywarn-shadowing")\end{verbatim}
-      \end{mylisting}""",None,None
-    )
+      \end{mylisting}""", None, None)
     props += extraCompilerArgs_
-    def extraCompilerArgs() = extraCompilerArgs_()
+    def extraCompilerArgs() = extraCompilerArgs_(m)
 
-
-
-    val extraBuilderArgs_ = new StringListProp(
-      m,
+    lazy val extraBuilderArgs_ = new StringListProp(
       ":builder-args",
       """Specify arguments that should be passed to ENSIME's internal builder.""",
-      None,None
-    )
+      None, None)
     props += extraBuilderArgs_
-    def extraBuilderArgs() = extraBuilderArgs_()
+    def extraBuilderArgs() = extraBuilderArgs_(m)
 
-
-    val formatPrefs_ = new SymbolMapProp(
-      m,
+    lazy val formatPrefs_ = new SymbolMapProp(
       ":formatting-prefs",
       """Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
       \vspace{1 cm}
@@ -485,20 +455,28 @@ object ProjectConfig {
       {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
       \end{tabular}
       """,
-      None,None
-    )
+      None, None)
     props += formatPrefs_
-    def formatPrefs() = formatPrefs_()
+    def formatPrefs() = formatPrefs_(m)
+
+
+    private lazy val m: KeyMap = {
+      val mainproj = config.toKeywordMap
+      val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
+      mainproj ++ subproj
+    }
+
   }
 
-  def main(args:Array[String]) {
+
+  def main(args: Array[String]) {
     import java.io._
     val out = new OutputStreamWriter(new FileOutputStream(args(0)))
     try {
-      val o = new SExpFormatHandler(SExpList(List())){}
-      for(prop <- o.props){
-	out.write("\n\n")
-	out.write(prop.manualEntry)
+      val o = new SExpFormatHandler(SExpList(List())) {}
+      for (prop <- o.props) {
+        out.write("\n\n")
+        out.write(prop.manualEntry)
       }
     } finally {
       out.close()
@@ -509,8 +487,17 @@ object ProjectConfig {
   * Create a ProjectConfig instance from the given
   * SExp property list.
   */
-  def fromSExp(sexp: SExpList): ProjectConfig = {
-    load(new SExpFormatHandler(sexp))
+  def fromSExp(sexp: SExp): Either[Throwable,ProjectConfig] = {
+    try{
+      sexp match{
+	case s:SExpList => Right(load(new SExpFormatHandler(s)))
+	case _ => Left(new RuntimeException("Expected a SExpList."))
+      }
+    }
+    catch{ case e:Throwable => 
+      e.printStackTrace()
+      Left(e) 
+    }
   }
 
   def load(conf: FormatHandler): ProjectConfig = {
@@ -534,32 +521,32 @@ object ProjectConfig {
 
     for (configurator <- externalConf) {
       configurator.getConfig(rootDir, conf) match {
-	case Right(ext) => {
+        case Right(ext) => {
           projectName = ext.projectName
-	  println("External Config found project name: " + ext.projectName)
+          println("External Config found project name: " + ext.projectName)
 
           sourceRoots ++= ext.sourceRoots
-	  println("External Config found source roots: " + ext.sourceRoots)
+          println("External Config found source roots: " + ext.sourceRoots)
 
           compileDeps ++= ext.compileDepFiles
-	  println("External Config found compile dependencies: " + ext.runtimeDepFiles)
+          println("External Config found compile dependencies: " + ext.runtimeDepFiles)
 
           runtimeDeps ++= ext.runtimeDepFiles
-	  println("External Config found runtime dependencies: " + ext.runtimeDepFiles)
+          println("External Config found runtime dependencies: " + ext.runtimeDepFiles)
 
           target = ext.target
-	  println("External Config found target: " + ext.target)
-	}
-	case Left(except) => {
+          println("External Config found target: " + ext.target)
+        }
+        case Left(except) => {
           System.err.println("Failed to load external project information. Reason:")
           except.printStackTrace(System.err)
-	}
+        }
       }
     }
 
     {
       val deps = maybeFiles(conf.compileJars, rootDir)
-      val jars = expandRecursively(rootDir, deps, isValidJar )
+      val jars = expandRecursively(rootDir, deps, isValidJar)
       println("Including compile jars: " + jars.mkString(","))
       compileDeps ++= jars
       val moreDeps = maybeFiles(conf.compileDeps, rootDir)
@@ -567,17 +554,15 @@ object ProjectConfig {
       compileDeps ++= moreDeps
     }
 
-
     {
       val deps = maybeFiles(conf.runtimeJars, rootDir)
-      val jars = expandRecursively(rootDir, deps, isValidJar )
-      println("Including compile jars: " + jars.mkString(","))
+      val jars = expandRecursively(rootDir, deps, isValidJar)
+      println("Including runtime jars: " + jars.mkString(","))
       runtimeDeps ++= jars
       val moreDeps = maybeFiles(conf.runtimeDeps, rootDir)
-      println("Including compile deps: " + moreDeps.mkString(","))
+      println("Including runtime deps: " + moreDeps.mkString(","))
       runtimeDeps ++= moreDeps
     }
-
 
     {
       val moreDeps = maybeFiles(conf.testDeps, rootDir)
@@ -585,7 +570,6 @@ object ProjectConfig {
       compileDeps ++= moreDeps
       runtimeDeps ++= moreDeps
     }
-
 
     {
       val dirs = maybeDirs(conf.sourceRoots, rootDir)
@@ -595,7 +579,7 @@ object ProjectConfig {
 
     conf.target match {
       case Some(targetDir) => {
-	target = target.orElse(maybeDir(targetDir, rootDir))
+        target = target.orElse(maybeDir(targetDir, rootDir))
       }
       case _ =>
     }
@@ -608,14 +592,6 @@ object ProjectConfig {
     // Provide some reasonable defaults..
     target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
     println("Using target directory: " + target.getOrElse("ERROR"))
-
-    if (sourceRoots.isEmpty) {
-      val f = new File("src")
-      if (f.exists && f.isDirectory) {
-	println("Using default source root, 'src'.")
-	sourceRoots += f
-      }
-    }
 
     val scalaLibraryJar = new File("lib/scala-library.jar")
     val scalaCompilerJar = new File("lib/scala-compiler.jar")
@@ -634,9 +610,7 @@ object ProjectConfig {
       conf.onlyIncludeInIndex,
       conf.excludeFromIndex,
       conf.extraCompilerArgs,
-      conf.extraBuilderArgs
-    )
-
+      conf.extraBuilderArgs)
   }
 
   // If given target directory is not valid, use the default,
@@ -644,7 +618,7 @@ object ProjectConfig {
   def verifyTargetDir(rootDir: File, target: Option[File], defaultTarget: File): Option[CanonFile] = {
     val targetDir = target match {
       case Some(f: File) => {
-	if (f.exists && f.isDirectory) { f } else { defaultTarget }
+        if (f.exists && f.isDirectory) { f } else { defaultTarget }
       }
       case None => defaultTarget
     }
@@ -652,10 +626,10 @@ object ProjectConfig {
       Some(targetDir)
     } else {
       try {
-	if (targetDir.mkdirs) Some(targetDir)
-	else None
+        if (targetDir.mkdirs) Some(targetDir)
+        else None
       } catch {
-	case e => None
+        case e => None
       }
     }
   }
@@ -673,17 +647,17 @@ object ProjectConfig {
     val javaHome = getJavaHome();
     javaHome match {
       case Some(javaHome) => {
-	if (System.getProperty("os.name").startsWith("Mac")) {
+        if (System.getProperty("os.name").startsWith("Mac")) {
           expandRecursively(
             new File("."),
             List(new File(javaHome, "../Classes")),
             isValidJar)
-	} else {
+        } else {
           expandRecursively(
             new File("."),
             List(new File(javaHome, "lib")),
             isValidJar)
-	}
+        }
       }
       case None => Set()
     }

@@ -145,6 +145,13 @@ object SExp extends RegexParsers {
     }
   }
 
+  def read(s:String):SExp = {
+    val chars = new Array[Char](s.length)
+    s.getChars(0, s.length, chars, 0)
+    val r = new input.CharArrayReader(chars)
+    SExp.read(r)
+  }
+
   /** A parser that matches a regex string and returns the match groups */
   def regexGroups(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
     def apply(in: Input) = {
@@ -231,49 +238,6 @@ object SExp extends RegexParsers {
   new Iterable[SExpable] with SExpable {
     override def iterator = o.iterator
     override def toSExp = SExp(o.map { _.toSExp })
-  }
-
-
-  def main(args:Array[String]){
-    def readStr(s:String) = {
-      val chars = new Array[Char](s.length)
-      s.getChars(0, s.length, chars, 0)
-      val r = new input.CharArrayReader(chars)
-      SExp.read(r)
-    }
-    def check(s:String, r:String) {
-      assert(readStr(s).toString() == r, "Failed at: " + s)
-    }
-    check("()", "()")
-    check("(nil)", "(nil)")
-    check("(t)", "(t)")
-    check("(a b c d)", "(a b c d)")
-    check("(a b c () nil)", "(a b c () nil)")
-    check("(a b c () trait)", "(a b c () trait)")
-    check("(a b c () t())", "(a b c () t ())")
-    check("(a b c\n() nil(nil\n t))", "(a b c () nil (nil t))")
-    check("(nildude)", "(nildude)")
-
-    assert(readStr("t\n").toScala == true, "t should be true!")
-    assert(readStr("t\n\t").toScala == true, "t should be true!")
-    assert(readStr("t\n\t").toScala == true, "t should be true!")
-    assert(readStr("t ").toScala == true, "t should be true!")
-    assert(readStr("t").toScala == true, "t should be true!")
-
-
-    assert(readStr("nil\n").toScala == false, "nil should be false!")
-    assert(readStr("nil\n\t").toScala == false, "nil should be false!")
-    assert(readStr("nil\n\t").toScala == false, "nil should be false!")
-    assert(readStr("nil ").toScala == false, "nil should be false!")
-    assert(readStr("nil").toScala == false, "nil should be false!")
-    val map = readStr("(:use-sbt t :dude 1212)") match{
-      case ls:SExpList => ls.toKeywordMap()
-    }
-    map.get(key(":use-sbt")) match{
-      case Some(v) => assert(v.toScala == true)
-      case None => assert(false)
-    }
-
   }
 
 }
