@@ -2073,11 +2073,11 @@ trait SwankProtocol extends Protocol {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'disconnect))
       }
-      case DebugExceptionEvent(e: String, threadId: Long) => {
+      case DebugExceptionEvent(excId: Long, threadId: Long) => {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'exception,
-	  key(":exception"), threadId.toString,
-	  key(":thread-id"), e
+	  key(":exception"), excId.toString,
+	  key(":thread-id"), threadId.toString
 	))
       }
       case DebugThreadStartEvent(threadId: Long) => {

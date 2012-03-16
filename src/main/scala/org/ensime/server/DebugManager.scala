@@ -74,7 +74,7 @@ case class DebugBreakEvent(threadId: Long, pos: SourcePosition) extends DebugEve
 case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
-case class DebugExceptionEvent(e: String, threadId: Long) extends DebugEvent
+case class DebugExceptionEvent(excId: Long, threadId: Long) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 
@@ -177,30 +177,33 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
 
   private var maybeVM: Option[VM] = None
 
-  private def handleWithVM(action: (VM => Unit)) = {
-    (for (vm <- maybeVM) yield {
-    }).getOrElse {
-      System.err.println("No VM under debug!")
+  def withVM[T](action: (VM => T)): Option[T] = {
+    maybeVM.synchronized {
+      for (vm <- maybeVM) yield {
+        action(vm)
+      }
     }
   }
+
   private def handleRPCWithVM(callId: Int)(action: (VM => Unit)) = {
-    (for (vm <- maybeVM) yield {
+    withVM { vm =>
       action(vm)
-    }).getOrElse {
+    }.getOrElse {
       project ! RPCResultEvent(toWF(false), callId)
       System.err.println("No VM under debug!")
     }
   }
+
   private def handleRPCWithVMAndThread(callId: Int,
     threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
-    (for (vm <- maybeVM) yield {
+    withVM { vm =>
       (for (thread <- vm.threadById(threadId)) yield {
         action(vm, thread)
       }).getOrElse {
         System.err.println("Couldn't find thread: " + threadId)
         project ! RPCResultEvent(toWF(false), callId)
       }
-    }).getOrElse {
+    }.getOrElse {
       System.err.println("No VM under debug!")
       project ! RPCResultEvent(toWF(false), callId)
     }
@@ -211,7 +214,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       try {
         receive {
           case DebuggerShutdownEvent => {
-            for (vm <- maybeVM) {
+            withVM { vm =>
               vm.dispose()
             }
             exit('stop)
@@ -220,7 +223,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
             try {
               evt match {
                 case e: VMStartEvent => {
-                  for (vm <- maybeVM) {
+                  withVM { vm =>
                     vm.initLocationMap()
                   }
                   project ! AsyncEvent(toWF(DebugVMStartEvent()))
@@ -254,8 +257,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   }
                 }
                 case e: ExceptionEvent => {
+                  withVM { vm => vm.remember(e.exception) }
                   project ! AsyncEvent(toWF(DebugExceptionEvent(
-                    e.toString,
+                    e.exception.uniqueID(),
                     e.thread().uniqueID())))
                 }
                 case e: ThreadDeathEvent => {
@@ -268,8 +272,8 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 }
                 case e: AccessWatchpointEvent => {}
                 case e: ClassPrepareEvent => {
-                  for (vm <- maybeVM) {
-                    vm.typeAdded(e.referenceType())
+                  withVM { vm =>
+                    println("ClassPrepareEvent: " + e.referenceType().name())
                   }
                 }
                 case e: ClassUnloadEvent => {}
@@ -293,28 +297,12 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
             try {
               req match {
                 case DebugStartVMReq(commandLine: String) => {
-                  for (vm <- maybeVM) {
+                  withVM { vm =>
                     vm.dispose()
                   }
-                  maybeVM = None
-                  val connector = Bootstrap.virtualMachineManager().defaultConnector
-                  val arguments = connector.defaultArguments()
-                  //arguments.get("home").setValue(jreHome);
-                  val opts = arguments.get("options").value
-                  val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
-                  arguments.get("options").setValue(allVMOpts)
-                  arguments.get("main").setValue(commandLine)
-                  arguments.get("suspend").setValue("false")
-                  //arguments.get("quote").setValue("\"");
-                  //arguments.get("vmexec").setValue("java");
-                  println("Using Connector: " + connector.name +
-                    " : " + connector.description())
-                  println("Connector class: " + connector.getClass.getName())
-                  println("Debugger VM args: " + allVMOpts)
-                  println("Debugger program args: " + commandLine)
-                  val vm = connector.launch(arguments)
-
-                  maybeVM = Some(new VM(vm))
+                  val vm = new VM(commandLine)
+                  maybeVM = Some(vm)
+                  vm.start()
                   project ! RPCResultEvent(toWF(true), callId)
                 }
 
@@ -533,16 +521,34 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     System.out.println("Finalizing debug manager actor.")
   }
 
-  private class VM(val vm: VirtualMachine) {
+  private class VM(commandLine: String) {
     import scala.collection.JavaConversions._
 
-    //    vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
+    private val vm: VirtualMachine = {
+      val connector = Bootstrap.virtualMachineManager().defaultConnector
+      val arguments = connector.defaultArguments()
+      //arguments.get("home").setValue(jreHome);
+      val opts = arguments.get("options").value
+      val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
+      arguments.get("options").setValue(allVMOpts)
+      arguments.get("main").setValue(commandLine)
+      arguments.get("suspend").setValue("false")
+      //arguments.get("quote").setValue("\"");
+      //arguments.get("vmexec").setValue("java");
+      println("Using Connector: " + connector.name +
+        " : " + connector.description())
+      println("Connector class: " + connector.getClass.getName())
+      println("Debugger VM args: " + allVMOpts)
+      println("Debugger program args: " + commandLine)
+      connector.launch(arguments)
+    }
+
+    // vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
     val evtQ = new VMEventManager(vm.eventQueue())
-    evtQ.start()
     val erm = vm.eventRequestManager();
     {
       val req = erm.createClassPrepareRequest()
-      req.setSuspendPolicy(EventRequest.SUSPEND_NONE)
+      req.setSuspendPolicy(EventRequest.SUSPEND_ALL)
       req.enable()
     }
     {
@@ -560,15 +566,20 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       req.setSuspendPolicy(EventRequest.SUSPEND_ALL)
       req.enable()
     }
+
     private val fileToUnits = HashMap[String, HashSet[ReferenceType]]()
     private val process = vm.process();
     private val outputMon = new MonitorOutput(process.getErrorStream());
-    outputMon.start
     private val inputMon = new MonitorOutput(process.getInputStream());
-    inputMon.start
     private val savedObjects = new HashMap[Long, ObjectReference]()
 
-    private def remember(value: Value): Value = {
+    def start() {
+      evtQ.start()
+      outputMon.start()
+      inputMon.start()
+    }
+
+    def remember(value: Value): Value = {
       value match {
         case v: ObjectReference => {
           savedObjects(v.uniqueID) = v
@@ -594,13 +605,18 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     }
 
     def setBreakpoint(file: CanonFile, line: Int): Boolean = {
-      (for (loc <- location(file, line)) yield {
-        val request = erm.createBreakpointRequest(loc)
-        request.setSuspendPolicy(EventRequest.SUSPEND_ALL)
-        request.enable();
-        project.bgMessage("Set breakpoint at: " + file + " : " + line)
+      val locs = locations(file, line)
+      if (!locs.isEmpty) {
+        for (loc <- locs) {
+          val request = erm.createBreakpointRequest(loc)
+          request.setSuspendPolicy(EventRequest.SUSPEND_ALL)
+          request.enable();
+        }
+        project.bgMessage("Resolved breakpoint at: " + file + " : " + line)
         true
-      }).getOrElse { false }
+      } else {
+        false
+      }
     }
 
     def clearAllBreakpoints() {
@@ -639,25 +655,22 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       }
     }
 
-    def location(file: CanonFile, line: Int): Option[Location] = {
+    def locations(file: CanonFile, line: Int): List[Location] = {
       val buf = ListBuffer[Location]()
       val key = file.getName
       for (types <- fileToUnits.get(key)) {
         for (t <- types) {
           for (m <- t.methods()) {
             try { buf ++= m.locationsOfLine(line) } catch {
-              case _ =>
-                print("no debug info for: " + m)
+              case e: AbsentInformationException =>
             }
           }
           try { buf ++= t.locationsOfLine(line) } catch {
-            case _ =>
-              print("no debug info for: " + t)
+            case e: AbsentInformationException =>
           }
         }
       }
-      println("Found locations: " + buf)
-      buf.headOption
+      buf.toList
     }
 
     def threadById(id: Long): Option[ThreadReference] = {
@@ -764,8 +777,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
       val locals = ignoreErr({
         frame.visibleVariables.map { v =>
           DebugStackLocal(v.name, Some(makeDebugValue(
-		remember(frame.getValue(v))
-	      )))
+            remember(frame.getValue(v)))))
         }.toList
       }, List())
 
@@ -864,11 +876,10 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
     } catch {
       case e: VMDisconnectedException => {}
     }
-
   }
 
   private class VMEventManager(val eventQueue: EventQueue) extends Thread {
-    var finished = false
+    @volatile var finished = false
     override def run() {
       try {
         do {
@@ -876,10 +887,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
           val it = eventSet.eventIterator()
           while (it.hasNext()) {
             val evt = it.nextEvent();
-            println("VM Event:" + evt.toString)
             evt match {
               case e: VMDisconnectEvent => {
                 finished = true
+              }
+              case e: ClassPrepareEvent => {
+                withVM { vm =>
+                  vm.typeAdded(e.referenceType())
+                }
+                eventSet.resume()
               }
               case _ => {}
             }

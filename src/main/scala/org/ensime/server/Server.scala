@@ -45,7 +45,6 @@ object Server {
         {
           // TODO add an option to change the protocol
           val protocol: Protocol = SwankProtocol
-
           val project: Project = new Project(protocol)
           project.start()
 
@@ -59,7 +58,7 @@ object Server {
             System.out.flush();
             while (true) {
               try {
-                 val socket = listener.accept()
+                val socket = listener.accept()
                 println("Got connection, creating handler...")
                 val handler = new SocketHandler(socket, protocol, project)
                 handler.start()

@@ -476,9 +476,13 @@ object ProjectConfig {
       val o = new SExpFormatHandler(SExpList(List())) {}
       for (prop <- o.props) {
         out.write("\n\n")
-        out.write(prop.manualEntry)
+	out.write(prop.manualEntry)
       }
-    } finally {
+    } 
+    catch{
+      case e:Exception => e.printStackTrace()
+    }
+    finally {
       out.close()
     }
   }
