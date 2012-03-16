@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.config
 import java.io.File
@@ -79,7 +79,7 @@ object ProjectConfig {
     def desc: String
     def typeHint: Option[String]
     def synonymKey: Option[String]
-    def apply(m:KeyMap): Any
+    def apply(m: KeyMap): Any
 
     def defaultTypeHint: String = "NA"
 
@@ -167,10 +167,10 @@ object ProjectConfig {
     private def subprojects(m: KeyMap): List[KeyMap] = {
       m.get(key(":subprojects")) match {
         case Some(SExpList(items)) =>
-        items.flatMap {
-          case lst: SExpList => Some(lst.toKeywordMap)
-          case _ => None
-        }.toList
+          items.flatMap {
+            case lst: SExpList => Some(lst.toKeywordMap)
+            case _ => None
+          }.toList
         case _ => List()
       }
     }
@@ -181,26 +181,25 @@ object ProjectConfig {
         (primary, secondary) match {
           case (Some(s1: SExp), None) => Some(s1)
           case (None, Some(s2: SExp)) => Some(s2)
-          case (Some(SExpList(items1)), Some(SExpList(items2))) => 
-	  Some(SExpList(items1 ++ items2))
+          case (Some(SExpList(items1)), Some(SExpList(items2))) =>
+            Some(SExpList(items1 ++ items2))
           case (Some(s1: SExp), Some(s2: SExp)) => Some(s2)
           case _ => None
         }
       }
 
       def withMerged(m: KeyMap, key: KeywordAtom): KeyMap = {
-	merge(m.get(key), dep.get(key)) match{
-	  case Some(sexp) => m + ((key, sexp))
-	  case None => m
-	}
+        merge(m.get(key), dep.get(key)) match {
+          case Some(sexp) => m + ((key, sexp))
+          case None => m
+        }
       }
 
       List(
-	sourceRoots_.key,
+        sourceRoots_.key,
         runtimeDeps_.key,
         compileDeps_.key,
-        testDeps_.key
-      ).foldLeft(main)(withMerged)
+        testDeps_.key).foldLeft(main)(withMerged)
     }
 
     private def subproject(m: KeyMap, moduleName: String): Option[KeyMap] = {
@@ -212,13 +211,12 @@ object ProjectConfig {
       }
       main.map { p: KeyMap =>
         val deps = (p.get(dependsOnModules_.key) match {
-            case Some(names: SExpList) => names.map(_.toString)
-            case _ => List()
-          }).flatMap { subproject(m, _)}
+          case Some(names: SExpList) => names.map(_.toString)
+          case _ => List()
+        }).flatMap { subproject(m, _) }
         deps.foldLeft(p)(mergeWithDependency)
       }
     }
-
 
     private def activeSubprojectKeyMap(main: KeyMap): Option[KeyMap] = {
       main.get(activeSubproject_.key) match {
@@ -226,7 +224,6 @@ object ProjectConfig {
         case _ => None
       }
     }
-
 
     lazy val props = scala.collection.mutable.ListBuffer[Prop]()
 
@@ -268,7 +265,6 @@ object ProjectConfig {
     props += activeSubproject_
     def activeSubproject() = activeSubproject_(m)
 
-
     lazy val dependsOnModules_ = new StringListProp(
       ":depends-on-modules",
       "A list of module-names on which this project depends.",
@@ -276,7 +272,6 @@ object ProjectConfig {
       None)
     props += dependsOnModules_
     def dependsOnModules() = dependsOnModules_(m)
-
 
     lazy val version_ = new OptionalStringProp(
       ":version",
@@ -371,8 +366,7 @@ object ProjectConfig {
       ":source-roots",
       "A list of directories in which to start searching for source files.",
       Some("(directory*)"),
-      Some(":sources")
-    )
+      Some(":sources"))
 
     props += sourceRoots_
     def sourceRoots() = sourceRoots_(m)
@@ -459,7 +453,6 @@ object ProjectConfig {
     props += formatPrefs_
     def formatPrefs() = formatPrefs_(m)
 
-
     private lazy val m: KeyMap = {
       val mainproj = config.toKeywordMap
       val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
@@ -468,7 +461,6 @@ object ProjectConfig {
 
   }
 
-
   def main(args: Array[String]) {
     import java.io._
     val out = new OutputStreamWriter(new FileOutputStream(args(0)))
@@ -476,31 +468,29 @@ object ProjectConfig {
       val o = new SExpFormatHandler(SExpList(List())) {}
       for (prop <- o.props) {
         out.write("\n\n")
-	out.write(prop.manualEntry)
+        out.write(prop.manualEntry)
       }
-    } 
-    catch{
-      case e:Exception => e.printStackTrace()
-    }
-    finally {
+    } catch {
+      case e: Exception => e.printStackTrace()
+    } finally {
       out.close()
     }
   }
 
   /**
-  * Create a ProjectConfig instance from the given
-  * SExp property list.
-  */
-  def fromSExp(sexp: SExp): Either[Throwable,ProjectConfig] = {
-    try{
-      sexp match{
-	case s:SExpList => Right(load(new SExpFormatHandler(s)))
-	case _ => Left(new RuntimeException("Expected a SExpList."))
+   * Create a ProjectConfig instance from the given
+   * SExp property list.
+   */
+  def fromSExp(sexp: SExp): Either[Throwable, ProjectConfig] = {
+    try {
+      sexp match {
+        case s: SExpList => Right(load(new SExpFormatHandler(s)))
+        case _ => Left(new RuntimeException("Expected a SExpList."))
       }
-    }
-    catch{ case e:Throwable => 
-      e.printStackTrace()
-      Left(e) 
+    } catch {
+      case e: Throwable =>
+        e.printStackTrace()
+        Left(e)
     }
   }
 
@@ -689,50 +679,50 @@ class ProjectConfig(
   val extraBuilderArgs: Iterable[String]) {
 
   val formattingPrefs = formattingPrefsMap.
-  foldLeft(FormattingPreferences()) { (fp, p) =>
-    p match {
-      case ('alignParameters, value: Boolean) =>
-      fp.setPreference(AlignParameters, value)
-      case ('alignSingleLineCaseStatements, value: Boolean) =>
-      fp.setPreference(AlignSingleLineCaseStatements, value)
-      case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
-      fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
-      case ('compactStringConcatenation, value: Boolean) =>
-      fp.setPreference(CompactStringConcatenation, value)
-      case ('doubleIndentClassDeclaration, value: Boolean) =>
-      fp.setPreference(DoubleIndentClassDeclaration, value)
-      case ('formatXml, value: Boolean) =>
-      fp.setPreference(FormatXml, value)
-      case ('indentLocalDefs, value: Boolean) =>
-      fp.setPreference(IndentLocalDefs, value)
-      case ('indentPackageBlocks, value: Boolean) =>
-      fp.setPreference(IndentPackageBlocks, value)
-      case ('indentSpaces, value: Int) =>
-      fp.setPreference(IndentSpaces, value)
-      case ('indentWithTabs, value: Boolean) =>
-      fp.setPreference(IndentWithTabs, value)
-      case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
-      fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
-      case ('preserveDanglingCloseParenthesis, value: Boolean) =>
-      fp.setPreference(PreserveDanglingCloseParenthesis, value)
-      case ('preserveSpaceBeforeArguments, value: Boolean) =>
-      fp.setPreference(PreserveSpaceBeforeArguments, value)
-      case ('spaceInsideBrackets, value: Boolean) =>
-      fp.setPreference(SpaceInsideBrackets, value)
-      case ('spaceInsideParentheses, value: Boolean) =>
-      fp.setPreference(SpaceInsideParentheses, value)
-      case ('spaceBeforeColon, value: Boolean) =>
-      fp.setPreference(SpaceBeforeColon, value)
-      case ('spacesWithinPatternBinders, value: Boolean) =>
-      fp.setPreference(SpacesWithinPatternBinders, value)
-      case ('rewriteArrowSymbols, value: Boolean) =>
-      fp.setPreference(RewriteArrowSymbols, value)
-      case (name, _) => {
-        System.err.println("Oops, unrecognized formatting option: " + name)
-        fp
+    foldLeft(FormattingPreferences()) { (fp, p) =>
+      p match {
+        case ('alignParameters, value: Boolean) =>
+          fp.setPreference(AlignParameters, value)
+        case ('alignSingleLineCaseStatements, value: Boolean) =>
+          fp.setPreference(AlignSingleLineCaseStatements, value)
+        case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
+          fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
+        case ('compactStringConcatenation, value: Boolean) =>
+          fp.setPreference(CompactStringConcatenation, value)
+        case ('doubleIndentClassDeclaration, value: Boolean) =>
+          fp.setPreference(DoubleIndentClassDeclaration, value)
+        case ('formatXml, value: Boolean) =>
+          fp.setPreference(FormatXml, value)
+        case ('indentLocalDefs, value: Boolean) =>
+          fp.setPreference(IndentLocalDefs, value)
+        case ('indentPackageBlocks, value: Boolean) =>
+          fp.setPreference(IndentPackageBlocks, value)
+        case ('indentSpaces, value: Int) =>
+          fp.setPreference(IndentSpaces, value)
+        case ('indentWithTabs, value: Boolean) =>
+          fp.setPreference(IndentWithTabs, value)
+        case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
+          fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
+        case ('preserveDanglingCloseParenthesis, value: Boolean) =>
+          fp.setPreference(PreserveDanglingCloseParenthesis, value)
+        case ('preserveSpaceBeforeArguments, value: Boolean) =>
+          fp.setPreference(PreserveSpaceBeforeArguments, value)
+        case ('spaceInsideBrackets, value: Boolean) =>
+          fp.setPreference(SpaceInsideBrackets, value)
+        case ('spaceInsideParentheses, value: Boolean) =>
+          fp.setPreference(SpaceInsideParentheses, value)
+        case ('spaceBeforeColon, value: Boolean) =>
+          fp.setPreference(SpaceBeforeColon, value)
+        case ('spacesWithinPatternBinders, value: Boolean) =>
+          fp.setPreference(SpacesWithinPatternBinders, value)
+        case ('rewriteArrowSymbols, value: Boolean) =>
+          fp.setPreference(RewriteArrowSymbols, value)
+        case (name, _) => {
+          System.err.println("Oops, unrecognized formatting option: " + name)
+          fp
+        }
       }
     }
-  }
 
   def scalaJars: Set[CanonFile] = Set(scalaCompilerJar, scalaLibraryJar)
 
@@ -772,7 +762,11 @@ class ProjectConfig(
   }
 
   def runtimeClasspath: String = {
-    val deps = scalaJars ++ runtimeDeps ++ target
+
+    // Note: target comes first so newly generated
+    // classes will shadow classes in jars.
+    val deps = target ++ scalaJars ++ runtimeDeps
+
     val paths = deps.map(_.getPath).toSet
     paths.mkString(File.pathSeparator)
   }
