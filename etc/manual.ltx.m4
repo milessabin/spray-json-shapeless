@@ -149,7 +149,7 @@ The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior 
 
 \noindent
 \textbf{Compile-on-Save}:\\
-If the configuration directive :sbt-compile-on-save is set to 't', ENSIME will invoke the 'compile' task in the inferior sbt process whenever you save a Scala buffer. Warning: This can eat up a lot of CPU.\\
+If the value of the Emacs-Lisp variablt ensime-sbt-compile-on-save is non-nil ENSIME will invoke the 'compile' task in the inferior sbt process(presuming you have one running) whenever you save a Scala buffer. This option is enabled by default.\\
 
 \subsubsection{Maven}
 
