@@ -79,6 +79,44 @@ class ProjectConfigSpec extends Spec with ShouldMatchers{
       }
     }
 
+
+    it("should correctly merge with outer proj") {
+      withTemporaryDirectory{ dir =>
+	val root0 = CanonFile(createUniqueDirectory(dir))
+	val root1 = CanonFile(createUniqueDirectory(dir))
+	val root2 = CanonFile(createUniqueDirectory(dir))
+	val target = CanonFile(createUniqueDirectory(dir))
+	val conf = parse(List(
+	    "(",
+	    "     :name \"Outer\"",
+	    "     :target \"" + target + "\"",
+	    "     :source-roots (\"" + root0 + "\")",
+	    "  :subprojects (",
+	    "     (",
+	    "     :name \"Proj A\"",
+	    "     :module-name \"A\"",
+	    "     :source-roots (\"" + root1 + "\")",
+	    "     )",
+	    "     (",
+	    "     :name \"Proj B\"",
+	    "     :module-name \"B\"",
+	    "     :source-roots (\"" + root2 + "\")",
+	    "     :depends-on-modules (\"A\")",
+	    "     )",
+	    "  )",
+	    "  :active-subproject \"B\"",
+	    ")"
+	  ))
+	assert(conf.name.get == "Proj B")
+	println(conf.sourceRoots)
+	assert(conf.sourceRoots.toSet.contains(root0))
+	assert(conf.sourceRoots.toSet.contains(root1))
+	assert(conf.sourceRoots.toSet.contains(root2))
+	assert(conf.target.get == target)
+      }
+    }
+
+
   }
 
 }

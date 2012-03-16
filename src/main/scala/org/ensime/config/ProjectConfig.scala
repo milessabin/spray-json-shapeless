@@ -458,10 +458,25 @@ object ProjectConfig {
     def formatPrefs() = formatPrefs_(m)
 
 
+    private def simpleMerge(m1:KeyMap, m2:KeyMap):KeyMap = {
+      val keys = Set() ++ m1.keys ++ m2.keys
+      val merged: Map[KeywordAtom, SExp] = keys.map{ key =>
+	(m1.get(key), m2.get(key)) match{
+	  case (Some(s1),None) => (key, s1)
+	  case (None,Some(s2)) => (key, s2)
+	  case (Some(SExpList(items1)), 
+	    Some(SExpList(items2))) => (key, SExpList(items1 ++ items2))
+	  case (Some(s1:SExp),Some(s2:SExp)) => (key, s2)
+	  case _ => (key, NilAtom())
+	}
+      }.toMap
+      merged 
+    }
+
     private lazy val m: KeyMap = {
       val mainproj = config.toKeywordMap
       val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
-      mainproj ++ subproj
+      simpleMerge(mainproj,subproj)
     }
 
   }
