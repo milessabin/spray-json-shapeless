@@ -100,8 +100,6 @@ First, you need to install the ENSIME sbt plugin. Add the following lines to you
 
 \begin{mylisting}
 \begin{verbatim}
-resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
-    
 addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "VERSION")
 \end{verbatim}
 \end{mylisting}
