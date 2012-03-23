@@ -40,7 +40,7 @@ object EnsimeBuild extends Build {
 
   val root = Path(".")
 
-  val TwoNineVersion = "2.9.2-SNAPSHOT"
+  val TwoNineVersion = "2.9.2-RC1"
 
   lazy val project = {
     Project(
