@@ -77,7 +77,7 @@ object EnsimeBuild extends Build {
 	    scalariform,
 	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
 	  )},
-	scalacOptions ++= Seq("-deprecation"),
+	scalacOptions ++= Seq("-g:vars","-deprecation"),
 	exportJars := true,
 	stageTask,
 	distTask,

@@ -202,6 +202,10 @@ object SExp extends RegexParsers {
     IntAtom(value)
   }
 
+  implicit def longToSExp(value: Long): SExp = {
+    IntAtom(value.toInt)
+  }
+
   implicit def boolToSExp(value: Boolean): SExp = {
     if (value) {
       TruthAtom()
@@ -230,7 +234,8 @@ object SExp extends RegexParsers {
     def toSExp = o
   }
 
-  implicit def listToSExpable(o: Iterable[SExpable]): SExpable = new Iterable[SExpable] with SExpable {
+  implicit def listToSExpable(o: Iterable[SExpable]): SExpable = 
+  new Iterable[SExpable] with SExpable {
     override def iterator = o.iterator
     override def toSExp = SExp(o.map { _.toSExp })
   }

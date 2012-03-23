@@ -29,7 +29,7 @@ package org.ensime.server
 
 import java.io.File
 import org.ensime.config.ProjectConfig
-import org.ensime.debug.ProjectDebugInfo
+
 import org.ensime.protocol._
 import org.ensime.util._
 import scala.actors._
@@ -37,14 +37,15 @@ import scala.actors.Actor._
 import scala.tools.nsc.{ Settings }
 import scala.collection.mutable.{ LinkedHashMap }
 
-case class SendBackgroundMessageEvent(code: Int, detail: Option[String])
+
 case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: Option[String], callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
+case class AsyncEvent(evt: WireFormat)
 
 case class ClearAllNotesEvent(lang: scala.Symbol)
 case class NewNotesEvent(lang: scala.Symbol, notelist: NoteList)
-
+case class SendBackgroundMessageEvent(code: Int, detail: Option[String])
 case class AnalyzerReadyEvent()
 case class AnalyzerShutdownEvent()
 case class IndexerReadyEvent()
@@ -82,42 +83,40 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected var analyzer: Actor = actor {}
   protected var builder: Option[Actor] = None
-  protected var debugInfo: Option[ProjectDebugInfo] = None
+  protected var debugger: Option[Actor] = None
 
   private var undoCounter = 0
   private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]
+
+  def sendRPCError(code: Int, detail: Option[String], callId:Int){
+    this ! RPCErrorEvent(code,detail,callId)
+  }
+  def sendRPCError(detail: String, callId:Int){
+    sendRPCError(ProtocolConst.ErrExceptionInRPC,Some(detail),callId)
+  }
+
+  def bgMessage(msg: String){
+    this ! AsyncEvent(protocol.toWF(SendBackgroundMessageEvent(
+      ProtocolConst.MsgMisc, 
+      Some(msg))))
+  }
 
   def act() {
     println("Project waiting for init...")
     loop {
       try {
         receive {
-          case SendBackgroundMessageEvent(code: Int, detail: Option[String]) => {
-            protocol.sendBackgroundMessage(code, detail)
-          }
           case IncomingMessageEvent(msg: WireFormat) => {
             protocol.handleIncomingMessage(msg)
-          }
-          case AnalyzerReadyEvent() => {
-            protocol.sendCompilerReady
-          }
-          case FullTypeCheckCompleteEvent() => {
-            protocol.sendFullTypeCheckComplete
-          }
-          case msg: IndexerReadyEvent => {
-            protocol.sendIndexerReady
-          }
-          case NewNotesEvent(lang, notes:NoteList) => {
-            protocol.sendNotes(lang, notes)
-          }
-          case ClearAllNotesEvent(lang) => {
-            protocol.sendClearAllNotes(lang)
           }
           case AddUndo(sum, changes) => {
             addUndo(sum, changes)
           }
           case RPCResultEvent(value, callId) => {
             protocol.sendRPCReturn(value, callId)
+          }
+          case AsyncEvent(value) => {
+            protocol.sendEvent(value)
           }
           case RPCErrorEvent(code, detail, callId) => {
             protocol.sendRPCError(code, detail, callId)
@@ -160,6 +159,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     config = conf
     restartCompiler
     shutdownBuilder
+    shutdownDebugger
     undos.clear
     undoCounter = 0
   }
@@ -183,11 +183,30 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
   }
 
+  protected def getOrStartDebugger(): Actor = {
+    debugger match {
+      case Some(b) => b
+      case None =>
+        {
+        val b = new DebugManager(this, protocol, config)
+        debugger = Some(b)
+        b.start
+        b
+      }
+    }
+  }
+
   protected def shutdownBuilder() {
     for (b <- builder) {
       b ! BuilderShutdownEvent
     }
     builder = None
+  }
+  protected def shutdownDebugger() {
+    for (d <- debugger) {
+      d ! DebuggerShutdownEvent
+    }
+    debugger = None
   }
 
   protected def shutdownServer() {

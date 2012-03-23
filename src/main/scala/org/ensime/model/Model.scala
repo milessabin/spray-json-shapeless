@@ -30,8 +30,11 @@ import scala.collection.mutable.{ HashMap, ArrayBuffer }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.symtab.{ Symbols, Types }
 import scala.tools.nsc.util.{ NoPosition, Position }
+import org.ensime.util.CanonFile
 
 abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
+
+case class SourcePosition(file: CanonFile, line: Int)
 
 class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
@@ -74,6 +77,71 @@ case class CompletionInfo(
 case class CompletionInfoList(
   val prefix: String,
   val completions: List[CompletionInfo]) {}
+
+
+case class Breakpoint(pos: SourcePosition)
+case class BreakpointList(val active: List[Breakpoint], val pending: List[Breakpoint])
+
+sealed trait DebugValue{
+  def typeName:String;
+}
+
+
+case class DebugNullValue(
+  val typeName: String
+) extends DebugValue
+
+case class DebugPrimitiveValue(
+  val value: String,
+  val typeName: String
+) extends DebugValue
+
+case class DebugObjectField(
+  val index: Int,
+  val name: String,
+  val typeName: String,
+  val value: Option[DebugValue]
+)
+
+case class DebugObjectReference(
+  val fields: List[DebugObjectField],
+  val typeName: String,
+  val objectId: Long
+) extends DebugValue
+
+case class DebugStringReference(
+  val stringValue: String,
+  val fields: List[DebugObjectField],
+  val typeName: String,
+  val objectId: Long
+) extends DebugValue
+
+case class DebugArrayReference(
+  val length: Int,
+  val typeName: String,
+  val elementTypeName: String,
+  val objectId: Long
+) extends DebugValue
+
+case class DebugStackLocal(
+  val name: String,
+  val value: Option[DebugValue]
+)
+
+case class DebugStackFrame(
+  val locals: List[DebugStackLocal],
+  val numArguments: Int,
+  val className: String,
+  val methodName: String,
+  val pcLocation: SourcePosition,
+  val thisObjectId: Long
+)
+
+case class DebugBacktrace(
+  val frames: List[DebugStackFrame],
+  val threadId: Long
+)
+
 
 class NamedTypeMemberInfo(override val name: String, val tpe: TypeInfo, val pos: Position, val declaredAs: scala.Symbol) extends EntityInfo(name, List()) {}
 

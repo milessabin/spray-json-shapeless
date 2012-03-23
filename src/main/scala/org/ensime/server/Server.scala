@@ -45,7 +45,6 @@ object Server {
         {
           // TODO add an option to change the protocol
           val protocol: Protocol = SwankProtocol
-
           val project: Project = new Project(protocol)
           project.start()
 

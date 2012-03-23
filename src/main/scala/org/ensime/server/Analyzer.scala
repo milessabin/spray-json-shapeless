@@ -55,22 +55,25 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
   println("\nPresentation Compiler settings:")
   println(settings.toString)
+  import protocol._
 
   private val reportHandler = new ReportHandler {
     override def messageUser(str: String) {
-      project ! SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))
+      project ! AsyncEvent(
+	toWF(SendBackgroundMessageEvent(
+	    MsgCompilerUnexpectedError, Some(str))))
     }
     override def clearAllScalaNotes() {
-      project ! ClearAllNotesEvent('scala)
+      project ! AsyncEvent(toWF(ClearAllNotesEvent('scala)))
     }
     override def clearAllJavaNotes() {
-      project ! ClearAllNotesEvent('java)
+      project ! AsyncEvent(toWF(ClearAllNotesEvent('java)))
     }
     override def reportScalaNotes(notes: List[Note]) {
-      project ! NewNotesEvent('scala, NoteList(false, notes))
+      project ! AsyncEvent(toWF(NewNotesEvent('scala, NoteList(false, notes))))
     }
     override def reportJavaNotes(notes: List[Note]) {
-      project ! NewNotesEvent('java, NoteList(false, notes))
+      project ! AsyncEvent(toWF(NewNotesEvent('java, NoteList(false, notes))))
     }
   }
 
@@ -87,8 +90,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   import scalaCompiler._
 
   def act() {
-    project ! SendBackgroundMessageEvent(
-      MsgInitializingAnalyzer, Some("Initializing Analyzer. Please wait..."))
+    project.bgMessage("Initializing Analyzer. Please wait...")
 
     println("Initing Indexer...")
     indexer.start
@@ -119,15 +121,15 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
             if (awaitingInitialCompile) {
               awaitingInitialCompile = false
               reporter.enable()
-              project ! AnalyzerReadyEvent()
+              project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
             }
-            project ! FullTypeCheckCompleteEvent()
+            project ! AsyncEvent(toWF(FullTypeCheckCompleteEvent()))
           }
 
           case rpcReq @ RPCRequestEvent(req: Any, callId: Int) => {
             try {
               if (awaitingInitialCompile) {
-                project ! RPCErrorEvent(ErrAnalyzerNotReady,
+                project.sendRPCError(ErrAnalyzerNotReady,
                   Some("Analyzer is not ready! Please wait."), callId)
               } else {
 
@@ -151,7 +153,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 
                   case ReloadFileReq(file: File) => {
                     if (!file.exists()) {
-                      project ! RPCErrorEvent(ErrFileDoesNotExist,
+                      project.sendRPCError(ErrFileDoesNotExist,
                         Some(file.getPath()), callId)
                     } else {
                       if (file.getAbsolutePath().endsWith(".java")) {
@@ -297,7 +299,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
               case e => {
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
-                project ! RPCErrorEvent(ErrExceptionInAnalyzer,
+                project.sendRPCError(ErrExceptionInAnalyzer,
                   Some("Error occurred in Analyzer. Check the server log."), callId)
               }
             }
