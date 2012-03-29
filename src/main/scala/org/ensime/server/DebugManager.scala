@@ -69,12 +69,12 @@ case class DebugClearAllBreaksReq()
 case class DebugListBreaksReq()
 
 abstract class DebugEvent
-case class DebugStepEvent(threadId: Long, pos: SourcePosition) extends DebugEvent
-case class DebugBreakEvent(threadId: Long, pos: SourcePosition) extends DebugEvent
+case class DebugStepEvent(threadId: Long, threadName: String, pos: SourcePosition) extends DebugEvent
+case class DebugBreakEvent(threadId: Long, threadName: String, pos: SourcePosition) extends DebugEvent
 case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
-case class DebugExceptionEvent(excId: Long, threadId: Long) extends DebugEvent
+case class DebugExceptionEvent(excId: Long, threadId: Long, threadName: String) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 
@@ -241,7 +241,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 case e: StepEvent => {
                   (for (pos <- locToPos(e.location())) yield {
                     project ! AsyncEvent(toWF(DebugStepEvent(
-                      e.thread().uniqueID(), pos)))
+                      e.thread().uniqueID(), e.thread().name, pos)))
                   }) getOrElse {
                     System.err.println("Step position not found: " +
                       e.location().sourceName() + " : " + e.location().lineNumber())
@@ -250,7 +250,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                 case e: BreakpointEvent => {
                   (for (pos <- locToPos(e.location())) yield {
                     project ! AsyncEvent(toWF(DebugBreakEvent(
-                      e.thread().uniqueID(), pos)))
+                      e.thread().uniqueID(), e.thread().name, pos)))
                   }) getOrElse {
                     System.err.println("Break position not found: " +
                       e.location().sourceName() + " : " + e.location().lineNumber())
@@ -260,7 +260,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   withVM { vm => vm.remember(e.exception) }
                   project ! AsyncEvent(toWF(DebugExceptionEvent(
                     e.exception.uniqueID(),
-                    e.thread().uniqueID())))
+                    e.thread().uniqueID(),
+		    e.thread().name
+		  )))
                 }
                 case e: ThreadDeathEvent => {
                   project ! AsyncEvent(toWF(DebugThreadDeathEvent(
@@ -850,7 +852,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
         frames += makeStackFrame(thread.frame(i))
         i += 1
       }
-      DebugBacktrace(frames.toList, thread.uniqueID())
+      DebugBacktrace(frames.toList, thread.uniqueID(), thread.name())
     }
 
     private def stackValueNamed(thread: ThreadReference, name: String): Option[Value] = {

@@ -1806,15 +1806,16 @@ trait SwankProtocol extends Protocol {
        * Summary:
        *   Get a detailed backtrace for the given thread
        * Arguments:
-       *   Int: The index of the first backtrace. The 0th frame is the
+       *   String: The unique id of the thread.
+       *   Int: The index of the first frame to list. The 0th frame is the
        *     currently executing frame.
        *   Int: The number of frames to return. -1 denotes _all_ frames.
        * Return:
        *   A DebugBacktrace
        * Example call:
-       *   (:swank-rpc (swank:debug-backtrace "thread-23" 0 2) 42)
+       *   (:swank-rpc (swank:debug-backtrace "23" 0 2) 42)
        * Example return:
-       *   (:return (:ok t) 42)
+       *   (:return (:ok (:frames () :thread-id "23" :thread-name "main")) 42)
        */
       case "swank:debug-backtrace" => {
         form match {
@@ -2001,7 +2002,9 @@ trait SwankProtocol extends Protocol {
   def toWF(obj: DebugBacktrace): SExp = {
     SExp(
       key(":frames"), SExpList(obj.frames.map(toWF)),    
-      key(":thread-id"), obj.threadId.toString)
+      key(":thread-id"), obj.threadId.toString,
+      key(":thread-name"), obj.threadName
+    )
   }
 
   def toWF(pos: SourcePosition): SExp = {
@@ -2047,17 +2050,19 @@ trait SwankProtocol extends Protocol {
 
   def toWF(evt: DebugEvent): SExp = {
     evt match {
-      case DebugStepEvent(threadId: Long, pos: SourcePosition) => {
+      case DebugStepEvent(threadId, threadName, pos) => {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'step,
 	  key(":thread-id"), threadId.toString, 
+	  key(":thread-name"), threadName, 
 	  key(":file"), pos.file.getAbsolutePath, 
 	  key(":line"), pos.line))
       }
-      case DebugBreakEvent(threadId: Long, pos: SourcePosition) => {
+      case DebugBreakEvent(threadId, threadName, pos) => {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'breakpoint,
 	  key(":thread-id"), threadId.toString, 
+	  key(":thread-name"), threadName, 
 	  key(":file"), pos.file.getAbsolutePath, 
 	  key(":line"), pos.line))
       }
@@ -2073,11 +2078,12 @@ trait SwankProtocol extends Protocol {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'disconnect))
       }
-      case DebugExceptionEvent(excId: Long, threadId: Long) => {
+      case DebugExceptionEvent(excId, threadId, threadName) => {
         SExp(key(":debug-event"), 
 	  SExp(key(":type"), 'exception,
 	  key(":exception"), excId.toString,
-	  key(":thread-id"), threadId.toString
+	  key(":thread-id"), threadId.toString,
+	  key(":thread-name"), threadName
 	))
       }
       case DebugThreadStartEvent(threadId: Long) => {
