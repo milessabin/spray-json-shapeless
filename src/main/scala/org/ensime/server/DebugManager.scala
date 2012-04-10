@@ -583,12 +583,14 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
 
     def remember(value: Value): Value = {
       value match {
-        case v: ObjectReference => {
-          savedObjects(v.uniqueID) = v
-          v
-        }
+        case v: ObjectReference => remember(v)
         case _ => value
       }
+    }
+
+    def remember(v: ObjectReference): ObjectReference = {
+      savedObjects(v.uniqueID) = v
+      v
     }
 
     def resume() {
@@ -791,8 +793,8 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
           CanonFile(
             frame.location.sourcePath()),
           frame.location.lineNumber))
-      val thisObj = ignoreErr(frame.thisObject().uniqueID, -1)
-      DebugStackFrame(locals, numArgs, className, methodName, pcLocation, thisObj)
+      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
+      DebugStackFrame(locals, numArgs, className, methodName, pcLocation, thisObjId)
     }
 
     def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
@@ -824,7 +826,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
 
     def valueForId(objectId: Long): Option[DebugValue] = {
       savedObjects.get(objectId).map {
-        obj => makeDebugValue(remember(obj))
+        obj => makeDebugValue(obj)
       }
     }
 
