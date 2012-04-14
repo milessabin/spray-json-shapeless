@@ -55,7 +55,7 @@ object Server {
             val actualPort = listener.getLocalPort
             println("Server listening on " + actualPort + "..")
             writePort(portfile, actualPort)
-            System.out.flush();
+            System.out.flush()
             while (true) {
               try {
                 val socket = listener.accept()

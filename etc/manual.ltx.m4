@@ -270,7 +270,7 @@ Select a region by setting the mark using \emph{C-SPACE} and then placing the po
 
 \noindent
 \textbf{Inline Local}:\\
-Place your cursor over the local val who's value you'd like to inline. Type \emph{M-x ensime-refactor-inline-local} and follow the minibuffer instructions.\\
+Place your cursor over the local val whose value you'd like to inline. Type \emph{M-x ensime-refactor-inline-local} and follow the minibuffer instructions.\\
 
 \subsection{Global Type and Method Search}
 

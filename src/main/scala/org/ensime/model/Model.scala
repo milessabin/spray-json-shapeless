@@ -139,7 +139,8 @@ case class DebugStackFrame(
 
 case class DebugBacktrace(
   val frames: List[DebugStackFrame],
-  val threadId: Long
+  val threadId: Long,
+  val threadName: String
 )
 
 
