@@ -69,16 +69,20 @@ case class DebugClearAllBreaksReq()
 case class DebugListBreaksReq()
 
 abstract class DebugEvent
-case class DebugStepEvent(threadId: Long, threadName: String, pos: SourcePosition) extends DebugEvent
-case class DebugBreakEvent(threadId: Long, threadName: String, pos: SourcePosition) extends DebugEvent
+case class DebugStepEvent(threadId: Long,
+  threadName: String, pos: SourcePosition) extends DebugEvent
+case class DebugBreakEvent(threadId: Long,
+  threadName: String, pos: SourcePosition) extends DebugEvent
 case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
-case class DebugExceptionEvent(excId: Long, threadId: Long, threadName: String) extends DebugEvent
+case class DebugExceptionEvent(excId: Long,
+  threadId: Long, threadName: String) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 
-class DebugManager(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor {
+class DebugManager(project: Project, protocol: ProtocolConversions,
+  config: ProjectConfig) extends Actor {
 
   import protocol._
 
@@ -87,13 +91,17 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
   }
 
   def locToPos(loc: Location): Option[SourcePosition] = {
-    (for (set <- sourceMap.get(loc.sourceName())) yield {
-      if (set.size > 1) {
-        System.err.println("Warning, ambiguous source name: " +
-          loc.sourceName())
-      }
-      set.headOption.map(f => SourcePosition(f, loc.lineNumber))
-    }).getOrElse(None)
+    try {
+      (for (set <- sourceMap.get(loc.sourceName())) yield {
+        if (set.size > 1) {
+          System.err.println("Warning, ambiguous source name: " +
+            loc.sourceName())
+        }
+        set.headOption.map(f => SourcePosition(f, loc.lineNumber))
+      }).getOrElse(None)
+    } catch {
+      case e: AbsentInformationException => None
+    }
   }
 
   private val sourceMap = HashMap[String, HashSet[CanonFile]]()
@@ -261,8 +269,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions, config: Proj
                   project ! AsyncEvent(toWF(DebugExceptionEvent(
                     e.exception.uniqueID(),
                     e.thread().uniqueID(),
-		    e.thread().name
-		  )))
+                    e.thread().name)))
                 }
                 case e: ThreadDeathEvent => {
                   project ! AsyncEvent(toWF(DebugThreadDeathEvent(
