@@ -1,7 +1,7 @@
 /**
 *  Copyright (c) 2010, Aemon Cannon
 *  All rights reserved.
-*  
+*
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions are met:
 *      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
 *      * Neither the name of ENSIME nor the
 *        names of its contributors may be used to endorse or promote products
 *        derived from this software without specific prior written permission.
-*  
+*
 *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -67,6 +67,7 @@ object EnsimeBuild extends Build {
 	    "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test"
 	  }
 	  Seq(
+	    "org.apache.lucene" % "lucene-core" % "3.5.0",
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
 	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
 	    "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
