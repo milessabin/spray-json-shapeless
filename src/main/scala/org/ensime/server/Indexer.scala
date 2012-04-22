@@ -26,6 +26,13 @@
 */
 
 package org.ensime.server
+import org.apache.lucene.analysis.SimpleAnalyzer
+import org.apache.lucene.document.Document
+import org.apache.lucene.document.Field
+import org.apache.lucene.index.IndexWriter
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.util.Version
 import org.eclipse.jdt.core.compiler.CharOperation
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
 import java.io.File
@@ -61,9 +68,11 @@ trait AbstractIndex {
 }
 
 
+
 trait LuceneIndex {
 
   val index = new RAMDirectory();
+  val analyzer = new SimpleAnalyzer()
   val config  = new IndexWriterConfig(Version.LUCENE_35, analyzer);
 
   def initialize(): Unit = {
@@ -78,8 +87,9 @@ trait LuceneIndex {
 
 
   def insert(key: String, value: SymbolSearchResult): Unit = {
+    val w = new IndexWriter(index, config);
     val doc = new Document();
-    doc.add(new Field("name", key, Field.Store.YES, Field.Index.ANALYZED));
+    doc.add(new Field("name", key, Field.Store.NO, Field.Index.ANALYZED));
     w.addDocument(doc);
   }
 
