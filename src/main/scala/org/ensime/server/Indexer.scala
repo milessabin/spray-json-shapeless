@@ -63,26 +63,29 @@ trait AbstractIndex {
 
 trait LuceneIndex {
 
-  // val index = new RAMDirectory();
-  // val config  = new IndexWriterConfig(Version.LUCENE_35, analyzer);
+  val index = new RAMDirectory();
+  val config  = new IndexWriterConfig(Version.LUCENE_35, analyzer);
 
   def initialize(): Unit = {
 
-    // def addDoc(w:IndexWriter, value:String) {
-    //   val doc = new Document();
-    //   doc.add(new Field("title", value, Field.Store.YES, Field.Index.ANALYZED));
-    //   w.addDocument(doc);
-    // }
+    def addDoc(w:IndexWriter, value:String) {
 
-    // val w = new IndexWriter(index, config);
-    // w.close();
+    }
+
+    val w = new IndexWriter(index, config);
+    w.close();
   }
 
 
   def insert(key: String, value: SymbolSearchResult): Unit = {
+    val doc = new Document();
+    doc.add(new Field("name", key, Field.Store.YES, Field.Index.ANALYZED));
+    w.addDocument(doc);
   }
+
   def remove(key: String): Unit = {
   }
+
   def search(key: String, receiver: (SymbolSearchResult => Unit)): Unit = {
   }
 }
@@ -221,116 +224,116 @@ trait IndexerInterface { self: RichPresentationCompiler =>
 
     class ForEachValCursor[V](fn: V => Any) extends Cursor[Any, V] {
       override def select(entry: java.util.Map.Entry[_, _ <: V]): Cursor.Decision = {
-      fn(entry.getValue())
-      Cursor.Decision.CONTINUE
-    }
-  }
-
-
-
-
-  trait Indexing extends TrieIndex with StringSimilarity {
-
-    private def splitTypeName(nm: String): List[String] = {
-      val keywords = new ListBuffer[String]()
-      var i = 0
-      var k = 0
-      while (i < nm.length) {
-	val c: Char = nm.charAt(i)
-	if (Character.isUpperCase(c) && i != k) {
-          keywords += nm.substring(k, i)
-          k = i
-	}
-	i += 1
+	fn(entry.getValue())
+	Cursor.Decision.CONTINUE
       }
-      if (i != k) {
-	keywords += nm.substring(k)
-      }
-      keywords.toList
     }
 
-    private val cache = new HashMap[(String, String), Int]
-    private def editDist(a: String, b: String): Int = {
-      cache.getOrElseUpdate((a, b), getLevenshteinDistance(a, b))
-    }
 
-    protected def getImportSuggestions(typeNames: Iterable[String],
-      maxResults: Int = 0): List[List[SymbolSearchResult]] = {
-      def suggestions(typeName: String): List[SymbolSearchResult] = {
-	val keywords = splitTypeName(typeName)
-	val candidates = new HashSet[SymbolSearchResult]
 
-	for (key <- keywords) {
-	  search(key.toLowerCase,
-	    (r: SymbolSearchResult) =>
-            r match {
-              case r: TypeSearchResult => candidates += r
-              case _ => // nothing
-            })
+
+    trait Indexing extends TrieIndex with StringSimilarity {
+
+      private def splitTypeName(nm: String): List[String] = {
+	val keywords = new ListBuffer[String]()
+	var i = 0
+	var k = 0
+	while (i < nm.length) {
+	  val c: Char = nm.charAt(i)
+	  if (Character.isUpperCase(c) && i != k) {
+            keywords += nm.substring(k, i)
+            k = i
+	  }
+	  i += 1
 	}
-
-	// Sort by edit distance of type name primarily, and
-	// length of full name secondarily.
-	val candidates2 = candidates.toList.sortWith { (a, b) =>
-          val d1 = editDist(a.localName, typeName)
-          val d2 = editDist(b.localName, typeName)
-          if (d1 == d2) a.name.length < b.name.length
-          else d1 < d2
+	if (i != k) {
+	  keywords += nm.substring(k)
 	}
-
-	if (maxResults == 0) {
-          candidates2
-	} else {
-          candidates2.take(maxResults)
-	}
-      }
-      typeNames.map(suggestions).toList
-    }
-
-    private val BruteForceThresh = 1000
-    protected def findTopLevelSyms(keywords: Iterable[String],
-      maxResults: Int = 0): List[SymbolSearchResult] = {
-
-      var resultSet = new HashSet[SymbolSearchResult]
-
-      if (keywords.size() > 0) {
-	val keyword = keywords.head
-	val key = keyword.toLowerCase()
-	val caseSens = !keyword.equals(key)
-	search(key, { (r: SymbolSearchResult) =>
-            if (!caseSens || r.name.contains(keyword)) {
-              resultSet += r
-            }
-	  })
+	keywords.toList
       }
 
-      if (keywords.size() > 1) {
-	for (keyword <- keywords.tail) {
-          val key = keyword.toLowerCase()
-          val caseSens = !keyword.equals(key)
-          if (resultSet.size() > BruteForceThresh) {
-            val results = new HashSet[SymbolSearchResult]
-            trie.traverseWithPrefix(key, { (r: SymbolSearchResult) =>
-		if (resultSet.contains(r) &&
+      private val cache = new HashMap[(String, String), Int]
+      private def editDist(a: String, b: String): Int = {
+	cache.getOrElseUpdate((a, b), getLevenshteinDistance(a, b))
+      }
+
+      protected def getImportSuggestions(typeNames: Iterable[String],
+	maxResults: Int = 0): List[List[SymbolSearchResult]] = {
+	def suggestions(typeName: String): List[SymbolSearchResult] = {
+	  val keywords = splitTypeName(typeName)
+	  val candidates = new HashSet[SymbolSearchResult]
+
+	  for (key <- keywords) {
+	    search(key.toLowerCase,
+	      (r: SymbolSearchResult) =>
+              r match {
+		case r: TypeSearchResult => candidates += r
+		case _ => // nothing
+              })
+	  }
+
+	  // Sort by edit distance of type name primarily, and
+	  // length of full name secondarily.
+	  val candidates2 = candidates.toList.sortWith { (a, b) =>
+            val d1 = editDist(a.localName, typeName)
+            val d2 = editDist(b.localName, typeName)
+            if (d1 == d2) a.name.length < b.name.length
+            else d1 < d2
+	  }
+
+	  if (maxResults == 0) {
+            candidates2
+	  } else {
+            candidates2.take(maxResults)
+	  }
+	}
+	typeNames.map(suggestions).toList
+      }
+
+      private val BruteForceThresh = 1000
+      protected def findTopLevelSyms(keywords: Iterable[String],
+	maxResults: Int = 0): List[SymbolSearchResult] = {
+
+	var resultSet = new HashSet[SymbolSearchResult]
+
+	if (keywords.size() > 0) {
+	  val keyword = keywords.head
+	  val key = keyword.toLowerCase()
+	  val caseSens = !keyword.equals(key)
+	  search(key, { (r: SymbolSearchResult) =>
+              if (!caseSens || r.name.contains(keyword)) {
+		resultSet += r
+              }
+	    })
+	}
+
+	if (keywords.size() > 1) {
+	  for (keyword <- keywords.tail) {
+            val key = keyword.toLowerCase()
+            val caseSens = !keyword.equals(key)
+            if (resultSet.size() > BruteForceThresh) {
+              val results = new HashSet[SymbolSearchResult]
+              trie.traverseWithPrefix(key, { (r: SymbolSearchResult) =>
+		  if (resultSet.contains(r) &&
+		    (!caseSens || r.name.contains(keyword))) {
+		    results += r
+		  }
+		})
+              resultSet = results
+            } else {
+              val results = new HashSet[SymbolSearchResult]
+              for (r <- resultSet) {
+		if (r.name.toLowerCase().contains(key) &&
 		  (!caseSens || r.name.contains(keyword))) {
 		  results += r
 		}
-              })
-            resultSet = results
-          } else {
-            val results = new HashSet[SymbolSearchResult]
-            for (r <- resultSet) {
-              if (r.name.toLowerCase().contains(key) &&
-		(!caseSens || r.name.contains(keyword))) {
-		results += r
               }
+              resultSet = results
             }
-            resultSet = results
-          }
+	  }
 	}
-      }
 
-      val sorted = resultSet.toList.sortWith { (a, b) => a.name.length < b.name.length }
+	val sorted = resultSet.toList.sortWith { (a, b) => a.name.length < b.name.length }
 	if (maxResults == 0) {
 	  sorted
 	} else {
@@ -363,191 +366,191 @@ trait IndexerInterface { self: RichPresentationCompiler =>
 	sealed abstract trait IndexEvent
 	case class ClassEvent(name: String, location: String, flags: Int) extends IndexEvent
 	case class MethodEvent(className: String, name: String, location: String, flags: Int) extends IndexEvent
-	  case object StopEvent extends IndexEvent
+	case object StopEvent extends IndexEvent
 
-	  class IndexWorkQueue extends Actor {
-	    def act() {
-              loop {
-		receive {
-		  case ClassEvent(name: String, location: String, flags: Int) => {
-		    val i = name.lastIndexOf(".")
-		    val localName = if (i > -1) name.substring(i + 1) else name
-		    val value = new TypeSearchResult(name,
-                      localName,
-                      declaredAs(name, flags),
-                      Some((location, -1)))
-		    insert(name, value)
-		  }
-		  case MethodEvent(className: String, name: String, location: String, flags: Int) => {
-		    val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
-		    val revisedClassName = if (isStatic) className + "$"
-		    else className
-		    val lookupKey = revisedClassName + "." + name
-		    val value = new MethodSearchResult(lookupKey,
-                      name,
-                      'method,
-                      Some((location, -1)),
-                      revisedClassName)
-		    insert(lookupKey, value)
-		  }
-		  case StopEvent => {
-		    reply(StopEvent)
-		    exit()
-		  }
+	class IndexWorkQueue extends Actor {
+	  def act() {
+            loop {
+	      receive {
+		case ClassEvent(name: String, location: String, flags: Int) => {
+		  val i = name.lastIndexOf(".")
+		  val localName = if (i > -1) name.substring(i + 1) else name
+		  val value = new TypeSearchResult(name,
+                    localName,
+                    declaredAs(name, flags),
+                    Some((location, -1)))
+		  insert(name, value)
 		}
-              }
-	    }
-	  }
-	  val indexWorkQ = new IndexWorkQueue
-	  indexWorkQ.start
-
-	  val handler = new ClassHandler {
-	    var classCount = 0
-	    var methodCount = 0
-	    var validClass = false
-	    override def onClass(name: String, location: String, flags: Int) {
-              val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-              validClass = (isPublic && Indexer.isValidType(name) && include(name, includes, excludes))
-		  if (validClass) {
-		    indexWorkQ ! ClassEvent(name, location, flags)
-		    classCount += 1
-		  }
+		case MethodEvent(className: String, name: String, location: String, flags: Int) => {
+		  val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+		  val revisedClassName = if (isStatic) className + "$"
+		  else className
+		  val lookupKey = revisedClassName + "." + name
+		  val value = new MethodSearchResult(lookupKey,
+                    name,
+                    'method,
+                    Some((location, -1)),
+                    revisedClassName)
+		  insert(lookupKey, value)
 		}
-		override def onMethod(className: String, name: String, location: String, flags: Int) {
-		  val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-		  if (validClass && isPublic && Indexer.isValidMethod(name)) {
-		    indexWorkQ ! MethodEvent(className, name, location, flags)
-		    methodCount += 1
-		  }
+		case StopEvent => {
+		  reply(StopEvent)
+		  exit()
 		}
 	      }
-
-	      println("Updated: Indexing classpath...")
-	      ClassIterator.find(files, handler)
-	      val elapsed = System.currentTimeMillis() - t
-	      indexWorkQ !? StopEvent
-	      println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
-	      println("Indexed " + handler.classCount + " classes with " +
-		handler.methodCount + " methods.")
-	      onIndexingComplete()
-	    }
-
-	    def onIndexingComplete()
+            }
 	  }
+	}
+	val indexWorkQ = new IndexWorkQueue
+	indexWorkQ.start
 
-
-	  object Indexer {
-	    def isValidType(s: String): Boolean = {
-	      val i = s.indexOf("$")
-	      i == -1 || (i == (s.length - 1))
-	    }
-	    def isValidMethod(s: String): Boolean = {
-	      s.indexOf("$") == -1 && !s.equals("<init>") && !s.equals("this")
+	val handler = new ClassHandler {
+	  var classCount = 0
+	  var methodCount = 0
+	  var validClass = false
+	  override def onClass(name: String, location: String, flags: Int) {
+            val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+            validClass = (isPublic && Indexer.isValidType(name) && include(name, includes, excludes))
+	    if (validClass) {
+	      indexWorkQ ! ClassEvent(name, location, flags)
+	      classCount += 1
 	    }
 	  }
-
-	  class Indexer(project: Project, protocol: ProtocolConversions,
-	    config: ProjectConfig) extends Actor with Indexing {
-
-	    import protocol._
-
-	    override def onIndexingComplete() {
-	      project ! AsyncEvent(toWF(IndexerReadyEvent()))
+	  override def onMethod(className: String, name: String, location: String, flags: Int) {
+	    val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+	    if (validClass && isPublic && Indexer.isValidMethod(name)) {
+	      indexWorkQ ! MethodEvent(className, name, location, flags)
+	      methodCount += 1
 	    }
+	  }
+	}
 
-	    def act() {
+	println("Updated: Indexing classpath...")
+	ClassIterator.find(files, handler)
+	val elapsed = System.currentTimeMillis() - t
+	indexWorkQ !? StopEvent
+	println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
+	println("Indexed " + handler.classCount + " classes with " +
+	  handler.methodCount + " methods.")
+	onIndexingComplete()
+      }
 
-	      println("Initializing Indexer...")
-	      initialize()
+      def onIndexingComplete()
+    }
 
-	      loop {
+
+    object Indexer {
+      def isValidType(s: String): Boolean = {
+	val i = s.indexOf("$")
+	i == -1 || (i == (s.length - 1))
+      }
+      def isValidMethod(s: String): Boolean = {
+	s.indexOf("$") == -1 && !s.equals("<init>") && !s.equals("this")
+      }
+    }
+
+    class Indexer(project: Project, protocol: ProtocolConversions,
+      config: ProjectConfig) extends Actor with Indexing {
+
+      import protocol._
+
+      override def onIndexingComplete() {
+	project ! AsyncEvent(toWF(IndexerReadyEvent()))
+      }
+
+      def act() {
+
+	println("Initializing Indexer...")
+	initialize()
+
+	loop {
+	  try {
+	    receive {
+	      case IndexerShutdownReq() => {
+		exit('stop)
+	      }
+	      case RebuildStaticIndexReq() => {
+		buildStaticIndex(config.allFilesOnClasspath,
+		  config.onlyIncludeInIndex,
+		  config.excludeFromIndex)
+	      }
+	      case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
+		syms.foreach { info =>
+		  insert(info.name, info)
+		}
+	      }
+	      case RemoveSymbolsReq(syms: Iterable[String]) => {
+		syms.foreach { s => remove(s) }
+	      }
+	      case TypeCompletionsReq(prefix: String, maxResults: Int) => {
+		val suggestions = getImportSuggestions(List(prefix), maxResults).flatten
+		sender ! suggestions
+	      }
+	      case RPCRequestEvent(req: Any, callId: Int) => {
 		try {
-		  receive {
-		    case IndexerShutdownReq() => {
-		      exit('stop)
+		  req match {
+		    case ImportSuggestionsReq(file: File, point: Int,
+		      names: List[String], maxResults: Int) => {
+		      val suggestions = ImportSuggestions(getImportSuggestions(names, maxResults))
+		      project ! RPCResultEvent(toWF(suggestions), callId)
 		    }
-		    case RebuildStaticIndexReq() => {
-		      buildStaticIndex(config.allFilesOnClasspath,
-			config.onlyIncludeInIndex,
-			config.excludeFromIndex)
+		    case PublicSymbolSearchReq(keywords: List[String],
+		      maxResults: Int) => {
+		      val nonEmptyKeywords = keywords.filter { _.length > 0 }
+		      val suggestions = SymbolSearchResults(
+			findTopLevelSyms(nonEmptyKeywords, maxResults))
+		      project ! RPCResultEvent(toWF(suggestions), callId)
 		    }
-		    case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
-		      syms.foreach { info =>
-			insert(info.name, info)
-		      }
-		    }
-		    case RemoveSymbolsReq(syms: Iterable[String]) => {
-		      syms.foreach { s => remove(s) }
-		    }
-		    case TypeCompletionsReq(prefix: String, maxResults: Int) => {
-		      val suggestions = getImportSuggestions(List(prefix), maxResults).flatten
-		      sender ! suggestions
-		    }
-		    case RPCRequestEvent(req: Any, callId: Int) => {
-		      try {
-			req match {
-			  case ImportSuggestionsReq(file: File, point: Int,
-			    names: List[String], maxResults: Int) => {
-			    val suggestions = ImportSuggestions(getImportSuggestions(names, maxResults))
-				project ! RPCResultEvent(toWF(suggestions), callId)
-			      }
-			      case PublicSymbolSearchReq(keywords: List[String],
-				maxResults: Int) => {
-				val nonEmptyKeywords = keywords.filter { _.length > 0 }
-				val suggestions = SymbolSearchResults(
-				  findTopLevelSyms(nonEmptyKeywords, maxResults))
-				project ! RPCResultEvent(toWF(suggestions), callId)
-			      }
-			    }
-			  } catch {
-			    case e: Exception =>
-			    {
-			      System.err.println("Error handling RPC: " +
-				e + " :\n" +
-				e.getStackTraceString)
-			      project.sendRPCError(ErrExceptionInIndexer,
-				Some("Error occurred in indexer. Check the server log."),
-				callId)
-			    }
-			  }
-			}
-			case other =>
-			{
-			  println("Indexer: WTF, what's " + other)
-			}
-		      }
-
-		    } catch {
-		      case e: Exception => {
-		      System.err.println("Error at Indexer message loop: " +
-			e + " :\n" + e.getStackTraceString)
-		    }
+		  }
+		} catch {
+		  case e: Exception =>
+		  {
+		    System.err.println("Error handling RPC: " +
+		      e + " :\n" +
+		      e.getStackTraceString)
+		    project.sendRPCError(ErrExceptionInIndexer,
+		      Some("Error occurred in indexer. Check the server log."),
+		      callId)
 		  }
 		}
 	      }
-
-	      override def finalize() {
-		System.out.println("Finalizing Indexer actor.")
+	      case other =>
+	      {
+		println("Indexer: WTF, what's " + other)
 	      }
 	    }
 
-
-
-	    object IndexTest extends Indexing {
-	      def onIndexingComplete() {
-		println("done")
-	      }
-	      def main(args: Array[String]) {
-		val classpath = "/Users/aemon/.ivy2/cache/nekohtml/xercesMinimal/jars/xercesMinimal-1.9.6.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-repository-metadata/jars/maven-repository-metadata-2.2.1.jar:/Users/aemon/projects/ensime/lib/org.scala-refactoring_2.9.2-SNAPSHOT-0.5.0-SNAPSHOT.jar:/Users/aemon/projects/ensime/lib/critbit-0.0.4.jar:/Users/aemon/.ivy2/cache/org.apache.ant/ant/jars/ant-1.8.1.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-container-default/jars/plexus-container-default-1.0-alpha-9-stable-1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-error-diagnostics/jars/maven-error-diagnostics-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-artifact/jars/maven-artifact-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-settings/jars/maven-settings-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-profile/jars/maven-profile-2.2.1.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-utils/jars/plexus-utils-1.5.15.jar:/Users/aemon/.ivy2/cache/classworlds/classworlds/jars/classworlds-1.1-alpha-2.jar:/Users/aemon/.ivy2/cache/asm/asm/jars/asm-3.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-provider-api/jars/wagon-provider-api-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.1.0.jar:/Users/aemon/.ivy2/cache/org.apache.ant/ant-launcher/jars/ant-launcher-1.8.1.jar:/Users/aemon/.ivy2/cache/ant/ant/jars/ant-1.6.5.jar:/Users/aemon/.ivy2/cache/backport-util-concurrent/backport-util-concurrent/jars/backport-util-concurrent-3.1.jar:/Users/aemon/.ivy2/cache/nekohtml/nekohtml/jars/nekohtml-1.9.6.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-lightweight/jars/wagon-http-lightweight-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.scalariform/scalariform_2.9.1/jars/scalariform_2.9.1-0.1.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-project/jars/maven-project-2.2.1.jar:/Users/aemon/.ivy2/cache/asm/asm-commons/jars/asm-commons-3.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-ant-tasks/jars/maven-ant-tasks-2.1.0.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-file/jars/wagon-file-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-plugin-registry/jars/maven-plugin-registry-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-model/jars/maven-model-2.2.1.jar:/Users/aemon/.ivy2/cache/org.scalatest/scalatest_2.9.1/jars/scalatest_2.9.1-1.6.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-shared/jars/wagon-http-shared-1.0-beta-6.jar:/Users/aemon/.sbt/boot/scala-2.9.2-SNAPSHOT/lib/scala-compiler.jar:/Users/aemon/projects/ensime/target/scala-2.9.2-SNAPSHOT/ensime_2.9.2-SNAPSHOT-0.9.3.RC3-test.jar:/Users/aemon/projects/ensime/dist_2.9.2-RC1/lib/scala-library.jar:/Users/aemon/projects/ensime/dist_2.9.2-RC1/lib/scala-compiler.jar:/Users/aemon/.ivy2/cache/org.sonatype.tycho/org.eclipse.jdt.core/jars/org.eclipse.jdt.core-3.6.0.v_A58.jar:/Users/aemon/projects/ensime/target/scala-2.9.2-SNAPSHOT/ensime_2.9.2-SNAPSHOT-0.9.3.RC3.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-interpolation/jars/plexus-interpolation-1.11.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-artifact-manager/jars/maven-artifact-manager-2.2.1.jar:/Users/aemon/.sbt/boot/scala-2.9.2-SNAPSHOT/lib/scala-library.jar:/Users/aemon/.ivy2/cache/asm/asm-tree/jars/asm-tree-3.2.jar"
-		val files = classpath.split(":").map { new File(_) }
-		import java.util.Scanner
-		val in = new Scanner(System.in)
-		val name = in.nextLine()
-		buildStaticIndex(files, List(), List())
-		for (l <- getImportSuggestions(args, 5)) {
-		  for (s <- l) {
-		    println(s.name)
-		  }
-		}
-	      }
+	  } catch {
+	    case e: Exception => {
+	      System.err.println("Error at Indexer message loop: " +
+		e + " :\n" + e.getStackTraceString)
 	    }
+	  }
+	}
+      }
+
+      override def finalize() {
+	System.out.println("Finalizing Indexer actor.")
+      }
+    }
+
+
+
+    object IndexTest extends Indexing {
+      def onIndexingComplete() {
+	println("done")
+      }
+      def main(args: Array[String]) {
+	val classpath = "/Users/aemon/.ivy2/cache/nekohtml/xercesMinimal/jars/xercesMinimal-1.9.6.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-repository-metadata/jars/maven-repository-metadata-2.2.1.jar:/Users/aemon/projects/ensime/lib/org.scala-refactoring_2.9.2-SNAPSHOT-0.5.0-SNAPSHOT.jar:/Users/aemon/projects/ensime/lib/critbit-0.0.4.jar:/Users/aemon/.ivy2/cache/org.apache.ant/ant/jars/ant-1.8.1.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-container-default/jars/plexus-container-default-1.0-alpha-9-stable-1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-error-diagnostics/jars/maven-error-diagnostics-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-artifact/jars/maven-artifact-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-settings/jars/maven-settings-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-profile/jars/maven-profile-2.2.1.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-utils/jars/plexus-utils-1.5.15.jar:/Users/aemon/.ivy2/cache/classworlds/classworlds/jars/classworlds-1.1-alpha-2.jar:/Users/aemon/.ivy2/cache/asm/asm/jars/asm-3.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-provider-api/jars/wagon-provider-api-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.1.0.jar:/Users/aemon/.ivy2/cache/org.apache.ant/ant-launcher/jars/ant-launcher-1.8.1.jar:/Users/aemon/.ivy2/cache/ant/ant/jars/ant-1.6.5.jar:/Users/aemon/.ivy2/cache/backport-util-concurrent/backport-util-concurrent/jars/backport-util-concurrent-3.1.jar:/Users/aemon/.ivy2/cache/nekohtml/nekohtml/jars/nekohtml-1.9.6.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-lightweight/jars/wagon-http-lightweight-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.scalariform/scalariform_2.9.1/jars/scalariform_2.9.1-0.1.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-project/jars/maven-project-2.2.1.jar:/Users/aemon/.ivy2/cache/asm/asm-commons/jars/asm-commons-3.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-ant-tasks/jars/maven-ant-tasks-2.1.0.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-file/jars/wagon-file-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-plugin-registry/jars/maven-plugin-registry-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-model/jars/maven-model-2.2.1.jar:/Users/aemon/.ivy2/cache/org.scalatest/scalatest_2.9.1/jars/scalatest_2.9.1-1.6.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-shared/jars/wagon-http-shared-1.0-beta-6.jar:/Users/aemon/.sbt/boot/scala-2.9.2-SNAPSHOT/lib/scala-compiler.jar:/Users/aemon/projects/ensime/target/scala-2.9.2-SNAPSHOT/ensime_2.9.2-SNAPSHOT-0.9.3.RC3-test.jar:/Users/aemon/projects/ensime/dist_2.9.2-RC1/lib/scala-library.jar:/Users/aemon/projects/ensime/dist_2.9.2-RC1/lib/scala-compiler.jar:/Users/aemon/.ivy2/cache/org.sonatype.tycho/org.eclipse.jdt.core/jars/org.eclipse.jdt.core-3.6.0.v_A58.jar:/Users/aemon/projects/ensime/target/scala-2.9.2-SNAPSHOT/ensime_2.9.2-SNAPSHOT-0.9.3.RC3.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-interpolation/jars/plexus-interpolation-1.11.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-artifact-manager/jars/maven-artifact-manager-2.2.1.jar:/Users/aemon/.sbt/boot/scala-2.9.2-SNAPSHOT/lib/scala-library.jar:/Users/aemon/.ivy2/cache/asm/asm-tree/jars/asm-tree-3.2.jar"
+	val files = classpath.split(":").map { new File(_) }
+	import java.util.Scanner
+	val in = new Scanner(System.in)
+	val name = in.nextLine()
+	buildStaticIndex(files, List(), List())
+	for (l <- getImportSuggestions(args, 5)) {
+	  for (s <- l) {
+	    println(s.name)
+	  }
+	}
+      }
+    }
