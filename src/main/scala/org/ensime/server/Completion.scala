@@ -189,7 +189,7 @@ trait CompletionControl {
     "(", ident, "*)$").mkString.r
 
   private val nameFollowingSyntaxRE =
-  List("([!:=>\\(,;\\}\\[\\{\n+*/\\^&~%\\-])",
+  List("([!:=><\\(,;\\}\\[\\{\n+*/\\^&~%\\-])",
     ws, "*","(", ident, "*)$").mkString.r
 
   private val constructorNameRE =

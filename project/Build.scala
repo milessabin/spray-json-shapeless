@@ -40,15 +40,15 @@ object EnsimeBuild extends Build {
 
   val root = Path(".")
 
-  val TwoNineVersion = "2.9.2-RC1"
+  val TwoNineVersion = "2.9.2"
 
   lazy val project = {
     Project(
       id = "ensime",
       base = file ("."),
-      settings = Project.defaultSettings ++ 
+      settings = Project.defaultSettings ++
       Seq(
-	version := "0.9.3.RC4",
+	version := "0.9.4",
 	organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoNineVersion),
@@ -58,14 +58,6 @@ object EnsimeBuild extends Build {
 	resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
 	libraryDependencies <++= (scalaVersion) { scalaVersion =>
 	  val compilerVersion = scalaVersion
-	  val scalatest = scalaVersion match {
-	    case v if v == TwoNineVersion => 
-	    "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test"
-	  }
-	  val scalariform = scalaVersion match {
-	    case v if v == TwoNineVersion => 
-	    "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test"
-	  }
 	  Seq(
 	    "org.apache.lucene" % "lucene-core" % "3.5.0",
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
@@ -74,17 +66,21 @@ object EnsimeBuild extends Build {
 	    "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
 	    "asm" % "asm" % "3.2",
 	    "asm" % "asm-commons" % "3.2",
-	    scalatest,
-	    scalariform,
+	    "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
+	    "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
 	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
 	  )},
+	unmanagedClasspath in Compile += {
+	  val javaHome = new File(System.getProperty("java.home"))
+	  new File(javaHome.getParent) / "lib" / "tools.jar"
+	},
 	scalacOptions ++= Seq("-g:vars","-deprecation"),
 	exportJars := true,
 	stageTask,
 	distTask,
 	releaseTask,
 	publishManualTask,
-	
+
 	{
 	  import org.ensime.sbt.Plugin.Settings.ensimeConfig
 	  import org.ensime.sbt.util.SExp._
@@ -98,9 +94,9 @@ object EnsimeBuild extends Build {
 
   val log = LogManager.defaultScreen
 
-  var stage = TaskKey[Unit]("stage", 
+  var stage = TaskKey[Unit]("stage",
     "Copy files into staging directory for a release.")
-  lazy val stageTask:Setting[sbt.Task[Unit]] = 
+  lazy val stageTask:Setting[sbt.Task[Unit]] =
   stage <<= (
     dependencyClasspath in Runtime,
     exportedProducts in Runtime,
@@ -112,7 +108,7 @@ object EnsimeBuild extends Build {
 
     log.info("Copying runtime environment to ./" + distDir + "....")
     createDirectories(List(
-	file(distDir), 
+	file(distDir),
 	file(distDir + "/bin"),
 	file(distDir + "/lib"),
 	file(distDir + "/elisp")))
@@ -138,12 +134,15 @@ object EnsimeBuild extends Build {
       f.setExecutable(true)
     }
 
+    val javaHome = new File(System.getProperty("java.home"))
+    val runtimeLibs = cpLibs ++ Seq(new File(javaHome.getParent) / "lib" / "tools.jar")
+
     // Expand the server invocation script templates.
-    writeScript(cpLibs.mkString(":").replace("\\", "/"),
+    writeScript(runtimeLibs.mkString(":").replace("\\", "/"),
       "./etc/scripts/server",
       "./" + distDir + "/bin/server")
 
-    writeScript("\"" + cpLibs.map{lib => "%~dp0/../" + lib}.mkString(";").replace("/", "\\") + "\"",
+    writeScript("\"" + runtimeLibs.map{lib => "%~dp0/../" + lib}.mkString(";").replace("/", "\\") + "\"",
       "./etc/scripts/server.bat",
       "./" + distDir + "/bin/server.bat")
 
@@ -160,7 +159,7 @@ object EnsimeBuild extends Build {
 
 
   var release = TaskKey[Unit]("release", "Create the release package and tag the current commit.")
-  lazy val releaseTask:Setting[sbt.Task[Unit]] = 
+  lazy val releaseTask:Setting[sbt.Task[Unit]] =
   release <<= (stage,version,scalaVersion) map {
     (_,version,scalaBuildVersion) =>
 
@@ -170,7 +169,7 @@ object EnsimeBuild extends Build {
 
     val shallWeTag = false
     val tagArg = if(shallWeTag){ "-s" }else{ "" }
-    doSh("git tag " + tagArg + " v" + tagName + 
+    doSh("git tag " + tagArg + " v" + tagName +
       " -m 'Tag for release " + modName + "'") !! (log)
 
     val initialDir = new File(".")
@@ -178,12 +177,12 @@ object EnsimeBuild extends Build {
       modName + ".tar.gz").getCanonicalPath
     withTemporaryDirectory{ f =>
       val releaseDir = new File(
-	f.getAbsolutePath + "/" + 
+	f.getAbsolutePath + "/" +
 	modName)
       log.info("Copying ./" + distDir + " to temp directory: " + releaseDir)
       doSh("cp -r ./" + distDir + " " + releaseDir)!!(log)
       log.info("Compressing temp directory to " + archiveFile + "...")
-      doSh("tar -pcvzf " + archiveFile + " " + 
+      doSh("tar -pcvzf " + archiveFile + " " +
 	modName, Some(f)) !! (log)
       None
     }
@@ -203,7 +202,7 @@ object EnsimeBuild extends Build {
     log.info("Publishing manual to web...")
     doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
     doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
-    None     
+    None
   }
 
 

@@ -13,7 +13,7 @@ esac
 
 if [ "$ENSIME_JVM_ARGS" == "" ]
 then
-  ENSIME_JVM_ARGS="-XX:+DoEscapeAnalysis -Xms256M -Xmx1512M -XX:PermSize=128m -Xss1M -Dfile.encoding=UTF-8"
+  ENSIME_JVM_ARGS="-Xms256M -Xmx1512M -XX:PermSize=128m -Xss1M -Dfile.encoding=UTF-8"
 fi
 
 CLASSPATH=<RUNTIME_CLASSPATH>
