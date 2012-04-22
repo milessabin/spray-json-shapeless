@@ -38,7 +38,7 @@ case class SourcePosition(file: CanonFile, line: Int)
 
 class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
-class SymbolSearchResult(
+abstract class SymbolSearchResult(
   val name: String,
   val localName: String,
   val declaredAs: scala.Symbol,

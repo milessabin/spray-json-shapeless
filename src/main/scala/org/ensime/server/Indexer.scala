@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.server
 import org.apache.lucene.analysis.SimpleAnalyzer
@@ -33,7 +33,12 @@ import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.search.TopScoreDocCollector
 import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.queryParser.QueryParser
+import org.apache.lucene.store.NIOFSDirectory
 import org.apache.lucene.util.Version
 import org.eclipse.jdt.core.compiler.CharOperation
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
@@ -61,59 +66,138 @@ import scala.util.matching.Regex
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
 
-
 trait AbstractIndex {
   def initialize(): Unit = {}
+  def commitChanges(): Unit = {}
   def insert(key: String, value: SymbolSearchResult): Unit
   def remove(key: String): Unit
-  def search(key: String, receiver: (SymbolSearchResult => Unit)): Unit
+  def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit
 }
-
-
 
 trait LuceneIndex {
 
-  val index = new RAMDirectory();
-  val analyzer = new SimpleAnalyzer()
-  val config  = new IndexWriterConfig(Version.LUCENE_35, analyzer);
+  val dir: File = new File(FileUtils.temporaryDirectory + "/.ensime_lucene")
+  val index: NIOFSDirectory = new NIOFSDirectory(dir)
+  val analyzer = new SimpleAnalyzer(Version.LUCENE_35)
+  val config: IndexWriterConfig = new IndexWriterConfig(
+    Version.LUCENE_35, analyzer);
+  var indexWriter: Option[IndexWriter] = None
+  var indexReader: Option[IndexReader] = None
+  var batchMode = false
 
   def initialize(): Unit = {
+    indexWriter = Some(new IndexWriter(index, config))
+  }
+
+  def setBatchMode(value: Boolean): Unit = {
+    batchMode = value
   }
 
   private def buildDoc(value: SymbolSearchResult): Document = {
-    val doc = new Document();
+    val doc = new Document()
     doc.add(new Field("name",
-	value.name, Field.Store.YES, Field.Index.ANALYZED));
+      value.name, Field.Store.YES, Field.Index.ANALYZED))
     doc.add(new Field("localName",
-	value.localName, Field.Store.YES, Field.Index.NOT_ANALYZED));
+      value.localName, Field.Store.YES, Field.Index.NOT_ANALYZED))
     doc.add(new Field("type",
-	value.declaredAs.toString, Field.Store.YES,
-	Field.Index.ANALYZED));
+      value.declaredAs.toString, Field.Store.YES,
+      Field.Index.ANALYZED))
+    value.pos match {
+      case Some((file, offset)) => {
+        doc.add(new Field("file", file, Field.Store.YES,
+          Field.Index.ANALYZED))
+        doc.add(new Field("offset", offset.toString, Field.Store.YES,
+          Field.Index.ANALYZED))
+      }
+      case None => {
+        doc.add(new Field("file", "", Field.Store.YES,
+          Field.Index.NOT_ANALYZED))
+        doc.add(new Field("offset", "", Field.Store.YES,
+          Field.Index.NOT_ANALYZED))
+      }
+    }
+    value match {
+      case value: TypeSearchResult => {}
+      case value: MethodSearchResult => {
+        doc.add(new Field("owner",
+          value.owner, Field.Store.YES,
+          Field.Index.ANALYZED))
+      }
+    }
     doc
   }
 
+  private def buildSym(d: Document): SymbolSearchResult = {
+    val name = d.get("name")
+    val localName = d.get("localName")
+    val tpe = scala.Symbol(d.get("type"))
+    val file = d.get("file")
+    val offset = d.get("offset")
+    val pos = (file, offset) match{
+      case ("","") => None
+      case (file,"") => Some((file, 0))
+      case (file,offset) => Some((file, offset.toInt))
+    }
+    val owner = Option(d.get("owner"))
+    owner match {
+      case Some(owner) => {
+        new MethodSearchResult(name, localName, tpe, pos, owner)
+      }
+      case None => {
+        new TypeSearchResult(name, localName, tpe, pos)
+      }
+    }
+
+  }
+
   def insert(key: String, value: SymbolSearchResult): Unit = {
-    val w = new IndexWriter(index, config);
-    val doc = buildDoc(value)
-    w.addDocument(doc);
-    w.close()
+    for (w <- indexWriter) {
+      val doc = buildDoc(value)
+      w.addDocument(doc)
+    }
+  }
+
+  def commitChanges(): Unit = {
+    for (w <- indexWriter) {
+      w.commit()
+    }
+    for (r <- indexReader) {
+      IndexReader.openIfChanged(r)
+    }
   }
 
   def remove(key: String): Unit = {
-    val w = new IndexWriter(index, config);
-    w.deleteDocuments(new Term("name", key))
-    w.close()
+    for (w <- indexWriter) {
+      val w = new IndexWriter(index, config)
+      w.deleteDocuments(new Term("name", key))
+    }
   }
 
-  def search(key: String, receiver: (SymbolSearchResult => Unit)): Unit = {
-    val r = new IndexReader(index)
+  def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit = {
+    if (indexReader.isEmpty) {
+      indexReader = Some(IndexReader.open(index))
+    }
+    val q = new QueryParser(Version.LUCENE_35, "name", analyzer).parse(
+      keys.mkString(" "))
+    for (reader <- indexReader) {
+      val hitsPerPage = 50
+      val searcher = new IndexSearcher(reader)
+      val collector = TopScoreDocCollector.create(hitsPerPage, true)
+      searcher.search(q, collector)
+      val hits = collector.topDocs().scoreDocs
+      for (hit <- hits) {
+        val docId = hit.doc
+        val doc = searcher.doc(docId)
+        receiver(buildSym(doc))
+      }
+    }
   }
 }
 
 trait TrieIndex extends AbstractIndex {
 
   implicit def fnToForEachValCursor[V](fn: V => Any): ForEachValCursor[V] =
-  new ForEachValCursor[V](fn)
+    new ForEachValCursor[V](fn)
 
   protected val trie = new MCritBitTree[String, SymbolSearchResult](
     StringKeyAnalyzer.INSTANCE)
@@ -136,7 +220,6 @@ trait TrieIndex extends AbstractIndex {
     }
   }
 
-
   def remove(key: String): Unit = {
     val tmp = key.toLowerCase()
     val k = tmp + tmp.hashCode()
@@ -155,17 +238,16 @@ trait TrieIndex extends AbstractIndex {
     }
   }
 
-
-  def search(key: String, receiver: (SymbolSearchResult => Unit)): Unit = {
-    trie.traverseWithPrefix(key.toLowerCase(), (r: SymbolSearchResult) =>
-      r match {
-        case r: TypeSearchResult => receiver(r)
-        case _ => // nothing
-      })
+  def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit = {
+    for (key <- keys) {
+      trie.traverseWithPrefix(key.toLowerCase(), (r: SymbolSearchResult) =>
+        r match {
+          case r: TypeSearchResult => receiver(r)
+          case _ => // nothing
+        })
+    }
   }
 }
-
-
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
@@ -230,8 +312,8 @@ trait IndexerInterface { self: RichPresentationCompiler =>
         infos += sym
         for (mem <- try { sym.tpe.members } catch { case e => { List() } }) {
           if (Indexer.isValidMethod(mem.nameString)) {
-	    val key = lookupKey(mem)
-	    infos += mem
+            val key = lookupKey(mem)
+            infos += mem
           }
         }
       }
@@ -240,8 +322,6 @@ trait IndexerInterface { self: RichPresentationCompiler =>
   }
 }
 
-
-
 class ForEachValCursor[V](fn: V => Any) extends Cursor[Any, V] {
   override def select(entry: java.util.Map.Entry[_, _ <: V]): Cursor.Decision = {
     fn(entry.getValue())
@@ -249,10 +329,7 @@ class ForEachValCursor[V](fn: V => Any) extends Cursor[Any, V] {
   }
 }
 
-
-
-
-trait Indexing extends TrieIndex with StringSimilarity {
+trait Indexing extends LuceneIndex with StringSimilarity {
 
   private def splitTypeName(nm: String): List[String] = {
     val keywords = new ListBuffer[String]()
@@ -284,12 +361,12 @@ trait Indexing extends TrieIndex with StringSimilarity {
       val candidates = new HashSet[SymbolSearchResult]
 
       for (key <- keywords) {
-	search(key.toLowerCase,
-	  (r: SymbolSearchResult) =>
-          r match {
-	    case r: TypeSearchResult => candidates += r
-	    case _ => // nothing
-          })
+        search(List(key.toLowerCase),
+          (r: SymbolSearchResult) =>
+            r match {
+              case r: TypeSearchResult => candidates += r
+              case _ => // nothing
+            })
       }
 
       // Sort by edit distance of type name primarily, and
@@ -315,43 +392,14 @@ trait Indexing extends TrieIndex with StringSimilarity {
     maxResults: Int = 0): List[SymbolSearchResult] = {
 
     var resultSet = new HashSet[SymbolSearchResult]
-
-    if (keywords.size() > 0) {
-      val keyword = keywords.head
-      val key = keyword.toLowerCase()
-      val caseSens = !keyword.equals(key)
-      search(key, { (r: SymbolSearchResult) =>
-          if (!caseSens || r.name.contains(keyword)) {
-	    resultSet += r
-          }
-	})
-    }
-
-    if (keywords.size() > 1) {
-      for (keyword <- keywords.tail) {
-        val key = keyword.toLowerCase()
-        val caseSens = !keyword.equals(key)
-        if (resultSet.size() > BruteForceThresh) {
-          val results = new HashSet[SymbolSearchResult]
-          trie.traverseWithPrefix(key, { (r: SymbolSearchResult) =>
-	      if (resultSet.contains(r) &&
-		(!caseSens || r.name.contains(keyword))) {
-		results += r
-	      }
-	    })
-          resultSet = results
-        } else {
-          val results = new HashSet[SymbolSearchResult]
-          for (r <- resultSet) {
-	    if (r.name.toLowerCase().contains(key) &&
-	      (!caseSens || r.name.contains(keyword))) {
-	      results += r
-	    }
-          }
-          resultSet = results
-        }
+    val keyword = keywords.head
+    val key = keyword.toLowerCase()
+    val caseSens = !keyword.equals(key)
+    search(keywords, { (r: SymbolSearchResult) =>
+      if (!caseSens || r.name.contains(keyword)) {
+        resultSet += r
       }
-    }
+    })
 
     val sorted = resultSet.toList.sortWith { (a, b) => a.name.length < b.name.length }
     if (maxResults == 0) {
@@ -384,40 +432,43 @@ trait Indexing extends TrieIndex with StringSimilarity {
     val t = System.currentTimeMillis()
 
     sealed abstract trait IndexEvent
-    case class ClassEvent(name: String, location: String, flags: Int) extends IndexEvent
-    case class MethodEvent(className: String, name: String, location: String, flags: Int) extends IndexEvent
+    case class ClassEvent(name: String,
+      location: String, flags: Int) extends IndexEvent
+    case class MethodEvent(className: String, name: String,
+      location: String, flags: Int) extends IndexEvent
     case object StopEvent extends IndexEvent
 
     class IndexWorkQueue extends Actor {
       def act() {
         loop {
-	  receive {
-	    case ClassEvent(name: String, location: String, flags: Int) => {
-	      val i = name.lastIndexOf(".")
-	      val localName = if (i > -1) name.substring(i + 1) else name
-	      val value = new TypeSearchResult(name,
+          receive {
+            case ClassEvent(name: String, location: String, flags: Int) => {
+              val i = name.lastIndexOf(".")
+              val localName = if (i > -1) name.substring(i + 1) else name
+              val value = new TypeSearchResult(name,
                 localName,
                 declaredAs(name, flags),
                 Some((location, -1)))
-	      insert(name, value)
-	    }
-	    case MethodEvent(className: String, name: String, location: String, flags: Int) => {
-	      val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
-	      val revisedClassName = if (isStatic) className + "$"
-	      else className
-	      val lookupKey = revisedClassName + "." + name
-	      val value = new MethodSearchResult(lookupKey,
+              insert(name, value)
+            }
+            case MethodEvent(className: String, name: String,
+              location: String, flags: Int) => {
+              val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+              val revisedClassName = if (isStatic) className + "$"
+              else className
+              val lookupKey = revisedClassName + "." + name
+              val value = new MethodSearchResult(lookupKey,
                 name,
                 'method,
                 Some((location, -1)),
                 revisedClassName)
-	      insert(lookupKey, value)
-	    }
-	    case StopEvent => {
-	      reply(StopEvent)
-	      exit()
-	    }
-	  }
+              insert(lookupKey, value)
+            }
+            case StopEvent => {
+              reply(StopEvent)
+              exit()
+            }
+          }
         }
       }
     }
@@ -430,25 +481,27 @@ trait Indexing extends TrieIndex with StringSimilarity {
       var validClass = false
       override def onClass(name: String, location: String, flags: Int) {
         val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-        validClass = (isPublic && Indexer.isValidType(name) && include(name, includes, excludes))
-	if (validClass) {
-	  indexWorkQ ! ClassEvent(name, location, flags)
-	  classCount += 1
-	}
+        validClass = (isPublic && Indexer.isValidType(name) && include(name,
+          includes, excludes))
+        if (validClass) {
+          indexWorkQ ! ClassEvent(name, location, flags)
+          classCount += 1
+        }
       }
-      override def onMethod(className: String, name: String, location: String, flags: Int) {
-	val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-	if (validClass && isPublic && Indexer.isValidMethod(name)) {
-	  indexWorkQ ! MethodEvent(className, name, location, flags)
-	  methodCount += 1
-	}
+      override def onMethod(className: String, name: String,
+        location: String, flags: Int) {
+        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+        if (validClass && isPublic && Indexer.isValidMethod(name)) {
+          indexWorkQ ! MethodEvent(className, name, location, flags)
+          methodCount += 1
+        }
       }
     }
 
     println("Updated: Indexing classpath...")
     ClassIterator.find(files, handler)
-    val elapsed = System.currentTimeMillis() - t
     indexWorkQ !? StopEvent
+    val elapsed = System.currentTimeMillis() - t
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
     println("Indexed " + handler.classCount + " classes with " +
       handler.methodCount + " methods.")
@@ -457,7 +510,6 @@ trait Indexing extends TrieIndex with StringSimilarity {
 
   def onIndexingComplete()
 }
-
 
 object Indexer {
   def isValidType(s: String): Boolean = {
@@ -485,66 +537,74 @@ class Indexer(project: Project, protocol: ProtocolConversions,
 
     loop {
       try {
-	receive {
-	  case IndexerShutdownReq() => {
-	    exit('stop)
-	  }
-	  case RebuildStaticIndexReq() => {
-	    buildStaticIndex(config.allFilesOnClasspath,
-	      config.onlyIncludeInIndex,
-	      config.excludeFromIndex)
-	  }
-	  case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
-	    syms.foreach { info =>
-	      insert(info.name, info)
-	    }
-	  }
-	  case RemoveSymbolsReq(syms: Iterable[String]) => {
-	    syms.foreach { s => remove(s) }
-	  }
-	  case TypeCompletionsReq(prefix: String, maxResults: Int) => {
-	    val suggestions = getImportSuggestions(List(prefix), maxResults).flatten
-	    sender ! suggestions
-	  }
-	  case RPCRequestEvent(req: Any, callId: Int) => {
-	    try {
-	      req match {
-		case ImportSuggestionsReq(file: File, point: Int,
-		  names: List[String], maxResults: Int) => {
-		  val suggestions = ImportSuggestions(getImportSuggestions(names, maxResults))
-		  project ! RPCResultEvent(toWF(suggestions), callId)
-		}
-		case PublicSymbolSearchReq(keywords: List[String],
-		  maxResults: Int) => {
-		  val nonEmptyKeywords = keywords.filter { _.length > 0 }
-		  val suggestions = SymbolSearchResults(
-		    findTopLevelSyms(nonEmptyKeywords, maxResults))
-		  project ! RPCResultEvent(toWF(suggestions), callId)
-		}
-	      }
-	    } catch {
-	      case e: Exception =>
-	      {
-		System.err.println("Error handling RPC: " +
-		  e + " :\n" +
-		  e.getStackTraceString)
-		project.sendRPCError(ErrExceptionInIndexer,
-		  Some("Error occurred in indexer. Check the server log."),
-		  callId)
-	      }
-	    }
-	  }
-	  case other =>
-	  {
-	    println("Indexer: WTF, what's " + other)
-	  }
-	}
+        receive {
+          case IndexerShutdownReq() => {
+            exit('stop)
+          }
+          case RebuildStaticIndexReq() => {
+            buildStaticIndex(config.allFilesOnClasspath,
+              config.onlyIncludeInIndex,
+              config.excludeFromIndex)
+
+            val t = System.currentTimeMillis()
+            commitChanges()
+            val elapsed = System.currentTimeMillis() - t
+            println("Index changes committed in " + elapsed / 1000.0 +
+              " seconds.")
+          }
+          case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
+            syms.foreach { info =>
+              insert(info.name, info)
+            }
+            commitChanges()
+          }
+          case RemoveSymbolsReq(syms: Iterable[String]) => {
+            syms.foreach { s => remove(s) }
+            commitChanges()
+          }
+          case TypeCompletionsReq(prefix: String, maxResults: Int) => {
+            val suggestions = getImportSuggestions(List(prefix), maxResults).flatten
+            sender ! suggestions
+          }
+          case RPCRequestEvent(req: Any, callId: Int) => {
+            try {
+              req match {
+                case ImportSuggestionsReq(file: File, point: Int,
+                  names: List[String], maxResults: Int) => {
+                  val suggestions = ImportSuggestions(getImportSuggestions(names, maxResults))
+                  project ! RPCResultEvent(toWF(suggestions), callId)
+                }
+                case PublicSymbolSearchReq(keywords: List[String],
+                  maxResults: Int) => {
+                  val nonEmptyKeywords = keywords.filter { _.length > 0 }
+                  val suggestions = SymbolSearchResults(
+                    findTopLevelSyms(nonEmptyKeywords, maxResults))
+                  project ! RPCResultEvent(toWF(suggestions), callId)
+                }
+              }
+            } catch {
+              case e: Exception =>
+                {
+                  System.err.println("Error handling RPC: " +
+                    e + " :\n" +
+                    e.getStackTraceString)
+                  project.sendRPCError(ErrExceptionInIndexer,
+                    Some("Error occurred in indexer. Check the server log."),
+                    callId)
+                }
+            }
+          }
+          case other =>
+            {
+              println("Indexer: WTF, what's " + other)
+            }
+        }
 
       } catch {
-	case e: Exception => {
-	  System.err.println("Error at Indexer message loop: " +
-	    e + " :\n" + e.getStackTraceString)
-	}
+        case e: Exception => {
+          System.err.println("Error at Indexer message loop: " +
+            e + " :\n" + e.getStackTraceString)
+        }
       }
     }
   }
@@ -553,8 +613,6 @@ class Indexer(project: Project, protocol: ProtocolConversions,
     System.out.println("Finalizing Indexer actor.")
   }
 }
-
-
 
 object IndexTest extends Indexing {
   def onIndexingComplete() {
@@ -569,7 +627,7 @@ object IndexTest extends Indexing {
     buildStaticIndex(files, List(), List())
     for (l <- getImportSuggestions(args, 5)) {
       for (s <- l) {
-	println(s.name)
+        println(s.name)
       }
     }
   }

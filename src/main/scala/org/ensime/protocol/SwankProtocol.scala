@@ -2350,7 +2350,8 @@ trait SwankProtocol extends Protocol {
           (":pos", toWF(value.pos)),
           (":owner-name", value.owner))
       }
-      case value => throw new IllegalStateException("Unknown SymbolSearchResult: " + value)
+      case value => throw new IllegalStateException(
+	"Unknown SymbolSearchResult: " + value)
     }
 
   }
