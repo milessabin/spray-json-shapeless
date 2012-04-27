@@ -26,7 +26,14 @@
  */
 
 package org.ensime.server
+import java.io.Reader
 import org.apache.lucene.analysis.SimpleAnalyzer
+import org.apache.lucene.analysis.ReusableAnalyzerBase
+import org.apache.lucene.analysis.LetterTokenizer
+import org.apache.lucene.analysis.TokenFilter
+import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.analysis.CharTokenizer
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexReader
@@ -47,6 +54,7 @@ import org.ensime.config.ProjectConfig
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
+import scala.Char
 import scala.actors._
 import scala.actors.Actor._
 import org.ensime.model.{
@@ -72,6 +80,52 @@ trait AbstractIndex {
   def insert(key: String, value: SymbolSearchResult): Unit
   def remove(key: String): Unit
   def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit
+}
+
+class CamelCaseAnalyzer(version: Version) extends ReusableAnalyzerBase {
+
+  class CamelCaseFilter(input: TokenStream) extends TokenFilter(input) {
+
+    val termAtt: CharTermAttribute = addAttribute(classOf[CharTermAttribute])
+
+    override def incrementToken(): Boolean = {
+      if (input.incrementToken()) {
+        val nm = termAtt.toString()
+        termAtt.setEmpty()
+
+	// termAtt.append(nm)
+        // termAtt.append("|")
+
+        // var i = 0
+        // var k = 0
+        // while (i < nm.length) {
+        //   val c: Char = nm.charAt(i)
+        //   if (Character.isUpperCase(c) && i != k) {
+        //     termAtt.append("|")
+        //     termAtt.append(nm.substring(k, i))
+        //     k = i
+        //   }
+        //   i += 1
+        // }
+        // if (i != k) {
+        //   termAtt.append("|")
+        //   termAtt.append(nm.substring(k))
+        // }
+	termAtt.append(nm)
+
+        true
+      } else {
+        false
+      }
+    }
+  }
+
+  override def createComponents(
+    fieldName: String, reader: Reader): ReusableAnalyzerBase.TokenStreamComponents = {
+    val src = new LetterTokenizer(version, reader)
+    val tok = new CamelCaseFilter(src);
+    return new ReusableAnalyzerBase.TokenStreamComponents(src, tok)
+  }
 }
 
 trait LuceneIndex {
@@ -105,9 +159,9 @@ trait LuceneIndex {
     value.pos match {
       case Some((file, offset)) => {
         doc.add(new Field("file", file, Field.Store.YES,
-          Field.Index.ANALYZED))
+          Field.Index.NOT_ANALYZED))
         doc.add(new Field("offset", offset.toString, Field.Store.YES,
-          Field.Index.ANALYZED))
+          Field.Index.NOT_ANALYZED))
       }
       case None => {
         doc.add(new Field("file", "", Field.Store.YES,
@@ -133,10 +187,10 @@ trait LuceneIndex {
     val tpe = scala.Symbol(d.get("type"))
     val file = d.get("file")
     val offset = d.get("offset")
-    val pos = (file, offset) match{
-      case ("","") => None
-      case (file,"") => Some((file, 0))
-      case (file,offset) => Some((file, offset.toInt))
+    val pos = (file, offset) match {
+      case ("", "") => None
+      case (file, "") => Some((file, 0))
+      case (file, offset) => Some((file, offset.toInt))
     }
     val owner = Option(d.get("owner"))
     owner match {
@@ -178,7 +232,7 @@ trait LuceneIndex {
       indexReader = Some(IndexReader.open(index))
     }
     val q = new QueryParser(Version.LUCENE_35, "name", analyzer).parse(
-      keys.mkString(" "))
+      keys.map(_ + "*").mkString(" AND "))
     for (reader <- indexReader) {
       val hitsPerPage = 50
       val searcher = new IndexSearcher(reader)

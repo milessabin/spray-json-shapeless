@@ -38,6 +38,18 @@ object EnsimeBuild extends Build {
 
   private def file(str:String) = new File(str)
 
+  private lazy val toolsJarCandidates: List[File] = {
+    val jdkHome = Option(System.getenv("JAVA_HOME")).getOrElse("/tmp")
+    val jreHome = new File(System.getProperty("java.home"))
+    List[File](
+      new File(jdkHome + "/lib/tools.jar"),
+      new File(jreHome.getParent + "/lib/tools.jar"))
+  }
+
+  private lazy val toolsJar: Option[File] = {
+    toolsJarCandidates.find(_.exists)
+  }
+
   val root = Path(".")
 
   val TwoNineVersion = "2.9.2"
@@ -70,10 +82,7 @@ object EnsimeBuild extends Build {
 	    "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
 	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
 	  )},
-	unmanagedClasspath in Compile += {
-	  val javaHome = new File(System.getProperty("java.home"))
-	  new File(javaHome.getParent) / "lib" / "tools.jar"
-	},
+	unmanagedClasspath in Compile ++= toolsJar.toList,
 	scalacOptions ++= Seq("-g:vars","-deprecation"),
 	exportJars := true,
 	stageTask,
@@ -134,17 +143,21 @@ object EnsimeBuild extends Build {
       f.setExecutable(true)
     }
 
-    val javaHome = new File(System.getProperty("java.home"))
-    val runtimeLibs = cpLibs ++ Seq(new File(javaHome.getParent) / "lib" / "tools.jar")
+    {
+      val runtimeLibs = cpLibs ++ Seq("${JAVA_HOME}/lib/tools.jar")
+      // Expand the server invocation script templates.
+      writeScript(runtimeLibs.mkString(":").replace("\\", "/"),
+	"./etc/scripts/server",
+	"./" + distDir + "/bin/server")
+    }
 
-    // Expand the server invocation script templates.
-    writeScript(runtimeLibs.mkString(":").replace("\\", "/"),
-      "./etc/scripts/server",
-      "./" + distDir + "/bin/server")
-
-    writeScript("\"" + runtimeLibs.map{lib => "%~dp0/../" + lib}.mkString(";").replace("/", "\\") + "\"",
-      "./etc/scripts/server.bat",
-      "./" + distDir + "/bin/server.bat")
+    {
+      val runtimeLibs = cpLibs
+      writeScript("\"" + (runtimeLibs.map{lib => "%~dp0/../" + lib} ++
+	  Seq("%JAVA_HOME%\\lib\\tools.jar")).mkString(";").replace("/", "\\") + "\"",
+	"./etc/scripts/server.bat",
+	"./" + distDir + "/bin/server.bat")
+    }
 
     copyFile(root / "README.md", root / distDir / "README.md")
     copyFile(root / "LICENSE", root / distDir / "LICENSE")

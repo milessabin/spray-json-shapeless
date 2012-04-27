@@ -92,13 +92,14 @@ object Server {
       out.flush()
       System.out.println("Wrote port " + port + " to " + filename + ".")
     } catch {
-      case e: IOException =>
-        {
-          System.err.println("Could not write port to " + filename + ". " + e)
-          System.exit(-1)
-        }
+      case e: IOException => {
+        System.err.println("Could not write port to " + filename + ". " + e)
+        System.exit(-1)
+      }
     } finally {
       out.close()
+      Runtime.getRuntime.addShutdownHook(
+        new Thread { override def run { new java.io.File(filename).delete } })
     }
   }
 
