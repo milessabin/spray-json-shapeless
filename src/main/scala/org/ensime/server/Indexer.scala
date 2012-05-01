@@ -82,52 +82,6 @@ trait AbstractIndex {
   def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit
 }
 
-class CamelCaseAnalyzer(version: Version) extends ReusableAnalyzerBase {
-
-  class CamelCaseFilter(input: TokenStream) extends TokenFilter(input) {
-
-    val termAtt: CharTermAttribute = addAttribute(classOf[CharTermAttribute])
-
-    override def incrementToken(): Boolean = {
-      if (input.incrementToken()) {
-        val nm = termAtt.toString()
-        termAtt.setEmpty()
-
-	// termAtt.append(nm)
-        // termAtt.append("|")
-
-        // var i = 0
-        // var k = 0
-        // while (i < nm.length) {
-        //   val c: Char = nm.charAt(i)
-        //   if (Character.isUpperCase(c) && i != k) {
-        //     termAtt.append("|")
-        //     termAtt.append(nm.substring(k, i))
-        //     k = i
-        //   }
-        //   i += 1
-        // }
-        // if (i != k) {
-        //   termAtt.append("|")
-        //   termAtt.append(nm.substring(k))
-        // }
-	termAtt.append(nm)
-
-        true
-      } else {
-        false
-      }
-    }
-  }
-
-  override def createComponents(
-    fieldName: String, reader: Reader): ReusableAnalyzerBase.TokenStreamComponents = {
-    val src = new LetterTokenizer(version, reader)
-    val tok = new CamelCaseFilter(src);
-    return new ReusableAnalyzerBase.TokenStreamComponents(src, tok)
-  }
-}
-
 trait LuceneIndex {
 
   val dir: File = new File(FileUtils.temporaryDirectory + "/.ensime_lucene")
