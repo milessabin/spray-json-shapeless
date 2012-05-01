@@ -60,17 +60,19 @@ trait CompletionControl {
     val infos = List(CompletionInfo(sym, tpe, score))
 
     if(constructing) {
-      val constructorSyns = constructorSynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
+      val constructorSyns = constructorSynonyms(sym).map{
+	c => CompletionInfo(sym, c.tpe, score) }
       infos ++ constructorSyns
     }
     else{
-      val applySyns = applySynonyms(sym).map{ c => CompletionInfo(sym, c.tpe, score) }
+      val applySyns = applySynonyms(sym).map{
+	c => CompletionInfo(sym, c.tpe, score) }
       infos ++ applySyns
     }
   }
 
   def completionsAt(p: Position, maxResultsArg: Int, caseSens: Boolean): CompletionInfoList = {
-    
+
     val maxResults = if(maxResultsArg == 0) Int.MaxValue else maxResultsArg
 
     def makeTypeSearchCompletions(prefix:String):List[CompletionInfo] = {
@@ -91,7 +93,7 @@ trait CompletionControl {
       constructing: Boolean): List[CompletionInfo] = {
       val buff = new LinkedHashSet[CompletionInfo]()
       var members = List[Member]()
-      do { 
+      do {
 	x.get match{
 	  case Left(mems) => members ++= mems
 	  case _ => {}
@@ -115,7 +117,7 @@ trait CompletionControl {
                 buff ++= makeCompletions(prefix, sym, tpe, constructing, inherited, viaView)
 	      }
 	    }
-	    case _ => 
+	    case _ =>
           }
 	}
       }
@@ -128,8 +130,8 @@ trait CompletionControl {
 	val typeSearchSyms = if(path.isEmpty()){
 	  makeTypeSearchCompletions(prefix)
 	} else List()
-	(prefix, 
-	  askCompletePackageMember(path, prefix) ++ 
+	(prefix,
+	  askCompletePackageMember(path, prefix) ++
 	  typeSearchSyms)
       }
       case Some(SymbolContext(p, prefix, constructing)) => {
@@ -255,7 +257,7 @@ trait CompletionControl {
   private def spliceSource(s: SourceFile, start: Int, end: Int,
     replacement: String): SourceFile = {
     new BatchSourceFile(s.file,
-      Arrays.splice(s.content, start, end, 
+      Arrays.splice(s.content, start, end,
 	replacement.toArray))
   }
 
@@ -264,7 +266,7 @@ trait CompletionControl {
   case class MemberContext(p: Position, prefix: String, constructing: Boolean) extends CompletionContext
 
   def memberContext(p: Position, preceding: String): Option[MemberContext] = {
-    memberRE.findFirstMatchIn(preceding) match { 
+    memberRE.findFirstMatchIn(preceding) match {
       case Some(m) => {
 	val constructing = memberConstructorRE.findFirstMatchIn(preceding).isDefined
 	println("Matched member context. Constructing? " + constructing)

@@ -101,15 +101,40 @@ trait LuceneIndex {
     batchMode = value
   }
 
+  private def tokenize(nm: String): String = {
+    val tokens = new StringBuilder
+    var i = 0
+    var k = 0
+    while (i < nm.length) {
+      val c: Char = nm.charAt(i)
+      if ((c == ' ' || c == '.') && i != k){
+        tokens.append(nm.substring(k, i))
+        tokens.append(" ")
+        k = i + 1
+      } else if(Character.isUpperCase(c) && i != k) {
+        tokens.append(nm.substring(k, i))
+        tokens.append(" ")
+	k = i
+      }
+      i += 1
+    }
+    if (i != k) {
+      tokens.append(nm.substring(k))
+    }
+    tokens.toString
+  }
+
   private def buildDoc(value: SymbolSearchResult): Document = {
     val doc = new Document()
+    doc.add(new Field("tags",
+      tokenize(value.name), Field.Store.NO, Field.Index.ANALYZED))
     doc.add(new Field("name",
-      value.name, Field.Store.YES, Field.Index.ANALYZED))
+      value.name, Field.Store.YES, Field.Index.NOT_ANALYZED))
     doc.add(new Field("localName",
       value.localName, Field.Store.YES, Field.Index.NOT_ANALYZED))
     doc.add(new Field("type",
       value.declaredAs.toString, Field.Store.YES,
-      Field.Index.ANALYZED))
+      Field.Index.NOT_ANALYZED))
     value.pos match {
       case Some((file, offset)) => {
         doc.add(new Field("file", file, Field.Store.YES,
@@ -129,7 +154,7 @@ trait LuceneIndex {
       case value: MethodSearchResult => {
         doc.add(new Field("owner",
           value.owner, Field.Store.YES,
-          Field.Index.ANALYZED))
+          Field.Index.NOT_ANALYZED))
       }
     }
     doc
@@ -181,11 +206,30 @@ trait LuceneIndex {
     }
   }
 
-  def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit = {
+  private def splitTypeName(nm: String): List[String] = {
+    val keywords = new ListBuffer[String]()
+    var i = 0
+    var k = 0
+    while (i < nm.length) {
+      val c: Char = nm.charAt(i)
+      if (Character.isUpperCase(c) && i != k) {
+        keywords += nm.substring(k, i)
+        k = i
+      }
+      i += 1
+    }
+    if (i != k) {
+      keywords += nm.substring(k)
+    }
+    keywords.toList
+  }
+
+  def search(keywords: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit = {
     if (indexReader.isEmpty) {
       indexReader = Some(IndexReader.open(index))
     }
-    val q = new QueryParser(Version.LUCENE_35, "name", analyzer).parse(
+    val keys = keywords.flatMap(splitTypeName)
+    val q = new QueryParser(Version.LUCENE_35, "tags", analyzer).parse(
       keys.map(_ + "*").mkString(" AND "))
     for (reader <- indexReader) {
       val hitsPerPage = 50
