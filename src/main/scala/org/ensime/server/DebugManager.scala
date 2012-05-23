@@ -31,6 +31,7 @@ import com.sun.jdi.request.EventRequest
 import com.sun.jdi.request.StepRequest
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import org.ensime.debug.ProjectDebugInfo
@@ -80,6 +81,7 @@ case class DebugExceptionEvent(excId: Long,
   threadId: Long, threadName: String) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
+case class DebugOutputEvent(out: String) extends DebugEvent
 
 class DebugManager(project: Project, protocol: ProtocolConversions,
   config: ProjectConfig) extends Actor {
@@ -921,14 +923,13 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
   private class MonitorOutput(val inStream: InputStream) extends Thread {
     val in = new InputStreamReader(inStream)
-    val out = new OutputStreamWriter(System.out);
     override def run() {
       try {
         var i = 0;
-        val buf = new Array[Char](256);
+        val buf = new Array[Char](512);
         i = in.read(buf, 0, buf.length)
         while (i >= 0) {
-          out.write(buf, 0, i);
+          project ! AsyncEvent(toWF(DebugOutputEvent(new String(buf, 0, i))))
           i = in.read(buf, 0, buf.length)
         }
       } catch {

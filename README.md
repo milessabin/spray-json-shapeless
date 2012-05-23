@@ -82,6 +82,8 @@ Replace VERSION with the latest version of the plugin, available on [the plugin 
     
     ensime generate
 
+Note: Currently, it may be necessary to first delete your project/target directories before running 'ensime generate'.
+
 You should now have a .ensime file in the root of your project. There's no need to edit this file manually as you can now specify ENSIME settings directly from your sbt build file. Check the [manual](http://aemon.com/file_dump/ensime_manual.html#tth_sEc3.1.1) for details.
 
 
