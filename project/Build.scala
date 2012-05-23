@@ -113,7 +113,8 @@ object EnsimeBuild extends Build {
 	file(distDir + "/elisp")))
 
     // Copy the emacs lisp to dist
-    val elisp = root / "src" / "main" / "elisp" ** "*.el"
+    val elisp_base = root / "src" / "main" / "elisp"
+    val elisp = ( elisp_base ** "*.el" ) +++ ( elisp_base ** "Makefile" )
     copy(elisp x flat(root / distDir / "elisp"))
 
     // Copy the runtime jars

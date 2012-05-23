@@ -10,6 +10,8 @@
 *.fdb_latexmk
 *~
 *.json
+*.elc
+.history
 target/
 lib_managed/
 src_managed/
