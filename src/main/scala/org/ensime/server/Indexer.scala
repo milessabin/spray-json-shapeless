@@ -26,6 +26,7 @@
  */
 
 package org.ensime.server
+import java.io.IOException
 import java.io.Reader
 import org.apache.lucene.analysis.SimpleAnalyzer
 import org.apache.lucene.analysis.ReusableAnalyzerBase
@@ -36,6 +37,7 @@ import org.apache.lucene.analysis.CharTokenizer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
+import org.apache.lucene.index.CorruptIndexException
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
@@ -75,6 +77,7 @@ import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
 
 trait AbstractIndex {
+  def projectConfig(): ProjectConfig
   def initialize(): Unit = {}
   def commitChanges(): Unit = {}
   def insert(key: String, value: SymbolSearchResult): Unit
@@ -82,23 +85,42 @@ trait AbstractIndex {
   def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit
 }
 
-trait LuceneIndex {
-
-  val dir: File = new File(FileUtils.temporaryDirectory + "/.ensime_lucene")
+trait LuceneIndex extends AbstractIndex {
+  val dir: File = new File(projectConfig.root, ".ensime_lucene")
   val index: NIOFSDirectory = new NIOFSDirectory(dir)
   val analyzer = new SimpleAnalyzer(Version.LUCENE_35)
   val config: IndexWriterConfig = new IndexWriterConfig(
     Version.LUCENE_35, analyzer);
   var indexWriter: Option[IndexWriter] = None
   var indexReader: Option[IndexReader] = None
-  var batchMode = false
+  var userData: Map[String, String] = Map()
 
-  def initialize(): Unit = {
-    indexWriter = Some(new IndexWriter(index, config))
+  val IndexVersion: Int = 1
+
+  private def onDiskVersion(userData: Map[String, String]): Int = {
+    Option(userData("index_version")).getOrElse("0").toInt
   }
 
-  def setBatchMode(value: Boolean): Unit = {
-    batchMode = value
+  private def loadIndexUserData: Map[String, String] = {
+    try {
+      if (dir.exists) {
+        val reader = IndexReader.open(index)
+        val map = reader.getCommitUserData()
+        reader.close()
+        map.toMap
+      } else Map()
+    } catch {
+      case e: IOException => Map()
+      case e: CorruptIndexException => Map()
+    }
+  }
+
+  def initialize(): Unit = {
+    userData = loadIndexUserData
+    if (IndexVersion > onDiskVersion(userData)) {
+      FileUtils.delete(dir)
+    }
+    indexWriter = Some(new IndexWriter(index, config))
   }
 
   private def tokenize(nm: String): String = {
@@ -107,14 +129,14 @@ trait LuceneIndex {
     var k = 0
     while (i < nm.length) {
       val c: Char = nm.charAt(i)
-      if ((c == ' ' || c == '.') && i != k){
+      if ((c == ' ' || c == '.') && i != k) {
         tokens.append(nm.substring(k, i))
         tokens.append(" ")
         k = i + 1
-      } else if(Character.isUpperCase(c) && i != k) {
+      } else if (Character.isUpperCase(c) && i != k) {
         tokens.append(nm.substring(k, i))
         tokens.append(" ")
-	k = i
+        k = i
       }
       i += 1
     }
@@ -180,7 +202,14 @@ trait LuceneIndex {
         new TypeSearchResult(name, localName, tpe, pos)
       }
     }
+  }
 
+  def fileIsIndexed(file: File): Boolean = {
+    if (file.exists() &&
+      userData.contains(file.getAbsolutePath)) {
+      val md5 = FileUtils.md5(file)
+      userData(file.getAbsolutePath) == md5
+    } else false
   }
 
   def insert(key: String, value: SymbolSearchResult): Unit = {
@@ -242,61 +271,6 @@ trait LuceneIndex {
         val doc = searcher.doc(docId)
         receiver(buildSym(doc))
       }
-    }
-  }
-}
-
-trait TrieIndex extends AbstractIndex {
-
-  implicit def fnToForEachValCursor[V](fn: V => Any): ForEachValCursor[V] =
-    new ForEachValCursor[V](fn)
-
-  protected val trie = new MCritBitTree[String, SymbolSearchResult](
-    StringKeyAnalyzer.INSTANCE)
-
-  def insert(key: String, value: SymbolSearchResult): Unit = {
-    val tmp = key.toLowerCase()
-    val k = tmp + tmp.hashCode()
-    trie.put(k, value)
-    var i: Int = 1
-    while (i < key.length) {
-      val c: Char = key.charAt(i)
-      if (c == '.' || c == '_') {
-        trie.put(k.substring(i), value)
-        trie.put(k.substring(i + 1), value)
-        i += 1
-      } else if (Character.isUpperCase(c)) {
-        trie.put(k.substring(i), value)
-      }
-      i += 1
-    }
-  }
-
-  def remove(key: String): Unit = {
-    val tmp = key.toLowerCase()
-    val k = tmp + tmp.hashCode()
-    trie.remove(k)
-    var i: Int = 1
-    while (i < key.length) {
-      val c: Char = key.charAt(i)
-      if (c == '.' || c == '_') {
-        trie.remove(k.substring(i))
-        trie.remove(k.substring(i + 1))
-        i += 1
-      } else if (Character.isUpperCase(c)) {
-        trie.remove(k.substring(i))
-      }
-      i += 1
-    }
-  }
-
-  def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit = {
-    for (key <- keys) {
-      trie.traverseWithPrefix(key.toLowerCase(), (r: SymbolSearchResult) =>
-        r match {
-          case r: TypeSearchResult => receiver(r)
-          case _ => // nothing
-        })
     }
   }
 }

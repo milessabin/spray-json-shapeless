@@ -10,6 +10,7 @@
 *.fdb_latexmk
 *~
 *.json
+*.elc
 target/
 lib_managed/
 src_managed/
