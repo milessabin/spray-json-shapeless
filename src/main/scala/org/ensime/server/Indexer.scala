@@ -75,6 +75,7 @@ import scala.tools.nsc.util.{ NoPosition }
 import scala.util.matching.Regex
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
+import com.codahale.jerkson.Json
 
 trait AbstractIndex {
   def projectConfig(): ProjectConfig
@@ -93,32 +94,58 @@ trait LuceneIndex extends AbstractIndex {
     Version.LUCENE_35, analyzer);
   var indexWriter: Option[IndexWriter] = None
   var indexReader: Option[IndexReader] = None
-  var userData: Map[String, String] = Map()
 
+  val KeyIndexVersion = "indexVersion"
+  val KeyFileHashes = "fileHashes"
   val IndexVersion: Int = 1
 
-  private def onDiskVersion(userData: Map[String, String]): Int = {
-    Option(userData("index_version")).getOrElse("0").toInt
-  }
-
-  private def loadIndexUserData: Map[String, String] = {
+  private def loadIndexUserData():(Int,Map[String,String]) = {
     try {
       if (dir.exists) {
         val reader = IndexReader.open(index)
-        val map = reader.getCommitUserData()
+        val userData = reader.getCommitUserData()
+        val onDiskIndexVersion = Option(
+          userData(KeyIndexVersion)).getOrElse("0").toInt
+        val indexedFiles = Json.parse[Map[String, String]](
+          userData(KeyFileHashes).getOrElse("{}"))
         reader.close()
-        map.toMap
-      } else Map()
+	(onDiskIndexVersion, indexedFiles)
+      } else (0, Map())
     } catch {
-      case e: IOException => Map()
-      case e: CorruptIndexException => Map()
+      case e: IOException => (0, Map())
+      case e: CorruptIndexException => (0, Map())
     }
   }
 
-  def initialize(): Unit = {
-    userData = loadIndexUserData
-    if (IndexVersion > onDiskVersion(userData)) {
-      FileUtils.delete(dir)
+  private def shouldReindex(
+    version: Int,
+    onDisk: Set[(String, String)],
+    proposed: Set[(String, String)]): Boolean = {
+
+    // Very conservative.
+    // Re-index whenver the proposed set
+    // contains unindexed files.
+    (version < IndexVersion ||
+      !(proposed -- onDisk.toList).isEmpty)
+  }
+
+  def initialize(files: Set[String]): Unit = {
+    val (version, indexedFiles) = loadIndexUserData()
+    val hashed = files.map { f =>
+      val file = new File(f)
+      if (file.exists) {
+        (f, FileUtils.md5(file))
+      } else {
+        (f, "")
+      }
+    }
+    if (shouldReindex(version, indexedFiles.toSet, hashed)) {
+      val batchWriter = new IndexWriter(index, config)
+      buildStaticIndex(files, batchWriter)
+      val userData = Map(
+        (KeyIndexVersion, IndexVersion),
+        (KeyFileHashes, Json.generate(hashed.toMap)))
+      batchWriter.commit(userData)
     }
     indexWriter = Some(new IndexWriter(index, config))
   }
@@ -202,14 +229,6 @@ trait LuceneIndex extends AbstractIndex {
         new TypeSearchResult(name, localName, tpe, pos)
       }
     }
-  }
-
-  def fileIsIndexed(file: File): Boolean = {
-    if (file.exists() &&
-      userData.contains(file.getAbsolutePath)) {
-      val md5 = FileUtils.md5(file)
-      userData(file.getAbsolutePath) == md5
-    } else false
   }
 
   def insert(key: String, value: SymbolSearchResult): Unit = {
@@ -311,7 +330,9 @@ trait IndexerInterface { self: RichPresentationCompiler =>
 
   private implicit def symToSearchResult(sym: Symbol): SymbolSearchResult = {
 
-    val pos = if (sym.pos.isDefined) { Some((sym.pos.source.path, sym.pos.point)) }
+    val pos = if (sym.pos.isDefined) {
+      Some((sym.pos.source.path, sym.pos.point))
+    }
     else None
 
     if (isType(sym)) {
@@ -427,7 +448,9 @@ trait Indexing extends LuceneIndex with StringSimilarity {
       }
     })
 
-    val sorted = resultSet.toList.sortWith { (a, b) => a.name.length < b.name.length }
+    val sorted = resultSet.toList.sortWith {
+      (a, b) => a.name.length < b.name.length
+    }
     if (maxResults == 0) {
       sorted
     } else {
@@ -597,7 +620,9 @@ class Indexer(project: Project, protocol: ProtocolConversions,
               req match {
                 case ImportSuggestionsReq(file: File, point: Int,
                   names: List[String], maxResults: Int) => {
-                  val suggestions = ImportSuggestions(getImportSuggestions(names, maxResults))
+                  val suggestions = ImportSuggestions(getImportSuggestions(
+		      names, maxResults)
+		  )
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
                 case PublicSymbolSearchReq(keywords: List[String],

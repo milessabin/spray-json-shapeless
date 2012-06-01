@@ -68,9 +68,11 @@ object EnsimeBuild extends Build {
 	resolvers += "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
 	resolvers += "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
 	resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
+	resolvers += "repo.codahale.com" at "http://repo.codahale.com",
 	libraryDependencies <++= (scalaVersion) { scalaVersion =>
 	  val compilerVersion = scalaVersion
 	  Seq(
+	    "com.codahale" % "jerkson_2.9.1" % "0.5.0",
 	    "org.apache.lucene" % "lucene-core" % "3.5.0",
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
 	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
