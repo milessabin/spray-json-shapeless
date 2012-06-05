@@ -37,8 +37,8 @@ import scala.actors.Actor._
 object Server {
 
   def main(args: Array[String]): Unit = {
-    System.setProperty("actors.corePoolSize", "8")
-    System.setProperty("actors.maxPoolSize", "20")
+    System.setProperty("actors.corePoolSize", "10")
+    System.setProperty("actors.maxPoolSize", "100")
 
     args match {
       case Array(portfile) =>

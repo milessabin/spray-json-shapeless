@@ -85,12 +85,14 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
     settings, reporter, this, indexer, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(config, reportHandler, indexer)
   protected var awaitingInitialCompile = true
+  protected var initTime: Long = 0
 
   import protocol._
   import scalaCompiler._
 
   def act() {
     project.bgMessage("Initializing Analyzer. Please wait...")
+    initTime = System.currentTimeMillis()
 
     println("Initing Indexer...")
     indexer.start
@@ -120,6 +122,8 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
           case FullTypeCheckCompleteEvent() => {
             if (awaitingInitialCompile) {
               awaitingInitialCompile = false
+	      val elapsed = System.currentTimeMillis() - initTime
+	      println("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
               reporter.enable()
               project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
             }

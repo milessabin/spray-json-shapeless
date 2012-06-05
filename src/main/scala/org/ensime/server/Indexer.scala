@@ -45,6 +45,8 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.TopScoreDocCollector
+import org.apache.lucene.store.FSDirectory
+import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.queryParser.QueryParser
 import org.apache.lucene.store.NIOFSDirectory
@@ -67,7 +69,7 @@ import org.ensime.model.{
   SymbolSearchResults,
   ImportSuggestions
 }
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions
 import org.ardverk.collection._
 import io.prelink.critbit.MCritBitTree
 import scala.tools.nsc.interactive.Global
@@ -77,47 +79,34 @@ import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
 import com.codahale.jerkson.Json
 
-trait AbstractIndex {
-  def projectConfig(): ProjectConfig
-  def initialize(): Unit = {}
-  def commitChanges(): Unit = {}
-  def insert(key: String, value: SymbolSearchResult): Unit
-  def remove(key: String): Unit
-  def search(keys: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit
-}
-
-trait LuceneIndex extends AbstractIndex {
-  val dir: File = new File(projectConfig.root, ".ensime_lucene")
-  val index: NIOFSDirectory = new NIOFSDirectory(dir)
-  val analyzer = new SimpleAnalyzer(Version.LUCENE_35)
-  val config: IndexWriterConfig = new IndexWriterConfig(
-    Version.LUCENE_35, analyzer);
-  var indexWriter: Option[IndexWriter] = None
-  var indexReader: Option[IndexReader] = None
-
+object LuceneIndex {
   val KeyIndexVersion = "indexVersion"
   val KeyFileHashes = "fileHashes"
-  val IndexVersion: Int = 1
+  val IndexVersion: Int = 4
+  val DirName = ".ensime_lucene"
 
-  private def loadIndexUserData():(Int,Map[String,String]) = {
+  def loadIndexUserData(dir: File): (Int, Map[String, String]) = {
     try {
       if (dir.exists) {
+        println(dir.toString + " exists, loading user data...")
+        var index = FSDirectory.open(dir)
         val reader = IndexReader.open(index)
         val userData = reader.getCommitUserData()
         val onDiskIndexVersion = Option(
-          userData(KeyIndexVersion)).getOrElse("0").toInt
+          userData.get(KeyIndexVersion)).getOrElse("0").toInt
         val indexedFiles = Json.parse[Map[String, String]](
-          userData(KeyFileHashes).getOrElse("{}"))
+          Option(userData.get(KeyFileHashes)).getOrElse("{}"))
         reader.close()
-	(onDiskIndexVersion, indexedFiles)
+        (onDiskIndexVersion, indexedFiles)
       } else (0, Map())
     } catch {
-      case e: IOException => (0, Map())
-      case e: CorruptIndexException => (0, Map())
+      case e: IOException => e.printStackTrace(); (0, Map())
+      case e: CorruptIndexException => e.printStackTrace(); (0, Map())
+      case e: Exception => e.printStackTrace(); (0, Map())
     }
   }
 
-  private def shouldReindex(
+  def shouldReindex(
     version: Int,
     onDisk: Set[(String, String)],
     proposed: Set[(String, String)]): Boolean = {
@@ -129,29 +118,10 @@ trait LuceneIndex extends AbstractIndex {
       !(proposed -- onDisk.toList).isEmpty)
   }
 
-  def initialize(files: Set[String]): Unit = {
-    val (version, indexedFiles) = loadIndexUserData()
-    val hashed = files.map { f =>
-      val file = new File(f)
-      if (file.exists) {
-        (f, FileUtils.md5(file))
-      } else {
-        (f, "")
-      }
-    }
-    if (shouldReindex(version, indexedFiles.toSet, hashed)) {
-      val batchWriter = new IndexWriter(index, config)
-      buildStaticIndex(files, batchWriter)
-      val userData = Map(
-        (KeyIndexVersion, IndexVersion),
-        (KeyFileHashes, Json.generate(hashed.toMap)))
-      batchWriter.commit(userData)
-    }
-    indexWriter = Some(new IndexWriter(index, config))
-  }
-
-  private def tokenize(nm: String): String = {
+  def tokenize(nm: String): String = {
     val tokens = new StringBuilder
+    tokens.append(nm.toLowerCase)
+    tokens.append(" ")
     var i = 0
     var k = 0
     while (i < nm.length) {
@@ -199,11 +169,18 @@ trait LuceneIndex extends AbstractIndex {
       }
     }
     value match {
-      case value: TypeSearchResult => {}
+      case value: TypeSearchResult => {
+        doc.add(new Field("docType",
+          "type", Field.Store.NO,
+          Field.Index.ANALYZED))
+      }
       case value: MethodSearchResult => {
         doc.add(new Field("owner",
           value.owner, Field.Store.YES,
           Field.Index.NOT_ANALYZED))
+        doc.add(new Field("docType",
+          "method", Field.Store.NO,
+          Field.Index.ANALYZED))
       }
     }
     doc
@@ -231,19 +208,167 @@ trait LuceneIndex extends AbstractIndex {
     }
   }
 
-  def insert(key: String, value: SymbolSearchResult): Unit = {
-    for (w <- indexWriter) {
-      val doc = buildDoc(value)
-      w.addDocument(doc)
+  private def declaredAs(name: String, flags: Int) = {
+    if (name.endsWith("$")) 'object
+    else if ((flags & Opcodes.ACC_INTERFACE) != 0) 'trait
+    else 'class
+  }
+
+  private def include(name: String,
+    includes: Iterable[Regex],
+    excludes: Iterable[Regex]): Boolean = {
+    if (includes.isEmpty || includes.exists(_.findFirstIn(name) != None)) {
+      excludes.forall(_.findFirstIn(name) == None)
+    } else {
+      false
     }
   }
 
-  def commitChanges(): Unit = {
-    for (w <- indexWriter) {
-      w.commit()
+  def buildStaticIndex(
+    writer: IndexWriter,
+    files: Iterable[File],
+    includes: Iterable[Regex],
+    excludes: Iterable[Regex]) {
+    val t = System.currentTimeMillis()
+
+    sealed abstract trait IndexEvent
+    case class ClassEvent(name: String,
+      location: String, flags: Int) extends IndexEvent
+    case class MethodEvent(className: String, name: String,
+      location: String, flags: Int) extends IndexEvent
+    case object StopEvent extends IndexEvent
+
+    class IndexWorkQueue extends Actor {
+      def act() {
+        loop {
+          receive {
+            case ClassEvent(name: String, location: String, flags: Int) => {
+              val i = name.lastIndexOf(".")
+              val localName = if (i > -1) name.substring(i + 1) else name
+              val value = new TypeSearchResult(name,
+                localName,
+                declaredAs(name, flags),
+                Some((location, -1)))
+              val doc = buildDoc(value)
+              writer.addDocument(doc)
+            }
+            case MethodEvent(className: String, name: String,
+              location: String, flags: Int) => {
+              val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+              val revisedClassName = if (isStatic) className + "$"
+              else className
+              val lookupKey = revisedClassName + "." + name
+              val value = new MethodSearchResult(lookupKey,
+                name,
+                'method,
+                Some((location, -1)),
+                revisedClassName)
+              val doc = buildDoc(value)
+              writer.addDocument(doc)
+            }
+            case StopEvent => {
+              reply(StopEvent)
+              exit()
+            }
+          }
+        }
+      }
     }
-    for (r <- indexReader) {
-      IndexReader.openIfChanged(r)
+    val indexWorkQ = new IndexWorkQueue
+    indexWorkQ.start
+
+    val handler = new ClassHandler {
+      var classCount = 0
+      var methodCount = 0
+      var validClass = false
+      override def onClass(name: String, location: String, flags: Int) {
+        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+        validClass = (isPublic && Indexer.isValidType(name) && include(name,
+          includes, excludes))
+        if (validClass) {
+          indexWorkQ ! ClassEvent(name, location, flags)
+          classCount += 1
+        }
+      }
+      override def onMethod(className: String, name: String,
+        location: String, flags: Int) {
+        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+        if (validClass && isPublic && Indexer.isValidMethod(name)) {
+          indexWorkQ ! MethodEvent(className, name, location, flags)
+          methodCount += 1
+        }
+      }
+    }
+
+    println("Updated: Indexing classpath...")
+    ClassIterator.find(files, handler)
+    indexWorkQ !? StopEvent
+    val elapsed = System.currentTimeMillis() - t
+    println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
+    println("Indexed " + handler.classCount + " classes with " +
+      handler.methodCount + " methods.")
+  }
+
+}
+
+trait LuceneIndex {
+  import LuceneIndex._
+  private val analyzer = new SimpleAnalyzer(Version.LUCENE_35)
+  private val config: IndexWriterConfig = new IndexWriterConfig(
+    Version.LUCENE_35, analyzer);
+  private var index: FSDirectory = null
+  private var indexWriter: Option[IndexWriter] = None
+  private var indexReader: Option[IndexReader] = None
+
+  def onIndexingComplete()
+
+  def initialize(
+    root: File,
+    files: Set[File],
+    includes: Iterable[Regex],
+    excludes: Iterable[Regex]): Unit = {
+
+    val dir: File = new File(root, DirName)
+
+    val hashed = files.map { f =>
+      if (f.exists) {
+        (f.getAbsolutePath(), FileUtils.md5(f))
+      } else {
+        (f.getAbsolutePath(), "")
+      }
+    }
+    val (version, indexedFiles) = loadIndexUserData(dir)
+    println("ENSIME indexer version: " + IndexVersion)
+    println("On disk version: " + version)
+    println("On disk indexed files: " + indexedFiles.toString)
+
+    index = FSDirectory.open(dir)
+
+    indexWriter = Some(new IndexWriter(index, config))
+    for (writer <- indexWriter) {
+      if (shouldReindex(version, indexedFiles.toSet, hashed)) {
+        println("Re-indexing...")
+        buildStaticIndex(writer, files, includes, excludes)
+        val userData = Map[String, String](
+          (KeyIndexVersion, IndexVersion.toString),
+          (KeyFileHashes, Json.generate(hashed.toMap)))
+        writer.commit(JavaConversions.mapAsJavaMap(userData))
+      } else {
+        println("Skip re-indexing.")
+      }
+    }
+
+    onIndexingComplete()
+  }
+
+  def insert(value: SymbolSearchResult): Unit = {
+    for (w <- indexWriter) {
+      val doc = buildDoc(value)
+      w.addDocument(doc)
+      // w.commit()
+      // for (r <- indexReader) {
+      //   IndexReader.openIfChanged(r)
+      // }
     }
   }
 
@@ -251,6 +376,10 @@ trait LuceneIndex extends AbstractIndex {
     for (w <- indexWriter) {
       val w = new IndexWriter(index, config)
       w.deleteDocuments(new Term("name", key))
+      // w.commit()
+      // for (r <- indexReader) {
+      //   IndexReader.openIfChanged(r)
+      // }
     }
   }
 
@@ -272,13 +401,18 @@ trait LuceneIndex extends AbstractIndex {
     keywords.toList
   }
 
-  def search(keywords: Iterable[String], receiver: (SymbolSearchResult => Unit)): Unit = {
+  def search(
+    keys: Iterable[String],
+    restrictToTypes: Boolean,
+    receiver: (SymbolSearchResult => Unit)): Unit = {
     if (indexReader.isEmpty) {
       indexReader = Some(IndexReader.open(index))
     }
-    val keys = keywords.flatMap(splitTypeName)
-    val q = new QueryParser(Version.LUCENE_35, "tags", analyzer).parse(
-      keys.map(_ + "*").mkString(" AND "))
+    val validatedKeys = keys.filter(!_.isEmpty)
+    val qs = (validatedKeys.map(_ + "*").mkString(" AND ") +
+      (if (restrictToTypes) { " docType:type" } else { "" }))
+    val q = new QueryParser(Version.LUCENE_35, "tags", analyzer).parse(qs)
+    println("Handling query: " + q)
     for (reader <- indexReader) {
       val hitsPerPage = 50
       val searcher = new IndexSearcher(reader)
@@ -290,6 +424,12 @@ trait LuceneIndex extends AbstractIndex {
         val doc = searcher.doc(docId)
         receiver(buildSym(doc))
       }
+    }
+  }
+
+  def close() {
+    for (w <- indexWriter) {
+      w.close()
     }
   }
 }
@@ -329,11 +469,9 @@ trait IndexerInterface { self: RichPresentationCompiler =>
   }
 
   private implicit def symToSearchResult(sym: Symbol): SymbolSearchResult = {
-
     val pos = if (sym.pos.isDefined) {
       Some((sym.pos.source.path, sym.pos.point))
-    }
-    else None
+    } else None
 
     if (isType(sym)) {
       new TypeSearchResult(
@@ -408,7 +546,7 @@ trait Indexing extends LuceneIndex with StringSimilarity {
       val candidates = new HashSet[SymbolSearchResult]
 
       for (key <- keywords) {
-        search(List(key.toLowerCase),
+        search(List(key.toLowerCase), true,
           (r: SymbolSearchResult) =>
             r match {
               case r: TypeSearchResult => candidates += r
@@ -437,17 +575,12 @@ trait Indexing extends LuceneIndex with StringSimilarity {
   private val BruteForceThresh = 1000
   protected def findTopLevelSyms(keywords: Iterable[String],
     maxResults: Int = 0): List[SymbolSearchResult] = {
-
     var resultSet = new HashSet[SymbolSearchResult]
-    val keyword = keywords.head
-    val key = keyword.toLowerCase()
-    val caseSens = !keyword.equals(key)
-    search(keywords, { (r: SymbolSearchResult) =>
-      if (!caseSens || r.name.contains(keyword)) {
-        resultSet += r
-      }
+    search(keywords, false,
+      { (r: SymbolSearchResult) =>
+      resultSet += r
+      println("Result: " + r.name)
     })
-
     val sorted = resultSet.toList.sortWith {
       (a, b) => a.name.length < b.name.length
     }
@@ -456,105 +589,6 @@ trait Indexing extends LuceneIndex with StringSimilarity {
     } else {
       sorted.take(maxResults)
     }
-
-  }
-
-  private def declaredAs(name: String, flags: Int) = {
-    if (name.endsWith("$")) 'object
-    else if ((flags & Opcodes.ACC_INTERFACE) != 0) 'trait
-    else 'class
-  }
-
-  private def include(name: String,
-    includes: Iterable[Regex],
-    excludes: Iterable[Regex]): Boolean = {
-    if (includes.isEmpty || includes.exists(_.findFirstIn(name) != None)) {
-      excludes.forall(_.findFirstIn(name) == None)
-    } else {
-      false
-    }
-  }
-
-  def buildStaticIndex(files: Iterable[File],
-    includes: Iterable[Regex],
-    excludes: Iterable[Regex]) {
-    val t = System.currentTimeMillis()
-
-    sealed abstract trait IndexEvent
-    case class ClassEvent(name: String,
-      location: String, flags: Int) extends IndexEvent
-    case class MethodEvent(className: String, name: String,
-      location: String, flags: Int) extends IndexEvent
-    case object StopEvent extends IndexEvent
-
-    class IndexWorkQueue extends Actor {
-      def act() {
-        loop {
-          receive {
-            case ClassEvent(name: String, location: String, flags: Int) => {
-              val i = name.lastIndexOf(".")
-              val localName = if (i > -1) name.substring(i + 1) else name
-              val value = new TypeSearchResult(name,
-                localName,
-                declaredAs(name, flags),
-                Some((location, -1)))
-              insert(name, value)
-            }
-            case MethodEvent(className: String, name: String,
-              location: String, flags: Int) => {
-              val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
-              val revisedClassName = if (isStatic) className + "$"
-              else className
-              val lookupKey = revisedClassName + "." + name
-              val value = new MethodSearchResult(lookupKey,
-                name,
-                'method,
-                Some((location, -1)),
-                revisedClassName)
-              insert(lookupKey, value)
-            }
-            case StopEvent => {
-              reply(StopEvent)
-              exit()
-            }
-          }
-        }
-      }
-    }
-    val indexWorkQ = new IndexWorkQueue
-    indexWorkQ.start
-
-    val handler = new ClassHandler {
-      var classCount = 0
-      var methodCount = 0
-      var validClass = false
-      override def onClass(name: String, location: String, flags: Int) {
-        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-        validClass = (isPublic && Indexer.isValidType(name) && include(name,
-          includes, excludes))
-        if (validClass) {
-          indexWorkQ ! ClassEvent(name, location, flags)
-          classCount += 1
-        }
-      }
-      override def onMethod(className: String, name: String,
-        location: String, flags: Int) {
-        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-        if (validClass && isPublic && Indexer.isValidMethod(name)) {
-          indexWorkQ ! MethodEvent(className, name, location, flags)
-          methodCount += 1
-        }
-      }
-    }
-
-    println("Updated: Indexing classpath...")
-    ClassIterator.find(files, handler)
-    indexWorkQ !? StopEvent
-    val elapsed = System.currentTimeMillis() - t
-    println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
-    println("Indexed " + handler.classCount + " classes with " +
-      handler.methodCount + " methods.")
-    onIndexingComplete()
   }
 
   def onIndexingComplete()
@@ -570,7 +604,9 @@ object Indexer {
   }
 }
 
-class Indexer(project: Project, protocol: ProtocolConversions,
+class Indexer(
+  project: Project,
+  protocol: ProtocolConversions,
   config: ProjectConfig) extends Actor with Indexing {
 
   import protocol._
@@ -580,39 +616,31 @@ class Indexer(project: Project, protocol: ProtocolConversions,
   }
 
   def act() {
-
-    println("Initializing Indexer...")
-    initialize()
-
     loop {
       try {
         receive {
           case IndexerShutdownReq() => {
+            close()
             exit('stop)
           }
           case RebuildStaticIndexReq() => {
-            buildStaticIndex(config.allFilesOnClasspath,
+            initialize(
+              config.root,
+              config.allFilesOnClasspath,
               config.onlyIncludeInIndex,
               config.excludeFromIndex)
-
-            val t = System.currentTimeMillis()
-            commitChanges()
-            val elapsed = System.currentTimeMillis() - t
-            println("Index changes committed in " + elapsed / 1000.0 +
-              " seconds.")
           }
           case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
             syms.foreach { info =>
-              insert(info.name, info)
+              insert(info)
             }
-            commitChanges()
           }
           case RemoveSymbolsReq(syms: Iterable[String]) => {
             syms.foreach { s => remove(s) }
-            commitChanges()
           }
           case TypeCompletionsReq(prefix: String, maxResults: Int) => {
-            val suggestions = getImportSuggestions(List(prefix), maxResults).flatten
+            val suggestions = getImportSuggestions(
+              List(prefix), maxResults).flatten
             sender ! suggestions
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
@@ -621,15 +649,14 @@ class Indexer(project: Project, protocol: ProtocolConversions,
                 case ImportSuggestionsReq(file: File, point: Int,
                   names: List[String], maxResults: Int) => {
                   val suggestions = ImportSuggestions(getImportSuggestions(
-		      names, maxResults)
-		  )
+                    names, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
                 case PublicSymbolSearchReq(keywords: List[String],
                   maxResults: Int) => {
-                  val nonEmptyKeywords = keywords.filter { _.length > 0 }
+                  println("Received keywords: " + keywords)
                   val suggestions = SymbolSearchResults(
-                    findTopLevelSyms(nonEmptyKeywords, maxResults))
+                    findTopLevelSyms(keywords, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
               }
@@ -669,17 +696,27 @@ object IndexTest extends Indexing {
   def onIndexingComplete() {
     println("done")
   }
+
+  def projectConfig() {
+    println("done")
+  }
+
   def main(args: Array[String]) {
-    val classpath = "/Users/aemon/.ivy2/cache/nekohtml/xercesMinimal/jars/xercesMinimal-1.9.6.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-repository-metadata/jars/maven-repository-metadata-2.2.1.jar:/Users/aemon/projects/ensime/lib/org.scala-refactoring_2.9.2-SNAPSHOT-0.5.0-SNAPSHOT.jar:/Users/aemon/projects/ensime/lib/critbit-0.0.4.jar:/Users/aemon/.ivy2/cache/org.apache.ant/ant/jars/ant-1.8.1.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-container-default/jars/plexus-container-default-1.0-alpha-9-stable-1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-error-diagnostics/jars/maven-error-diagnostics-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-artifact/jars/maven-artifact-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-settings/jars/maven-settings-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-profile/jars/maven-profile-2.2.1.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-utils/jars/plexus-utils-1.5.15.jar:/Users/aemon/.ivy2/cache/classworlds/classworlds/jars/classworlds-1.1-alpha-2.jar:/Users/aemon/.ivy2/cache/asm/asm/jars/asm-3.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-provider-api/jars/wagon-provider-api-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.1.0.jar:/Users/aemon/.ivy2/cache/org.apache.ant/ant-launcher/jars/ant-launcher-1.8.1.jar:/Users/aemon/.ivy2/cache/ant/ant/jars/ant-1.6.5.jar:/Users/aemon/.ivy2/cache/backport-util-concurrent/backport-util-concurrent/jars/backport-util-concurrent-3.1.jar:/Users/aemon/.ivy2/cache/nekohtml/nekohtml/jars/nekohtml-1.9.6.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-lightweight/jars/wagon-http-lightweight-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.scalariform/scalariform_2.9.1/jars/scalariform_2.9.1-0.1.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-project/jars/maven-project-2.2.1.jar:/Users/aemon/.ivy2/cache/asm/asm-commons/jars/asm-commons-3.2.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-ant-tasks/jars/maven-ant-tasks-2.1.0.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-file/jars/wagon-file-1.0-beta-6.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-plugin-registry/jars/maven-plugin-registry-2.2.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-model/jars/maven-model-2.2.1.jar:/Users/aemon/.ivy2/cache/org.scalatest/scalatest_2.9.1/jars/scalatest_2.9.1-1.6.1.jar:/Users/aemon/.ivy2/cache/org.apache.maven.wagon/wagon-http-shared/jars/wagon-http-shared-1.0-beta-6.jar:/Users/aemon/.sbt/boot/scala-2.9.2-SNAPSHOT/lib/scala-compiler.jar:/Users/aemon/projects/ensime/target/scala-2.9.2-SNAPSHOT/ensime_2.9.2-SNAPSHOT-0.9.3.RC3-test.jar:/Users/aemon/projects/ensime/dist_2.9.2-RC1/lib/scala-library.jar:/Users/aemon/projects/ensime/dist_2.9.2-RC1/lib/scala-compiler.jar:/Users/aemon/.ivy2/cache/org.sonatype.tycho/org.eclipse.jdt.core/jars/org.eclipse.jdt.core-3.6.0.v_A58.jar:/Users/aemon/projects/ensime/target/scala-2.9.2-SNAPSHOT/ensime_2.9.2-SNAPSHOT-0.9.3.RC3.jar:/Users/aemon/.ivy2/cache/org.codehaus.plexus/plexus-interpolation/jars/plexus-interpolation-1.11.jar:/Users/aemon/.ivy2/cache/org.apache.maven/maven-artifact-manager/jars/maven-artifact-manager-2.2.1.jar:/Users/aemon/.sbt/boot/scala-2.9.2-SNAPSHOT/lib/scala-library.jar:/Users/aemon/.ivy2/cache/asm/asm-tree/jars/asm-tree-3.2.jar"
-    val files = classpath.split(":").map { new File(_) }
+    val classpath = "/Users/aemon/projects/ensime/lib/org.scala-refactoring_2.9.2-SNAPSHOT-0.5.0-SNAPSHOT.jar"
+    val files = classpath.split(":").map { new File(_) }.toSet
+    initialize(new File("."), files, List(), List())
+
     import java.util.Scanner
     val in = new Scanner(System.in)
-    val name = in.nextLine()
-    buildStaticIndex(files, List(), List())
-    for (l <- getImportSuggestions(args, 5)) {
-      for (s <- l) {
-        println(s.name)
+    var line = in.nextLine()
+    while (!line.isEmpty) {
+      val keys = line.split(" ")
+      for (l <- getImportSuggestions(keys, 20)) {
+        for (s <- l) {
+          println(s.name)
+        }
       }
+      line = in.nextLine()
     }
   }
 }
