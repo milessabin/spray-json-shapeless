@@ -37,3 +37,4 @@ sublime*
 .ensime_port
 
 src/main/scala/org/ensime/server/Test.scala
+.ensime_lucene

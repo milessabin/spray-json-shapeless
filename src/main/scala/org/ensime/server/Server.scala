@@ -37,8 +37,8 @@ import scala.actors.Actor._
 object Server {
 
   def main(args: Array[String]): Unit = {
-    System.setProperty("actors.corePoolSize", "8")
-    System.setProperty("actors.maxPoolSize", "20")
+    System.setProperty("actors.corePoolSize", "10")
+    System.setProperty("actors.maxPoolSize", "100")
 
     args match {
       case Array(portfile) =>
@@ -92,13 +92,14 @@ object Server {
       out.flush()
       System.out.println("Wrote port " + port + " to " + filename + ".")
     } catch {
-      case e: IOException =>
-        {
-          System.err.println("Could not write port to " + filename + ". " + e)
-          System.exit(-1)
-        }
+      case e: IOException => {
+        System.err.println("Could not write port to " + filename + ". " + e)
+        System.exit(-1)
+      }
     } finally {
       out.close()
+      Runtime.getRuntime.addShutdownHook(
+        new Thread { override def run { new java.io.File(filename).delete } })
     }
   }
 

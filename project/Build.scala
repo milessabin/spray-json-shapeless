@@ -38,6 +38,18 @@ object EnsimeBuild extends Build {
 
   private def file(str:String) = new File(str)
 
+  private lazy val toolsJarCandidates: List[File] = {
+    val jdkHome = Option(System.getenv("JAVA_HOME")).getOrElse("/tmp")
+    val jreHome = new File(System.getProperty("java.home"))
+    List[File](
+      new File(jdkHome + "/lib/tools.jar"),
+      new File(jreHome.getParent + "/lib/tools.jar"))
+  }
+
+  private lazy val toolsJar: Option[File] = {
+    toolsJarCandidates.find(_.exists)
+  }
+
   val root = Path(".")
 
   val TwoNineVersion = "2.9.2"
@@ -56,9 +68,12 @@ object EnsimeBuild extends Build {
 	resolvers += "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
 	resolvers += "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
 	resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
+	resolvers += "repo.codahale.com" at "http://repo.codahale.com",
 	libraryDependencies <++= (scalaVersion) { scalaVersion =>
 	  val compilerVersion = scalaVersion
 	  Seq(
+	    "com.codahale" % "jerkson_2.9.1" % "0.5.0",
+	    "org.apache.lucene" % "lucene-core" % "3.5.0",
 	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
 	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
 	    "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
@@ -69,10 +84,7 @@ object EnsimeBuild extends Build {
 	    "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
 	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
 	  )},
-	unmanagedClasspath in Compile += {
-	  val javaHome = new File(System.getProperty("java.home"))
-	  new File(javaHome.getParent) / "lib" / "tools.jar"
-	},
+	unmanagedClasspath in Compile ++= toolsJar.toList,
 	scalacOptions ++= Seq("-g:vars","-deprecation"),
 	exportJars := true,
 	stageTask,
@@ -134,17 +146,21 @@ object EnsimeBuild extends Build {
       f.setExecutable(true)
     }
 
-    val javaHome = new File(System.getProperty("java.home"))
-    val runtimeLibs = cpLibs ++ Seq(new File(javaHome.getParent) / "lib" / "tools.jar")
+    {
+      val runtimeLibs = cpLibs ++ Seq("${JAVA_HOME}/lib/tools.jar")
+      // Expand the server invocation script templates.
+      writeScript(runtimeLibs.mkString(":").replace("\\", "/"),
+	"./etc/scripts/server",
+	"./" + distDir + "/bin/server")
+    }
 
-    // Expand the server invocation script templates.
-    writeScript(runtimeLibs.mkString(":").replace("\\", "/"),
-      "./etc/scripts/server",
-      "./" + distDir + "/bin/server")
-
-    writeScript("\"" + runtimeLibs.map{lib => "%~dp0/../" + lib}.mkString(";").replace("/", "\\") + "\"",
-      "./etc/scripts/server.bat",
-      "./" + distDir + "/bin/server.bat")
+    {
+      val runtimeLibs = cpLibs
+      writeScript("\"" + (runtimeLibs.map{lib => "%~dp0/../" + lib} ++
+	  Seq("%JAVA_HOME%\\lib\\tools.jar")).mkString(";").replace("/", "\\") + "\"",
+	"./etc/scripts/server.bat",
+	"./" + distDir + "/bin/server.bat")
+    }
 
     copyFile(root / "README.md", root / distDir / "README.md")
     copyFile(root / "LICENSE", root / distDir / "LICENSE")

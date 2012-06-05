@@ -38,13 +38,15 @@ case class SourcePosition(file: CanonFile, line: Int)
 
 class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
-class SymbolSearchResult(
+abstract class SymbolSearchResult(
   val name: String,
   val localName: String,
   val declaredAs: scala.Symbol,
   val pos: Option[(String, Int)])
-class TypeSearchResult(name: String, localName: String, declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
-class MethodSearchResult(name: String, localName: String, declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
+class TypeSearchResult(name: String, localName: String,
+  declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
+class MethodSearchResult(name: String, localName: String,
+  declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
 
 case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
 case class SymbolSearchResults(syms: Iterable[SymbolSearchResult])
