@@ -1,5 +1,7 @@
 /**
- *  Copyright (c) 2008, 2009, 2010 Aemon Cannon, Steven Blundy, Josh Cough, Mark Harrah, Stuart Roebuck, Tony Sloane, Vesa Vilhonen, Jason Zaugg
+ *  Copyright (c) 2008, 2009, 2010 Aemon Cannon, Steven Blundy, Josh Cough,
+ *  Mark Harrah, Stuart Roebuck, Tony Sloane, Vesa Vilhonen, Jason Zaugg
+ *
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -16,7 +18,7 @@
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DISCLAIMED. IN NO EVENT SHALL Copright holders BE LIABLE FOR ANY
  *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -161,7 +163,8 @@ object FileUtils {
   def isValidJar(f: File): Boolean = f.exists && f.getName.endsWith(".jar")
   def isValidClassDir(f: File): Boolean = f.exists && f.isDirectory
   def isValidSourceFile(f: File): Boolean = {
-    f.exists && !f.isHidden && (f.getName.endsWith(".scala") || f.getName.endsWith(".java"))
+    f.exists && !f.isHidden && (f.getName.endsWith(".scala") ||
+      f.getName.endsWith(".java"))
   }
 
   def createDirectory(dir: File): Unit = {
@@ -209,18 +212,29 @@ object FileUtils {
   }
 
   def md5(f: File): String = {
-    val fis = new FileInputStream(f);
     val buffer = new Array[Byte](1024);
-    val complete = MessageDigest.getInstance("MD5");
-    var numRead = 0;
-    do {
-      numRead = fis.read(buffer);
-      if (numRead > 0) {
-        complete.update(buffer, 0, numRead);
+    val hash = MessageDigest.getInstance("MD5");
+    for (f <- f.andTree) {
+      try {
+        hash.update(f.getAbsolutePath().getBytes)
+        if (!f.isDirectory) {
+          val fis = new FileInputStream(f);
+          var numRead = 0;
+          do {
+            numRead = fis.read(buffer);
+            if (numRead > 0) {
+              hash.update(buffer, 0, numRead);
+            }
+          } while (numRead != -1);
+          fis.close();
+        }
+      } catch {
+        case e: IOException => {
+          e.printStackTrace()
+        }
       }
-    } while (numRead != -1);
-    fis.close();
-    hexifyBytes(complete.digest());
+    }
+    hexifyBytes(hash.digest());
   }
 
   /**

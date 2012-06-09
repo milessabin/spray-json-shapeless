@@ -127,6 +127,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
 	      println("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
               reporter.enable()
               project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
+	      indexer ! CommitReq()
             }
             project ! AsyncEvent(toWF(FullTypeCheckCompleteEvent()))
           }

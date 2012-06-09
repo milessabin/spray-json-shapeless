@@ -46,7 +46,10 @@ import scala.collection.{ mutable, Iterable }
 import scala.collection.JavaConversions._
 import scala.tools.nsc.ast._
 
-class JavaCompiler(config: ProjectConfig, val reportHandler: ReportHandler, val indexer: Actor) {
+class JavaCompiler(
+  config: ProjectConfig,
+  val reportHandler: ReportHandler,
+  val indexer: Actor) {
 
   private val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
 
@@ -57,7 +60,8 @@ class JavaCompiler(config: ProjectConfig, val reportHandler: ReportHandler, val 
     }
   }
 
-  class NameProvider(classpath: Array[String]) extends FileSystem(classpath.toArray, Array(), "UTF-8") {
+  class NameProvider(classpath: Array[String]) extends FileSystem(
+    classpath.toArray, Array(), "UTF-8") {
 
     private val compiledClasses = new mutable.HashMap[String, ClassFileReader]()
     private val knownPackages = new mutable.HashSet[String]()
