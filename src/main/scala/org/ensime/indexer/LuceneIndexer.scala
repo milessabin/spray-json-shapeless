@@ -177,8 +177,12 @@ object LuceneIndex extends StringSimilarity {
 
   private def buildDoc(value: SymbolSearchResult): Document = {
     val doc = new Document()
+
     doc.add(new Field("tags",
 	tokenize(value.name), Field.Store.NO, Field.Index.ANALYZED))
+    doc.add(new Field("localNameTags",
+	tokenize(value.localName), Field.Store.NO, Field.Index.ANALYZED))
+
     doc.add(new Field("name",
 	value.name, Field.Store.YES, Field.Index.NOT_ANALYZED))
     doc.add(new Field("localName",
@@ -232,10 +236,10 @@ private def buildSym(d: Document): SymbolSearchResult = {
   val owner = Option(d.get("owner"))
   owner match {
     case Some(owner) => {
-      new MethodSearchResult(name, localName, tpe, pos, owner)
+      MethodSearchResult(name, localName, tpe, pos, owner)
     }
     case None => {
-      new TypeSearchResult(name, localName, tpe, pos)
+      TypeSearchResult(name, localName, tpe, pos)
     }
   }
 }
@@ -277,7 +281,7 @@ def buildStaticIndex(
           case ClassEvent(name: String, location: String, flags: Int) => {
             val i = name.lastIndexOf(".")
             val localName = if (i > -1) name.substring(i + 1) else name
-            val value = new TypeSearchResult(name,
+            val value = TypeSearchResult(name,
               localName,
               declaredAs(name, flags),
               Some((location, -1)))
@@ -290,7 +294,7 @@ def buildStaticIndex(
             val revisedClassName = if (isStatic) className + "$"
             else className
             val lookupKey = revisedClassName + "." + name
-            val value = new MethodSearchResult(lookupKey,
+            val value = MethodSearchResult(lookupKey,
               name,
               'method,
               Some((location, -1)),
@@ -444,6 +448,7 @@ trait LuceneIndex {
 
   def search(
     keys: Iterable[String],
+    maxResults: Int,
     restrictToTypes: Boolean,
     receiver: (SymbolSearchResult => Unit)): Unit = {
     if (indexReader.isEmpty) {
@@ -452,10 +457,11 @@ trait LuceneIndex {
     val validatedKeys = keys.filter(!_.isEmpty)
     val qs = (validatedKeys.map(_ + "*").mkString(" AND ") +
       (if (restrictToTypes) { " docType:type" } else { "" }))
-    val q = new QueryParser(Version.LUCENE_35, "tags", analyzer).parse(qs)
+    val field = if (restrictToTypes) "localNameTags" else "tags"
+    val q = new QueryParser(Version.LUCENE_35, field, analyzer).parse(qs)
     println("Handling query: " + q)
     for (reader <- indexReader) {
-      val hitsPerPage = 50
+      val hitsPerPage = if (maxResults == 0) 100 else maxResults
       val searcher = new IndexSearcher(reader)
       val collector = TopScoreDocCollector.create(hitsPerPage, true)
       searcher.search(q, collector)

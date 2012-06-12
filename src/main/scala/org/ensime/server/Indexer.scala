@@ -25,7 +25,6 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 package org.ensime.server
 
 import scala.Char
@@ -75,10 +74,13 @@ trait Indexing extends LuceneIndex {
       val candidates = new HashSet[SymbolSearchResult]
 
       for (key <- keywords) {
-        search(List(key.toLowerCase), true,
+        search(List(key.toLowerCase),
+	  maxResults, true,
           (r: SymbolSearchResult) =>
             r match {
-              case r: TypeSearchResult => candidates += r
+              case r: TypeSearchResult => {
+                candidates += r
+              }
               case _ => // nothing
             })
       }
@@ -105,25 +107,18 @@ trait Indexing extends LuceneIndex {
   protected def findTopLevelSyms(keywords: Iterable[String],
     maxResults: Int = 0): List[SymbolSearchResult] = {
     var resultSet = new HashSet[SymbolSearchResult]
-    search(keywords, false,
+    search(keywords, maxResults, false,
       { (r: SymbolSearchResult) =>
         resultSet += r
-        println("Result: " + r.name)
       })
-    val sorted = resultSet.toList.sortWith {
+    resultSet.toList.sortWith {
       (a, b) => a.name.length < b.name.length
-    }
-    if (maxResults == 0) {
-      sorted
-    } else {
-      sorted.take(maxResults)
     }
   }
 
   def onIndexingComplete()
 
 }
-
 
 object Indexer {
   def isValidType(s: String): Boolean = {
@@ -133,7 +128,6 @@ object Indexer {
     LuceneIndex.isValidMethod(s)
   }
 }
-
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
@@ -172,7 +166,7 @@ class Indexer(
               config.excludeFromIndex)
           }
           case CommitReq() => {
-	    commit()
+            commit()
           }
           case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
             syms.foreach { info =>
@@ -265,7 +259,6 @@ object IndexTest extends Indexing {
   }
 }
 
-
 /**
  * Helper mixin for interfacing compiler (Symbols)
  * with the indexer.
@@ -304,13 +297,13 @@ trait IndexerInterface { self: RichPresentationCompiler =>
     } else None
 
     if (isType(sym)) {
-      new TypeSearchResult(
+      TypeSearchResult(
         lookupKey(sym),
         sym.nameString,
         declaredAs(sym),
         pos)
     } else {
-      new MethodSearchResult(
+      MethodSearchResult(
         lookupKey(sym),
         sym.nameString,
         declaredAs(sym),

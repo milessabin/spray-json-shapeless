@@ -84,7 +84,7 @@ class JavaCompiler(
             CharOperation.charToString(cn(cn.length - 1))
           } else "NA"
           val pos = Some((CharOperation.charToString(reader.getFileName()), 0))
-          infos += new TypeSearchResult(
+          infos += TypeSearchResult(
             key,
             localName,
             'class,

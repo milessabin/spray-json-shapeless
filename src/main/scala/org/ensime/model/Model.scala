@@ -1,7 +1,7 @@
 /**
 *  Copyright (c) 2010, Aemon Cannon
 *  All rights reserved.
-*  
+*
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions are met:
 *      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
 *      * Neither the name of ENSIME nor the
 *        names of its contributors may be used to endorse or promote products
 *        derived from this software without specific prior written permission.
-*  
+*
 *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -36,17 +36,30 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 
 case class SourcePosition(file: CanonFile, line: Int)
 
-class PackageInfo(override val name: String, val fullname: String, override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
+class PackageInfo(
+  override val name: String,
+  val fullname: String,
+  override val members: Iterable[EntityInfo]) extends EntityInfo(name, members) {}
 
-abstract class SymbolSearchResult(
+trait SymbolSearchResult{
+  val name: String
+  val localName: String
+  val declaredAs: scala.Symbol
+  val pos: Option[(String, Int)]
+}
+
+case class TypeSearchResult(
   val name: String,
   val localName: String,
   val declaredAs: scala.Symbol,
-  val pos: Option[(String, Int)])
-class TypeSearchResult(name: String, localName: String,
-  declaredAs: scala.Symbol, pos: Option[(String, Int)]) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
-class MethodSearchResult(name: String, localName: String,
-  declaredAs: scala.Symbol, pos: Option[(String, Int)], val owner: String) extends SymbolSearchResult(name, localName, declaredAs, pos) {}
+  val pos: Option[(String, Int)]) extends SymbolSearchResult
+
+case class MethodSearchResult(
+  val name: String,
+  val localName: String,
+  val declaredAs: scala.Symbol,
+  val pos: Option[(String, Int)],
+  val owner: String) extends SymbolSearchResult
 
 case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
 case class SymbolSearchResults(syms: Iterable[SymbolSearchResult])
@@ -231,7 +244,7 @@ trait ModelBuilders { self: Global with Helpers =>
         case (ownerSym, members) => {
 
           // If all the members in this interface were
-          // provided by the same view, remember that 
+          // provided by the same view, remember that
           // view for later display to user.
           val byView = members.groupBy(_.viaView)
           val viaView = if (byView.size == 1) {
@@ -337,7 +350,7 @@ trait ModelBuilders { self: Global with Helpers =>
 
     def apply(t: Type, members: Iterable[EntityInfo] = List()): TypeInfo = {
       val tpe = t match {
-        // TODO: Instead of throwing away this information, would be better to 
+        // TODO: Instead of throwing away this information, would be better to
         // alert the user that the type is existentially quantified.
         case et: ExistentialType => et.underlying
         case t => t
@@ -426,7 +439,7 @@ trait ModelBuilders { self: Global with Helpers =>
 
   object CompletionInfo {
 
-    def apply(sym: Symbol, relevance: Int): CompletionInfo = 
+    def apply(sym: Symbol, relevance: Int): CompletionInfo =
     CompletionInfo(sym, sym.tpe, relevance)
 
     def apply(sym: Symbol, tpe: Type, relevance: Int): CompletionInfo = {
