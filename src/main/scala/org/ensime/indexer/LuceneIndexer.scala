@@ -44,6 +44,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.TermQuery
+import org.apache.lucene.search.Query
 import org.apache.lucene.search.TopScoreDocCollector
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.store.FSDirectory
@@ -451,14 +452,42 @@ trait LuceneIndex {
     maxResults: Int,
     restrictToTypes: Boolean,
     receiver: (SymbolSearchResult => Unit)): Unit = {
-    if (indexReader.isEmpty) {
-      indexReader = Some(IndexReader.open(index))
-    }
+
     val validatedKeys = keys.filter(!_.isEmpty)
     val qs = (validatedKeys.map(_ + "*").mkString(" AND ") +
       (if (restrictToTypes) { " docType:type" } else { "" }))
     val field = if (restrictToTypes) "localNameTags" else "tags"
-    val q = new QueryParser(Version.LUCENE_35, field, analyzer).parse(qs)
+    val q:Query = new QueryParser(Version.LUCENE_35, field, analyzer).parse(qs)
+
+    searchByQuery(q, maxResults, restrictToTypes, receiver)
+  }
+
+  def fuzzySearch(
+    keys: Iterable[String],
+    maxResults: Int,
+    restrictToTypes: Boolean,
+    receiver: (SymbolSearchResult => Unit)): Unit = {
+
+    val validatedKeys = keys.filter(!_.isEmpty)
+    val qs = (validatedKeys.map(_ + "~").mkString(" ") +
+      (if (restrictToTypes) { " docType:type" } else { "" }))
+    val field = if (restrictToTypes) "localNameTags" else "tags"
+    val q:Query = new QueryParser(Version.LUCENE_35, field, analyzer).parse(qs)
+
+    searchByQuery(q, maxResults, restrictToTypes, receiver)
+  }
+
+
+
+
+  private def searchByQuery(
+    q: Query,
+    maxResults: Int,
+    restrictToTypes: Boolean,
+    receiver: (SymbolSearchResult => Unit)): Unit = {
+    if (indexReader.isEmpty) {
+      indexReader = Some(IndexReader.open(index))
+    }
     println("Handling query: " + q)
     for (reader <- indexReader) {
       val hitsPerPage = if (maxResults == 0) 100 else maxResults
@@ -473,6 +502,8 @@ trait LuceneIndex {
       }
     }
   }
+
+
 
   def close() {
     for (w <- indexWriter) {

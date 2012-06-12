@@ -70,35 +70,26 @@ trait Indexing extends LuceneIndex {
   protected def getImportSuggestions(typeNames: Iterable[String],
     maxResults: Int = 0): List[List[SymbolSearchResult]] = {
     def suggestions(typeName: String): List[SymbolSearchResult] = {
-      val keywords = splitTypeName(typeName)
+      val keywords = typeName::splitTypeName(typeName)
       val candidates = new HashSet[SymbolSearchResult]
 
-      for (key <- keywords) {
-        search(List(key.toLowerCase),
-	  maxResults, true,
-          (r: SymbolSearchResult) =>
-            r match {
-              case r: TypeSearchResult => {
-                candidates += r
-              }
-              case _ => // nothing
-            })
-      }
+      fuzzySearch(keywords,
+	maxResults, true,
+        (r: SymbolSearchResult) =>
+        r match {
+          case r: TypeSearchResult => candidates += r
+          case _ => // nothing
+        })
 
       // Sort by edit distance of type name primarily, and
       // length of full name secondarily.
-      val candidates2 = candidates.toList.sortWith { (a, b) =>
+      candidates.toList.sortWith { (a, b) =>
         val d1 = editDist(a.localName, typeName)
         val d2 = editDist(b.localName, typeName)
         if (d1 == d2) a.name.length < b.name.length
         else d1 < d2
       }
 
-      if (maxResults == 0) {
-        candidates2
-      } else {
-        candidates2.take(maxResults)
-      }
     }
     typeNames.map(suggestions).toList
   }
