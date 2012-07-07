@@ -44,14 +44,6 @@ trait FormatHandler {
   def pack(): Option[String]
   def version(): Option[String]
 
-  def useMaven(): Boolean
-  def useIvy(): Boolean
-
-  def ivyRuntimeConf(): Option[String]
-  def ivyCompileConf(): Option[String]
-  def ivyTestConf(): Option[String]
-  def ivyFile(): Option[String]
-
   def compileDeps(): List[String]
   def runtimeDeps(): List[String]
   def testDeps(): List[String]
@@ -280,48 +272,6 @@ object ProjectConfig {
     props += version_
     def version() = version_(m)
 
-    lazy val useMaven_ = new BooleanProp(
-      ":use-maven",
-      "Use an existing pom.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
-      None, None)
-    props += useMaven_
-    def useMaven() = useMaven_(m)
-
-    lazy val useIvy_ = new BooleanProp(
-      ":use-ivy",
-      "Use an existing ivy.xml to determine the dependencies for the project. A Maven-style directory structure is assumed.",
-      None, None)
-    props += useIvy_
-    def useIvy() = useIvy_(m)
-
-    lazy val ivyFile_ = new OptionalStringProp(
-      ":ivy-file",
-      "Override the default ivy.xml location.",
-      Some("a filename"), None)
-    props += ivyFile_
-    def ivyFile() = ivyFile_(m)
-
-    lazy val ivyRuntimeConf_ = new OptionalStringProp(
-      ":ivy-runtime-conf",
-      "Specify the names of dependency profiles to be used for runtime scenarios.",
-      None, None)
-    props += ivyRuntimeConf_
-    def ivyRuntimeConf() = ivyRuntimeConf_(m)
-
-    lazy val ivyCompileConf_ = new OptionalStringProp(
-      ":ivy-compile-conf",
-      "Specify the names of dependency profiles to be used for compile scenarios.",
-      None, None)
-    props += ivyCompileConf_
-    def ivyCompileConf() = ivyCompileConf_(m)
-
-    lazy val ivyTestConf_ = new OptionalStringProp(
-      ":ivy-test-conf",
-      "Specify the names of dependency profiles to be used for test scenarios.",
-      None, None)
-    props += ivyTestConf_
-    def ivyTestConf() = ivyTestConf_(m)
-
     lazy val compileDeps_ = new StringListProp(
       ":compile-deps",
       "A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.",
@@ -524,35 +474,6 @@ object ProjectConfig {
     val compileDeps = new mutable.HashSet[CanonFile]
     var target: Option[CanonFile] = None
     var projectName: Option[String] = None
-
-    val externalConf = if (conf.useMaven) Some(Maven)
-    else if (conf.useIvy) Some(Ivy)
-    else None
-
-    for (configurator <- externalConf) {
-      configurator.getConfig(rootDir, conf) match {
-        case Right(ext) => {
-          projectName = ext.projectName
-          println("External Config found project name: " + ext.projectName)
-
-          sourceRoots ++= ext.sourceRoots
-          println("External Config found source roots: " + ext.sourceRoots)
-
-          compileDeps ++= ext.compileDepFiles
-          println("External Config found compile dependencies: " + ext.runtimeDepFiles)
-
-          runtimeDeps ++= ext.runtimeDepFiles
-          println("External Config found runtime dependencies: " + ext.runtimeDepFiles)
-
-          target = ext.target
-          println("External Config found target: " + ext.target)
-        }
-        case Left(except) => {
-          System.err.println("Failed to load external project information. Reason:")
-          except.printStackTrace(System.err)
-        }
-      }
-    }
 
     {
       val deps = maybeFiles(conf.compileJars, rootDir)

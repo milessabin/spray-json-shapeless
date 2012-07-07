@@ -21,7 +21,6 @@ the ENhanced Scala Interaction Mode for Emacs
 - Source Formatting
 - AST-based selection
 - Supports sbt7,10,11
-- Supports Maven,Ivy build descriptions
 - Embedded sbt shell
 - REPL
 - Debug support

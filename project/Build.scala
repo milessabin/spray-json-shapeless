@@ -60,7 +60,7 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++
       Seq(
-	version := "0.9.4",
+	version := "0.9.5",
 	organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoNineVersion),
@@ -74,9 +74,6 @@ object EnsimeBuild extends Build {
 	  Seq(
 	    "com.codahale" % "jerkson_2.9.1" % "0.5.0",
 	    "org.apache.lucene" % "lucene-core" % "3.5.0",
-	    "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
-	    "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
-	    "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
 	    "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
 	    "asm" % "asm" % "3.2",
 	    "asm" % "asm-commons" % "3.2",

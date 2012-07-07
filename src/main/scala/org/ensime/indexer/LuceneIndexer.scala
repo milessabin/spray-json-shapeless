@@ -503,7 +503,6 @@ trait LuceneIndex {
       // boostExacts.setBoost(2)
       // bq.add(boostExacts, Occur.SHOULD)
    }
-
     searchByQuery(bq, maxResults, receiver)
   }
 

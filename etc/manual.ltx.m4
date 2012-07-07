@@ -149,21 +149,9 @@ The keystrokes \emph{C-c C-v s} will launch (or switch to an existing) inferior 
 \textbf{Compile-on-Save}:\\
 If the value of the Emacs-Lisp variablt ensime-sbt-compile-on-save is non-nil ENSIME will invoke the 'compile' task in the inferior sbt process(presuming you have one running) whenever you save a Scala buffer. This option is enabled by default.\\
 
-\subsubsection{Maven}
-
-\noindent
-\textbf{Dependencies}:\\
-Dependencies are discovered using the maven ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer.
-
-\subsubsection{Other + Ivy}
-
-\noindent
-\textbf{Dependencies}:\\
-Dependencies are discovered using the ivy ant task. In debugging dependency resolution issues, it may be helpful to look at the contents of the \emph{*inferior-ensime-server*} buffer. If you've defined ivy configurations that you'd like to map to the compile and runtime modes in ENSIME, see the :ivy-*-conf directives in section \ref{sec:configformat}. If your ivy.xml file is in a non-standard location, see the :ivy-file directive .
 
 \subsubsection{Other}
-
-Your project doesn't fit into one of the given categories? No problem. See section \ref{sec:configformat} for how to specify dependency, source, and class-output locations.
+See section \ref{sec:configformat} for how to specify dependency, source, and class-output locations.
 
 
 \subsection{Config File Format}

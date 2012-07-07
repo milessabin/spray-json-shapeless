@@ -1707,7 +1707,8 @@ trait SwankProtocol extends Protocol {
        * Doc RPC:
        *   swank:debug-value-for-name
        * Summary:
-       *   Get the current binding for the given name.
+       *   Get the local binding for the given name at this point
+       *     in the program's execution.
        * Arguments:
        *   String: The thread-id in which to search.
        *   String: The name to search for.
