@@ -289,6 +289,17 @@ def buildStaticIndex(
     location: String, flags: Int) extends IndexEvent
   case object StopEvent extends IndexEvent
 
+
+  /**
+  * Implement a producer, consumer model for creation of the static index.
+  * We fill the IndexWorkQueue's mailbox as quickly as possibly, reading
+  * classes off the disk (see use of ClassIterator below). IndexWorkQueue
+  * drains the mailbox as fast as it can write to the search index.
+  *
+  * The idea is to allow the reading of class information to proceed at
+  * full speed, spooling work to the mailbox, while the index writing
+  * slowly catches up.
+  */
   class IndexWorkQueue extends Actor {
     def act() {
       loop {
@@ -479,7 +490,7 @@ trait LuceneIndex {
     }
     for (key <- preparedKeys) {
       val term = new Term(field, key)
-      val pq = if (fuzzy) new FuzzyQuery(term, 0.9F) else new PrefixQuery(term)
+      val pq = if (fuzzy) new FuzzyQuery(term, 0.6F) else new PrefixQuery(term)
       /* Must force scoring, otherwise prefix queries use a constant
       score which ignores field length normalization, etc.
       http://stackoverflow.com/questions/3060636/lucene-question-of-score-caculation-with-prefixquery */
