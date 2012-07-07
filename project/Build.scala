@@ -87,7 +87,6 @@ object EnsimeBuild extends Build {
 	stageTask,
 	distTask,
 	releaseTask,
-	publishManualTask,
 
 	{
 	  import org.ensime.sbt.Plugin.Settings.ensimeConfig
@@ -203,20 +202,6 @@ object EnsimeBuild extends Build {
   }
 
 
-  val publishManual = TaskKey[Unit]("publish-manual", "Publish the manual Create the release package.")
-  lazy val publishManualTask:Setting[sbt.Task[Unit]] = publishManual := {
-    log.info("Converting manual to html..")
-    val target = "/tmp/ensime_manual.html"
-    val cwd = Some(new File("etc"))
-    doSh("pdflatex manual.ltx", cwd)!!log
-    doSh("cat manual_head.html > " + target, cwd)!!log
-    doSh("tth -r -u -e2 -Lmanual < manual.ltx >> " + target, cwd)!!(log)
-    doSh("cat manual_tail.html >> " + target, cwd)!!log
-    log.info("Publishing manual to web...")
-    doSh("scp " + target + " www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
-    doSh("scp wire_protocol.png www@aemon.com:~/public/aemon/file_dump/", cwd)!!(log)
-    None
-  }
 
 
 

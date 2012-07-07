@@ -1,16 +1,15 @@
 #!bash
 WARNING="This file was generated using gen_manual.sh. Do not manually edit!"
 MODIFIED_DATE=`date "+%m/%d/%Y"`
-PROTOCOL_DATA_DOCS=`python gen_protocol_docs.py data`
-PROTOCOL_RPC_DOCS=`python gen_protocol_docs.py rpc`
-PROTOCOL_EVENTS_DOCS=`python gen_protocol_docs.py events`
-PROTOCOL_VERSION=`python gen_protocol_docs.py version`
-PROTOCOL_CHANGE_LOG=`python gen_protocol_docs.py changelog`
-cd ..
-CONFIG_DOCS_FILE=/tmp/config_docs.out
-sbt "run-main org.ensime.config.ProjectConfig $CONFIG_DOCS_FILE"
-cd etc
-CONFIG_DOCS=`cat $CONFIG_DOCS_FILE`
+PROTOCOL_SOURCE="../src/main/scala/org/ensime/protocol/SwankProtocol.scala"
+CONFIG_SOURCE="../src/main/scala/org/ensime/config/ProjectConfig.scala"
+PROTOCOL_DATA_DOCS=`python gen_protocol_docs.py data $PROTOCOL_SOURCE`
+PROTOCOL_RPC_DOCS=`python gen_protocol_docs.py rpc $PROTOCOL_SOURCE`
+PROTOCOL_EVENTS_DOCS=`python gen_protocol_docs.py events $PROTOCOL_SOURCE`
+PROTOCOL_VERSION=`python gen_protocol_docs.py version $PROTOCOL_SOURCE`
+PROTOCOL_CHANGE_LOG=`python gen_protocol_docs.py changelog $PROTOCOL_SOURCE`
+CONFIG_DOCS=`python gen_protocol_docs.py property $CONFIG_SOURCE`
+
 
 m4 --define=NO_MANUAL_EDIT_WARNING="$WARNING" \
     --define=PROTOCOL_DATA_DOCUMENTATION="$PROTOCOL_DATA_DOCS" \
@@ -21,3 +20,23 @@ m4 --define=NO_MANUAL_EDIT_WARNING="$WARNING" \
     --define=PROTOCOL_VERSION="$PROTOCOL_VERSION" \
     --define=MODIFIED_DATE="$MODIFIED_DATE" \
     manual.ltx.m4 > manual.ltx
+
+echo "Wrote updated manual.ltx"
+
+echo "Converting manual to html.."
+TMP_TARGET="/tmp/ensime_manual.html"
+pdflatex manual.ltx
+cat manual_head.html > $TMP_TARGET
+tth -r -u -e2 -Lmanual < manual.ltx >> $TMP_TARGET
+cat manual_tail.html >> $TMP_TARGET
+
+PAGES_DIR="../../ensime-docs"
+
+if [ -d "$PAGES_DIR" ]; then
+    echo "Copying content to $PAGES_DIR"
+    cp $TMP_TARGET $PAGES_DIR
+    cp wire_protocol.png $PAGES_DIR
+else
+    echo "$PAGES_DIR does not exist!"
+fi
+

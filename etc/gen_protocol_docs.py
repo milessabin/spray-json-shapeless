@@ -43,7 +43,7 @@ class ChangeLog:
 
     def __init__(self, offset):
         self.offset = offset
-    
+
     def read(self, fin):
         off = self.offset + 2
         self.log = read_until(fin,"*/",off)
@@ -56,7 +56,7 @@ class DataStructure:
 
     def __init__(self, offset):
         self.offset = offset
-    
+
     def read(self, fin):
         off = self.offset + 2
         self.name = read_until(fin,"Summary:",off)
@@ -80,7 +80,7 @@ class Event:
 
     def __init__(self, offset):
         self.offset = offset
-    
+
     def read(self, fin):
         off = self.offset + 2
         self.name = read_until(fin,"Summary:",off)
@@ -102,7 +102,7 @@ class RPCCall:
 
     def __init__(self, offset):
         self.offset = offset
-    
+
     def read(self, fin):
         off = self.offset + 2
         self.name = read_until(fin,"Summary:",off)
@@ -140,13 +140,43 @@ class RPCCall:
         print_vspace("5 mm")
         print "\n"
 
-mode = sys.argv[1]
-assert mode in set(["data", "rpc", "version", "events", "changelog"])
 
-fin = (FileReader(open("../src/main/scala/org/ensime/protocol/SwankProtocol.scala")).lines())
+class Property:
+
+    def __init__(self, offset):
+        self.offset = offset
+
+    def read(self, fin):
+        off = self.offset + 2
+        self.name = read_until(fin,"Summary:",off)
+        self.summary = read_until(fin,"Arguments:",off)
+        self.arguments = read_until(fin,"*/",off)
+
+    def print_latex(self):
+        print_bold(self.name)
+        print_nl()
+
+        print "\\begin{quote}"
+        print self.summary + "\\\\\\\\"
+
+        print_bold("Arguments:")
+        if self.arguments == "None":
+            print " None\\\\\\\\"
+        else:
+            print_verbatim(self.arguments)
+
+        print "\\end{quote}"
+        print_vspace("5 mm")
+        print "\n"
+
+
+mode = sys.argv[1]
+assert mode in set(["data", "rpc", "version", "events", "changelog", "property"])
+
+input_file = sys.argv[2]
+fin = (FileReader(open(input_file)).lines())
 line = next(fin)
 while line:
-
     if mode == "data":
         i = line.find("Doc DataStructure:")
         if i > -1:
@@ -158,6 +188,13 @@ while line:
         i = line.find("Doc RPC:")
         if i > -1:
             handler = RPCCall(i)
+            handler.read(fin)
+            handler.print_latex()
+
+    elif mode == "property":
+        i = line.find("Doc Property:")
+        if i > -1:
+            handler = Property(i)
             handler.read(fin)
             handler.print_latex()
 

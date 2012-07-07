@@ -68,23 +68,9 @@ object ProjectConfig {
 
   trait Prop {
     def keyName: String
-    def desc: String
-    def typeHint: Option[String]
     def synonymKey: Option[String]
     def apply(m: KeyMap): Any
-
-    def defaultTypeHint: String = "NA"
-
     def key: KeywordAtom = KeywordAtom(keyName)
-
-    def manualEntry: String = {
-      val tpe = typeHint.getOrElse(defaultTypeHint)
-      List(
-        """\noindent""",
-        """{\bf """ + keyName + "}  " + tpe + """\\""",
-        desc,
-        """\vspace{1 cm}""").mkString("\n")
-    }
 
     def matchError(s: String) = {
       System.err.println("Configuration Format Error: " + s)
@@ -124,32 +110,27 @@ object ProjectConfig {
     }
   }
 
-  class OptionalStringProp(val keyName: String, val desc: String,
-    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+  class OptionalStringProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Option[String] = getStr(m, keyName).orElse(synonymKey.flatMap(getStr(m, _)))
     override def defaultTypeHint: String = "a string"
   }
 
-  class BooleanProp(val keyName: String, val desc: String,
-    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+  class BooleanProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.map(getBool(m, _)).getOrElse(false)
     override def defaultTypeHint: String = "[t or nil]"
   }
 
-  class StringListProp(val keyName: String, val desc: String,
-    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+  class StringListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): List[String] = getStrList(m, keyName) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
     override def defaultTypeHint: String = "(string*)"
   }
 
-  class RegexListProp(val keyName: String, val desc: String,
-    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+  class RegexListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): List[Regex] = getRegexList(m, keyName) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
     override def defaultTypeHint: String = "(regex*)"
   }
 
-  class SymbolMapProp(val keyName: String, val desc: String,
-    val typeHint: Option[String], val synonymKey: Option[String]) extends Prop {
+  class SymbolMapProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, keyName) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
     override def defaultTypeHint: String = "([keyword value]*)"
   }
@@ -219,228 +200,323 @@ object ProjectConfig {
 
     lazy val props = scala.collection.mutable.ListBuffer[Prop]()
 
-    lazy val rootDir_ = new OptionalStringProp(
-      ":root-dir",
-      "The root directory of your project. This option should be filled in by your editor.",
-      Some("a filename"),
-      None)
+    /**
+     * Doc Property:
+     *   :root-dir
+     * Summary:
+     *   The root directory of your project. This option should be filled in by your editor.
+     * Arguments:
+     *   String: a filename
+     */
+    lazy val rootDir_ = new OptionalStringProp(":root-dir", None)
     props += rootDir_
     def rootDir() = rootDir_(m)
 
-    lazy val name_ = new OptionalStringProp(
-      ":name",
-      "The short identifier for your project. Should be the same that you use when publishing. Will be displayed in the Emacs mode-line when connected to an ENSIME server.",
-      None,
-      Some(":project-name"))
+    /**
+     * Doc Property:
+     *   :name
+     * Summary:
+     *   The short identifier for your project. Should be the same that you use
+     *     when publishing. Will be displayed in the Emacs mode-line when
+     *     connected to an ENSIME server.
+     * Arguments:
+     *   String: name
+     */
+    lazy val name_ = new OptionalStringProp(":name",Some(":project-name"))
     props += name_
     def name() = name_(m)
 
-    lazy val pack_ = new OptionalStringProp(
-      ":package",
-      "The main package for your project. Used by ENSIME to populate the project outline view.",
-      None,
-      Some(":project-package"))
+    /**
+     * Doc Property:
+     *   :package
+     * Summary:
+     *   An optional 'primary' package for your project. Used by ENSIME to populate
+     *     the project outline view.
+     * Arguments:
+     *   String: package name
+     */
+    lazy val pack_ = new OptionalStringProp(":package", Some(":project-package"))
     props += pack_
     def pack() = pack_(m)
 
-    lazy val moduleName_ = new OptionalStringProp(
-      ":module-name",
-      "The canonical module-name of this project.",
-      None, None)
+    /**
+     * Doc Property:
+     *   :module-name
+     * Summary:
+     *   The canonical module-name of this project.
+     * Arguments:
+     *   String: name
+     */
+    lazy val moduleName_ = new OptionalStringProp(":module-name", None)
     props += moduleName_
     def moduleName() = moduleName_(m)
 
-    lazy val activeSubproject_ = new OptionalStringProp(
-      ":active-subproject",
-      "The module-name of the subproject which is currently selected.",
-      None, None)
+    /**
+     * Doc Property:
+     *   :active-subproject
+     * Summary:
+     *   The module-name of the subproject which is currently selected.
+     * Arguments:
+     *   String: module name
+     */
+    lazy val activeSubproject_ = new OptionalStringProp(":active-subproject", None)
     props += activeSubproject_
     def activeSubproject() = activeSubproject_(m)
 
-    lazy val dependsOnModules_ = new StringListProp(
-      ":depends-on-modules",
-      "A list of module-names on which this project depends.",
-      Some("(module-name*)"),
-      None)
+    /**
+     * Doc Property:
+     *   :name
+     * Summary:
+     *   A list of module-names on which this project depends.
+     * Arguments:
+     *   List of Strings: module names
+     */
+    lazy val dependsOnModules_ = new StringListProp(":depends-on-modules", None)
     props += dependsOnModules_
     def dependsOnModules() = dependsOnModules_(m)
 
-    lazy val version_ = new OptionalStringProp(
-      ":version",
-      "The current, working version of your project.",
-      None, None)
+    /**
+     * Doc Property:
+     *   :version
+     * Summary:
+     *   The current, working version of your project.
+     * Arguments:
+     *   String: version number
+     */
+    lazy val version_ = new OptionalStringProp(":version", None)
     props += version_
     def version() = version_(m)
 
-    lazy val compileDeps_ = new StringListProp(
-      ":compile-deps",
-      "A list of jar files and class directories to include on the compilation classpath. No recursive expansion will be done.",
-      Some("([directory or filename]*)"),
-      None)
+    /**
+     * Doc Property:
+     *   :compile-deps
+     * Summary:
+     *   A list of jar files and class directories to include on the compilation
+     *     classpath. No recursive expansion will be done.
+     * Arguments:
+     *   List of Strings: file and directory names
+     */
+    lazy val compileDeps_ = new StringListProp(":compile-deps", None)
     props += compileDeps_
     def compileDeps() = compileDeps_(m)
 
-    lazy val compileJars_ = new StringListProp(
-      ":compile-jars",
-      "A list of jar files and directories to search for jar files to include on the compilation classpath.",
-      Some("([directory or filename]*)"),
-      None)
+
+    /**
+     * Doc Property:
+     *   :compile-jars
+     * Summary:
+     *   A list of jar files and directories to search for jar files to include
+     *     on the compilation classpath. Directories will be searched recursively.
+     * Arguments:
+     *   List of Strings: file and directory names
+     */
+    lazy val compileJars_ = new StringListProp(":compile-jars", None)
     props += compileJars_
     def compileJars() = compileJars_(m)
 
-    lazy val runtimeDeps_ = new StringListProp(
-      ":runtime-deps",
-      "A list of jar files and class directories to include on the runtime classpath. No recursive expansion will be done.",
-      Some("([directory or filename]*)"),
-      None)
+    /**
+     * Doc Property:
+     *   :runtime-deps
+     * Summary:
+     *   A list of jar files and class directories to include on the runtime
+     *     classpath. No recursive expansion will be done.
+     * Arguments:
+     *   List of Strings: file and directory names
+     */
+    lazy val runtimeDeps_ = new StringListProp(":runtime-deps", None)
     props += runtimeDeps_
     def runtimeDeps() = runtimeDeps_(m)
 
-    lazy val runtimeJars_ = new StringListProp(
-      ":runtime-jars",
-      "A list of jar files and directories to search for jar files to include on the runtime classpath.",
-      Some("([directory or filename]*)"),
-      None)
+    /**
+     * Doc Property:
+     *   :runtime-jars
+     * Summary:
+     *   A list of jar files and directories to search for jar files to include
+     *     on the runtime classpath. Directories will be searched recursively.
+     * Arguments:
+     *   List of Strings: file and directory names
+     */
+    lazy val runtimeJars_ = new StringListProp(":runtime-jars", None)
     props += runtimeJars_
     def runtimeJars() = runtimeJars_(m)
 
-    lazy val testDeps_ = new StringListProp(
-      ":test-deps",
-      "A list of jar files and class directories to include on the test classpath. No recursive expansion will be done.",
-      Some("([directory or filename]*)"),
-      None)
+    /**
+     * Doc Property:
+     *   :test-deps
+     * Summary:
+     *   A list of jar files and class directories to include on the test
+     *     classpath. No recursive expansion will be done.
+     * Arguments:
+     *   List of Strings: file and directory names
+     */
+    lazy val testDeps_ = new StringListProp(":test-deps", None)
     props += testDeps_
     def testDeps() = testDeps_(m)
 
-    lazy val sourceRoots_ = new StringListProp(
-      ":source-roots",
-      "A list of directories in which to start searching for source files.",
-      Some("(directory*)"),
-      Some(":sources"))
+    /**
+     * Doc Property:
+     *   :source-roots
+     * Summary:
+     *   A list of directories in which to start searching for source files.
+     * Arguments:
+     *   List of Strings: directory names
+     */
+    lazy val sourceRoots_ = new StringListProp(":source-roots", Some(":sources"))
 
     props += sourceRoots_
     def sourceRoots() = sourceRoots_(m)
 
-    lazy val target_ = new OptionalStringProp(
-      ":target",
-      "The root of the class output directory.",
-      Some("filename"),
-      None)
+    /**
+     * Doc Property:
+     *   :target
+     * Summary:
+     *   The root of the class output directory.
+     * Arguments:
+     *   String: directory
+     */
+    lazy val target_ = new OptionalStringProp(":target", None)
     props += target_
     def target() = target_(m)
 
-    lazy val disableIndexOnStartup_ = new BooleanProp(
-      ":disable-index-on-startup",
-      "Disable the classpath indexing process that happens at startup. This will speed up the loading process significantly, at the cost of breaking some functionality.",
-      None, None)
+    /**
+     * Doc Property:
+     *   :disable-index-on-startup
+     * Summary:
+     *   Disable the classpath indexing process that happens at startup.
+     *     This will speed up the loading process significantly, at the
+     *     cost of breaking some functionality.
+     * Arguments:
+     *   Boolean: t or nil
+     */
+    lazy val disableIndexOnStartup_ = new BooleanProp(":disable-index-on-startup", None)
     props += disableIndexOnStartup_
     def disableIndexOnStartup() = disableIndexOnStartup_(m)
 
-    lazy val onlyIncludeInIndex_ = new RegexListProp(
-      ":only-include-in-index",
-      """Only classes that match one of the given regular expressions will be added to the index. If this is omitted, all classes will be added. This can be used to reduce memory usage and speed up loading. For example:
-      \begin{mylisting}
-      \begin{verbatim}:only-include-in-index ("my\\.project\\.packages\\.\*" "important\\.dependency\\..\*")\end{verbatim}
-      \end{mylisting}
-      This option can be used in conjunction with 'exclude-from-index' - the result when both are given is that the exclusion expressions are applied to the names that pass the inclusion filter.""",
-      None, None)
+    /**
+     * Doc Property:
+     *   :only-include-in-index
+     * Summary:
+     *   Only classes that match one of the given regular expressions will be
+     *     added to the index. If this is omitted, all classes will be added.
+     *     This can be used to reduce memory usage and speed up loading.
+     *     For example:
+     *     \begin{mylisting}
+     *     \begin{verbatim}:only-include-in-index ("my\\.project\\.packages\\.\*" "important\\.dependency\\..\*")\end{verbatim}
+     *     \end{mylisting}
+     *     This option can be used in conjunction with 'exclude-from-index' -
+     *     the result when both are given is that the exclusion expressions are
+     *     applied to the names that pass the inclusion filter.
+     * Arguments:
+     *   List of Strings: regular expresions
+     */
+    lazy val onlyIncludeInIndex_ = new RegexListProp(":only-include-in-index", None)
     props += onlyIncludeInIndex_
     def onlyIncludeInIndex() = onlyIncludeInIndex_(m)
 
-    lazy val excludeFromIndex_ = new RegexListProp(
-      ":exclude-from-index",
-      """Classes that match one of the excluded regular expressions will not be added to the index. This can be used to reduce memory usage and speed up loading. For example:
-      \begin{mylisting}
-      \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
-      \end{mylisting}
-      This option can be used in conjunction with 'only-include-in-index' - the result when both are given is that the exclusion expressions are applied to the classes that pass the inclusion filter.
-      """, None, None)
+    /**
+     * Doc Property:
+     *   :exclude-from-index
+     * Summary:
+     *   Classes that match one of the given regular expressions will not be
+     *     added to the index. This can be used to reduce memory usage and
+     *     speed up loading.
+     *     For example:
+     *     \begin{mylisting}
+     *	   \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
+     *	   \end{mylisting}
+     *     This option can be used in conjunction with 'only-include-in-index' -
+     *     the result when both are given is that the exclusion expressions are
+     *     applied to the names that pass the inclusion filter.
+     * Arguments:
+     *   List of Strings: regular expresions
+     */
+    lazy val excludeFromIndex_ = new RegexListProp(":exclude-from-index", None)
     props += excludeFromIndex_
     def excludeFromIndex() = excludeFromIndex_(m)
 
-    lazy val extraCompilerArgs_ = new StringListProp(
-      ":compiler-args",
-      """Specify arguments that should be passed to ENSIME's internal compiler. For example, to enable two warnings in the compiler, you might use:
-      \begin{mylisting}
-      \begin{verbatim}:compiler-args ("-Ywarn-dead-code" "-Ywarn-shadowing")\end{verbatim}
-      \end{mylisting}""", None, None)
+    /**
+     * Doc Property:
+     *   :compiler-args
+     * Summary:
+     *   Specify arguments that should be passed to ENSIME's internal
+     *     presentation compiler. Warning: the presentation compiler
+     *     understands a subset of the batch compiler's arguments.
+     * Arguments:
+     *   List of Strings: arguments
+     */
+    lazy val extraCompilerArgs_ = new StringListProp(":compiler-args", None)
     props += extraCompilerArgs_
     def extraCompilerArgs() = extraCompilerArgs_(m)
 
-    lazy val extraBuilderArgs_ = new StringListProp(
-      ":builder-args",
-      """Specify arguments that should be passed to ENSIME's internal builder.""",
-      None, None)
+
+    /**
+     * Doc Property:
+     *   :builder-args
+     * Summary:
+     *   Specify arguments that should be passed to ENSIME's internal
+     *     incrmental compiler.
+     * Arguments:
+     *   List of Strings: arguments
+     */
+    lazy val extraBuilderArgs_ = new StringListProp(":builder-args", None)
     props += extraBuilderArgs_
     def extraBuilderArgs() = extraBuilderArgs_(m)
 
-    lazy val formatPrefs_ = new SymbolMapProp(
-      ":formatting-prefs",
-      """Customize the behavior of the source formatter. All Scalariform preferences are supported:\\
-      \vspace{1 cm}
-      \begin{tabular}{|l|l|}
-      \hline
-      {\bf :alignParameters} & t or nil  \\ \hline
-      {\bf :alignSingleLineCaseStatements} & t or nil  \\ \hline
-      {\bf :alignSingleLineCaseStatements\_maxArrowIndent} & 1-100  \\ \hline
-      {\bf :compactStringConcatenation} & t or nil  \\ \hline
-      {\bf :doubleIndentClassDeclaration} & t or nil  \\ \hline
-      {\bf :indentLocalDefs} & t or nil  \\ \hline
-      {\bf :indentPackageBlocks} & t or nil  \\ \hline
-      {\bf :indentSpaces} & 1-10  \\ \hline
-      {\bf :indentWithTabs} & t or nil  \\ \hline
-      {\bf :multilineScaladocCommentsStartOnFirstLine} & t or nil  \\ \hline
-      {\bf :preserveDanglingCloseParenthesis} & t or nil \\ \hline
-      {\bf :preserveSpaceBeforeArguments} & t or nil  \\ \hline
-      {\bf :rewriteArrowSymbols} & t or nil  \\ \hline
-      {\bf :spaceBeforeColon} & t or nil  \\ \hline
-      {\bf :spaceInsideBrackets} & t or nil  \\ \hline
-      {\bf :spaceInsideParentheses} & t or nil  \\ \hline
-      {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
-      \end{tabular}
-      """,
-      None, None)
+    /**
+     * Doc Property:
+     *   :formatting-prefs
+     * Summary:
+     *   Customize the behavior of the source formatter. All Scalariform
+     *     preferences are supported:
+     *	  \vspace{1 cm}
+     *	  \begin{tabular}{|l|l|}
+     *	  \hline
+     *	  {\bf :alignParameters} & t or nil  \\ \hline
+     *	  {\bf :alignSingleLineCaseStatements} & t or nil  \\ \hline
+     *	  {\bf :alignSingleLineCaseStatements\_maxArrowIndent} & 1-100  \\ \hline
+     *	  {\bf :compactStringConcatenation} & t or nil  \\ \hline
+     *	  {\bf :doubleIndentClassDeclaration} & t or nil  \\ \hline
+     *	  {\bf :indentLocalDefs} & t or nil  \\ \hline
+     *	  {\bf :indentPackageBlocks} & t or nil  \\ \hline
+     *	  {\bf :indentSpaces} & 1-10  \\ \hline
+     *	  {\bf :indentWithTabs} & t or nil  \\ \hline
+     *	  {\bf :multilineScaladocCommentsStartOnFirstLine} & t or nil  \\ \hline
+     *	  {\bf :preserveDanglingCloseParenthesis} & t or nil \\ \hline
+     *	  {\bf :preserveSpaceBeforeArguments} & t or nil  \\ \hline
+     *	  {\bf :rewriteArrowSymbols} & t or nil  \\ \hline
+     *	  {\bf :spaceBeforeColon} & t or nil  \\ \hline
+     *	  {\bf :spaceInsideBrackets} & t or nil  \\ \hline
+     *	  {\bf :spaceInsideParentheses} & t or nil  \\ \hline
+     *	  {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
+     *	  \end{tabular}
+     * Arguments:
+     *   List of keyword, string pairs: preferences
+     */
+    lazy val formatPrefs_ = new SymbolMapProp(":formatting-prefs", None)
     props += formatPrefs_
     def formatPrefs() = formatPrefs_(m)
 
-
-    private def simpleMerge(m1:KeyMap, m2:KeyMap):KeyMap = {
+    private def simpleMerge(m1: KeyMap, m2: KeyMap): KeyMap = {
       val keys = Set() ++ m1.keys ++ m2.keys
-      val merged: Map[KeywordAtom, SExp] = keys.map{ key =>
-	(m1.get(key), m2.get(key)) match{
-	  case (Some(s1),None) => (key, s1)
-	  case (None,Some(s2)) => (key, s2)
-	  case (Some(SExpList(items1)), 
-	    Some(SExpList(items2))) => (key, SExpList(items1 ++ items2))
-	  case (Some(s1:SExp),Some(s2:SExp)) => (key, s2)
-	  case _ => (key, NilAtom())
-	}
+      val merged: Map[KeywordAtom, SExp] = keys.map { key =>
+        (m1.get(key), m2.get(key)) match {
+          case (Some(s1), None) => (key, s1)
+          case (None, Some(s2)) => (key, s2)
+          case (Some(SExpList(items1)),
+            Some(SExpList(items2))) => (key, SExpList(items1 ++ items2))
+          case (Some(s1: SExp), Some(s2: SExp)) => (key, s2)
+          case _ => (key, NilAtom())
+        }
       }.toMap
-      merged 
+      merged
     }
 
     private lazy val m: KeyMap = {
       val mainproj = config.toKeywordMap
       val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
-      simpleMerge(mainproj,subproj)
+      simpleMerge(mainproj, subproj)
     }
 
-  }
-
-  def main(args: Array[String]) {
-    import java.io._
-    val out = new OutputStreamWriter(new FileOutputStream(args(0)))
-    try {
-      val o = new SExpFormatHandler(SExpList(List())) {}
-      for (prop <- o.props) {
-        out.write("\n\n")
-        out.write(prop.manualEntry)
-      }
-    } catch {
-      case e: Exception => e.printStackTrace()
-    } finally {
-      out.close()
-    }
   }
 
   /**
