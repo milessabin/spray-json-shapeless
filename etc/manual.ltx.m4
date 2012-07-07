@@ -224,23 +224,27 @@ First, ensure that you've set the :target directive in your config file. The :ta
 
 \subsection{Debugging}
 
-Debugging support in ENSIME is provided by running an instance of jdb under Emacs, sending it commands, and parsing its output. As such, in addition to the graphical tools provided by ENSIME, you also have full access to the jdb command line.\\
-
-\noindent
-\textbf{Launching the Debugger}:\\
-First, ensure that you've set the :target directive in your config file. The debugger needs these classes to run your application. Then, type \emph{C-c C-d d} to launch the embedded Scala Debugger. \\
+Debugging support in ENSIME is a work in progress. Feedback is welcome.
 
 \noindent
 \textbf{Break Points}:\\
-With your cursor on a line of Scala source, type \emph{C-c C-d b} to set a breakpoint. Type \emph{C-c C-d u} to remove the breakpoint.\\
+With your cursor on a line of Scala source, type \emph{C-c C-d b} to set a breakpoint. Type \emph{C-c C-d u} to remove the breakpoint. Note that breakpoints can be added and removed outside of any debug session. Breakpoints are not, however, persisted between runs of ENSIME.\\
+
+\noindent
+\textbf{Launching the Debugger}:\\
+Type \emph{C-c C-d r} to launch the embedded Scala Debugger. ENSIME will prompt you for the class (with 'main' function) that you want to run (tab-completion works here), and then launch the debug VM. The first breakpoint your program hits will be highlighted and centered in Emacs.\\
 
 \noindent
 \textbf{Run Control}:\\
-Once you've set your breakpoints, type \emph{C-c C-d r} to run the program. Type \emph{C-c C-d c} to continue after hitting a breakpoint, or \emph{C-c C-d s} to step into the current line, or \emph{C-c C-d n} to step to the next line.\\
+Type \emph{C-c C-d c} to continue after hitting a breakpoint, or \emph{C-c C-d s} to step into the current line, or \emph{C-c C-d n} to step to the next line, or \emph{C-c C-d o} to step out of the current function.\\
 
 \noindent
 \textbf{Value Inspection}:\\
-When stopped at a breakpoint, switch to the debug buffer \emph{*ensime-db*}. Type 'locals' ENTER to see a list of all the local variables in the current runtime context. Use 'dump X'' to dump the fields of an object X. Or 'print X' to print the value of an arbitrary expression X. To get help on more jdb commands, type 'help'.
+When execution is paused, with your cursor over a local variable, type \emph{C-c C-d i} to inspect the runtime value of a variable.
+
+\noindent
+\textbf{Show Backtrace}:\\
+When execution is paused, type \emph{C-c C-d t} to display the current backtrace.
 
 \subsection{Refactoring}
 
