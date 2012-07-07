@@ -134,7 +134,7 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
                   e + " :\n" +
                   e.getStackTraceString)
 
-                project.sendRPCError(ErrExceptionInBuilder, 
+                project.sendRPCError(ErrExceptionInBuilder,
 		  Some("Error occurred in incremental builder. Check the server log."), 
 		  callId)
               }

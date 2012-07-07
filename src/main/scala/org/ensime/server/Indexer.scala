@@ -73,8 +73,8 @@ trait Indexing extends LuceneIndex {
       val keywords = typeName::splitTypeName(typeName)
       val candidates = new HashSet[SymbolSearchResult]
 
-      fuzzySearch(keywords,
-	maxResults, true,
+      search(keywords,
+	maxResults, true, true,
         (r: SymbolSearchResult) =>
         r match {
           case r: TypeSearchResult => candidates += r
@@ -95,16 +95,16 @@ trait Indexing extends LuceneIndex {
   }
 
   private val BruteForceThresh = 1000
-  protected def findTopLevelSyms(keywords: Iterable[String],
-    maxResults: Int = 0): List[SymbolSearchResult] = {
-    var resultSet = new HashSet[SymbolSearchResult]
-    search(keywords, maxResults, false,
-      { (r: SymbolSearchResult) =>
-        resultSet += r
+  protected def keywordSearch(
+    keywords: Iterable[String],
+    maxResults: Int = 0,
+    restrictToTypes: Boolean = false): List[SymbolSearchResult] = {
+    var results = new ListBuffer[SymbolSearchResult]
+    search(keywords, maxResults, restrictToTypes, false,
+      {(r: SymbolSearchResult) =>
+        results += r
       })
-    resultSet.toList.sortWith {
-      (a, b) => a.name.length < b.name.length
-    }
+    results.toList
   }
 
   def onIndexingComplete()
@@ -168,9 +168,8 @@ class Indexer(
             syms.foreach { s => remove(s) }
           }
           case TypeCompletionsReq(prefix: String, maxResults: Int) => {
-            val suggestions = getImportSuggestions(
-              List(prefix), maxResults).flatten
-            sender ! suggestions
+            val suggestions = keywordSearch(List(prefix), maxResults, true)
+	    sender ! suggestions
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
@@ -185,7 +184,7 @@ class Indexer(
                   maxResults: Int) => {
                   println("Received keywords: " + keywords)
                   val suggestions = SymbolSearchResults(
-                    findTopLevelSyms(keywords, maxResults))
+                    keywordSearch(keywords, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
               }

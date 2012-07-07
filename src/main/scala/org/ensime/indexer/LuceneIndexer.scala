@@ -38,11 +38,19 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.CorruptIndexException
+import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DefaultSimilarity
+import org.apache.lucene.search.FuzzyQuery
 import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.MultiTermQuery
+import org.apache.lucene.search.PrefixQuery
+import org.apache.lucene.search.ScoringRewrite
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TopScoreDocCollector
@@ -83,8 +91,14 @@ import com.codahale.jerkson.Json
 object LuceneIndex extends StringSimilarity {
   val KeyIndexVersion = "indexVersion"
   val KeyFileHashes = "fileHashes"
-  val IndexVersion: Int = 4
+  val IndexVersion: Int = 5
   val DirName = ".ensime_lucene"
+
+  val Similarity = new DefaultSimilarity {
+    override def computeNorm(field: String, state: FieldInvertState):Float = {
+      state.getBoost() * (1F / (state.getLength()))
+    }
+  }
 
   def splitTypeName(nm: String): List[String] = {
     val keywords = new ListBuffer[String]()
@@ -354,7 +368,8 @@ trait LuceneIndex {
 
   private val analyzer = new SimpleAnalyzer(Version.LUCENE_35)
   private val config: IndexWriterConfig = new IndexWriterConfig(
-    Version.LUCENE_35, analyzer);
+    Version.LUCENE_35, analyzer)
+  config.setSimilarity(Similarity)
   private var index: FSDirectory = null
   private var indexWriter: Option[IndexWriter] = None
   private var indexReader: Option[IndexReader] = None
@@ -451,39 +466,39 @@ trait LuceneIndex {
     keys: Iterable[String],
     maxResults: Int,
     restrictToTypes: Boolean,
+    fuzzy: Boolean,
     receiver: (SymbolSearchResult => Unit)): Unit = {
 
-    val validatedKeys = keys.filter(!_.isEmpty)
-    val qs = (validatedKeys.map(_ + "*").mkString(" AND ") +
-      (if (restrictToTypes) { " docType:type" } else { "" }))
+    val preparedKeys = keys.filter(!_.isEmpty).map(_.toLowerCase)
     val field = if (restrictToTypes) "localNameTags" else "tags"
-    val q:Query = new QueryParser(Version.LUCENE_35, field, analyzer).parse(qs)
 
-    searchByQuery(q, maxResults, restrictToTypes, receiver)
+    val bq = new BooleanQuery()
+    if (restrictToTypes) {
+      bq.add(new TermQuery(new Term("docType", "type")),
+	BooleanClause.Occur.MUST)
+    }
+    for (key <- preparedKeys) {
+      val term = new Term(field, key)
+      val pq = if (fuzzy) new FuzzyQuery(term, 0.9F) else new PrefixQuery(term)
+      /* Must force scoring, otherwise prefix queries use a constant
+      score which ignores field length normalization, etc.
+      http://stackoverflow.com/questions/3060636/lucene-question-of-score-caculation-with-prefixquery */
+      pq.setRewriteMethod(ScoringRewrite.SCORING_BOOLEAN_QUERY_REWRITE)
+      import BooleanClause._
+      val operator = if (fuzzy) Occur.SHOULD else Occur.MUST
+      bq.add(pq, operator)
+
+      // val boostExacts = new TermQuery(term)
+      // boostExacts.setBoost(2)
+      // bq.add(boostExacts, Occur.SHOULD)
+   }
+
+    searchByQuery(bq, maxResults, receiver)
   }
-
-  def fuzzySearch(
-    keys: Iterable[String],
-    maxResults: Int,
-    restrictToTypes: Boolean,
-    receiver: (SymbolSearchResult => Unit)): Unit = {
-
-    val validatedKeys = keys.filter(!_.isEmpty)
-    val qs = (validatedKeys.map(_ + "~").mkString(" ") +
-      (if (restrictToTypes) { " docType:type" } else { "" }))
-    val field = if (restrictToTypes) "localNameTags" else "tags"
-    val q:Query = new QueryParser(Version.LUCENE_35, field, analyzer).parse(qs)
-
-    searchByQuery(q, maxResults, restrictToTypes, receiver)
-  }
-
-
-
 
   private def searchByQuery(
     q: Query,
     maxResults: Int,
-    restrictToTypes: Boolean,
     receiver: (SymbolSearchResult => Unit)): Unit = {
     if (indexReader.isEmpty) {
       indexReader = Some(IndexReader.open(index))
@@ -492,13 +507,13 @@ trait LuceneIndex {
     for (reader <- indexReader) {
       val hitsPerPage = if (maxResults == 0) 100 else maxResults
       val searcher = new IndexSearcher(reader)
-      val collector = TopScoreDocCollector.create(hitsPerPage, true)
-      searcher.search(q, collector)
-      val hits = collector.topDocs().scoreDocs
-      for (hit <- hits) {
-        val docId = hit.doc
-        val doc = searcher.doc(docId)
-        receiver(buildSym(doc))
+      searcher.setSimilarity(LuceneIndex.Similarity)
+      val hits = searcher.search(q, maxResults)
+      for (hit <- hits.scoreDocs) {
+	val docId = hit.doc
+	val doc = searcher.doc(docId)
+	receiver(buildSym(doc))
+	//println(hit.score + "   " + doc.get("name"))
       }
     }
   }
