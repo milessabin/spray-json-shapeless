@@ -30,7 +30,11 @@ cat manual_head.html > $TMP_TARGET
 tth -r -u -e2 -Lmanual < manual.ltx >> $TMP_TARGET
 cat manual_tail.html >> $TMP_TARGET
 
-PAGES_DIR="../../ensime-docs"
+
+
+PAGES_DIR="tmp_html_root"
+rm -rf $PAGES_DIR
+git clone aemoncannon@github.com:ensime.git -b gh-pages $PAGES_DIR
 
 if [ -d "$PAGES_DIR" ]; then
     echo "Copying content to $PAGES_DIR"
@@ -40,4 +44,11 @@ if [ -d "$PAGES_DIR" ]; then
 else
     echo "$PAGES_DIR does not exist!"
 fi
+
+cd $PAGES_DIR
+git add .
+git commit -a -m "gen_manual.sh: Add latest changes."
+git push origin gh-pages
+cd ..
+rm -rf $PAGES_DIR
 
