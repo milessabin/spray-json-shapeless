@@ -30,25 +30,31 @@ cat manual_head.html > $TMP_TARGET
 tth -r -u -e2 -Lmanual < manual.ltx >> $TMP_TARGET
 cat manual_tail.html >> $TMP_TARGET
 
+ORIGIN="https://github.com/aemoncannon/ensime.git"
+PAGES_BRANCH="gh-pages"
 
+rm -rf $PAGES_BRANCH
+mkdir $PAGES_BRANCH
 
-PAGES_DIR="tmp_html_root"
-rm -rf $PAGES_DIR
-git clone aemoncannon@github.com:ensime.git -b gh-pages $PAGES_DIR
+echo "Getting latest $PAGES_BRANCH"
+cd $PAGES_BRANCH
+git init
+git remote add -t $PAGES_BRANCH -f origin $ORIGIN
+git checkout $PAGES_BRANCH
+cd ..
 
-if [ -d "$PAGES_DIR" ]; then
-    echo "Copying content to $PAGES_DIR"
-    cp $TMP_TARGET $PAGES_DIR/index.html
-    cp wire_protocol.png $PAGES_DIR
-    cp manual.pdf $PAGES_DIR
-else
-    echo "$PAGES_DIR does not exist!"
-fi
+echo "Copying content to $PAGES_BRANCH"
+cp $TMP_TARGET $PAGES_BRANCH/index.html
+cp wire_protocol.png $PAGES_BRANCH
+cp manual.pdf $PAGES_BRANCH
 
-cd $PAGES_DIR
+echo "Committing modifications..."
+cd $PAGES_BRANCH
 git add .
 git commit -a -m "gen_manual.sh: Add latest changes."
 git push origin gh-pages
 cd ..
-rm -rf $PAGES_DIR
+rm -rf $PAGES_BRANCH
+
+
 
