@@ -69,6 +69,7 @@ trait SwankProtocol extends Protocol {
     println("Writing: " + dataString)
     out.write(header)
     out.write(data)
+    
     out.flush()
   }
 
