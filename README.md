@@ -4,6 +4,7 @@ the ENhanced Scala Interaction Mode for Emacs
 # Links
 - [ Downloads ](https://github.com/aemoncannon/ensime/downloads)
 - [ Manual ](http://aemoncannon.github.com/ensime/index.html)
+- [ Manual as PDF ](http://aemoncannon.github.com/ensime/manual.pdf)
 - [ Discussion Group ](http://groups.google.com/group/ensime?hl=en)
 
 

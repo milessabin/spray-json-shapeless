@@ -34,8 +34,9 @@ PAGES_DIR="../../ensime-docs"
 
 if [ -d "$PAGES_DIR" ]; then
     echo "Copying content to $PAGES_DIR"
-    cp $TMP_TARGET $PAGES_DIR
+    cp $TMP_TARGET $PAGES_DIR/index.html
     cp wire_protocol.png $PAGES_DIR
+    cp manual.pdf $PAGES_DIR
 else
     echo "$PAGES_DIR does not exist!"
 fi
