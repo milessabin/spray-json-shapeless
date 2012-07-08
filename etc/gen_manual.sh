@@ -10,7 +10,6 @@ PROTOCOL_VERSION=`python gen_protocol_docs.py version $PROTOCOL_SOURCE`
 PROTOCOL_CHANGE_LOG=`python gen_protocol_docs.py changelog $PROTOCOL_SOURCE`
 CONFIG_DOCS=`python gen_protocol_docs.py property $CONFIG_SOURCE`
 
-
 m4 --define=NO_MANUAL_EDIT_WARNING="$WARNING" \
     --define=PROTOCOL_DATA_DOCUMENTATION="$PROTOCOL_DATA_DOCS" \
     --define=PROTOCOL_RPC_DOCUMENTATION="$PROTOCOL_RPC_DOCS" \
