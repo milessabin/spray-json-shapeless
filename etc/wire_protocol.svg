@@ -13,8 +13,11 @@
    height="1052.3622047"
    id="svg5115"
    version="1.1"
-   inkscape:version="0.48.1 r9760"
-   sodipodi:docname="wire_protocol.svg">
+   inkscape:version="0.48.2 r9819"
+   sodipodi:docname="wire_protocol.svg"
+   inkscape:export-filename="/Users/aemon/projects/ensime/etc/wire_protocol.png"
+   inkscape:export-xdpi="103.1"
+   inkscape:export-ydpi="103.1">
   <defs
      id="defs5117" />
   <sodipodi:namedview
@@ -31,9 +34,9 @@
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1680"
-     inkscape:window-height="969"
+     inkscape:window-height="1002"
      inkscape:window-x="0"
-     inkscape:window-y="25"
+     inkscape:window-y="22"
      inkscape:window-maximized="1" />
   <metadata
      id="metadata5120">
@@ -204,7 +207,7 @@
            x="85"
            y="19.505039" /></flowRegion><flowPara
          id="flowPara5660"
-         style="font-size:10px;line-height:124.00000095%">17 ASCII bytes</flowPara></flowRoot>    <flowRoot
+         style="font-size:10px;line-height:124.00000095%">17 bytes</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot5662"
        style="font-size:12px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:9.09000015px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:arial;-inkscape-font-specification:arial"
@@ -302,7 +305,7 @@
            height="16.157764"
            x="96.244072"
            y="49.1758" /></flowRegion><flowPara
-         id="flowPara5814"></flowPara></flowRoot>    <flowRoot
+         id="flowPara5814" /></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot5816"
        style="font-size:12px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:7.65000105px;word-spacing:-0.03px;fill:#000000;fill-opacity:1;stroke:none;font-family:arial;-inkscape-font-specification:arial"

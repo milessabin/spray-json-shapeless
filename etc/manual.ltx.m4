@@ -561,9 +561,9 @@ Emacs starts the ENSIME server using the server.sh script in the \emph{bin} fold
 
 
 \subsection{The Swank Protocol}
-The Emacs ENSIME client communicates with the server using the Swank protocol. This protocol was originally developed for the SLIME lisp environment for Emacs. A socket connection is maintained for the duration of the session. The client and server exchange s-expressions. At the wire level, these messages are encoded as sequences of ASCII bytes. Each message is prepended with a fixed-size header denoting its length.
+The Emacs ENSIME client communicates with the server using the Swank protocol. This protocol was originally developed for the SLIME lisp environment for Emacs. A socket connection is maintained for the duration of the session. The client and server exchange s-expressions. At the wire level, these messages are encoded as sequences of bytes. Each message is prepended with a fixed-size header denoting its length.
 
-To send an s-expression, determine its ASCII length and then encode that integer as a padded six-digit hexadecimal value.  Write this value to the output socket first, then followed by the ASCII form of the s-expression.  On the receiving side, the reader loop should read six ASCII characters into a buffer and convert that into an integer, then read that number of ASCII characters from the socket, parsing the result into an s-expression.\\
+To send an s-expression, first encode the s-expression as a UTF-8 string. Determine the string's length in bytes and encode that length as a padded six-digit hexadecimal string.  Write this value (which will always be six bytes) to the output socket first, then write the UTF-8 encoded s-expression.  On the receiving side, the reader loop should read six bytes into a buffer and convert that into an integer, then read that number of bytes from the socket. The result is a UTF-8 string representation of the s-expression. This s-expression should then be parsed using a suitable lisp reader.\\
 
 \vspace{5 mm} 
 
