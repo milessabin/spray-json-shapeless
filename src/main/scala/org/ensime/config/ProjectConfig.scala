@@ -112,27 +112,27 @@ object ProjectConfig {
 
   class OptionalStringProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Option[String] = getStr(m, keyName).orElse(synonymKey.flatMap(getStr(m, _)))
-    override def defaultTypeHint: String = "a string"
+    def defaultTypeHint: String = "a string"
   }
 
   class BooleanProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.map(getBool(m, _)).getOrElse(false)
-    override def defaultTypeHint: String = "[t or nil]"
+    def defaultTypeHint: String = "[t or nil]"
   }
 
   class StringListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): List[String] = getStrList(m, keyName) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
-    override def defaultTypeHint: String = "(string*)"
+    def defaultTypeHint: String = "(string*)"
   }
 
   class RegexListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): List[Regex] = getRegexList(m, keyName) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
-    override def defaultTypeHint: String = "(regex*)"
+    def defaultTypeHint: String = "(regex*)"
   }
 
   class SymbolMapProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, keyName) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
-    override def defaultTypeHint: String = "([keyword value]*)"
+    def defaultTypeHint: String = "([keyword value]*)"
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
