@@ -146,10 +146,7 @@ object SExp extends RegexParsers {
   }
 
   def read(s:String):SExp = {
-    val chars = new Array[Char](s.length)
-    s.getChars(0, s.length, chars, 0)
-    val r = new input.CharArrayReader(chars)
-    SExp.read(r)
+    SExp.read(new input.CharSequenceReader(s))
   }
 
   /** A parser that matches a regex string and returns the match groups */

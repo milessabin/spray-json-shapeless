@@ -61,19 +61,21 @@ trait SwankProtocol extends Protocol {
 
   // Handle reading / writing of messages
 
-  def writeMessage(value: WireFormat, out: Writer) {
-    val data: String = value.toWireString
-    val header: String = String.format("%06x", int2Integer(data.length))
-    val msg = header + data
-    println("Writing: " + msg)
-    out.write(msg)
+  def writeMessage(value: WireFormat, out: OutputStream) {
+    val dataString: String = value.toWireString
+    val data: Array[Byte] = dataString.getBytes("UTF-8")
+    val header: Array[Byte] = String.format(
+      "%06x", int2Integer(data.length)).getBytes("UTF-8")
+    println("Writing: " + dataString)
+    out.write(header)
+    out.write(data)
     out.flush()
   }
 
   private def fillArray(in: java.io.Reader, a: Array[Char]) {
     var n = 0
     var l = a.length
-    var charsRead = 0;
+    var charsRead = 0
     while (n < l) {
       charsRead = in.read(a, n, l - n)
       if (charsRead == -1) {
@@ -86,13 +88,14 @@ trait SwankProtocol extends Protocol {
 
   private val headerBuf = new Array[Char](6);
 
-  def readMessage(in: java.io.Reader): WireFormat = {
-    fillArray(in, headerBuf)
+  def readMessage(in: java.io.InputStream): WireFormat = {
+    val reader = new InputStreamReader(in, "UTF-8")
+    fillArray(reader, headerBuf)
     val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
     if (msglen > 0) {
       //TODO allocating a new array each time is inefficient!
-      val buf: Array[Char] = new Array[Char](msglen);
-      fillArray(in, buf)
+      val buf: Array[Char] = new Array[Char](msglen)
+      fillArray(reader, buf)
       SExp.read(new input.CharArrayReader(buf))
     } else {
       throw new IllegalStateException("Empty message read from socket!")

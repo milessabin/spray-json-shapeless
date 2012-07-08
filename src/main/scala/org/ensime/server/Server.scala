@@ -109,7 +109,7 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
   protocol.setOutputActor(this)
 
   class SocketReader(socket: Socket, handler: SocketHandler) extends Actor {
-    val in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+    val in = new BufferedInputStream(socket.getInputStream());
     def act() {
       var running = true
       try {
@@ -127,7 +127,7 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
     }
   }
 
-  val out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+  val out = new BufferedOutputStream(socket.getOutputStream());
 
   def write(value: WireFormat) {
     try {

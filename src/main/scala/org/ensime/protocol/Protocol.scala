@@ -73,19 +73,19 @@ trait Protocol extends ProtocolConversions {
   /**
    * Read a message from the socket.
    *
-   * @param  reader  The reader from which to read the message.
+   * @param  reader  The stream from which to read the message.
    * @return         The message, in the intermediate format.
    */
-  def readMessage(reader: Reader): WireFormat
+  def readMessage(reader: InputStream): WireFormat
 
   /**
    * Write a message to the socket.
    *
    * @param  value  The message to write.
-   * @param  writer The writer to which to write the message.
+   * @param  writer The stream to which to write the message.
    * @return        Void
    */
-  def writeMessage(value: WireFormat, writer: Writer)
+  def writeMessage(value: WireFormat, writer: OutputStream)
 
   /**
    * Send a message in wire format to the client. Message
