@@ -452,15 +452,17 @@ Go to the previous compilation note in the current buffer.
 {\bf C-c C-d \emph{x}}\\
 Where \emph{x} is one of:
 \begin{itemize}
-\item {\bf d}  Start the debugger. 
+\item {\bf d}  Start and run the debugger. 
+\item {\bf r}  Start and run the debugger. 
 \item {\bf b}  Set a breakpoint.
 \item {\bf u}  Clear a breakpoint.
-\item {\bf r}  Run the debugged class.
 \item {\bf s}  Step.
 \item {\bf n}  Step over.
+\item {\bf o}  Step out.
 \item {\bf c}  Continue from a breakpoint.
 \item {\bf q}  Kill the debug session.
-\item {\bf l}  List the local variables at current line.
+\item {\bf i}  Inspect the local variable at cursor.
+\item {\bf t}  Show backtrace.
 \end{itemize}
 \vspace{5 mm}
 
