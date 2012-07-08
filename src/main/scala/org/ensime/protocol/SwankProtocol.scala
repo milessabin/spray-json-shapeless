@@ -44,7 +44,7 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.7.4"
+    val protocolVersion: String = "0.8"
   }
 
   import SwankProtocol._
@@ -143,9 +143,12 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Version: 0.7.4
+   * Protocol Version: 0.8
    *
    * Protocol Change Log:
+   *   0.8
+   *     Add RPC calls for debugging
+   *     Protocol is now explicitely UTF-8
    *   0.7.4
    *     Add optional 'owner-type-id' key to SymbolInfo
    *     Add optional 'case-sens' option to swank:completions call
