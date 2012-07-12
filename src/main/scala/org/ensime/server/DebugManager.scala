@@ -52,6 +52,7 @@ import com.sun.jdi.event._
 case class DebuggerShutdownEvent()
 
 case class DebugStartVMReq(commandLine: String)
+case class DebugAttachVMReq(hostname: String, port: String)
 case class DebugStopVMReq()
 case class DebugRunReq()
 case class DebugContinueReq(threadId: Long)
@@ -76,6 +77,7 @@ case class DebugBreakEvent(threadId: Long,
   threadName: String, pos: SourcePosition) extends DebugEvent
 case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
+case class DebugVMAttachExpection(exception:String) extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
 case class DebugExceptionEvent(excId: Long,
   threadId: Long, threadName: String) extends DebugEvent
@@ -307,14 +309,33 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
               req match {
-                case DebugStartVMReq(commandLine: String) => {
-                  withVM { vm =>
+                case DebugStartVMReq(commandLine: String) ⇒ {
+                  withVM { vm ⇒
                     vm.dispose()
                   }
-                  val vm = new VM(commandLine)
+                  val vm = new VM(VmStart(commandLine))
                   maybeVM = Some(vm)
                   vm.start()
                   project ! RPCResultEvent(toWF(true), callId)
+                }
+
+                case DebugAttachVMReq(hostname, port) ⇒ {
+                  withVM { vm ⇒
+                    vm.dispose()
+                  }
+                  try { 
+                    val vm = new VM(VmAttach(hostname, port))
+                    maybeVM = Some(vm)
+                    vm.start()
+                    project ! RPCResultEvent(toWF(true), callId)
+                  } catch {
+                    case e: Exception => {
+                      maybeVM = None
+                      println("Couldn't attach to target VM.")
+                      println("e: " + e)
+                      project ! RPCResultEvent(toWF(DebugVMAttachExpection(e.toString)), callId)
+                    }
+                  }
                 }
 
                 case DebugActiveVMReq() => {
@@ -532,29 +553,56 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
     System.out.println("Finalizing debug manager actor.")
   }
 
-  private class VM(commandLine: String) {
+  private sealed abstract class VmMode()
+  private case class VmAttach(hostname: String, port: String) extends VmMode()
+  private case class VmStart(commandLine: String) extends VmMode()
+
+  private class VM(mode: VmMode) {
     import scala.collection.JavaConversions._
 
     private val vm: VirtualMachine = {
-      val connector = Bootstrap.virtualMachineManager().defaultConnector
-      val arguments = connector.defaultArguments()
-      //arguments.get("home").setValue(jreHome);
-      val opts = arguments.get("options").value
-      val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
-      arguments.get("options").setValue(allVMOpts)
-      arguments.get("main").setValue(commandLine)
-      arguments.get("suspend").setValue("false")
-      //arguments.get("quote").setValue("\"");
-      //arguments.get("vmexec").setValue("java");
-      println("Using Connector: " + connector.name +
-        " : " + connector.description())
-      println("Connector class: " + connector.getClass.getName())
-      println("Debugger VM args: " + allVMOpts)
-      println("Debugger program args: " + commandLine)
-      connector.launch(arguments)
+      mode match {
+        case VmStart(commandLine) ⇒ {
+          val connector = Bootstrap.virtualMachineManager().defaultConnector()
+          val arguments = connector.defaultArguments()
+
+          val opts = arguments.get("options").value
+          val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
+          arguments.get("options").setValue(allVMOpts)
+          arguments.get("main").setValue(commandLine)
+          arguments.get("suspend").setValue("false")
+
+          println("Using Connector: " + connector.name +
+            " : " + connector.description())
+          println("Connector class: " + connector.getClass.getName())
+          println("Debugger VM args: " + allVMOpts)
+          println("Debugger program args: " + commandLine)
+          connector.launch(arguments)
+        }
+        case VmAttach(hostname, port) ⇒ {
+          println("Attach to running vm")
+
+          val vmm = Bootstrap.virtualMachineManager()
+          val connector = vmm.attachingConnectors().get(0)
+
+          val env = connector.defaultArguments()
+          env.get("port").setValue(port)
+          env.get("hostname").setValue(hostname)
+
+          println("Using Connector: " + connector.name +
+            " : " + connector.description())
+          println("Debugger arguments: " + env)
+          println("Attach to VM")
+          val vm = connector.attach(env)
+          println("VM: " + vm.description + ", " + vm)
+          vm
+        }
+
+      }
+
     }
 
-    // vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
+    vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
     val evtQ = new VMEventManager(vm.eventQueue())
     val erm = vm.eventRequestManager();
     {
@@ -580,14 +628,16 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
     private val fileToUnits = HashMap[String, HashSet[ReferenceType]]()
     private val process = vm.process();
-    private val outputMon = new MonitorOutput(process.getErrorStream());
-    private val inputMon = new MonitorOutput(process.getInputStream());
+    private val monitor = mode match {
+      case VmAttach(_, _) => Nil
+      case VmStart(_) => List(new MonitorOutput(process.getErrorStream()),
+        new MonitorOutput(process.getInputStream()))
+    }
     private val savedObjects = new HashMap[Long, ObjectReference]()
 
     def start() {
       evtQ.start()
-      outputMon.start()
-      inputMon.start()
+      monitor.map{_.start()}
     }
 
     def remember(value: Value): Value = {

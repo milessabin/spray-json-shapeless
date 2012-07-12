@@ -1439,7 +1439,6 @@ trait SwankProtocol extends Protocol {
         }
       }
 
-
       /**
        * Doc RPC:
        *   swank:debug-start
@@ -1459,6 +1458,30 @@ trait SwankProtocol extends Protocol {
         form match {
           case SExpList(head :: StringAtom(commandLine) :: body) => {
             rpcTarget.rpcDebugStartVM(commandLine, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-attach
+       * Summary:
+       *   Start a new debug session on a target vm.
+       * Arguments:
+       *   String: The hostname of the vm
+       *   String: The debug port of the vm
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-attach "localhost" "9000") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-attach" => {
+        form match {
+          case SExpList(head :: StringAtom(hostname) :: StringAtom(port) :: body) => {
+            rpcTarget.rpcDebugAttachVM(hostname, port, callId)
           }
           case _ => oops
         }
@@ -2108,6 +2131,11 @@ trait SwankProtocol extends Protocol {
         SExp(key(":debug-event"),
 	  SExp(key(":type"), 'threadDeath,
 	    key(":thread-id"), threadId.toString))
+      }
+      case DebugVMAttachExpection(exception) => {
+        SExp(key(":debug-event"),
+          SExp(key(":type"), 'debugAttachException,
+            key(":exception"), exception))
       }
       case _ => SExp(key(":debug-event"))
     }
