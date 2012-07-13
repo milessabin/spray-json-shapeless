@@ -2419,6 +2419,17 @@ trait SwankProtocol extends Protocol {
         })))
   }
 
+  def toWF(vmStatus: DebugVmStatus): SExp = {
+    vmStatus match {
+      case DebugVmSuccess() => SExp(
+        key(":status"), ("success"))
+      case DebugVmError(code, details) => SExp(
+        key(":status"), ("error"),
+        key(":error-code"), (code), 
+	key(":details"), (details))
+    }
+  }
+
   private def changeToWF(ch: FileEdit): SExp = {
     SExp.propList(
       (":file", ch.file.getCanonicalPath()),

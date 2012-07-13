@@ -70,6 +70,11 @@ case class DebugClearBreakReq(file: String, line: Int)
 case class DebugClearAllBreaksReq()
 case class DebugListBreaksReq()
 
+abstract class DebugVmStatus
+
+case class DebugVmSuccess() extends DebugVmStatus
+case class DebugVmError(code: Int, details: String) extends DebugVmStatus
+
 abstract class DebugEvent
 case class DebugStepEvent(threadId: Long,
   threadName: String, pos: SourcePosition) extends DebugEvent
@@ -77,7 +82,6 @@ case class DebugBreakEvent(threadId: Long,
   threadName: String, pos: SourcePosition) extends DebugEvent
 case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
-case class DebugVMAttachExpection(exception:String) extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
 case class DebugExceptionEvent(excId: Long,
   threadId: Long, threadName: String) extends DebugEvent
@@ -313,27 +317,35 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                   withVM { vm ⇒
                     vm.dispose()
                   }
-                  val vm = new VM(VmStart(commandLine))
-                  maybeVM = Some(vm)
-                  vm.start()
-                  project ! RPCResultEvent(toWF(true), callId)
+                  try {
+                    val vm = new VM(VmStart(commandLine))
+                    maybeVM = Some(vm)
+                    vm.start()
+                    project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
+                  } catch {
+                    case e: Exception => {
+                      maybeVM = None
+                      println("Couldn't start VM")
+                      project ! RPCResultEvent(toWF(DebugVmError(1, e.toString)), callId)
+                    }
+                  }
                 }
 
                 case DebugAttachVMReq(hostname, port) ⇒ {
                   withVM { vm ⇒
                     vm.dispose()
                   }
-                  try { 
+                  try {
                     val vm = new VM(VmAttach(hostname, port))
                     maybeVM = Some(vm)
                     vm.start()
-                    project ! RPCResultEvent(toWF(true), callId)
+                    project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
                   } catch {
                     case e: Exception => {
                       maybeVM = None
                       println("Couldn't attach to target VM.")
                       println("e: " + e)
-                      project ! RPCResultEvent(toWF(DebugVMAttachExpection(e.toString)), callId)
+                      project ! RPCResultEvent(toWF(DebugVmError(1, e.toString)), callId)
                     }
                   }
                 }
