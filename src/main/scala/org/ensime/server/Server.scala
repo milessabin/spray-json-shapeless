@@ -81,6 +81,7 @@ object Server {
       case _ => {
         println("Usage: PROGRAM <portfile>")
         System.exit(0)
+
       }
     }
   }
@@ -127,7 +128,7 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
     }
   }
 
-  val out = new BufferedOutputStream(socket.getOutputStream());
+  val out = new BufferedOutputStream(socket.getOutputStream())
 
   def write(value: WireFormat) {
     try {

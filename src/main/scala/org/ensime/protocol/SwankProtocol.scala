@@ -44,7 +44,7 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8"
+    val protocolVersion: String = "0.8.1"
   }
 
   import SwankProtocol._
@@ -69,7 +69,6 @@ trait SwankProtocol extends Protocol {
     println("Writing: " + dataString)
     out.write(header)
     out.write(data)
-    
     out.flush()
   }
 
@@ -144,9 +143,12 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Version: 0.8
+   * Protocol Version: 0.8.1
    *
    * Protocol Change Log:
+   *   0.8.1
+   *     Add patch-source.
+   *     Completions now takes a 'reload' argument.
    *   0.8
    *     Add RPC calls for debugging
    *     Protocol is now explicitely UTF-8
@@ -461,6 +463,20 @@ trait SwankProtocol extends Protocol {
    *   )
    */
 
+  /**
+   * Doc DataStructure:
+   *   FilePatch
+   * Summary:
+   *   Describes a patch to be applied to a single file.
+   * Structure:
+   *   (
+   *   // '+' is an insert of text before the existing text starting at i
+   *   // '-' is a deletion of text in interval [i,j)
+   *   // '*' is a replacement of text in interval [i,j)
+   *   [("+" i "some text") | ("-" i j) | ("*" i j "some text")]*
+   *   )
+   */
+
   ////////////
   // Events //
   ////////////
@@ -602,12 +618,12 @@ trait SwankProtocol extends Protocol {
       case "swank:init-project" => {
         form match {
           case SExpList(head :: (conf: SExpList) :: body) => {
-            ProjectConfig.fromSExp(conf) match{
-	      case Right(config) => rpcTarget.rpcInitProject(config, callId)
-	      case Left(t) => sendRPCError(ErrExceptionInRPC,
-					   Some(t.toString()),
-					   callId)
-	    }
+            ProjectConfig.fromSExp(conf) match {
+              case Right(config) => rpcTarget.rpcInitProject(config, callId)
+              case Left(t) => sendRPCError(ErrExceptionInRPC,
+                Some(t.toString()),
+                callId)
+            }
           }
           case _ => oops
         }
@@ -830,6 +846,41 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:patch-source
+       * Summary:
+       *   Request immediate load and check the given source file.
+       * Arguments:
+       *   String:A filename
+       *   A FilePatch
+       * Return:
+       *   None
+       * Example call:
+       *   (swank:patch-source "Analyzer.scala" (("+" 6461 "Inc")
+       *     ("-" 7127 7128)))
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:patch-source" => {
+        form match {
+          case SExpList(head :: StringAtom(file) ::
+            SExpList(editSexps) :: body) => {
+            val edits = editSexps.map {
+              case SExpList(StringAtom("+") :: IntAtom(i) ::
+                StringAtom(text) :: _) => PatchInsert(i, text)
+              case SExpList(StringAtom("*") :: IntAtom(i) :: IntAtom(j) ::
+                StringAtom(text) :: _) => PatchReplace(i, j, text)
+              case SExpList(StringAtom("-") :: IntAtom(i) :: IntAtom(j) :: _) =>
+                PatchDelete(i, j)
+              case _ => PatchInsert(0, "")
+            }.toList
+            rpcTarget.rpcPatchSource(file, edits, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
        *   swank:typecheck-all
        * Summary:
        *   Request immediate load and typecheck of all known sources.
@@ -947,12 +998,13 @@ trait SwankProtocol extends Protocol {
        *     no limit.
        *   Bool:If non-nil, only return prefixes that match the case of the
        *     prefix.
+       *   Bool:If non-nil, reload source from disk before computing completions.
        * Return:
        *   CompletionInfoList: The list of completions
        * Example call:
        *   (:swank-rpc (swank:completions
        *   "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala
-       *   22626 0) 42)
+       *   22626 0 t) 42)
        * Example return:
        *   (:return (:ok (:prefix "form" :completions
        *   ((:name "form" :type-sig "SExp" :type-id 10)
@@ -962,8 +1014,10 @@ trait SwankProtocol extends Protocol {
       case "swank:completions" => {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
-            IntAtom(maxResults) :: BooleanAtom(caseSens) :: body) => {
-            rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, caseSens, callId)
+            IntAtom(maxResults) :: BooleanAtom(caseSens) ::
+	    BooleanAtom(reload) :: body) => {
+            rpcTarget.rpcCompletionsAtPoint(
+	      file, point, maxResults, caseSens, reload, callId)
           }
           case _ => oops
         }
@@ -1439,7 +1493,6 @@ trait SwankProtocol extends Protocol {
         }
       }
 
-
       /**
        * Doc RPC:
        *   swank:debug-start
@@ -1487,8 +1540,6 @@ trait SwankProtocol extends Protocol {
         }
       }
 
-
-
       /**
        * Doc RPC:
        *   swank:debug-set-break
@@ -1507,14 +1558,12 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-set-break" => {
         form match {
           case SExpList(head :: StringAtom(filename) ::
-	    IntAtom(line) :: body) => {
+            IntAtom(line) :: body) => {
             rpcTarget.rpcDebugBreak(filename, line, callId)
           }
           case _ => oops
         }
       }
-
-
 
       /**
        * Doc RPC:
@@ -1534,13 +1583,12 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-clear-break" => {
         form match {
           case SExpList(head :: StringAtom(filename) ::
-	    IntAtom(line) :: body) => {
+            IntAtom(line) :: body) => {
             rpcTarget.rpcDebugClearBreak(filename, line, callId)
           }
           case _ => oops
         }
       }
-
 
       /**
        * Doc RPC:
@@ -1565,7 +1613,6 @@ trait SwankProtocol extends Protocol {
         }
       }
 
-
       /**
        * Doc RPC:
        *   swank:debug-list-breakpoints
@@ -1589,7 +1636,6 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
-
 
       /**
        * Doc RPC:
@@ -1636,7 +1682,6 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
-
 
       /**
        * Doc RPC:
@@ -1704,7 +1749,7 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-step-out" => {
         form match {
           case SExpList(head :: StringAtom(threadId) :: body) => {
-            rpcTarget.rpcDebugStepOut(threadId.toLong, callId:Int)
+            rpcTarget.rpcDebugStepOut(threadId.toLong, callId: Int)
           }
           case _ => oops
         }
@@ -1729,7 +1774,7 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-name" => {
         form match {
           case SExpList(head :: StringAtom(threadId) :: StringAtom(name) :: body) => {
-            rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId:Int)
+            rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId: Int)
           }
           case _ => oops
         }
@@ -1752,7 +1797,7 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-id" => {
         form match {
           case SExpList(head :: StringAtom(objectId) :: body) => {
-            rpcTarget.rpcDebugValueForId(objectId.toLong, callId:Int)
+            rpcTarget.rpcDebugValueForId(objectId.toLong, callId: Int)
           }
           case _ => oops
         }
@@ -1776,12 +1821,11 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-field" => {
         form match {
           case SExpList(head :: StringAtom(objectId) :: StringAtom(name) :: body) => {
-            rpcTarget.rpcDebugValueForField(objectId.toLong, name, callId:Int)
+            rpcTarget.rpcDebugValueForField(objectId.toLong, name, callId: Int)
           }
           case _ => oops
         }
       }
-
 
       /**
        * Doc RPC:
@@ -1801,12 +1845,11 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-index" => {
         form match {
           case SExpList(head :: StringAtom(objectId) :: IntAtom(index) :: body) => {
-            rpcTarget.rpcDebugValueForIndex(objectId.toLong, index, callId:Int)
+            rpcTarget.rpcDebugValueForIndex(objectId.toLong, index, callId: Int)
           }
           case _ => oops
         }
       }
-
 
       /**
        * Doc RPC:
@@ -1828,14 +1871,12 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-backtrace" => {
         form match {
           case SExpList(head :: StringAtom(threadId) ::
-	    IntAtom(index) :: IntAtom(count) :: body) => {
+            IntAtom(index) :: IntAtom(count) :: body) => {
             rpcTarget.rpcDebugBacktrace(threadId.toLong, index, count, callId)
           }
           case _ => oops
         }
       }
-
-
 
       /**
        * Doc RPC:
@@ -1939,56 +1980,54 @@ trait SwankProtocol extends Protocol {
   import SExpConversion._
 
   def toWF(obj: DebugValue): SExp = {
-    obj match{
-      case obj:DebugPrimitiveValue => toWF(obj)
-      case obj:DebugObjectReference => toWF(obj)
-      case obj:DebugArrayReference => toWF(obj)
-      case obj:DebugStringReference => toWF(obj)
-      case obj:DebugNullValue => toWF(obj)
+    obj match {
+      case obj: DebugPrimitiveValue => toWF(obj)
+      case obj: DebugObjectReference => toWF(obj)
+      case obj: DebugArrayReference => toWF(obj)
+      case obj: DebugStringReference => toWF(obj)
+      case obj: DebugNullValue => toWF(obj)
     }
   }
   def toWF(obj: DebugNullValue): SExp = {
     SExp(
       key(":val-type"), 'null,
-      key(":type-name"),obj.typeName
-    )
+      key(":type-name"), obj.typeName)
   }
   def toWF(obj: DebugPrimitiveValue): SExp = {
     SExp(
       key(":val-type"), 'prim,
       key(":value"), obj.value,
-      key(":type-name"),obj.typeName
-    )
+      key(":type-name"), obj.typeName)
   }
   def toWF(obj: DebugObjectField): SExp = {
     SExp(
       key(":index"), obj.index,
-      key(":name"),obj.name,
+      key(":name"), obj.name,
       key(":value"), obj.value.map(toWF).getOrElse(NilAtom()),
-      key(":type-name"),obj.typeName)
+      key(":type-name"), obj.typeName)
   }
   def toWF(obj: DebugObjectReference): SExp = {
     SExp(
       key(":val-type"), 'obj,
       key(":fields"), SExpList(obj.fields.map(toWF)),
-      key(":type-name"),obj.typeName,
-      key(":object-id"),obj.objectId.toString)
+      key(":type-name"), obj.typeName,
+      key(":object-id"), obj.objectId.toString)
   }
   def toWF(obj: DebugStringReference): SExp = {
     SExp(
       key(":val-type"), 'str,
-      key(":string-value"),obj.stringValue,
+      key(":string-value"), obj.stringValue,
       key(":fields"), SExpList(obj.fields.map(toWF)),
-      key(":type-name"),obj.typeName,
-      key(":object-id"),obj.objectId.toString)
+      key(":type-name"), obj.typeName,
+      key(":object-id"), obj.objectId.toString)
   }
   def toWF(obj: DebugArrayReference): SExp = {
     SExp(
       key(":val-type"), 'arr,
       key(":length"), obj.length,
-      key(":type-name"),obj.typeName,
-      key(":element-type-name"),obj.elementTypeName,
-      key(":object-id"),obj.objectId.toString)
+      key(":type-name"), obj.typeName,
+      key(":element-type-name"), obj.elementTypeName,
+      key(":object-id"), obj.objectId.toString)
   }
 
   def toWF(obj: DebugStackLocal): SExp = {
@@ -2000,19 +2039,18 @@ trait SwankProtocol extends Protocol {
   def toWF(obj: DebugStackFrame): SExp = {
     SExp(
       key(":locals"), SExpList(obj.locals.map(toWF)),
-      key(":num-args"),obj.numArguments,
+      key(":num-args"), obj.numArguments,
       key(":class-name"), obj.className,
       key(":method-name"), obj.methodName,
-      key(":pc-location"),toWF(obj.pcLocation),
-      key(":this-object-id"),obj.thisObjectId.toString)
+      key(":pc-location"), toWF(obj.pcLocation),
+      key(":this-object-id"), obj.thisObjectId.toString)
   }
 
   def toWF(obj: DebugBacktrace): SExp = {
     SExp(
       key(":frames"), SExpList(obj.frames.map(toWF)),
       key(":thread-id"), obj.threadId.toString,
-      key(":thread-name"), obj.threadName
-    )
+      key(":thread-name"), obj.threadName)
   }
 
   def toWF(pos: SourcePosition): SExp = {
@@ -2058,56 +2096,55 @@ trait SwankProtocol extends Protocol {
 
   def toWF(evt: DebugEvent): SExp = {
     evt match {
-      case DebugOutputEvent(out:String) => {
+      case DebugOutputEvent(out: String) => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'output,
-	  key(":body"), out))
+          SExp(key(":type"), 'output,
+            key(":body"), out))
       }
       case DebugStepEvent(threadId, threadName, pos) => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'step,
-	  key(":thread-id"), threadId.toString,
-	  key(":thread-name"), threadName,
-	  key(":file"), pos.file.getAbsolutePath,
-	  key(":line"), pos.line))
+          SExp(key(":type"), 'step,
+            key(":thread-id"), threadId.toString,
+            key(":thread-name"), threadName,
+            key(":file"), pos.file.getAbsolutePath,
+            key(":line"), pos.line))
       }
       case DebugBreakEvent(threadId, threadName, pos) => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'breakpoint,
-	  key(":thread-id"), threadId.toString,
-	  key(":thread-name"), threadName,
-	  key(":file"), pos.file.getAbsolutePath,
-	  key(":line"), pos.line))
+          SExp(key(":type"), 'breakpoint,
+            key(":thread-id"), threadId.toString,
+            key(":thread-name"), threadName,
+            key(":file"), pos.file.getAbsolutePath,
+            key(":line"), pos.line))
       }
       case DebugVMDeathEvent() => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'death))
+          SExp(key(":type"), 'death))
       }
       case DebugVMStartEvent() => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'start))
+          SExp(key(":type"), 'start))
       }
       case DebugVMDisconnectEvent() => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'disconnect))
+          SExp(key(":type"), 'disconnect))
       }
       case DebugExceptionEvent(excId, threadId, threadName) => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'exception,
-	  key(":exception"), excId.toString,
-	  key(":thread-id"), threadId.toString,
-	  key(":thread-name"), threadName
-	))
+          SExp(key(":type"), 'exception,
+            key(":exception"), excId.toString,
+            key(":thread-id"), threadId.toString,
+            key(":thread-name"), threadName))
       }
       case DebugThreadStartEvent(threadId: Long) => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'threadStart,
-	  key(":thread-id"), threadId.toString))
+          SExp(key(":type"), 'threadStart,
+            key(":thread-id"), threadId.toString))
       }
       case DebugThreadDeathEvent(threadId: Long) => {
         SExp(key(":debug-event"),
-	  SExp(key(":type"), 'threadDeath,
-	    key(":thread-id"), threadId.toString))
+          SExp(key(":type"), 'threadDeath,
+            key(":thread-id"), threadId.toString))
       }
       case _ => SExp(key(":debug-event"))
     }
@@ -2117,15 +2154,13 @@ trait SwankProtocol extends Protocol {
   def toWF(bp: Breakpoint): SExp = {
     SExp(
       key(":file"), bp.pos.file.getAbsolutePath,
-      key(":line"), bp.pos.line
-    )
+      key(":line"), bp.pos.line)
   }
 
   def toWF(bps: BreakpointList): SExp = {
     SExp(
-      key(":active"), SExpList(bps.active.map{ toWF(_) }),
-      key(":pending"), SExpList(bps.pending.map{ toWF(_) })
-    )
+      key(":active"), SExpList(bps.active.map { toWF(_) }),
+      key(":pending"), SExpList(bps.pending.map { toWF(_) }))
   }
 
   def toWF(config: ProjectConfig): SExp = {
@@ -2364,7 +2399,7 @@ trait SwankProtocol extends Protocol {
           (":owner-name", value.owner))
       }
       case value => throw new IllegalStateException(
-	"Unknown SymbolSearchResult: " + value)
+        "Unknown SymbolSearchResult: " + value)
     }
 
   }

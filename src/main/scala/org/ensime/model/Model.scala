@@ -73,7 +73,6 @@ case class SymbolDesignation(
   val end: Int,
   val symType: scala.Symbol)
 
-
 class SymbolInfo(
   val name: String,
   val declPos: Position,
@@ -93,6 +92,23 @@ case class CompletionInfoList(
   val prefix: String,
   val completions: List[CompletionInfo]) {}
 
+
+trait PatchOp {
+  val start: Int
+}
+
+case class PatchInsert(
+  val start: Int,
+  val text: String) extends PatchOp
+
+case class PatchDelete(
+  val start: Int,
+  val end: Int) extends PatchOp
+
+case class PatchReplace(
+  val start: Int,
+  val end: Int,
+  val text: String) extends PatchOp
 
 case class Breakpoint(pos: SourcePosition)
 case class BreakpointList(val active: List[Breakpoint], val pending: List[Breakpoint])
@@ -448,8 +464,8 @@ trait ModelBuilders { self: Global with Helpers =>
         typeShortNameWithArgs(tpe),
         cacheType(tpe.underlying),
         isArrowType(tpe.underlying),
-	relevance,
-	None
+	      relevance,
+	      None
       )
     }
 

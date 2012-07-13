@@ -29,6 +29,7 @@ package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.model.SymbolDesignations
+import org.ensime.model.PatchOp
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
@@ -45,7 +46,10 @@ import scala.tools.nsc.util.{ OffsetPosition }
 case class FullTypeCheckCompleteEvent()
 case class CompilerFatalError(e: Throwable)
 
-class Analyzer(val project: Project, val protocol: ProtocolConversions, val config: ProjectConfig)
+class Analyzer(
+  val project: Project,
+  val protocol: ProtocolConversions,
+  val config: ProjectConfig)
   extends Actor with RefactoringHandler {
 
   private val settings = new Settings(Console.println)
@@ -165,9 +169,23 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                       if (file.getAbsolutePath().endsWith(".java")) {
                         javaCompiler.compileFile(file)
                       }
-                      val f = sourceFile(file)
+                      val f = createSourceFile(file)
                       scalaCompiler.askReloadFile(f)
                       scalaCompiler.askNotifyWhenReady()
+                      project ! RPCResultEvent(toWF(true), callId)
+                    }
+                  }
+
+                  case PatchSourceReq(
+		    file: File, edits: List[PatchOp]) => {
+                    if (!file.exists()) {
+                      project.sendRPCError(ErrFileDoesNotExist,
+                        Some(file.getPath()), callId)
+                    } else {
+                      val f = createSourceFile(file)
+		      val revised = PatchSource.applyOperations(f, edits)
+		      reporter.disable()
+                      scalaCompiler.askReloadFile(revised)
                       project ! RPCResultEvent(toWF(true), callId)
                     }
                   }
@@ -184,10 +202,12 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                     handleRefactorCancel(req, callId)
                   }
 
-                  case CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean) => {
-                    val p = pos(file, point)
+                  case CompletionsReq(file: File, point: Int,
+		    maxResults: Int, caseSens: Boolean, reload: Boolean) => {
+                    val p = if (reload) pos(file, point) else posNoRead(file, point)
                     reporter.disable()
-                    val info = scalaCompiler.askCompletionsAt(p, maxResults, caseSens)
+                    val info = scalaCompiler.askCompletionsAt(
+		      p, maxResults, caseSens)
                     project ! RPCResultEvent(toWF(info), callId)
                   }
 
@@ -288,7 +308,7 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
                   }
 
                   case SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) => {
-                    val f = sourceFile(file)
+                    val f = createSourceFile(file)
                     val clampedEnd = math.max(end, start)
                     val pos = new RangePosition(f, start, start, clampedEnd)
                     if (!tpes.isEmpty) {
@@ -324,12 +344,17 @@ class Analyzer(val project: Project, val protocol: ProtocolConversions, val conf
   }
 
   def pos(file: File, offset: Int) = {
-    val f = scalaCompiler.sourceFileForPath(file.getCanonicalPath())
+    val f = scalaCompiler.createSourceFile(file.getCanonicalPath())
     new OffsetPosition(f, offset)
   }
 
-  def sourceFile(file: File) = {
-    scalaCompiler.sourceFileForPath(file.getCanonicalPath())
+  def posNoRead(file: File, offset: Int) = {
+    val f = scalaCompiler.findSourceFile(file.getCanonicalPath()).get
+    new OffsetPosition(f, offset)
+  }
+
+  def createSourceFile(file: File) = {
+    scalaCompiler.createSourceFile(file.getCanonicalPath())
   }
 
   override def finalize() {

@@ -71,16 +71,16 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     None
   }
 
-  def askSymbolInfoAt(p: Position): Option[SymbolInfo] = 
+  def askSymbolInfoAt(p: Position): Option[SymbolInfo] =
   askOption(symbolAt(p)).flatMap(_.map(SymbolInfo(_)))
 
-  def askTypeInfoAt(p: Position): Option[TypeInfo] = 
+  def askTypeInfoAt(p: Position): Option[TypeInfo] =
   askOption(typeAt(p)).flatMap(_.map(TypeInfo(_)))
 
-  def askTypeInfoById(id: Int): Option[TypeInfo] = 
+  def askTypeInfoById(id: Int): Option[TypeInfo] =
   askOption(typeById(id)).flatMap(_.map(TypeInfo(_)))
 
-  def askTypeInfoByName(name: String): Option[TypeInfo] = 
+  def askTypeInfoByName(name: String): Option[TypeInfo] =
   askOption(typeByName(name)).flatMap(_.map(TypeInfo(_)))
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = {
@@ -100,10 +100,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   }
 
 
-  def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] = 
+  def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] =
   askOption(typeById(id)).flatMap(_.map(CallCompletionInfo(_)))
 
-  def askPackageByPath(path: String): Option[PackageInfo] = 
+  def askPackageByPath(path: String): Option[PackageInfo] =
   askOption(PackageInfo.fromPath(path))
 
   def askReloadFile(f: SourceFile) {
@@ -126,32 +126,34 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askReloadFiles(all)
   }
 
-  def askInspectTypeById(id: Int): Option[TypeInspectInfo] = 
+  def askInspectTypeById(id: Int): Option[TypeInspectInfo] =
   askOption(typeById(id)).flatMap(_.map(inspectType(_)))
 
-  def askInspectTypeAt(p: Position): Option[TypeInspectInfo] = 
+  def askInspectTypeAt(p: Position): Option[TypeInspectInfo] =
   askOption(inspectTypeAt(p)).flatMap(os => os)
 
-  def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] = 
+  def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] =
   askOption(completePackageMember(path, prefix)).getOrElse(List())
 
-  def askCompletionsAt(p: Position, maxResults: Int, caseSens: Boolean): CompletionInfoList = 
+  def askCompletionsAt(p: Position, maxResults: Int, caseSens: Boolean): CompletionInfoList =
   completionsAt(p, maxResults, caseSens)
 
-  def askReloadAndTypeFiles(files: Iterable[SourceFile]) = 
+  def askReloadAndTypeFiles(files: Iterable[SourceFile]) =
   askOption(reloadAndTypeFiles(files))
 
-  def askUsesOfSymAtPoint(p: Position): List[RangePosition] = 
+  def askUsesOfSymAtPoint(p: Position): List[RangePosition] =
   askOption(usesOfSymbolAtPoint(p).toList).getOrElse(List())
 
-  def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations = 
+  def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations =
   askOption(symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List()))
 
   def askClearTypeCache() = clearTypeCache
 
   def askNotifyWhenReady() = ask(setNotifyWhenReady)
 
-  def sourceFileForPath(path: String) = getSourceFile(path)
+  def createSourceFile(path: String) = getSourceFile(path)
+  def findSourceFile(path: String): Option[SourceFile] = allSources.find(
+    _.file.path == path)
 
 }
 
@@ -219,7 +221,7 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
     super.syncTopLevelSyms(unit)
     unindexTopLevelSyms(deletedTopLevelSyms)
     indexTopLevelSyms(newTopLevelSyms)
-    //    WARNING: Clearing the set here makes 
+    //    WARNING: Clearing the set here makes
     //    recentlyDeleted useless.
     deletedTopLevelSyms.clear()
     newTopLevelSyms.clear()
@@ -347,7 +349,7 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
       }
     }
 
-    protected def filterMembersByPrefix(members:List[Member], prefix: String, 
+    protected def filterMembersByPrefix(members:List[Member], prefix: String,
       matchEntire: Boolean, caseSens: Boolean):List[Member] = members.filter{ m =>
       val prefixUpper = prefix.toUpperCase()
       val sym = m.sym
@@ -368,9 +370,9 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
       }
     }
 
-    // TODO: 
+    // TODO:
     // This hides the core implementation is Contexts.scala, which
-    // has been patched. Once this bug is fixed, we can get rid of 
+    // has been patched. Once this bug is fixed, we can get rid of
     // this workaround.
     private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
       case List() => List()

@@ -244,7 +244,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     })
   }
 
-  protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.sourceFileForPath(f.getPath())))
+  protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.createSourceFile(f.getPath())))
 
   protected def performRefactor(
     procId: Int,
