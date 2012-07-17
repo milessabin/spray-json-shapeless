@@ -203,7 +203,8 @@ trait CompletionControl {
     "(", ident, "*)$").mkString.r
 
 
-  // Ignores the reality of comment and string parsing
+  // Return true if the given string is balanced with respect
+  // to parenthesis. Ignores the possibility of comments and strings.
   private def parenBalanced(s:String):Boolean = {
     var i = 0
     var p = 0
@@ -246,7 +247,11 @@ trait CompletionControl {
     mo = nameFollowingControl.findFirstMatchIn(preceding)
     if(mo.isDefined){
       val m = mo.get
+
+      // Check that we're actually inside the control structure's
+      // parens.
       if(parenBalanced(m.group(1))){
+
 	println("Matched sym following control structure context.")
 	return Some(SymbolContext(p, m.group(2), false))
       }
