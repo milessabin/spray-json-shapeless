@@ -808,15 +808,26 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
     def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
 
+
     def makeDebugValue(value: Value): DebugValue = {
       if (value == null) makeDebugNull()
-      else value match {
-        case value: ArrayReference => makeDebugArr(value)
-        case value: StringReference => makeDebugStr(value)
-        case value: ObjectReference => makeDebugObj(value)
-        case value: PrimitiveValue => makeDebugPrim(value)
-      }
+      else {
+	value match {
+          case v: ArrayReference => makeDebugArr(v)
+          case v: StringReference => makeDebugStr(v)
+          case v: ObjectReference =>
+	  {
+	    val tpe = v.referenceType()
+	    if (tpe.name().matches("^scala\\.runtime\\.[A-Z][a-z]+Ref$")) {
+	      val elemField = tpe.fieldByName("elem")
+	      makeDebugValue(v.getValue(elemField))
+	    } else makeDebugObj(v)
+	  }
+          case v: PrimitiveValue => makeDebugPrim(v)
+	}
+     }
     }
+
 
     def valueForName(thread: ThreadReference, name: String): Option[DebugValue] = {
       val stackFrame = thread.frame(0)
