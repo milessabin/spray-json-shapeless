@@ -2132,11 +2132,6 @@ trait SwankProtocol extends Protocol {
 	  SExp(key(":type"), 'threadDeath,
 	    key(":thread-id"), threadId.toString))
       }
-      case DebugVMAttachExpection(exception) => {
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'debugAttachException,
-            key(":exception"), exception))
-      }
       case _ => SExp(key(":debug-event"))
     }
 
