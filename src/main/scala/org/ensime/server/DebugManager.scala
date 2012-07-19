@@ -34,7 +34,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import org.ensime.debug.ProjectDebugInfo
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import org.ensime.protocol.ProtocolConversions
@@ -60,6 +59,7 @@ case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugValueForNameReq(threadId: Long, name: String)
 case class DebugValueForFieldReq(objectId: Long, name: String)
+case class DebugValueForStackVarReq(threadId: Long, frame: Int, index: Int)
 case class DebugValueForIdReq(objectId: Long)
 case class DebugValueForIndexReq(objectId: Long, index: Int)
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
@@ -196,26 +196,40 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
   }
 
   private def handleRPCWithVM(callId: Int)(action: (VM => Unit)) = {
-    withVM { vm =>
-      action(vm)
-    }.getOrElse {
-      project ! RPCResultEvent(toWF(false), callId)
-      System.err.println("No VM under debug!")
+    try {
+      withVM { vm =>
+        action(vm)
+      }.getOrElse {
+        project ! RPCResultEvent(toWF(false), callId)
+        System.err.println("No VM under debug!")
+      }
+    } catch {
+      case e: AbsentInformationException => {
+        e.printStackTrace()
+        project ! RPCResultEvent(toWF(false), callId)
+      }
     }
   }
 
   private def handleRPCWithVMAndThread(callId: Int,
     threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
-    withVM { vm =>
-      (for (thread <- vm.threadById(threadId)) yield {
-        action(vm, thread)
-      }).getOrElse {
-        System.err.println("Couldn't find thread: " + threadId)
+    try {
+      withVM { vm =>
+        (for (thread <- vm.threadById(threadId)) yield {
+          action(vm, thread)
+        }).getOrElse {
+          System.err.println("Couldn't find thread: " + threadId)
+          project ! RPCResultEvent(toWF(false), callId)
+        }
+      }.getOrElse {
+        System.err.println("No VM under debug!")
         project ! RPCResultEvent(toWF(false), callId)
       }
-    }.getOrElse {
-      System.err.println("No VM under debug!")
-      project ! RPCResultEvent(toWF(false), callId)
+    } catch {
+      case e: AbsentInformationException => {
+        e.printStackTrace()
+        project ! RPCResultEvent(toWF(false), callId)
+      }
     }
   }
 
@@ -403,93 +417,70 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                 }
 
                 case DebugValueForNameReq(threadId: Long, name: String) => {
-                  try {
-                    handleRPCWithVMAndThread(callId, threadId) {
-                      (vm, thread) =>
-                        vm.valueForName(thread, name) match {
-                          case Some(value) =>
-                            project ! RPCResultEvent(toWF(value), callId)
-                          case None =>
-                            project ! RPCResultEvent(toWF(false), callId)
-                        }
-                    }
-                  } catch {
-                    case e: AbsentInformationException => {
-                      e.printStackTrace()
-                      project ! RPCResultEvent(toWF(false), callId)
-                    }
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
+                      vm.valueForName(thread, name) match {
+                        case Some(value) =>
+                          project ! RPCResultEvent(toWF(value), callId)
+                        case None =>
+                          project ! RPCResultEvent(toWF(false), callId)
+                      }
                   }
+
                 }
                 case DebugBacktraceReq(threadId: Long, index: Int, count: Int) => {
-                  try {
-                    handleRPCWithVMAndThread(callId, threadId) {
-                      (vm, thread) =>
-                        val bt = vm.backtrace(thread, index, count)
-                        project ! RPCResultEvent(toWF(bt), callId)
-                    }
-                  } catch {
-                    case e: AbsentInformationException => {
-                      e.printStackTrace()
-                      project ! RPCResultEvent(toWF(false), callId)
-                    }
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
+                      val bt = vm.backtrace(thread, index, count)
+                      project ! RPCResultEvent(toWF(bt), callId)
                   }
                 }
                 case DebugValueForIdReq(objectId: Long) => {
-                  try {
-                    handleRPCWithVM(callId) {
-                      (vm) =>
-                        vm.valueForId(objectId) match {
-                          case Some(value) =>
-                            project ! RPCResultEvent(toWF(value), callId)
-                          case None =>
-                            project ! RPCResultEvent(toWF(false), callId)
-                        }
-                    }
-                  } catch {
-                    case e: AbsentInformationException => {
-                      e.printStackTrace()
-                      project ! RPCResultEvent(toWF(false), callId)
-                    }
+                  handleRPCWithVM(callId) {
+                    (vm) =>
+                      vm.valueForId(objectId) match {
+                        case Some(value) =>
+                          project ! RPCResultEvent(toWF(value), callId)
+                        case None =>
+                          project ! RPCResultEvent(toWF(false), callId)
+                      }
                   }
+
                 }
                 case DebugValueForFieldReq(objectId: Long, name: String) => {
-                  try {
-                    handleRPCWithVM(callId) {
-                      (vm) =>
-                        vm.valueForField(objectId, name) match {
-                          case Some(value) =>
-                            project ! RPCResultEvent(toWF(value), callId)
-                          case None =>
-                            project ! RPCResultEvent(toWF(false), callId)
-                        }
-                    }
-                  } catch {
-                    case e: AbsentInformationException => {
-                      e.printStackTrace()
-                      project ! RPCResultEvent(toWF(false), callId)
-                    }
+                  handleRPCWithVM(callId) {
+                    (vm) =>
+                      vm.valueForField(objectId, name) match {
+                        case Some(value) =>
+                          project ! RPCResultEvent(toWF(value), callId)
+                        case None =>
+                          project ! RPCResultEvent(toWF(false), callId)
+                      }
                   }
                 }
-
+                case DebugValueForStackVarReq(
+                  threadId: Long, frame: Int, offset: Int) => {
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
+                      vm.valueForStackVar(thread, frame, offset) match {
+                        case Some(value) =>
+                          project ! RPCResultEvent(toWF(value), callId)
+                        case None =>
+                          project ! RPCResultEvent(toWF(false), callId)
+                      }
+                  }
+                }
                 case DebugValueForIndexReq(objectId: Long, index: Int) => {
-                  try {
-                    handleRPCWithVM(callId) {
-                      (vm) =>
-                        vm.valueForIndex(objectId, index) match {
-                          case Some(value) =>
-                            project ! RPCResultEvent(toWF(value), callId)
-                          case None =>
-                            project ! RPCResultEvent(toWF(false), callId)
-                        }
-                    }
-                  } catch {
-                    case e: AbsentInformationException => {
-                      e.printStackTrace()
-                      project ! RPCResultEvent(toWF(false), callId)
-                    }
+                  handleRPCWithVM(callId) {
+                    (vm) =>
+                      vm.valueForIndex(objectId, index) match {
+                        case Some(value) =>
+                          project ! RPCResultEvent(toWF(value), callId)
+                        case None =>
+                          project ! RPCResultEvent(toWF(false), callId)
+                      }
                   }
                 }
-
               }
             } catch {
               case e: VMDisconnectedException =>
@@ -692,7 +683,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
     // Helper as Value.toString doesn't give
     // us what we want...
-    def valueToString(value: Value): String = {
+    def valueSummary(value: Value): String = {
       value match {
         case v: BooleanValue => v.value().toString()
         case v: ByteValue => v.value().toString()
@@ -705,9 +696,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
         case v: VoidValue => "void"
         case v: StringReference => "\"" + v.value().toString() + "\""
         case v: ArrayReference => {
-          "Array[" + v.getValues().take(3).map(valueToString).mkString(", ") + "]"
+          "Array[" + v.getValues().take(3).map(valueSummary).mkString(", ") + "]"
         }
-        case v: ObjectReference => "instance of " + v.referenceType().name()
+        case v: ObjectReference => {
+          val tpe = v.referenceType()
+          if (tpe.name().matches("^scala\\.runtime\\.[A-Z][a-z]+Ref$")) {
+            val elemField = tpe.fieldByName("elem")
+            valueSummary(v.getValue(elemField))
+          } else "instance of " + v.referenceType().name()
+        }
         case _ => "NA"
       }
     }
@@ -727,11 +724,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
               DebugObjectField(
                 i, f.name(),
                 f.typeName(),
-                value match {
-                  case v: PrimitiveValue =>
-                    Some(makeDebugPrim(v))
-                  case _ => None
-                })
+                valueSummary(value))
             }.toList ++ fields
             tpe = tpe.superclass
           }
@@ -761,6 +754,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
     def makeDebugObj(value: ObjectReference): DebugObjectReference = {
       DebugObjectReference(
+        valueSummary(value),
         makeFields(value.referenceType(), value),
         value.referenceType().name(),
         value.uniqueID())
@@ -768,7 +762,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
     def makeDebugStr(value: StringReference): DebugStringReference = {
       DebugStringReference(
-        value.value().toString().take(50),
+        valueSummary(value),
         makeFields(value.referenceType(), value),
         value.referenceType().name(),
         value.uniqueID())
@@ -783,14 +777,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
     }
 
     def makeDebugPrim(value: PrimitiveValue): DebugPrimitiveValue = DebugPrimitiveValue(
-      valueToString(value),
+      valueSummary(value),
       value.`type`().name())
 
-    def makeStackFrame(frame: StackFrame): DebugStackFrame = {
+    def makeStackFrame(index: Int, frame: StackFrame): DebugStackFrame = {
       val locals = ignoreErr({
-        frame.visibleVariables.map { v =>
-          DebugStackLocal(v.name, Some(makeDebugValue(
-            remember(frame.getValue(v)))))
+        frame.visibleVariables.zipWithIndex.map {
+          case (v, i) =>
+            DebugStackLocal(i, v.name, v.typeName(),
+              valueSummary(frame.getValue(v)))
         }.toList
       }, List())
 
@@ -803,31 +798,23 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
             frame.location.sourcePath()),
           frame.location.lineNumber))
       val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
-      DebugStackFrame(locals, numArgs, className, methodName, pcLocation, thisObjId)
+      DebugStackFrame(index, locals, numArgs, className,
+	methodName, pcLocation, thisObjId)
     }
 
     def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
 
-
     def makeDebugValue(value: Value): DebugValue = {
       if (value == null) makeDebugNull()
       else {
-	value match {
+        value match {
           case v: ArrayReference => makeDebugArr(v)
           case v: StringReference => makeDebugStr(v)
-          case v: ObjectReference =>
-	  {
-	    val tpe = v.referenceType()
-	    if (tpe.name().matches("^scala\\.runtime\\.[A-Z][a-z]+Ref$")) {
-	      val elemField = tpe.fieldByName("elem")
-	      makeDebugValue(v.getValue(elemField))
-	    } else makeDebugObj(v)
-	  }
+          case v: ObjectReference => makeDebugObj(v)
           case v: PrimitiveValue => makeDebugPrim(v)
-	}
-     }
+        }
+      }
     }
-
 
     def valueForName(thread: ThreadReference, name: String): Option[DebugValue] = {
       val stackFrame = thread.frame(0)
@@ -859,6 +846,16 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
       }).map(makeDebugValue(_))
     }
 
+    def valueForStackVar(
+      thread: ThreadReference, frame: Int, offset: Int): Option[DebugValue] = {
+      if (thread.frameCount > frame &&
+        thread.frame(frame).visibleVariables.length > offset) {
+        val stackFrame = thread.frame(frame)
+        val value = stackFrame.getValue(stackFrame.visibleVariables.get(offset))
+        Some(makeDebugValue(remember(value)))
+      } else None
+    }
+
     def valueForIndex(objectId: Long, index: Int): Option[DebugValue] = {
       (savedObjects.get(objectId) match {
         case Some(arr: ArrayReference) => Some(remember(arr.getValue(index)))
@@ -871,7 +868,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
       var i = index
       while (i < thread.frameCount && (count == -1 || i < count)) {
         val stackFrame = thread.frame(i)
-        frames += makeStackFrame(thread.frame(i))
+        frames += makeStackFrame(i, thread.frame(i))
         i += 1
       }
       DebugBacktrace(frames.toList, thread.uniqueID(), thread.name())

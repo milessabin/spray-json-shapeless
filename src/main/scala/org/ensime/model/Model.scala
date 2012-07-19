@@ -123,7 +123,7 @@ case class DebugNullValue(
 ) extends DebugValue
 
 case class DebugPrimitiveValue(
-  val value: String,
+  val summary: String,
   val typeName: String
 ) extends DebugValue
 
@@ -131,17 +131,18 @@ case class DebugObjectField(
   val index: Int,
   val name: String,
   val typeName: String,
-  val value: Option[DebugValue]
+  val summary: String
 )
 
 case class DebugObjectReference(
+  val summary: String,
   val fields: List[DebugObjectField],
   val typeName: String,
   val objectId: Long
 ) extends DebugValue
 
 case class DebugStringReference(
-  val stringValue: String,
+  val summary: String,
   val fields: List[DebugObjectField],
   val typeName: String,
   val objectId: Long
@@ -155,11 +156,14 @@ case class DebugArrayReference(
 ) extends DebugValue
 
 case class DebugStackLocal(
+  val index: Int,
   val name: String,
-  val value: Option[DebugValue]
+  val typeName: String,
+  val summary: String
 )
 
 case class DebugStackFrame(
+  val index: Int,
   val locals: List[DebugStackLocal],
   val numArguments: Int,
   val className: String,

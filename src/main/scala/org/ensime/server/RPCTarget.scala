@@ -141,6 +141,10 @@ trait RPCTarget { self: Project =>
   def rpcDebugValueForField(objectId: Long, name:String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueForFieldReq(objectId,name), callId)
   }
+  def rpcDebugValueForStackVar(threadId: Long, frame: Int, index: Int, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugValueForStackVarReq(
+	threadId, frame, index), callId)
+  }
   def rpcDebugValueForId(objectId: Long, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueForIdReq(objectId), callId)
   }

@@ -1749,7 +1749,7 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-step-out" => {
         form match {
           case SExpList(head :: StringAtom(threadId) :: body) => {
-            rpcTarget.rpcDebugStepOut(threadId.toLong, callId: Int)
+            rpcTarget.rpcDebugStepOut(threadId.toLong, callId)
           }
           case _ => oops
         }
@@ -1774,7 +1774,7 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-name" => {
         form match {
           case SExpList(head :: StringAtom(threadId) :: StringAtom(name) :: body) => {
-            rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId: Int)
+            rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId)
           }
           case _ => oops
         }
@@ -1797,7 +1797,7 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-id" => {
         form match {
           case SExpList(head :: StringAtom(objectId) :: body) => {
-            rpcTarget.rpcDebugValueForId(objectId.toLong, callId: Int)
+            rpcTarget.rpcDebugValueForId(objectId.toLong, callId)
           }
           case _ => oops
         }
@@ -1821,7 +1821,33 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-field" => {
         form match {
           case SExpList(head :: StringAtom(objectId) :: StringAtom(name) :: body) => {
-            rpcTarget.rpcDebugValueForField(objectId.toLong, name, callId: Int)
+            rpcTarget.rpcDebugValueForField(objectId.toLong, name, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-value-for-stack-var
+       * Summary:
+       *   Get the value at the given offset in the given stack frame.
+       * Arguments:
+       *   Int: The stack frame in which the local is found.
+       *   Int: The offset within the stack frame.
+       * Return:
+       *   A DebugValue
+       * Example call:
+       *   (:swank-rpc (swank:debug-value-for-stack-var 0 2) 42)
+       * Example return:
+       *   (:return (:ok "Horatio Hornblower") 42)
+       */
+      case "swank:debug-value-for-stack-var" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: IntAtom(frame) ::
+	    IntAtom(offset) :: body) => {
+            rpcTarget.rpcDebugValueForStackVar(
+	      threadId.toLong, frame, offset, callId)
           }
           case _ => oops
         }
@@ -1996,14 +2022,14 @@ trait SwankProtocol extends Protocol {
   def toWF(obj: DebugPrimitiveValue): SExp = {
     SExp(
       key(":val-type"), 'prim,
-      key(":value"), obj.value,
+      key(":summary"), obj.summary,
       key(":type-name"), obj.typeName)
   }
   def toWF(obj: DebugObjectField): SExp = {
     SExp(
       key(":index"), obj.index,
       key(":name"), obj.name,
-      key(":value"), obj.value.map(toWF).getOrElse(NilAtom()),
+      key(":summary"), obj.summary,
       key(":type-name"), obj.typeName)
   }
   def toWF(obj: DebugObjectReference): SExp = {
@@ -2016,7 +2042,7 @@ trait SwankProtocol extends Protocol {
   def toWF(obj: DebugStringReference): SExp = {
     SExp(
       key(":val-type"), 'str,
-      key(":string-value"), obj.stringValue,
+      key(":string-value"), obj.summary,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"), obj.typeName,
       key(":object-id"), obj.objectId.toString)
@@ -2032,12 +2058,15 @@ trait SwankProtocol extends Protocol {
 
   def toWF(obj: DebugStackLocal): SExp = {
     SExp(
+      key(":index"), obj.index,
       key(":name"), obj.name,
-      key(":value"), obj.value.map(toWF).getOrElse(NilAtom()))
+      key(":summary"), obj.summary,
+      key(":type-name"), obj.typeName)
   }
 
   def toWF(obj: DebugStackFrame): SExp = {
     SExp(
+      key(":index"), obj.index,
       key(":locals"), SExpList(obj.locals.map(toWF)),
       key(":num-args"), obj.numArguments,
       key(":class-name"), obj.className,
