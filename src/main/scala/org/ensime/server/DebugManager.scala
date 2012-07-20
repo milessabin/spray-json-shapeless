@@ -688,10 +688,10 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
         case v: BooleanValue => v.value().toString()
         case v: ByteValue => v.value().toString()
         case v: CharValue => "'" + v.value().toString() + "'"
-        case v: DoubleValue => v.value().toString() + "d"
-        case v: FloatValue => v.value().toString() + "f"
+        case v: DoubleValue => v.value().toString()
+        case v: FloatValue => v.value().toString()
         case v: IntegerValue => v.value().toString()
-        case v: LongValue => v.value().toString() + "l"
+        case v: LongValue => v.value().toString()
         case v: ShortValue => v.value().toString()
         case v: VoidValue => "void"
         case v: StringReference => "\"" + v.value().toString() + "\""
@@ -703,9 +703,16 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           if (tpe.name().matches("^scala\\.runtime\\.[A-Z][a-z]+Ref$")) {
             val elemField = tpe.fieldByName("elem")
             valueSummary(v.getValue(elemField))
-          } else "instance of " + v.referenceType().name()
+          } else "Instance of " + lastNameComponent(v.referenceType().name())
         }
         case _ => "NA"
+      }
+    }
+
+    private def lastNameComponent(s: String): String = {
+      "^.*?\\.([^\\.]+)$".r.findFirstMatchIn(s) match {
+        case Some(m) => m.group(1)
+        case None => s
       }
     }
 
@@ -799,7 +806,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           frame.location.lineNumber))
       val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
       DebugStackFrame(index, locals, numArgs, className,
-	methodName, pcLocation, thisObjId)
+        methodName, pcLocation, thisObjId)
     }
 
     def makeDebugNull(): DebugNullValue = DebugNullValue("Null")

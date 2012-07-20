@@ -2042,7 +2042,7 @@ trait SwankProtocol extends Protocol {
   def toWF(obj: DebugStringReference): SExp = {
     SExp(
       key(":val-type"), 'str,
-      key(":string-value"), obj.summary,
+      key(":summary"), obj.summary,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"), obj.typeName,
       key(":object-id"), obj.objectId.toString)
