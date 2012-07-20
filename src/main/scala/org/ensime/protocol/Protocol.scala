@@ -239,5 +239,5 @@ trait ProtocolConversions {
   def toWF(value: Undo): WireFormat
   def toWF(value: UndoResult): WireFormat
   def toWF(value: Null): WireFormat
-
+  def toWF(vmStatus: DebugVmStatus): WireFormat
 }

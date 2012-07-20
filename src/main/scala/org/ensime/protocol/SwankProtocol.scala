@@ -1519,6 +1519,30 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:debug-attach
+       * Summary:
+       *   Start a new debug session on a target vm.
+       * Arguments:
+       *   String: The hostname of the vm
+       *   String: The debug port of the vm
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:debug-attach "localhost" "9000") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-attach" => {
+        form match {
+          case SExpList(head :: StringAtom(hostname) :: StringAtom(port) :: body) => {
+            rpcTarget.rpcDebugAttachVM(hostname, port, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
        *   swank:debug-stop
        * Summary:
        *   Stop the debug session
@@ -2453,6 +2477,17 @@ trait SwankProtocol extends Protocol {
         SExpList(value.syms.map { s =>
           SExpList(List(s.symType, s.start, s.end))
         })))
+  }
+
+  def toWF(vmStatus: DebugVmStatus): SExp = {
+    vmStatus match {
+      case DebugVmSuccess() => SExp(
+        key(":status"), ("success"))
+      case DebugVmError(code, details) => SExp(
+        key(":status"), ("error"),
+        key(":error-code"), (code), 
+	key(":details"), (details))
+    }
   }
 
   private def changeToWF(ch: FileEdit): SExp = {
