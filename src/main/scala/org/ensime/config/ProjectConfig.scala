@@ -538,9 +538,14 @@ object ProjectConfig {
 
   def load(conf: FormatHandler): ProjectConfig = {
 
+    val serverRoot = new File(".")
+
     val rootDir: CanonFile = conf.rootDir match {
       case Some(str) => new File(str)
-      case _ => new File(".")
+      case _ => {
+	System.err.println("No project root specified!")
+	serverRoot
+      }
     }
 
     println("Using project root: " + rootDir)
@@ -600,15 +605,11 @@ object ProjectConfig {
     target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
     println("Using target directory: " + target.getOrElse("ERROR"))
 
-    val scalaLibraryJar = new File("lib/scala-library.jar")
-    val scalaReflectJar = new File("lib/scala-reflect.jar")
-    val scalaCompilerJar = new File("lib/scala-compiler.jar")
-
     new ProjectConfig(
       projectName,
-      scalaLibraryJar,
-      scalaReflectJar,
-      scalaCompilerJar,
+      canonicalizeFile("lib/scala-library.jar", serverRoot),
+      canonicalizeFile("lib/scala-reflect.jar", serverRoot),
+      canonicalizeFile("lib/scala-compiler.jar", serverRoot),
       rootDir,
       sourceRoots,
       runtimeDeps,
@@ -643,7 +644,7 @@ object ProjectConfig {
     }
   }
 
-  def nullConfig = new ProjectConfig(None, null, null, null, new File("."), List(),
+  def nullConfig = new ProjectConfig(None, None, None, None, new File("."), List(),
     List(), List(), None, Map(), false, List(), List(), List(), List())
 
   def getJavaHome(): Option[File] = {
@@ -679,9 +680,9 @@ class DebugConfig(val classpath: String, val sourcepath: String) {}
 
 class ProjectConfig(
   val name: Option[String],
-  val scalaLibraryJar: CanonFile,
-  val scalaReflectJar: CanonFile,
-  val scalaCompilerJar: CanonFile,
+  val scalaLibraryJar: Option[CanonFile],
+  val scalaReflectJar: Option[CanonFile],
+  val scalaCompilerJar: Option[CanonFile],
   val root: CanonFile,
   val sourceRoots: Iterable[CanonFile],
   val runtimeDeps: Iterable[CanonFile],
@@ -740,7 +741,10 @@ class ProjectConfig(
       }
     }
 
-  def scalaJars: Set[CanonFile] = Set(scalaCompilerJar, scalaReflectJar, scalaLibraryJar)
+  def scalaJars: Set[CanonFile] = Set(
+    scalaCompilerJar,
+    scalaReflectJar,
+    scalaLibraryJar).flatten
 
   def compilerClasspathFilenames: Set[String] = {
     (scalaJars ++ compileDeps).map(_.getPath).toSet
