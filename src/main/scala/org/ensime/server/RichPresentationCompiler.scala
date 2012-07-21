@@ -37,7 +37,6 @@ import scala.tools.nsc.interactive.{ FreshRunReq, CompilerControl, Global, Missi
 import scala.tools.nsc.util._
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
-import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
@@ -340,9 +339,9 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
       }
       try {
 	if (name.endsWith("$")) {
-          maybeType(definitions.getModule(name.substring(0, name.length - 1)))
+          maybeType(definitions.getModule(newTermName(name.substring(0, name.length - 1))))
 	} else {
-          maybeType(definitions.getClass(name))
+          maybeType(definitions.getClass(newTypeName(name)))
 	}
       } catch {
 	case e => None
