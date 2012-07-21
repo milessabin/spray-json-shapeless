@@ -601,11 +601,13 @@ object ProjectConfig {
     println("Using target directory: " + target.getOrElse("ERROR"))
 
     val scalaLibraryJar = new File("lib/scala-library.jar")
+    val scalaReflectJar = new File("lib/scala-reflect.jar")
     val scalaCompilerJar = new File("lib/scala-compiler.jar")
 
     new ProjectConfig(
       projectName,
       scalaLibraryJar,
+      scalaReflectJar,
       scalaCompilerJar,
       rootDir,
       sourceRoots,
@@ -641,7 +643,7 @@ object ProjectConfig {
     }
   }
 
-  def nullConfig = new ProjectConfig(None, null, null, new File("."), List(),
+  def nullConfig = new ProjectConfig(None, null, null, null, new File("."), List(),
     List(), List(), None, Map(), false, List(), List(), List(), List())
 
   def getJavaHome(): Option[File] = {
@@ -678,6 +680,7 @@ class DebugConfig(val classpath: String, val sourcepath: String) {}
 class ProjectConfig(
   val name: Option[String],
   val scalaLibraryJar: CanonFile,
+  val scalaReflectJar: CanonFile,
   val scalaCompilerJar: CanonFile,
   val root: CanonFile,
   val sourceRoots: Iterable[CanonFile],
@@ -737,7 +740,7 @@ class ProjectConfig(
       }
     }
 
-  def scalaJars: Set[CanonFile] = Set(scalaCompilerJar, scalaLibraryJar)
+  def scalaJars: Set[CanonFile] = Set(scalaCompilerJar, scalaReflectJar, scalaLibraryJar)
 
   def compilerClasspathFilenames: Set[String] = {
     (scalaJars ++ compileDeps).map(_.getPath).toSet
