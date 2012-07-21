@@ -92,7 +92,6 @@ class Analyzer(
   protected var awaitingInitialCompile = true
   protected var initTime: Long = 0
 
-  import protocol._
   import scalaCompiler._
 
   def act() {
