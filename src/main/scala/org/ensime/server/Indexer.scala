@@ -262,7 +262,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
   private def typeSymName(sym: Symbol): String = {
     try {
       typeFullName(sym.tpe)
-    } catch { case e => sym.nameString }
+    } catch { case e : Throwable => sym.nameString }
   }
 
   private def lookupKey(sym: Symbol): String = {

@@ -64,7 +64,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       System.err.println("Error during askOption", e)
       None
     }
-    case e =>
+    case e : Throwable =>
     e.printStackTrace()
     System.err.println("Error during askOption", e)
     None
@@ -238,7 +238,7 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
           viaView)
         members(sym) = m
       } catch {
-        case e =>
+        case e : Throwable =>
         System.err.println("Error: Omitting member " + sym + ": " + e)
       }
     }
@@ -260,7 +260,7 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
           val members: Iterable[Member] = try {
             wrapTypeMembers(p)
           } catch {
-            case e => {
+            case e : Throwable => {
               System.err.println("Error retrieving type members:")
               e.printStackTrace(System.err)
               List()
@@ -344,7 +344,7 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
           maybeType(definitions.getClass(newTypeName(name)))
 	}
       } catch {
-	case e => None
+	case e : Throwable => None
       }
     }
 

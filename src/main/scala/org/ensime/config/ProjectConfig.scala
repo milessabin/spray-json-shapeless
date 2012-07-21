@@ -638,7 +638,7 @@ object ProjectConfig {
         if (targetDir.mkdirs) Some(targetDir)
         else None
       } catch {
-        case e => None
+        case e : Throwable => None
       }
     }
   }

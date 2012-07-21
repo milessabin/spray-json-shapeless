@@ -324,7 +324,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
         case _ => Left(RefactorFailure(procId, "Unknown refactoring: " + tpe))
       }
     } catch {
-      case e => {
+      case e : Throwable => {
 	e.printStackTrace()
 	Left(RefactorFailure(procId, e.toString))
       }

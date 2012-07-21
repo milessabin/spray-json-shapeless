@@ -47,7 +47,7 @@ object JavaProperties {
       }
     }
     catch{
-      case e => Map()
+      case e : Throwable => Map()
     }
   }
 

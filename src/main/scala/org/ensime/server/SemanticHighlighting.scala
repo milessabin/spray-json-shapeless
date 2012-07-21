@@ -104,7 +104,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
               val start = try {
                 qual.pos.end + 1
               } catch {
-                case _ => treeP.start
+                case _ : Throwable => treeP.start
               }
               val len = selector.decode.length()
               val end = start + len
@@ -123,9 +123,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 }
               } else if (sym.isConstructor) {
                 val start = try { sym.pos.start }
-                catch { case _ => treeP.start }
+                catch { case _ : Throwable => treeP.start }
                 val end = try { sym.pos.end }
-                catch { case _ => treeP.end }
+                catch { case _ : Throwable => treeP.end }
                 addAt(start, end, 'constructor)
               } else if (sym.isMethod) {
                 if (sym.nameString == "apply" ||
@@ -155,9 +155,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
                 // TODO:
                 // Unfotunately t.symbol.pos returns a RangePosition
-                // that covers the entire declaration. 
+                // that covers the entire declaration.
                 //
-                // This is brittle, but I don't know a better 
+                // This is brittle, but I don't know a better
                 // way to get the position of just the name.
 
                 val start = if (mods.positions.isEmpty) t.pos.start
@@ -192,9 +192,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'object)
               } else if (t.tpe != null) {
                 // TODO:
-                // This case occurs when 
-                // pattern matching on 
-                // case classes. 
+                // This case occurs when
+                // pattern matching on
+                // case classes.
                 // As in:
                 // case MyClass(a:Int,b:Int)
                 //
@@ -206,7 +206,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
 	}
 	catch{
-	  case e => {
+	  case e : Throwable => {
 	    System.err.println("Error in AST traverse:")
 	    e.printStackTrace(System.err);
 	  }
@@ -224,7 +224,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
     typed.get.left.toOption match {
       case Some(tree) => {
 
-	// TODO: Disable designations for 
+	// TODO: Disable designations for
 	// regions with errors?
 
         //        val cu = unitOf(p.source)

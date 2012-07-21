@@ -4,7 +4,7 @@ import java.io._
 object ProcessUtil {
 
   def readAllOutput(proc: Process, outputWriter: Writer, errorWriter: Writer): Either[Throwable, Int] = {
-    try {            
+    try {
       val outputStream = proc.getInputStream()
       val outputReaderThread = new StreamReaderThread(outputStream, outputWriter)
 
@@ -43,7 +43,7 @@ object ProcessUtil {
 
 
   def run(proc: Process): Either[Throwable, Int] = {
-    try {            
+    try {
       val exitVal = proc.waitFor()
       Right(exitVal)
     } catch {
@@ -64,7 +64,7 @@ object ProcessUtil {
 	  line = br.readLine()
 	}
       } catch {
-	case e => e.printStackTrace()
+	case e : Throwable => e.printStackTrace()
       }
     }
 

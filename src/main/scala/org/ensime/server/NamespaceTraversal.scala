@@ -54,7 +54,7 @@ trait NamespaceTraversal { self: RichPresentationCompiler =>
         }
       }
     } catch {
-      case e => None
+      case e : Throwable => None
     }
   }
 

@@ -83,7 +83,7 @@ trait CompletionControl {
 	    new CompletionInfo(s.localName, s.name, -1, false, 40, Some(s.name))
 	  }
 	}
-	case None => List()
+	case _ => List()
       }
     }
 

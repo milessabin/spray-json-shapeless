@@ -360,7 +360,7 @@ trait ModelBuilders { self: Global with Helpers =>
           None
         }
       } catch {
-        case e => None
+        case e : Throwable => None
       }
     }
   }

@@ -68,6 +68,8 @@ object EnsimeBuild extends Build {
       Seq(
         version := "0.9.5",
         organization := "org.ensime",
+	scalaVersion := TwoNineVersion,
+	crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
         resolvers <++= (scalaVersion) { scalaVersion =>
           if (scalaVersion == TwoTenVersion)
             // currently SBT will download scala-library and scala-compiler from oss.sonatype.org no matter what

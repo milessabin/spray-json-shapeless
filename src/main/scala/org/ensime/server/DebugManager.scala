@@ -928,7 +928,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
     def valueForIndex(objectId: Long, index: Int): Option[DebugValue] = {
       (savedObjects.get(objectId) match {
         case Some(arr: ArrayReference) => Some(remember(arr.getValue(index)))
-        case None => None
+        case _ => None
       }).map(makeDebugValue(_))
     }
 
