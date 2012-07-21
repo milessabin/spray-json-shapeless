@@ -53,6 +53,12 @@ object EnsimeBuild extends Build {
   val root = Path(".")
 
   val TwoNineVersion = "2.9.2"
+  val TwoTenVersion = "2.10.0-SNAPSHOT"
+  val supportedScalaVersions = Seq(TwoNineVersion, TwoTenVersion)
+  def unsupportedScalaVersion(scalaVersion: String): Nothing =
+    sys.error(
+      "Unsupported scala version: " + scalaVersion + ". " +
+      "Supported versions: " + supportedScalaVersions.mkString(", "))
 
   lazy val project = {
     Project(
@@ -60,44 +66,64 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++
       Seq(
-	version := "0.9.5",
-	organization := "org.ensime",
-	scalaVersion := TwoNineVersion,
-	crossScalaVersions := Seq(TwoNineVersion),
-	resolvers += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
-	resolvers += "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
-	resolvers += "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
-	resolvers +=  "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
-	resolvers += "repo.codahale.com" at "http://repo.codahale.com",
-	libraryDependencies <++= (scalaVersion) { scalaVersion =>
-	  val compilerVersion = scalaVersion
-	  Seq(
-	    "com.codahale" % "jerkson_2.9.1" % "0.5.0",
-	    "org.apache.lucene" % "lucene-core" % "3.5.0",
-	    "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
-	    "asm" % "asm" % "3.2",
-	    "asm" % "asm-commons" % "3.2",
-	    "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
-	    "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
-	    "org.scala-lang" % "scala-compiler" % compilerVersion % "compile;runtime;test"
-	  )},
-	unmanagedClasspath in Compile ++= toolsJar.toList,
-	scalacOptions ++= Seq("-g:vars","-deprecation"),
-	exportJars := true,
-	stageTask,
-	distTask,
-	releaseTask,
-
-	{
-	  import org.ensime.sbt.Plugin.Settings.ensimeConfig
-	  import org.ensime.sbt.util.SExp._
-	  ensimeConfig := sexp()
-	}
-
+        version := "0.9.5",
+        organization := "org.ensime",
+        resolvers <++= (scalaVersion) { scalaVersion =>
+          if (scalaVersion == TwoTenVersion)
+            // currently SBT will download scala-library and scala-compiler from oss.sonatype.org no matter what
+            // but we would like it to use our repository, so that sudden changes in SNAPSHOT don't break Ensime
+            // prevously to do that we'd just create `Resolver.withDefaultResolvers(rs, mavenCentral = true, scalaTools = false)`
+            // but this doesn't work anymore. todo. fix this
+            Seq("SublimeScala Snapshots Maven Repository" at "https://bitbucket.org/sublimescala/nexus/raw/master/snapshots/",
+                "SublimeScala Releases Maven Repository" at "https://bitbucket.org/sublimescala/nexus/raw/master/releases/",
+                "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2")
+          else if (scalaVersion == TwoNineVersion)
+            Seq("Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
+                "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
+                "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
+                "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
+                "repo.codahale.com" at "http://repo.codahale.com")
+          else unsupportedScalaVersion(scalaVersion)
+        },
+        libraryDependencies <++= (scalaVersion) { scalaVersion =>
+          Seq("org.apache.lucene" % "lucene-core" % "3.5.0",
+              "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
+              "asm" % "asm" % "3.2",
+              "asm" % "asm-commons" % "3.2") ++
+          (if (scalaVersion == TwoTenVersion)
+            Seq("com.codahale" %% "jerkson" % "0.6.0-SNAPSHOT",
+                "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
+                "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
+                "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
+                "org.scalariform" %% "scalariform" % "0.1.3-SNAPSHOT" % "compile;runtime;test",
+                // todo. rebuild ScalaTest for 2.10.0-SNAPSHOT
+                // "org.scalatest" %% "scalatest" % "2.0-SNAPSHOT" % "test",
+                "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test",
+                "org.scala-lang" % "scala-reflect" % scalaVersion % "compile;runtime;test",
+                "org.scala-lang" % "scala-actors" % scalaVersion % "compile;runtime;test")
+          else if (scalaVersion == TwoNineVersion)
+            Seq("com.codahale" % "jerkson_2.9.1" % "0.5.0",
+                "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
+                "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
+                "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test")
+          else unsupportedScalaVersion(scalaVersion))
+        },
+        unmanagedJars in Compile <++= (scalaVersion, baseDirectory) map { (scalaVersion, base) =>
+          (((base / "lib") +++ (base / ("lib_" + scalaVersion))) ** "*.jar").classpath
+        },
+        unmanagedClasspath in Compile ++= toolsJar.toList,
+        scalacOptions ++= Seq("-g:vars","-deprecation"),
+        exportJars := true,
+        stageTask,
+        distTask,
+        releaseTask,
+        {
+          import org.ensime.sbt.Plugin.Settings.ensimeConfig
+          import org.ensime.sbt.util.SExp._
+          ensimeConfig := sexp()
+        }
       ))
   }
-
-
 
   val log = LogManager.defaultScreen
 
@@ -115,10 +141,15 @@ object EnsimeBuild extends Build {
 
     log.info("Copying runtime environment to ./" + distDir + "....")
     createDirectories(List(
-	file(distDir),
-	file(distDir + "/bin"),
-	file(distDir + "/lib"),
-	file(distDir + "/elisp")))
+      file(distDir),
+      file(distDir + "/bin"),
+      file(distDir + "/lib"),
+      file(distDir + "/elisp")))
+
+    // Scalac components
+    val scalaComponents = List("library", "reflect", "compiler", "actors")
+    val jars = scalaComponents map (c => "scala-" + c + ".jar")
+    val scala = jars
 
     // Copy the emacs lisp to dist
     val elisp_base = root / "src" / "main" / "elisp"
@@ -129,14 +160,24 @@ object EnsimeBuild extends Build {
     val deps = (depCP ++ exportedCP).map(_.data)
     copy(deps x flat(root / distDir / "lib"))
 
+    // todo. fixup scala-reflect.jar, don't know why it gets its version appended
+    // I think that's because sbt treats scala-library and scala-compiler specially
+    // but the version we use (0.11.3) doesn't yet know about scala-reflect
+    // would be lovely to update to 0.12, but I'm afraid it will break in new fancy ways
+    val scalaReflectWeirdJar = root / distDir / "lib" / "scala-reflect-2.10.0-SNAPSHOT.jar"
+    val scalaReflectJar = root / distDir / "lib" / "scala-reflect.jar"
+    scalaReflectWeirdJar.renameTo(scalaReflectJar)
+    scalaReflectWeirdJar.delete()
+
     // Grab all jars..
     val cpLibs = (root / distDir / "lib" ** "*.jar").get.flatMap(
       _.relativeTo(root / distDir))
 
-    def writeScript(classpath:String, from:String, to:String){
+    def writeScript(bootclasspath:String, classpath:String, from:String, to:String){
       val tmplF = new File(from)
       val tmpl = read(tmplF)
-      val s = tmpl.replace("<RUNTIME_CLASSPATH>", classpath)
+      var s = tmpl.replace("<RUNTIME_CLASSPATH>", classpath)
+      s = s.replace("<RUNTIME_BOOTCLASSPATH>", bootclasspath)
       val f = new File(to)
       write(f, s)
       f.setExecutable(true)
@@ -145,17 +186,26 @@ object EnsimeBuild extends Build {
     {
       val runtimeLibs = cpLibs ++ Seq("${JAVA_HOME}/lib/tools.jar")
       // Expand the server invocation script templates.
-      writeScript(runtimeLibs.mkString(":").replace("\\", "/"),
-	"./etc/scripts/server",
-	"./" + distDir + "/bin/server")
+      def nix_wrap[T](cpEntries: Traversable[T]): String =
+        "\"" + (cpEntries map (_.toString) mkString ":").replace("\\", "/") + "\""
+      writeScript(
+        nix_wrap(scala),
+        nix_wrap(runtimeLibs),
+        "./etc/scripts/server",
+        "./" + distDir + "/bin/server")
     }
 
     {
-      val runtimeLibs = cpLibs
-      writeScript("\"" + (runtimeLibs.map{lib => "%~dp0/../" + lib} ++
-	  Seq("%JAVA_HOME%\\lib\\tools.jar")).mkString(";").replace("/", "\\") + "\"",
-	"./etc/scripts/server.bat",
-	"./" + distDir + "/bin/server.bat")
+      val runtimeLibs = cpLibs ++ Seq("%JAVA_HOME%/lib/tools.jar")
+      def win_wrap[T](cpEntries: Traversable[T]): String = {
+        def ensureAbsPath(p: String) = if ((p contains ":") || (p contains "%")) p else ("%~dp0\\..\\" + p)
+        "\"" + (cpEntries map (_.toString) map (c => ensureAbsPath(c)) mkString ";").replace("/", "\\") + "\""
+      }
+      writeScript(
+        win_wrap(scala),
+        win_wrap(runtimeLibs),
+        "./etc/scripts/server.bat",
+        "./" + distDir + "/bin/server.bat")
     }
 
     copyFile(root / "README.md", root / distDir / "README.md")
@@ -188,22 +238,13 @@ object EnsimeBuild extends Build {
     val archiveFile = new File(initialDir,
       modName + ".tar.gz").getCanonicalPath
     withTemporaryDirectory{ f =>
-      val releaseDir = new File(
-	f.getAbsolutePath + "/" +
-	modName)
+      val releaseDir = new File(f.getAbsolutePath + "/" + modName)
       log.info("Copying ./" + distDir + " to temp directory: " + releaseDir)
       doSh("cp -r ./" + distDir + " " + releaseDir)!!(log)
       log.info("Compressing temp directory to " + archiveFile + "...")
-      doSh("tar -pcvzf " + archiveFile + " " +
-	modName, Some(f)) !! (log)
+      doSh("tar -pcvzf " + archiveFile + " " + modName, Some(f)) !! (log)
       None
     }
     None
   }
-
-
-
-
-
-
 }
