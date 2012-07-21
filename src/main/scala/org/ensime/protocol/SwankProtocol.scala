@@ -2144,11 +2144,38 @@ trait SwankProtocol extends Protocol {
 
   def toWF(evt: DebugEvent): SExp = {
     evt match {
+      /**
+      * Doc Event:
+      *   :debug-event (:type output)
+      * Summary:
+      *   Communicates stdout/stderr of debugged VM to client.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: output
+      *      :body //String: A chunk of output text
+      *   ))
+      */
       case DebugOutputEvent(out: String) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'output,
             key(":body"), out))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type step)
+      * Summary:
+      *   Signals that the debugged VM has stepped to a new location and is now
+      *     paused awaiting control.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: step
+      *      :thread-id //String: The unique thread id of the paused thread.
+      *      :thread-name //String: The informal name of the paused thread.
+      *      :file //String: The source file the VM stepped into.
+      *      :line //Int: The source line the VM stepped to.
+      *   ))
+      */
       case DebugStepEvent(threadId, threadName, pos) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'step,
@@ -2157,6 +2184,21 @@ trait SwankProtocol extends Protocol {
             key(":file"), pos.file.getAbsolutePath,
             key(":line"), pos.line))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type breakpoint)
+      * Summary:
+      *   Signals that the debugged VM has stopped at a breakpoint.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: breakpoint
+      *      :thread-id //String: The unique thread id of the paused thread.
+      *      :thread-name //String: The informal name of the paused thread.
+      *      :file //String: The source file the VM stepped into.
+      *      :line //Int: The source line the VM stepped to.
+      *   ))
+      */
       case DebugBreakEvent(threadId, threadName, pos) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'breakpoint,
@@ -2165,30 +2207,107 @@ trait SwankProtocol extends Protocol {
             key(":file"), pos.file.getAbsolutePath,
             key(":line"), pos.line))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type death)
+      * Summary:
+      *   Signals that the debugged VM has exited.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: death
+      *   ))
+      */
       case DebugVMDeathEvent() => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'death))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type start)
+      * Summary:
+      *   Signals that the debugged VM has started.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: start
+      *   ))
+      */
       case DebugVMStartEvent() => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'start))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type disconnect)
+      * Summary:
+      *   Signals that the debugger has disconnected form the debugged VM.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: disconnect
+      *   ))
+      */
       case DebugVMDisconnectEvent() => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'disconnect))
       }
-      case DebugExceptionEvent(excId, threadId, threadName) => {
+
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type exception)
+      * Summary:
+      *   Signals that the debugged VM has thrown an exception and is now paused
+      *     waiting for control.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: exception
+      *      :exception //String: The unique object id of the exception.
+      *      :thread-id //String: The unique thread id of the paused thread.
+      *      :thread-name //String: The informal name of the paused thread.
+      *      :file //String: The source file where the exception was thrown.
+      *      :line //Int: The source line where the exception was thrown.
+      *   ))
+      */
+      case DebugExceptionEvent(excId, threadId, threadName, pos) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'exception,
             key(":exception"), excId.toString,
             key(":thread-id"), threadId.toString,
-            key(":thread-name"), threadName))
+            key(":thread-name"), threadName,
+            key(":file"), pos.file.getAbsolutePath,
+            key(":line"), pos.line))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type threadStart)
+      * Summary:
+      *   Signals that a new thread has started.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: threadStart
+      *      :thread-id //String: The unique thread id of the new thread.
+      *   ))
+      */
       case DebugThreadStartEvent(threadId: Long) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'threadStart,
             key(":thread-id"), threadId.toString))
       }
+
+      /**
+      * Doc Event:
+      *   :debug-event (:type threadDeath)
+      * Summary:
+      *   Signals that a new thread has died.
+      * Structure:
+      *   (:debug-event
+      *     (:type //Symbol: threadDeath
+      *      :thread-id //String: The unique thread id of the new thread.
+      *   ))
+      */
       case DebugThreadDeathEvent(threadId: Long) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'threadDeath,
