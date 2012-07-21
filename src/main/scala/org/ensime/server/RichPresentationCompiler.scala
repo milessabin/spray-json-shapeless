@@ -37,7 +37,6 @@ import scala.tools.nsc.interactive.{ FreshRunReq, CompilerControl, Global, Missi
 import scala.tools.nsc.util._
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
-import scala.tools.nsc.symtab.Types
 import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
