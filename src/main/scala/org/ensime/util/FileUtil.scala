@@ -142,22 +142,22 @@ object FileUtils {
     }).toSet
   }
 
-  def maybeDirs(names: Iterable[String], baseDir: File): Iterable[CanonFile] = {
-    names.map { s => maybeDir(s, baseDir) }.flatten
+  def canonicalizeDirs(names: Iterable[String], baseDir: File): Iterable[CanonFile] = {
+    names.map { s => canonicalizeDir(s, baseDir) }.flatten
   }
 
-  def maybeFiles(names: Iterable[String], baseDir: File): Iterable[CanonFile] = {
-    names.map { s => maybeFile(s, baseDir) }.flatten
+  def canonicalizeFiles(names: Iterable[String], baseDir: File): Iterable[CanonFile] = {
+    names.map { s => canonicalizeFile(s, baseDir) }.flatten
   }
 
-  def maybeFile(s: String, baseDir: File): Option[CanonFile] = {
+  def canonicalizeFile(s: String, baseDir: File): Option[CanonFile] = {
     val f = new File(s)
     if (f.isAbsolute) Some(toCanonFile(f))
     else Some(toCanonFile(new File(baseDir, s)))
   }.filter(f => f.exists)
 
-  def maybeDir(s: String, baseDir: File): Option[CanonFile] = {
-    maybeFile(s, baseDir).filter(_.isDirectory)
+  def canonicalizeDir(s: String, baseDir: File): Option[CanonFile] = {
+    canonicalizeFile(s, baseDir).filter(_.isDirectory)
   }
 
   def isValidJar(f: File): Boolean = f.exists && f.getName.endsWith(".jar")

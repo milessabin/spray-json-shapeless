@@ -552,41 +552,41 @@ object ProjectConfig {
     var projectName: Option[String] = None
 
     {
-      val deps = maybeFiles(conf.compileJars, rootDir)
+      val deps = canonicalizeFiles(conf.compileJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar)
       println("Including compile jars: " + jars.mkString(","))
       compileDeps ++= jars
-      val moreDeps = maybeFiles(conf.compileDeps, rootDir)
+      val moreDeps = canonicalizeFiles(conf.compileDeps, rootDir)
       println("Including compile deps: " + moreDeps.mkString(","))
       compileDeps ++= moreDeps
     }
 
     {
-      val deps = maybeFiles(conf.runtimeJars, rootDir)
+      val deps = canonicalizeFiles(conf.runtimeJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar)
       println("Including runtime jars: " + jars.mkString(","))
       runtimeDeps ++= jars
-      val moreDeps = maybeFiles(conf.runtimeDeps, rootDir)
+      val moreDeps = canonicalizeFiles(conf.runtimeDeps, rootDir)
       println("Including runtime deps: " + moreDeps.mkString(","))
       runtimeDeps ++= moreDeps
     }
 
     {
-      val moreDeps = maybeFiles(conf.testDeps, rootDir)
+      val moreDeps = canonicalizeFiles(conf.testDeps, rootDir)
       println("Including test deps: " + moreDeps.mkString(","))
       compileDeps ++= moreDeps
       runtimeDeps ++= moreDeps
     }
 
     {
-      val dirs = maybeDirs(conf.sourceRoots, rootDir)
+      val dirs = canonicalizeDirs(conf.sourceRoots, rootDir)
       println("Including source roots: " + dirs.mkString(", "))
       sourceRoots ++= dirs
     }
 
     conf.target match {
       case Some(targetDir) => {
-        target = target.orElse(maybeDir(targetDir, rootDir))
+        target = target.orElse(canonicalizeDir(targetDir, rootDir))
       }
       case _ =>
     }
