@@ -477,80 +477,6 @@ trait SwankProtocol extends Protocol {
    *   )
    */
 
-  ////////////
-  // Events //
-  ////////////
-
-  /**
-   * Doc Event:
-   *   :compiler-ready
-   * Summary:
-   *   Signal that the compiler has finished its initial compilation and the server
-   *   is ready to accept RPC calls.
-   * Structure:
-   *   (:compiler-ready)
-   */
-
-  /**
-   * Doc Event:
-   *   :full-typecheck-finished
-   * Summary:
-   *   Signal that the compiler has finished compilation of the entire project.
-   * Structure:
-   *   (:full-typecheck-finished)
-   */
-
-  /**
-   * Doc Event:
-   *   :indexer-ready
-   * Summary:
-   *   Signal that the indexer has finished indexing the classpath.
-   * Structure:
-   *   (:indexer-ready)
-   */
-
-  /**
-   * Doc Event:
-   *   :scala-notes
-   * Summary:
-   *   Notify client when Scala compiler generates errors,warnings or other notes.
-   * Structure:
-   *   (:scala-notes
-   *   notes //List of Note
-   *   )
-   */
-
-  /**
-   * Doc Event:
-   *   :java-notes
-   * Summary:
-   *   Notify client when Java compiler generates errors,warnings or other notes.
-   * Structure:
-   *   (:java-notes
-   *   notes //List of Note
-   *   )
-   */
-
-  /**
-   * Doc Event:
-   *   :clear-all-scala-notes
-   * Summary:
-   *   Notify client when Scala notes have become invalidated. Editor should consider
-   *   all Scala related notes to be stale at this point.
-   * Structure:
-   *   (:clear-all-scala-notes)
-   */
-
-  /**
-   * Doc Event:
-   *   :clear-all-java-notes
-   * Summary:
-   *   Notify client when Java notes have become invalidated. Editor should consider
-   *   all Java related notes to be stale at this point.
-   * Structure:
-   *   (:clear-all-java-notes)
-   */
-
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
     println("\nHandling RPC: " + form)
@@ -1015,9 +941,9 @@ trait SwankProtocol extends Protocol {
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
             IntAtom(maxResults) :: BooleanAtom(caseSens) ::
-	    BooleanAtom(reload) :: body) => {
+            BooleanAtom(reload) :: body) => {
             rpcTarget.rpcCompletionsAtPoint(
-	      file, point, maxResults, caseSens, reload, callId)
+              file, point, maxResults, caseSens, reload, callId)
           }
           case _ => oops
         }
@@ -1869,9 +1795,9 @@ trait SwankProtocol extends Protocol {
       case "swank:debug-value-for-stack-var" => {
         form match {
           case SExpList(head :: StringAtom(threadId) :: IntAtom(frame) ::
-	    IntAtom(offset) :: body) => {
+            IntAtom(offset) :: body) => {
             rpcTarget.rpcDebugValueForStackVar(
-	      threadId.toLong, frame, offset, callId)
+              threadId.toLong, frame, offset, callId)
           }
           case _ => oops
         }
@@ -2125,23 +2051,92 @@ trait SwankProtocol extends Protocol {
       evt.detail.map(strToSExp).getOrElse(NilAtom()))
   }
 
+  /**
+   * Doc Event:
+   *   :compiler-ready
+   * Summary:
+   *   Signal that the compiler has finished its initial compilation and the server
+   *   is ready to accept RPC calls.
+   * Structure:
+   *   (:compiler-ready)
+   */
   def toWF(evt: AnalyzerReadyEvent): SExp = {
     SExp(key(":compiler-ready"))
   }
 
+  /**
+   * Doc Event:
+   *   :full-typecheck-finished
+   * Summary:
+   *   Signal that the compiler has finished compilation of the entire project.
+   * Structure:
+   *   (:full-typecheck-finished)
+   */
   def toWF(evt: FullTypeCheckCompleteEvent): SExp = {
     SExp(key(":full-typecheck-finished"))
   }
 
+  /**
+   * Doc Event:
+   *   :indexer-ready
+   * Summary:
+   *   Signal that the indexer has finished indexing the classpath.
+   * Structure:
+   *   (:indexer-ready)
+   */
   def toWF(evt: IndexerReadyEvent): SExp = {
     SExp(key(":indexer-ready"))
   }
 
+
+
+  /**
+   * Doc Event:
+   *   :scala-notes
+   * Summary:
+   *   Notify client when Scala compiler generates errors,warnings or other notes.
+   * Structure:
+   *   (:scala-notes
+   *   notes //List of Note
+   *   )
+   */
+   //-----------------------
+  /**
+   * Doc Event:
+   *   :java-notes
+   * Summary:
+   *   Notify client when Java compiler generates errors,warnings or other notes.
+   * Structure:
+   *   (:java-notes
+   *   notes //List of Note
+   *   )
+   */
   def toWF(evt: NewNotesEvent): SExp = {
     if (evt.lang == 'scala) SExp(key(":scala-notes"), toWF(evt.notelist))
     else SExp(key(":java-notes"), toWF(evt.notelist))
   }
 
+
+
+  /**
+   * Doc Event:
+   *   :clear-all-scala-notes
+   * Summary:
+   *   Notify client when Scala notes have become invalidated. Editor should consider
+   *   all Scala related notes to be stale at this point.
+   * Structure:
+   *   (:clear-all-scala-notes)
+   */
+   //-----------------------
+  /**
+   * Doc Event:
+   *   :clear-all-java-notes
+   * Summary:
+   *   Notify client when Java notes have become invalidated. Editor should consider
+   *   all Java related notes to be stale at this point.
+   * Structure:
+   *   (:clear-all-java-notes)
+   */
   def toWF(evt: ClearAllNotesEvent): SExp = {
     if (evt.lang == 'scala) SExp(key(":clear-all-scala-notes"))
     else SExp(key(":clear-all-java-notes"))
@@ -2485,8 +2480,8 @@ trait SwankProtocol extends Protocol {
         key(":status"), ("success"))
       case DebugVmError(code, details) => SExp(
         key(":status"), ("error"),
-        key(":error-code"), (code), 
-	key(":details"), (details))
+        key(":error-code"), (code),
+        key(":details"), (details))
     }
   }
 
