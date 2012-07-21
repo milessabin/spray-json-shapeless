@@ -149,7 +149,12 @@ object EnsimeBuild extends Build {
       file(distDir + "/elisp")))
 
     // Scalac components
-    val scalaComponents = List("library", "reflect", "compiler", "actors")
+    val scalaComponents = if(scalaBuildVersion == TwoTenVersion) {
+      List("library", "reflect", "compiler", "actors")
+    } else {
+      List("library", "compiler")
+    }
+
     val jars = scalaComponents map (c => "scala-" + c + ".jar")
     val scala = jars
 
@@ -162,14 +167,16 @@ object EnsimeBuild extends Build {
     val deps = (depCP ++ exportedCP).map(_.data)
     copy(deps x flat(root / distDir / "lib"))
 
-    // todo. fixup scala-reflect.jar, don't know why it gets its version appended
-    // I think that's because sbt treats scala-library and scala-compiler specially
-    // but the version we use (0.11.3) doesn't yet know about scala-reflect
-    // would be lovely to update to 0.12, but I'm afraid it will break in new fancy ways
-    val scalaReflectWeirdJar = root / distDir / "lib" / "scala-reflect-2.10.0-SNAPSHOT.jar"
-    val scalaReflectJar = root / distDir / "lib" / "scala-reflect.jar"
-    scalaReflectWeirdJar.renameTo(scalaReflectJar)
-    scalaReflectWeirdJar.delete()
+    if(scalaBuildVersion == TwoTenVersion) {
+      // todo. fixup scala-reflect.jar, don't know why it gets its version appended
+      // I think that's because sbt treats scala-library and scala-compiler specially
+      // but the version we use (0.11.3) doesn't yet know about scala-reflect
+      // would be lovely to update to 0.12, but I'm afraid it will break in new fancy ways
+      val scalaReflectWeirdJar = root / distDir / "lib" / "scala-reflect-2.10.0-SNAPSHOT.jar"
+      val scalaReflectJar = root / distDir / "lib" / "scala-reflect.jar"
+      scalaReflectWeirdJar.renameTo(scalaReflectJar)
+      scalaReflectWeirdJar.delete()
+    }
 
     // Grab all jars..
     val cpLibs = (root / distDir / "lib" ** "*.jar").get.flatMap(

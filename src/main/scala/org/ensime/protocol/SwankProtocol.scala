@@ -2266,18 +2266,22 @@ trait SwankProtocol extends Protocol {
       *      :exception //String: The unique object id of the exception.
       *      :thread-id //String: The unique thread id of the paused thread.
       *      :thread-name //String: The informal name of the paused thread.
-      *      :file //String: The source file where the exception was thrown.
-      *      :line //Int: The source line where the exception was thrown.
+      *      :file //String: The source file where the exception was caught,
+      *         or nil if no location is known.
+      *      :line //Int: The source line where the exception was thrown,
+      *         or nil if no location is known.
       *   ))
       */
-      case DebugExceptionEvent(excId, threadId, threadName, pos) => {
+      case DebugExceptionEvent(excId, threadId, threadName, maybePos) => {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'exception,
             key(":exception"), excId.toString,
             key(":thread-id"), threadId.toString,
             key(":thread-name"), threadName,
-            key(":file"), pos.file.getAbsolutePath,
-            key(":line"), pos.line))
+            key(":file"), maybePos.map{ p =>
+	      StringAtom(p.file.getAbsolutePath)}.getOrElse('nil),
+            key(":line"), maybePos.map{ p =>
+	      IntAtom(p.line)}.getOrElse('nil)))
       }
 
       /**

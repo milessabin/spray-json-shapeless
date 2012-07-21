@@ -84,7 +84,7 @@ case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
 case class DebugExceptionEvent(excId: Long,
-  threadId: Long, threadName: String) extends DebugEvent
+  threadId: Long, threadName: String, pos: Option[SourcePosition]) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 case class DebugOutputEvent(out: String) extends DebugEvent
@@ -291,7 +291,9 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                   project ! AsyncEvent(toWF(DebugExceptionEvent(
                     e.exception.uniqueID(),
                     e.thread().uniqueID(),
-                    e.thread().name)))
+                    e.thread().name,
+		    locToPos(e.catchLocation())
+		  )))
                 }
                 case e: ThreadDeathEvent => {
                   project ! AsyncEvent(toWF(DebugThreadDeathEvent(
