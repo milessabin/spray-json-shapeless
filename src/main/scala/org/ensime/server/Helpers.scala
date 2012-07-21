@@ -32,7 +32,7 @@ import scala.tools.nsc.symtab.{Symbols, Types}
 
 trait Helpers { self: Global =>
 
-  import definitions.{ ObjectClass, ScalaObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
+  import definitions.{ ObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
   import scala.tools.nsc.symtab.Flags._
 
 

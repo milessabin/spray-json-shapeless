@@ -216,7 +216,7 @@ class TypeInspectInfo(val tpe: TypeInfo, val companionId: Option[Int], val super
 trait ModelBuilders { self: Global with Helpers =>
 
   import self._
-  import definitions.{ ObjectClass, ScalaObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
+  import definitions.{ ObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
 
   private val typeCache = new HashMap[Int, Type]
   private val typeCacheReverse = new HashMap[Type, Int]
