@@ -84,7 +84,8 @@ case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
 case class DebugExceptionEvent(excId: Long,
-  threadId: Long, threadName: String, pos: Option[SourcePosition]) extends DebugEvent
+  threadId: Long, threadName: String,
+  pos: Option[SourcePosition]) extends DebugEvent
 case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 case class DebugOutputEvent(out: String) extends DebugEvent
@@ -187,6 +188,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
     pendingBreaksBySourceName.values.flatten.toList
   }
 
+  def disconnectDebugVM() {
+    withVM { vm =>
+      vm.dispose()
+    }
+    moveActiveBreaksToPending()
+    maybeVM = None
+    project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
+  }
+
   def vmOptions(): List[String] = {
     List("-classpath", config.debugClasspath)
   }
@@ -195,47 +205,52 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
   def withVM[T](action: (VM => T)): Option[T] = {
     maybeVM.synchronized {
-      for (vm <- maybeVM) yield {
-        action(vm)
+      try {
+        for (vm <- maybeVM) yield {
+          action(vm)
+        }
+      } catch {
+        case e: AbsentInformationException => {
+          e.printStackTrace()
+	  None
+        }
+        case e: VMDisconnectedException =>
+          {
+            System.err.println("Attempted interaction with disconnected VM:")
+            e.printStackTrace()
+	    disconnectDebugVM()
+            None
+          }
+        case e: Throwable =>
+          {
+            e.printStackTrace()
+	    None
+          }
       }
     }
   }
 
   private def handleRPCWithVM(callId: Int)(action: (VM => Unit)) = {
-    try {
-      withVM { vm =>
-        action(vm)
-      }.getOrElse {
-        project ! RPCResultEvent(toWF(false), callId)
-        System.err.println("No VM under debug!")
-      }
-    } catch {
-      case e: AbsentInformationException => {
-        e.printStackTrace()
-        project ! RPCResultEvent(toWF(false), callId)
-      }
+    withVM { vm =>
+      action(vm)
+    }.getOrElse {
+      project ! RPCResultEvent(toWF(false), callId)
+      System.err.println("Could not access debug VM.")
     }
   }
 
   private def handleRPCWithVMAndThread(callId: Int,
     threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
-    try {
-      withVM { vm =>
-        (for (thread <- vm.threadById(threadId)) yield {
-          action(vm, thread)
-        }).getOrElse {
-          System.err.println("Couldn't find thread: " + threadId)
-          project ! RPCResultEvent(toWF(false), callId)
-        }
-      }.getOrElse {
-        System.err.println("No VM under debug!")
+    withVM { vm =>
+      (for (thread <- vm.threadById(threadId)) yield {
+        action(vm, thread)
+      }).getOrElse {
+        System.err.println("Couldn't find thread: " + threadId)
         project ! RPCResultEvent(toWF(false), callId)
       }
-    } catch {
-      case e: AbsentInformationException => {
-        e.printStackTrace()
-        project ! RPCResultEvent(toWF(false), callId)
-      }
+    }.getOrElse {
+      System.err.println("Could not access debug VM")
+      project ! RPCResultEvent(toWF(false), callId)
     }
   }
 
@@ -249,82 +264,63 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
             }
             exit('stop)
           }
+          case e: VMDisconnectedException => disconnectDebugVM()
           case evt: com.sun.jdi.event.Event => {
-            try {
-              evt match {
-                case e: VMStartEvent => {
-                  withVM { vm =>
-                    vm.initLocationMap()
-                  }
-                  project ! AsyncEvent(toWF(DebugVMStartEvent()))
+            evt match {
+              case e: VMStartEvent => {
+                withVM { vm =>
+                  vm.initLocationMap()
                 }
-                case e: VMDeathEvent => {
-                  maybeVM = None
-                  moveActiveBreaksToPending()
-                  project ! AsyncEvent(toWF(DebugVMDeathEvent()))
-                }
-                case e: VMDisconnectEvent => {
-                  maybeVM = None
-                  moveActiveBreaksToPending()
-                  project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
-                }
-                case e: StepEvent => {
-                  (for (pos <- locToPos(e.location())) yield {
-                    project ! AsyncEvent(toWF(DebugStepEvent(
-                      e.thread().uniqueID(), e.thread().name, pos)))
-                  }) getOrElse {
-                    System.err.println("Step position not found: " +
-                      e.location().sourceName() + " : " + e.location().lineNumber())
-                  }
-                }
-                case e: BreakpointEvent => {
-                  (for (pos <- locToPos(e.location())) yield {
-                    project ! AsyncEvent(toWF(DebugBreakEvent(
-                      e.thread().uniqueID(), e.thread().name, pos)))
-                  }) getOrElse {
-                    System.err.println("Break position not found: " +
-                      e.location().sourceName() + " : " + e.location().lineNumber())
-                  }
-                }
-                case e: ExceptionEvent => {
-                  withVM { vm => vm.remember(e.exception) }
-                  project ! AsyncEvent(toWF(DebugExceptionEvent(
-                    e.exception.uniqueID(),
-                    e.thread().uniqueID(),
-                    e.thread().name,
-		    locToPos(e.catchLocation())
-		  )))
-                }
-                case e: ThreadDeathEvent => {
-                  project ! AsyncEvent(toWF(DebugThreadDeathEvent(
-                    e.thread().uniqueID())))
-                }
-                case e: ThreadStartEvent => {
-                  project ! AsyncEvent(toWF(DebugThreadStartEvent(
-                    e.thread().uniqueID())))
-                }
-                case e: AccessWatchpointEvent => {}
-                case e: ClassPrepareEvent => {
-                  withVM { vm =>
-                    println("ClassPrepareEvent: " + e.referenceType().name())
-                  }
-                }
-                case e: ClassUnloadEvent => {}
-                case e: MethodEntryEvent => {}
-                case e: MethodExitEvent => {}
-                case _ => {}
+                project ! AsyncEvent(toWF(DebugVMStartEvent()))
               }
-
-            } catch {
-              case e: VMDisconnectedException =>
-                {
-                  System.err.println("Error handling DebugEvent:")
-                  e.printStackTrace()
-                  moveActiveBreaksToPending()
-                  project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
-                  maybeVM = None
+              case e: VMDeathEvent => disconnectDebugVM()
+              case e: VMDisconnectEvent => disconnectDebugVM()
+              case e: StepEvent => {
+                (for (pos <- locToPos(e.location())) yield {
+                  project ! AsyncEvent(toWF(DebugStepEvent(
+                    e.thread().uniqueID(), e.thread().name, pos)))
+                }) getOrElse {
+                  System.err.println("Step position not found: " +
+                    e.location().sourceName() + " : " + e.location().lineNumber())
                 }
+              }
+              case e: BreakpointEvent => {
+                (for (pos <- locToPos(e.location())) yield {
+                  project ! AsyncEvent(toWF(DebugBreakEvent(
+                    e.thread().uniqueID(), e.thread().name, pos)))
+                }) getOrElse {
+                  System.err.println("Break position not found: " +
+                    e.location().sourceName() + " : " + e.location().lineNumber())
+                }
+              }
+              case e: ExceptionEvent => {
+                withVM { vm => vm.remember(e.exception) }
+                project ! AsyncEvent(toWF(DebugExceptionEvent(
+                  e.exception.uniqueID(),
+                  e.thread().uniqueID(),
+                  e.thread().name,
+                  if (e.catchLocation() != null) locToPos(e.catchLocation()) else None)))
+              }
+              case e: ThreadDeathEvent => {
+                project ! AsyncEvent(toWF(DebugThreadDeathEvent(
+                  e.thread().uniqueID())))
+              }
+              case e: ThreadStartEvent => {
+                project ! AsyncEvent(toWF(DebugThreadStartEvent(
+                  e.thread().uniqueID())))
+              }
+              case e: AccessWatchpointEvent => {}
+              case e: ClassPrepareEvent => {
+                withVM { vm =>
+                  println("ClassPrepareEvent: " + e.referenceType().name())
+                }
+              }
+              case e: ClassUnloadEvent => {}
+              case e: MethodEntryEvent => {}
+              case e: MethodExitEvent => {}
+              case _ => {}
             }
+
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
@@ -518,17 +514,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                 }
               }
             } catch {
-              case e: VMDisconnectedException =>
-                {
-                  System.err.println("Error handling RPC:")
-                  e.printStackTrace()
-                  moveActiveBreaksToPending()
-                  project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
-                  project.sendRPCError(ErrExceptionInDebugger,
-                    Some("VM is disconnected!"), callId)
-                  maybeVM = None
-                }
-              case e: Exception =>
+              case e: Throwable =>
                 {
                   System.err.println("Error handling RPC:")
                   e.printStackTrace()
@@ -545,7 +531,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
         }
 
       } catch {
-        case e: Exception =>
+        case e: Throwable =>
           {
             System.err.println("Error at Debug Manager message loop:")
             e.printStackTrace()
@@ -642,7 +628,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
 
     def start() {
       evtQ.start()
-      monitor.map{_.start()}
+      monitor.map { _.start() }
+    }
+
+    def dispose() = try {
+      evtQ.finished = true
+      vm.dispose()
+      monitor.map { _.finished = true }
+    } catch {
+      case e: VMDisconnectedException => {}
     }
 
     def remember(value: Value): Value = {
@@ -962,19 +956,13 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
       result
     }
 
-    def dispose() = try {
-      evtQ.finished = true
-      vm.dispose()
-    } catch {
-      case e: VMDisconnectedException => {}
-    }
   }
 
   private class VMEventManager(val eventQueue: EventQueue) extends Thread {
     @volatile var finished = false
     override def run() {
-      try {
-        do {
+      do {
+        try {
           val eventSet = eventQueue.remove();
           val it = eventSet.eventIterator()
           while (it.hasNext()) {
@@ -993,21 +981,31 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
             }
             actor { DebugManager.this ! evt }
           }
-        } while (!finished);
-      } catch {
-        case t: Throwable => t.printStackTrace();
-      }
+        } catch {
+          case t: VMDisconnectedException =>
+            {
+              actor { DebugManager.this ! t }
+              finished = true
+            }
+          case t: Throwable => {
+            t.printStackTrace()
+            finished = true
+          }
+        }
+      } while (!finished);
+
     }
   }
 
   private class MonitorOutput(val inStream: InputStream) extends Thread {
     val in = new InputStreamReader(inStream)
+    @volatile var finished = false
     override def run() {
       try {
         var i = 0;
         val buf = new Array[Char](512);
         i = in.read(buf, 0, buf.length)
-        while (i >= 0) {
+        while (!finished && i >= 0) {
           project ! AsyncEvent(toWF(DebugOutputEvent(new String(buf, 0, i))))
           i = in.read(buf, 0, buf.length)
         }
