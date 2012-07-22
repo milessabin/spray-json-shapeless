@@ -53,7 +53,6 @@ object Server {
             val requestedPort = 0
             val listener = new ServerSocket(requestedPort)
             val actualPort = listener.getLocalPort
-	    throw new Exception("hello");
             println("Server listening on " + actualPort + "..")
             writePort(portfile, actualPort)
             System.out.flush()
