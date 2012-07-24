@@ -558,7 +558,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           val arguments = connector.defaultArguments()
 
           val opts = arguments.get("options").value
-          val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
+          val allVMOpts = (List(opts) ++ vmOptions).map(opt => "\"" + opt + "\"").mkString(" ")
           arguments.get("options").setValue(allVMOpts)
           arguments.get("main").setValue(commandLine)
           arguments.get("suspend").setValue("false")
