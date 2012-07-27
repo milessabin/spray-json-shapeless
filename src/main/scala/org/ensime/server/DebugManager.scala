@@ -69,6 +69,9 @@ case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
 case class DebugClearAllBreaksReq()
 case class DebugListBreaksReq()
+case class DebugSetStackVarReq(threadId: Long, frame: Int,
+  index: Int, newValue:String)
+
 
 abstract class DebugVmStatus
 
@@ -198,7 +201,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
   }
 
   def vmOptions(): List[String] = {
-    List("-classpath", config.debugClasspath)
+    List("-classpath", "\"" + config.debugClasspath + "\"")
   }
 
   private var maybeVM: Option[VM] = None
@@ -501,6 +504,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                       }
                   }
                 }
+
                 case DebugValueForIndexReq(objectId: Long, index: Int) => {
                   handleRPCWithVM(callId) {
                     (vm) =>
@@ -510,6 +514,17 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                         case None =>
                           project ! RPCResultEvent(toWF(false), callId)
                       }
+                  }
+                }
+                case DebugSetStackVarReq(
+                  threadId: Long, frame: Int, offset: Int,
+		  newValue:String) => {
+                  handleRPCWithVMAndThread(callId, threadId) {
+                    (vm, thread) =>
+                      val result = vm.setStackVar(
+			thread, frame,
+			offset, newValue)
+                      project ! RPCResultEvent(toWF(result), callId)
                   }
                 }
               }
@@ -558,7 +573,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           val arguments = connector.defaultArguments()
 
           val opts = arguments.get("options").value
-          val allVMOpts = (List(opts) ++ vmOptions).map(opt => "\"" + opt + "\"").mkString(" ")
+          val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
           arguments.get("options").setValue(allVMOpts)
           arguments.get("main").setValue(commandLine)
           arguments.get("suspend").setValue("false")
@@ -954,6 +969,43 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
         i += 1
       }
       result
+    }
+
+    private def mirrorFromString(tpe: Type, toMirror:String): Option[Value] = {
+      val s = toMirror.trim
+      if (s.length > 0) {
+	tpe match {
+	  case tpe:BooleanType => Some(vm.mirrorOf(s.toBoolean))
+	  case tpe:ByteType => Some(vm.mirrorOf(s.toByte))
+	  case tpe:CharType => Some(vm.mirrorOf(s(0)))
+	  case tpe:DoubleType => Some(vm.mirrorOf(s.toDouble))
+	  case tpe:FloatType => Some(vm.mirrorOf(s.toFloat))
+	  case tpe:IntegerType => Some(vm.mirrorOf(s.toInt))
+	  case tpe:LongType => Some(vm.mirrorOf(s.toLong))
+	  case tpe:ShortType => Some(vm.mirrorOf(s.toShort))
+	  case tpe:ReferenceType
+	  if tpe.name == "java.lang.String" =>
+	  {
+	    if (s.startsWith("\"") && s.endsWith("\"")) {
+	      Some(vm.mirrorOf(s.substring(1, s.length - 1)))
+	    } else Some(vm.mirrorOf(s))
+	  }
+	  case _ => None
+	}
+      } else None
+    }
+
+    def setStackVar(thread: ThreadReference, frame: Int, offset: Int,
+      newValue: String): Boolean = {
+      if (thread.frameCount > frame &&
+        thread.frame(frame).visibleVariables.length > offset) {
+        val stackFrame = thread.frame(frame)
+	val localVar = stackFrame.visibleVariables.get(offset)
+	mirrorFromString(localVar.`type`(), newValue) match {
+	  case Some(v) => stackFrame.setValue(localVar, v); true
+	  case None => false
+	}
+      } else false
     }
 
   }

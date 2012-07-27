@@ -1805,6 +1805,33 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:debug-set-stack-var
+       * Summary:
+       *   Set the value at the given offset in the given stack frame.
+       * Arguments:
+       *   Int: The stack frame in which the local is found.
+       *   Int: The offset within the stack frame.
+       *   String: A string encoded value.
+       * Return:
+       *   Boolean: t on success, nil otherwise
+       * Example call:
+       *   (:swank-rpc (swank:debug-set-stack-var 0 2 "true") 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:debug-set-stack-var" => {
+        form match {
+          case SExpList(head :: StringAtom(threadId) :: IntAtom(frame) ::
+            IntAtom(offset) :: StringAtom(newValue) :: body) => {
+            rpcTarget.rpcDebugSetStackVar(
+              threadId.toLong, frame, offset, newValue, callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
        *   swank:debug-value-for-index
        * Summary:
        *   Get the value at the given offset in the array specified by object id
