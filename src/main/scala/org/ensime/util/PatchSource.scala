@@ -37,7 +37,6 @@ object PatchSource {
   def applyOperations(
     s: SourceFile, ops: List[PatchOp]): SourceFile = {
     val result = applyOperations(s.content, ops)
-    System.out.print(result.mkString)
     new BatchSourceFile(s.file, result)
   }
 
