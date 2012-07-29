@@ -336,7 +336,7 @@ trait SwankProtocol extends Protocol {
    *   An abbreviated signature for a type member
    * Structure:
    *   (
-   *   //List of List of String: Parameter sections
+   *   //List of List of Pairs of String: Parameter sections
    *   //String: Result type
    *   )
    */
@@ -2426,7 +2426,10 @@ trait SwankProtocol extends Protocol {
 
   def toWF(value: CompletionSignature): SExp = {
     SExp(
-      SExp(value.sections.map{section => SExpList(section.map(StringAtom.apply))}),
+      SExp(value.sections.map{section =>
+	  SExpList(section.map{ param =>
+	      SExp(param._1, param._2)
+	    })}),
       value.result)
   }
 

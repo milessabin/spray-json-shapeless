@@ -80,7 +80,7 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
     val ownerTypeId: Option[Int]) {}
 
   case class CompletionSignature(
-    val sections: List[List[String]],
+    val sections: List[List[(String,String)]],
     val result: String) {}
 
   case class CompletionInfo(

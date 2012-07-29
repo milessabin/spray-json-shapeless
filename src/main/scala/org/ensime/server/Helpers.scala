@@ -81,7 +81,7 @@ trait Helpers { self: Global =>
   def completionSignatureForType(tpe: Type): CompletionSignature = {
     if (isArrowType(tpe)) {
       CompletionSignature(tpe.paramss.map { sect =>
-          sect.map { p => p.name + ":" + typeShortNameWithArgs(p.tpe) }
+          sect.map { p => (p.name.toString, typeShortNameWithArgs(p.tpe)) }
 	},
 	typeShortNameWithArgs(tpe.finalResultType))
     } else CompletionSignature(List(), resultTypeName(tpe))
