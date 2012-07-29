@@ -44,7 +44,7 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.1"
+    val protocolVersion: String = "0.8.2"
   }
 
   import SwankProtocol._
@@ -143,9 +143,12 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Version: 0.8.1
+   * Protocol Version: 0.8.2
    *
    * Protocol Change Log:
+   *   0.8.2
+   *     Debug attachement
+   *     CompletionInfo type-sig now has structure
    *   0.8.1
    *     Add patch-source.
    *     Completions now takes a 'reload' argument.
@@ -328,13 +331,26 @@ trait SwankProtocol extends Protocol {
 
   /**
    * Doc DataStructure:
+   *   CompletionSignature
+   * Summary:
+   *   An abbreviated signature for a type member
+   * Structure:
+   *   (
+   *   //List of List of String: Parameter sections
+   *   //String: Result type
+   *   )
+   */
+
+
+  /**
+   * Doc DataStructure:
    *   CompletionInfo
    * Summary:
    *   An abbreviated symbol description.
    * Structure:
    *   (
    *   :name //String:Name of this symbol.
-   *   :type-sig //String:The type signature of this symbol.
+   *   :type-sig //A CompletionSignature
    *   :type-id //Int:A type id.
    *   :is-callable //Bool:Is this symbol a method or function?
    *   :to-insert //String|Nil:The representation that should be
@@ -2408,10 +2424,16 @@ trait SwankProtocol extends Protocol {
     SExpList(values.map(ea => ea.asInstanceOf[SExp]))
   }
 
+  def toWF(value: CompletionSignature): SExp = {
+    SExp(
+      SExp(value.sections.map{section => SExpList(section.map(StringAtom.apply))}),
+      value.result)
+  }
+
   def toWF(value: CompletionInfo): SExp = {
     SExp.propList(
       (":name", value.name),
-      (":type-sig", value.tpeSig),
+      (":type-sig", toWF(value.tpeSig)),
       (":type-id", value.tpeId),
       (":is-callable", value.isCallable),
       (":to-insert", value.toInsert.map(strToSExp).getOrElse('nil)))

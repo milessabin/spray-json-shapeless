@@ -77,6 +77,17 @@ trait Helpers { self: Global =>
     }
   }
 
+
+  def completionSignatureForType(tpe: Type): CompletionSignature = {
+    if (isArrowType(tpe)) {
+      CompletionSignature(tpe.paramss.map { sect =>
+          sect.map { p => p.name + ":" + typeShortNameWithArgs(p.tpe) }
+	},
+	typeShortNameWithArgs(tpe.finalResultType))
+    } else CompletionSignature(List(), resultTypeName(tpe))
+  }
+
+
   /**
   * Convenience method to generate a String describing the type. Omit
   * the package name. Include the arguments postfix.
@@ -92,14 +103,17 @@ trait Helpers { self: Global =>
 	}.mkString(" => ")
         + " => " +
         typeShortNameWithArgs(tpe.finalResultType))
-    } else {
-      (typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
-            "[" +
-            tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
-            "]"
-	  } else { "" }))
-    }
+    } else resultTypeName(tpe)
   }
+
+  def resultTypeName(tpe: Type) : String = {
+    typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
+        "[" +
+        tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
+        "]"
+      } else { "" })
+  }
+
 
   /**
   * Generate qualified name, without args postfix.
