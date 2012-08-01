@@ -52,7 +52,7 @@ object Helpers{
 	System.err.println(msgLines.mkString("\n"))
 	System.err.println("***************************************\n")
       }
-      case e => throw e
+      case e:Throwable => throw e
     }
   }
 

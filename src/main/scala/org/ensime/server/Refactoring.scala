@@ -103,7 +103,7 @@ trait RefactoringHandler { self: Analyzer =>
         if (req.interactive) {
           effects(procedureId) = effect
           project ! RPCResultEvent(toWF(effect), callId)
-        } 
+        }
         else { // Execute the refactoring immediately..
           project ! AddUndo("Refactoring of type: " + req.refactorType.toString,
             FileUtils.inverseEdits(effect.changes))

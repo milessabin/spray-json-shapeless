@@ -64,8 +64,8 @@ class Analyzer(
   private val reportHandler = new ReportHandler {
     override def messageUser(str: String) {
       project ! AsyncEvent(
-	toWF(SendBackgroundMessageEvent(
-	    MsgCompilerUnexpectedError, Some(str))))
+        toWF(SendBackgroundMessageEvent(
+          MsgCompilerUnexpectedError, Some(str))))
     }
     override def clearAllScalaNotes() {
       project ! AsyncEvent(toWF(ClearAllNotesEvent('scala)))
@@ -89,7 +89,7 @@ class Analyzer(
     settings, reporter, this, indexer, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(
     config, reportHandler, indexer)
-  protected var awaitingInitialCompile = false
+  protected var awaitingInitialCompile = true
   protected var initTime: Long = 0
 
   import scalaCompiler._
@@ -104,13 +104,16 @@ class Analyzer(
       indexer ! RebuildStaticIndexReq()
     }
 
-    println("Building Java sources...")
-    javaCompiler.compileAll()
-
-    println("Building Scala sources...")
-    reporter.disable()
-    // scalaCompiler.askReloadAllFiles()
-    // scalaCompiler.askNotifyWhenReady()
+    if (!config.disableSourceLoadOnStartup) {
+      println("Building Java sources...")
+      javaCompiler.compileAll()
+      println("Building Scala sources...")
+      reporter.disable()
+      scalaCompiler.askReloadAllFiles()
+      scalaCompiler.askNotifyWhenReady()
+    } else {
+      this ! FullTypeCheckCompleteEvent()
+    }
 
     loop {
       try {
@@ -126,11 +129,11 @@ class Analyzer(
           case FullTypeCheckCompleteEvent() => {
             if (awaitingInitialCompile) {
               awaitingInitialCompile = false
-	      val elapsed = System.currentTimeMillis() - initTime
-	      println("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
+              val elapsed = System.currentTimeMillis() - initTime
+              println("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
               reporter.enable()
               project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
-	      indexer ! CommitReq()
+              indexer ! CommitReq()
             }
             project ! AsyncEvent(toWF(FullTypeCheckCompleteEvent()))
           }
@@ -176,14 +179,14 @@ class Analyzer(
                   }
 
                   case PatchSourceReq(
-		    file: File, edits: List[PatchOp]) => {
+                    file: File, edits: List[PatchOp]) => {
                     if (!file.exists()) {
                       project.sendRPCError(ErrFileDoesNotExist,
                         Some(file.getPath()), callId)
                     } else {
                       val f = createSourceFile(file)
-		      val revised = PatchSource.applyOperations(f, edits)
-		      reporter.disable()
+                      val revised = PatchSource.applyOperations(f, edits)
+                      reporter.disable()
                       scalaCompiler.askReloadFile(revised)
                       project ! RPCResultEvent(toWF(true), callId)
                     }
@@ -202,11 +205,11 @@ class Analyzer(
                   }
 
                   case CompletionsReq(file: File, point: Int,
-		    maxResults: Int, caseSens: Boolean, reload: Boolean) => {
+                    maxResults: Int, caseSens: Boolean, reload: Boolean) => {
                     val p = if (reload) pos(file, point) else posNoRead(file, point)
                     reporter.disable()
                     val info = scalaCompiler.askCompletionsAt(
-		      p, maxResults, caseSens)
+                      p, maxResults, caseSens)
                     project ! RPCResultEvent(toWF(info), callId)
                   }
 

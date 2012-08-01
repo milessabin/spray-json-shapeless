@@ -54,6 +54,7 @@ trait FormatHandler {
 
   def formatPrefs(): Map[Symbol, Any]
   def disableIndexOnStartup(): Boolean
+  def disableSourceLoadOnStartup(): Boolean
   def onlyIncludeInIndex(): List[Regex]
   def excludeFromIndex(): List[Regex]
   def extraCompilerArgs(): List[String]
@@ -394,6 +395,19 @@ object ProjectConfig {
 
     /**
      * Doc Property:
+     *   :disable-source-load-on-startup
+     * Summary:
+     *   Disable the parsing and reloading of all sources that normally
+     *     occurs on startup.
+     * Arguments:
+     *   Boolean: t or nil
+     */
+    lazy val disableSourceLoadOnStartup_ = new BooleanProp(":disable-source-load-on-startup", None)
+    props += disableSourceLoadOnStartup_
+    def disableSourceLoadOnStartup() = disableSourceLoadOnStartup_(m)
+
+    /**
+     * Doc Property:
      *   :only-include-in-index
      * Summary:
      *   Only classes that match one of the given regular expressions will be
@@ -617,6 +631,7 @@ object ProjectConfig {
       target,
       formatPrefs,
       conf.disableIndexOnStartup,
+      conf.disableSourceLoadOnStartup,
       conf.onlyIncludeInIndex,
       conf.excludeFromIndex,
       conf.extraCompilerArgs,
@@ -645,7 +660,7 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(None, None, None, None, new File("."), List(),
-    List(), List(), None, Map(), false, List(), List(), List(), List())
+    List(), List(), None, Map(), false, false, List(), List(), List(), List())
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -690,6 +705,7 @@ class ProjectConfig(
   val target: Option[CanonFile],
   formattingPrefsMap: Map[Symbol, Any],
   val disableIndexOnStartup: Boolean,
+  val disableSourceLoadOnStartup: Boolean,
   val onlyIncludeInIndex: Iterable[Regex],
   val excludeFromIndex: Iterable[Regex],
   val extraCompilerArgs: Iterable[String],
