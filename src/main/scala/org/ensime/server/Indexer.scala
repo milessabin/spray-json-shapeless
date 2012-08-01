@@ -36,7 +36,6 @@ import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.util.{ NoPosition }
 import scala.util.matching.Regex
 
-import com.codahale.jerkson.Json
 import io.prelink.critbit.MCritBitTree
 import java.io.File
 import java.io.IOException

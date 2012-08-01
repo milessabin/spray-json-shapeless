@@ -89,7 +89,7 @@ class Analyzer(
     settings, reporter, this, indexer, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(
     config, reportHandler, indexer)
-  protected var awaitingInitialCompile = true
+  protected var awaitingInitialCompile = false
   protected var initTime: Long = 0
 
   import scalaCompiler._
@@ -109,8 +109,8 @@ class Analyzer(
 
     println("Building Scala sources...")
     reporter.disable()
-    scalaCompiler.askReloadAllFiles()
-    scalaCompiler.askNotifyWhenReady()
+    // scalaCompiler.askReloadAllFiles()
+    // scalaCompiler.askNotifyWhenReady()
 
     loop {
       try {

@@ -91,10 +91,11 @@ object EnsimeBuild extends Build {
           Seq("org.apache.lucene" % "lucene-core" % "3.5.0",
               "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
               "asm" % "asm" % "3.2",
-              "asm" % "asm-commons" % "3.2") ++
+              "asm" % "asm-commons" % "3.2",
+              "com.googlecode.json-simple" % "json-simple" % "1.1"
+	    ) ++
           (if (scalaVersion == TwoTenVersion)
-            Seq("com.codahale" %% "jerkson" % "0.6.0-SNAPSHOT",
-                "org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
+            Seq("org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
                 "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
                 "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
                 "org.scalariform" %% "scalariform" % "0.1.3-SNAPSHOT" % "compile;runtime;test",
@@ -104,8 +105,7 @@ object EnsimeBuild extends Build {
                 "org.scala-lang" % "scala-reflect" % scalaVersion % "compile;runtime;test",
                 "org.scala-lang" % "scala-actors" % scalaVersion % "compile;runtime;test")
           else if (scalaVersion == TwoNineVersion)
-            Seq("com.codahale" % "jerkson_2.9.1" % "0.5.0",
-                "org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
+            Seq("org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
                 "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
                 "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test")
           else unsupportedScalaVersion(scalaVersion))

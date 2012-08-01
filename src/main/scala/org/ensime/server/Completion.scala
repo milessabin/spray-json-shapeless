@@ -152,7 +152,6 @@ trait CompletionControl {
         ("", List())
       }
     }
-
     CompletionInfoList(prefix, results.sortWith({ (c1, c2) =>
       c1.relevance > c2.relevance ||
         (c1.relevance == c2.relevance &&

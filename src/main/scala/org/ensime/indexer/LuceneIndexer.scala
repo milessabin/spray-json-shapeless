@@ -86,7 +86,7 @@ import scala.tools.nsc.util.{ NoPosition }
 import scala.util.matching.Regex
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
-import com.codahale.jerkson.Json
+import org.json.simple._
 
 object LuceneIndex extends StringSimilarity {
   val KeyIndexVersion = "indexVersion"
@@ -141,8 +141,20 @@ object LuceneIndex extends StringSimilarity {
         val userData = reader.getCommitUserData()
         val onDiskIndexVersion = Option(
           userData.get(KeyIndexVersion)).getOrElse("0").toInt
-        val indexedFiles = Json.parse[Map[String, String]](
-          Option(userData.get(KeyFileHashes)).getOrElse("{}"))
+	val src = Option(userData.get(KeyFileHashes)).getOrElse("{}")
+        val indexedFiles:Map[String,String] = try {
+	  JSONValue.parse(src) match {
+	    case obj:java.util.Map[String,Object] =>
+	    {
+	      val m = JavaConversions.mapAsScalaMap[String,Object](obj)
+	      m.map{ea => (ea._1, ea._2.toString)}.toMap
+	    }
+	    case _ => Map()
+	  }
+	} catch {
+	  case e: Throwable => Map()
+	}
+
         reader.close()
         (onDiskIndexVersion, indexedFiles)
       } else (0, Map())
@@ -422,9 +434,11 @@ trait LuceneIndex {
       if (shouldReindex(version, indexedFiles.toSet, hashed)) {
         println("Re-indexing...")
         buildStaticIndex(writer, files, includes, excludes)
+	val json = JSONValue.toJSONString(
+	  JavaConversions.mapAsJavaMap(hashed.toMap))
         val userData = Map[String, String](
           (KeyIndexVersion, IndexVersion.toString),
-          (KeyFileHashes, Json.generate(hashed.toMap)))
+          (KeyFileHashes, json))
         writer.commit(JavaConversions.mapAsJavaMap(userData))
       }
     }
