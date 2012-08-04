@@ -51,6 +51,7 @@ trait FormatHandler {
   def runtimeJars(): List[String]
   def sourceRoots(): List[String]
   def target(): Option[String]
+  def testTarget(): Option[String]
 
   def formatPrefs(): Map[Symbol, Any]
   def disableIndexOnStartup(): Boolean
@@ -225,7 +226,7 @@ object ProjectConfig {
      * Arguments:
      *   String: name
      */
-    lazy val name_ = new OptionalStringProp(":name",Some(":project-name"))
+    lazy val name_ = new OptionalStringProp(":name", Some(":project-name"))
     props += name_
     def name() = name_(m)
 
@@ -302,7 +303,6 @@ object ProjectConfig {
     lazy val compileDeps_ = new StringListProp(":compile-deps", None)
     props += compileDeps_
     def compileDeps() = compileDeps_(m)
-
 
     /**
      * Doc Property:
@@ -383,6 +383,18 @@ object ProjectConfig {
 
     /**
      * Doc Property:
+     *   :target
+     * Summary:
+     *   The root of the test class output directory.
+     * Arguments:
+     *   String: directory
+     */
+    lazy val testTarget_ = new OptionalStringProp(":test-target", None)
+    props += testTarget_
+    def testTarget() = testTarget_(m)
+
+    /**
+     * Doc Property:
      *   :disable-index-on-startup
      * Summary:
      *   Disable the classpath indexing process that happens at startup.
@@ -438,8 +450,8 @@ object ProjectConfig {
      *     speed up loading.
      *     For example:
      *     \begin{mylisting}
-     *	   \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
-     *	   \end{mylisting}
+     * 	   \begin{verbatim}:exclude-from-index ("com\\.sun\\..\*" "com\\.apple\\..\*")\end{verbatim}
+     * 	   \end{mylisting}
      *     This option can be used in conjunction with 'only-include-in-index' -
      *     the result when both are given is that the exclusion expressions are
      *     applied to the names that pass the inclusion filter.
@@ -463,7 +475,6 @@ object ProjectConfig {
     lazy val extraCompilerArgs_ = new StringListProp(":compiler-args", None)
     props += extraCompilerArgs_
     def extraCompilerArgs() = extraCompilerArgs_(m)
-
 
     /**
      * Doc Property:
@@ -513,27 +524,27 @@ object ProjectConfig {
      * Summary:
      *   Customize the behavior of the source formatter. All Scalariform
      *     preferences are supported:
-     *	  \vspace{1 cm}
-     *	  \begin{tabular}{|l|l|}
-     *	  \hline
-     *	  {\bf :alignParameters} & t or nil  \\ \hline
-     *	  {\bf :alignSingleLineCaseStatements} & t or nil  \\ \hline
-     *	  {\bf :alignSingleLineCaseStatements\_maxArrowIndent} & 1-100  \\ \hline
-     *	  {\bf :compactStringConcatenation} & t or nil  \\ \hline
-     *	  {\bf :doubleIndentClassDeclaration} & t or nil  \\ \hline
-     *	  {\bf :indentLocalDefs} & t or nil  \\ \hline
-     *	  {\bf :indentPackageBlocks} & t or nil  \\ \hline
-     *	  {\bf :indentSpaces} & 1-10  \\ \hline
-     *	  {\bf :indentWithTabs} & t or nil  \\ \hline
-     *	  {\bf :multilineScaladocCommentsStartOnFirstLine} & t or nil  \\ \hline
-     *	  {\bf :preserveDanglingCloseParenthesis} & t or nil \\ \hline
-     *	  {\bf :preserveSpaceBeforeArguments} & t or nil  \\ \hline
-     *	  {\bf :rewriteArrowSymbols} & t or nil  \\ \hline
-     *	  {\bf :spaceBeforeColon} & t or nil  \\ \hline
-     *	  {\bf :spaceInsideBrackets} & t or nil  \\ \hline
-     *	  {\bf :spaceInsideParentheses} & t or nil  \\ \hline
-     *	  {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
-     *	  \end{tabular}
+     * 	  \vspace{1 cm}
+     * 	  \begin{tabular}{|l|l|}
+     * 	  \hline
+     * 	  {\bf :alignParameters} & t or nil  \\ \hline
+     * 	  {\bf :alignSingleLineCaseStatements} & t or nil  \\ \hline
+     * 	  {\bf :alignSingleLineCaseStatements\_maxArrowIndent} & 1-100  \\ \hline
+     * 	  {\bf :compactStringConcatenation} & t or nil  \\ \hline
+     * 	  {\bf :doubleIndentClassDeclaration} & t or nil  \\ \hline
+     * 	  {\bf :indentLocalDefs} & t or nil  \\ \hline
+     * 	  {\bf :indentPackageBlocks} & t or nil  \\ \hline
+     * 	  {\bf :indentSpaces} & 1-10  \\ \hline
+     * 	  {\bf :indentWithTabs} & t or nil  \\ \hline
+     * 	  {\bf :multilineScaladocCommentsStartOnFirstLine} & t or nil  \\ \hline
+     * 	  {\bf :preserveDanglingCloseParenthesis} & t or nil \\ \hline
+     * 	  {\bf :preserveSpaceBeforeArguments} & t or nil  \\ \hline
+     * 	  {\bf :rewriteArrowSymbols} & t or nil  \\ \hline
+     * 	  {\bf :spaceBeforeColon} & t or nil  \\ \hline
+     * 	  {\bf :spaceInsideBrackets} & t or nil  \\ \hline
+     * 	  {\bf :spaceInsideParentheses} & t or nil  \\ \hline
+     * 	  {\bf :spacesWithinPatternBinders} & t or nil  \\ \hline
+     * 	  \end{tabular}
      * Arguments:
      *   List of keyword, string pairs: preferences
      */
@@ -588,8 +599,8 @@ object ProjectConfig {
     val rootDir: CanonFile = conf.rootDir match {
       case Some(str) => new File(str)
       case _ => {
-	System.err.println("No project root specified!")
-	serverRoot
+        System.err.println("No project root specified!")
+        serverRoot
       }
     }
 
@@ -598,7 +609,6 @@ object ProjectConfig {
     val sourceRoots = new mutable.HashSet[CanonFile]
     val runtimeDeps = new mutable.HashSet[CanonFile]
     val compileDeps = new mutable.HashSet[CanonFile]
-    var target: Option[CanonFile] = None
     var projectName: Option[String] = None
 
     {
@@ -634,21 +644,16 @@ object ProjectConfig {
       sourceRoots ++= dirs
     }
 
-    conf.target match {
-      case Some(targetDir) => {
-        target = target.orElse(canonicalizeDir(targetDir, rootDir))
-      }
-      case _ =>
-    }
+    var target: Option[CanonFile] = ensureDirectory(conf.target, rootDir)
+    println("Using target directory: " + target.getOrElse("ERROR"))
+
+    var testTarget: Option[CanonFile] = ensureDirectory(conf.testTarget, rootDir)
+    println("Using test target directory: " + testTarget.getOrElse("ERROR"))
 
     projectName = projectName.orElse(conf.name)
 
     val formatPrefs: Map[Symbol, Any] = conf.formatPrefs
     println("Using formatting preferences: " + formatPrefs)
-
-    // Provide some reasonable defaults..
-    target = verifyTargetDir(rootDir, target, new File(rootDir, "target/classes"))
-    println("Using target directory: " + target.getOrElse("ERROR"))
 
     new ProjectConfig(
       projectName,
@@ -660,6 +665,7 @@ object ProjectConfig {
       runtimeDeps,
       compileDeps,
       target,
+      testTarget,
       formatPrefs,
       conf.disableIndexOnStartup,
       conf.disableSourceLoadOnStartup,
@@ -671,29 +677,22 @@ object ProjectConfig {
       conf.javaCompilerVersion)
   }
 
-  // If given target directory is not valid, use the default,
-  // creating if necessary.
-  def verifyTargetDir(rootDir: File, target: Option[File], defaultTarget: File): Option[CanonFile] = {
-    val targetDir = target match {
-      case Some(f: File) => {
-        if (f.exists && f.isDirectory) { f } else { defaultTarget }
+  def ensureDirectory(dir: Option[String], root: File): Option[CanonFile] = {
+    (dir match {
+      case Some(f) => canonicalizeDir(f, root)
+      case None => Some(new File(root, "target/classes"))
+    }).map { f =>
+      if (!f.exists) {
+        f.mkdirs
       }
-      case None => defaultTarget
-    }
-    if (targetDir.exists) {
-      Some(targetDir)
-    } else {
-      try {
-        if (targetDir.mkdirs) Some(targetDir)
-        else None
-      } catch {
-        case e : Throwable => None
-      }
+      f
     }
   }
 
-  def nullConfig = new ProjectConfig(None, None, None, None, new File("."), List(),
-    List(), List(), None, Map(), false, false, List(), List(), List(), List(), List(), None)
+  def nullConfig = new ProjectConfig(
+    None, None, None, None, new File("."), List(),
+    List(), List(), None, None, Map(), false, false,
+    List(), List(), List(), List(), List(), None)
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -724,8 +723,6 @@ object ProjectConfig {
 
 class ReplConfig(val classpath: String) {}
 
-class DebugConfig(val classpath: String, val sourcepath: String) {}
-
 class ProjectConfig(
   val name: Option[String],
   val scalaLibraryJar: Option[CanonFile],
@@ -736,6 +733,7 @@ class ProjectConfig(
   val runtimeDeps: Iterable[CanonFile],
   val compileDeps: Iterable[CanonFile],
   val target: Option[CanonFile],
+  val testTarget: Option[CanonFile],
   formattingPrefsMap: Map[Symbol, Any],
   val disableIndexOnStartup: Boolean,
   val disableSourceLoadOnStartup: Boolean,
@@ -833,11 +831,9 @@ class ProjectConfig(
   }
 
   def runtimeClasspath: String = {
-
-    // Note: target comes first so newly generated
+    // Note: targets comes first so newly generated
     // classes will shadow classes in jars.
-    val deps = target ++ scalaJars ++ runtimeDeps
-
+    val deps = target ++ testTarget ++ scalaJars ++ runtimeDeps
     val paths = deps.map(_.getPath).toSet
     paths.mkString(File.pathSeparator)
   }
@@ -851,8 +847,6 @@ class ProjectConfig(
   def debugClasspath = runtimeClasspath
 
   def replConfig = new ReplConfig(replClasspath)
-
-  def debugConfig = new DebugConfig(debugClasspath, sourcepath)
 
 }
 

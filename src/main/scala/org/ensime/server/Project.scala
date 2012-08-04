@@ -81,8 +81,6 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protocol.setRPCTarget(this)
 
-  // TODO(aemoncannon) would like to use Option[ProjectConfig] here but causes
-  // prez-compiler to kerplode :\
   protected var config: ProjectConfig = ProjectConfig.nullConfig
 
   protected var analyzer: Actor = actor {}
