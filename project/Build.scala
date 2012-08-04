@@ -66,7 +66,7 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++
       Seq(
-        version := "0.9.6.3",
+        version := "0.9.6.4",
         organization := "org.ensime",
 	scalaVersion := TwoNineVersion,
 	crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
@@ -127,7 +127,7 @@ object EnsimeBuild extends Build {
       ))
   }
 
-  val log = LogManager.defaultScreen
+  val log = MainLogging.defaultScreen
 
   var stage = TaskKey[Unit]("stage",
     "Copy files into staging directory for a release.")
