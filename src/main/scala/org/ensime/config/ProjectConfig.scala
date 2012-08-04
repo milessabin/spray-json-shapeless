@@ -59,6 +59,8 @@ trait FormatHandler {
   def excludeFromIndex(): List[Regex]
   def extraCompilerArgs(): List[String]
   def extraBuilderArgs(): List[String]
+  def javaCompilerArgs(): List[String]
+  def javaCompilerVersion(): Option[String]
 }
 
 object ProjectConfig {
@@ -468,13 +470,42 @@ object ProjectConfig {
      *   :builder-args
      * Summary:
      *   Specify arguments that should be passed to ENSIME's internal
-     *     incrmental compiler.
+     *     incremental compiler.
      * Arguments:
      *   List of Strings: arguments
      */
     lazy val extraBuilderArgs_ = new StringListProp(":builder-args", None)
     props += extraBuilderArgs_
     def extraBuilderArgs() = extraBuilderArgs_(m)
+
+    /**
+     * Doc Property:
+     *   :java-compiler-args
+     * Summary:
+     *   Specify arguments that should be passed to ENSIME's internal
+     *   JDT java compiler. Arguments are passed as a list of strings,
+     *   with each pair being a key, value drawn from
+     *   org.eclipse.jdt.internal.compiler.impl.CompilerOptions
+     * Arguments:
+     *   List of Strings: arguments
+     */
+    lazy val javaCompilerArgs_ = new StringListProp(":java-compiler-args", None)
+    props += javaCompilerArgs_
+    def javaCompilerArgs() = javaCompilerArgs_(m)
+
+    /**
+     * Doc Property:
+     *   :java-compiler-version
+     * Summary:
+     *   Specify version of java compiler to use (must be supported by internal
+     *   JDT).
+     * Arguments:
+     *   String: version
+     */
+    lazy val javaCompilerVersion_ = new OptionalStringProp(
+      ":java-compiler-version", None)
+    props += javaCompilerVersion_
+    def javaCompilerVersion() = javaCompilerVersion_(m)
 
     /**
      * Doc Property:
@@ -635,7 +666,9 @@ object ProjectConfig {
       conf.onlyIncludeInIndex,
       conf.excludeFromIndex,
       conf.extraCompilerArgs,
-      conf.extraBuilderArgs)
+      conf.extraBuilderArgs,
+      conf.javaCompilerArgs,
+      conf.javaCompilerVersion)
   }
 
   // If given target directory is not valid, use the default,
@@ -660,7 +693,7 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(None, None, None, None, new File("."), List(),
-    List(), List(), None, Map(), false, false, List(), List(), List(), List())
+    List(), List(), None, Map(), false, false, List(), List(), List(), List(), List(), None)
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -709,7 +742,9 @@ class ProjectConfig(
   val onlyIncludeInIndex: Iterable[Regex],
   val excludeFromIndex: Iterable[Regex],
   val extraCompilerArgs: Iterable[String],
-  val extraBuilderArgs: Iterable[String]) {
+  val extraBuilderArgs: Iterable[String],
+  val javaCompilerArgs: Iterable[String],
+  val javaCompilerVersion: Option[String]) {
 
   val formattingPrefs = formattingPrefsMap.
     foldLeft(FormattingPreferences()) { (fp, p) =>

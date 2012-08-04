@@ -136,10 +136,21 @@ class JavaCompiler(
 
   private val errorPolicy = DefaultErrorHandlingPolicies.proceedWithAllProblems()
 
+  private val JavaVersion = config.javaCompilerVersion.getOrElse("1.6")
+
+  private val extraOptions: Map[String, String] = {
+    var m = Map[String, String]()
+    config.javaCompilerArgs.sliding(2, 2).foreach {
+      case key :: value :: rest => m += ( key -> value )
+      case _ =>
+    }
+    m
+  }
+
   private val options = new CompilerOptions(Map(
-    CompilerOptions.OPTION_Compliance -> "1.6",
-    CompilerOptions.OPTION_Source -> "1.6",
-    CompilerOptions.OPTION_TargetPlatform -> "1.6"))
+    CompilerOptions.OPTION_Compliance -> JavaVersion,
+    CompilerOptions.OPTION_Source -> JavaVersion,
+    CompilerOptions.OPTION_TargetPlatform -> JavaVersion) ++ extraOptions)
 
   class Requester(nameProvider: NameProvider) extends ICompilerRequestor {
     def allNotes(): List[Note] = problems
