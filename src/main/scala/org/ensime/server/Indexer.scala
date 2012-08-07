@@ -27,97 +27,18 @@
 
 package org.ensime.server
 
-import scala.Char
-import scala.actors.Actor._
-import scala.actors._
-import scala.collection.JavaConversions
-import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
-import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.util.{ NoPosition }
-import scala.util.matching.Regex
-
-import io.prelink.critbit.MCritBitTree
 import java.io.File
-import java.io.IOException
-import java.io.Reader
-import org.ardverk.collection._
-import org.eclipse.jdt.core.compiler.CharOperation
-import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
-import org.objectweb.asm.Opcodes;
-
 import org.ensime.config.ProjectConfig
+import org.ensime.indexer.LuceneIndex
 import org.ensime.model.{
-  ImportSuggestions,
-  MethodSearchResult,
-  SymbolSearchResult,
-  SymbolSearchResults,
-  TypeInfo,
-  TypeSearchResult
-}
+  ImportSuggestions, MethodSearchResult, SymbolSearchResult,
+  SymbolSearchResults, TypeInfo, TypeSearchResult}
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.util._
-import org.ensime.indexer.LuceneIndex
-
-/**
- * Main IDE interface to the Indexer.
- */
-trait Indexing extends LuceneIndex {
-
-  import LuceneIndex._
-
-  protected def getImportSuggestions(typeNames: Iterable[String],
-    maxResults: Int = 0): List[List[SymbolSearchResult]] = {
-    def suggestions(typeName: String): List[SymbolSearchResult] = {
-      val keywords = typeName::splitTypeName(typeName)
-      val candidates = new HashSet[SymbolSearchResult]
-
-      search(keywords,
-	maxResults, true, true,
-        (r: SymbolSearchResult) =>
-        r match {
-          case r: TypeSearchResult => candidates += r
-          case _ => // nothing
-        })
-
-      // Sort by edit distance of type name primarily, and
-      // length of full name secondarily.
-      candidates.toList.sortWith { (a, b) =>
-        val d1 = editDist(a.localName, typeName)
-        val d2 = editDist(b.localName, typeName)
-        if (d1 == d2) a.name.length < b.name.length
-        else d1 < d2
-      }
-
-    }
-    typeNames.map(suggestions).toList
-  }
-
-  private val BruteForceThresh = 1000
-  protected def keywordSearch(
-    keywords: Iterable[String],
-    maxResults: Int = 0,
-    restrictToTypes: Boolean = false): List[SymbolSearchResult] = {
-    var results = new ListBuffer[SymbolSearchResult]
-    search(keywords, maxResults, restrictToTypes, false,
-      {(r: SymbolSearchResult) =>
-        results += r
-      })
-    results.toList
-  }
-
-  def onIndexingComplete()
-
-}
-
-object Indexer {
-  def isValidType(s: String): Boolean = {
-    LuceneIndex.isValidType(s)
-  }
-  def isValidMethod(s: String): Boolean = {
-    LuceneIndex.isValidMethod(s)
-  }
-}
+import scala.actors._
+import scala.actors.Actor._
+import scala.collection.mutable.{ArrayBuffer, HashSet, ListBuffer}
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
@@ -126,18 +47,21 @@ case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 case class CommitReq()
 
+
 /**
- * The main indexer actor.
+ * The main index actor.
  */
 class Indexer(
   project: Project,
   protocol: ProtocolConversions,
-  config: ProjectConfig) extends Actor with Indexing {
+  config: ProjectConfig) extends Actor {
 
   import protocol._
 
-  override def onIndexingComplete() {
-    project ! AsyncEvent(toWF(IndexerReadyEvent()))
+  val index = new LuceneIndex{
+    override def onIndexingComplete() {
+      project ! AsyncEvent(toWF(IndexerReadyEvent()))
+    }
   }
 
   def act() {
@@ -145,29 +69,29 @@ class Indexer(
       try {
         receive {
           case IndexerShutdownReq() => {
-            close()
+            index.close()
             exit('stop)
           }
           case RebuildStaticIndexReq() => {
-            initialize(
+            index.initialize(
               config.root,
               config.allFilesOnClasspath,
               config.onlyIncludeInIndex,
               config.excludeFromIndex)
           }
           case CommitReq() => {
-            commit()
+            index.commit()
           }
           case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
             syms.foreach { info =>
-              insert(info)
+              index.insert(info)
             }
           }
           case RemoveSymbolsReq(syms: Iterable[String]) => {
-            syms.foreach { s => remove(s) }
+            syms.foreach { s => index.remove(s) }
           }
           case TypeCompletionsReq(prefix: String, maxResults: Int) => {
-            val suggestions = keywordSearch(List(prefix), maxResults, true)
+            val suggestions = index.keywordSearch(List(prefix), maxResults, true)
 	    sender ! suggestions
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
@@ -175,7 +99,7 @@ class Indexer(
               req match {
                 case ImportSuggestionsReq(file: File, point: Int,
                   names: List[String], maxResults: Int) => {
-                  val suggestions = ImportSuggestions(getImportSuggestions(
+                  val suggestions = ImportSuggestions(index.getImportSuggestions(
                     names, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
@@ -183,7 +107,7 @@ class Indexer(
                   maxResults: Int) => {
                   println("Received keywords: " + keywords)
                   val suggestions = SymbolSearchResults(
-                    keywordSearch(keywords, maxResults))
+                    index.keywordSearch(keywords, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
                 }
               }
@@ -219,34 +143,20 @@ class Indexer(
   }
 }
 
-object IndexTest extends Indexing {
-  def onIndexingComplete() {
-    println("done")
+/**
+ * Main IDE interface to the Indexer.
+ */
+
+object Indexer {
+  def isValidType(s: String): Boolean = {
+    LuceneIndex.isValidType(s)
   }
-
-  def projectConfig() {
-    println("done")
-  }
-
-  def main(args: Array[String]) {
-    val classpath = "/Users/aemon/projects/ensime/target/scala-2.9.2/classes:/Users/aemon/projects/ensime/lib/org.scala-refactoring_2.9.2-SNAPSHOT-0.5.0-SNAPSHOT.jar"
-    val files = classpath.split(":").map { new File(_) }.toSet
-    initialize(new File("."), files, List(), List())
-
-    import java.util.Scanner
-    val in = new Scanner(System.in)
-    var line = in.nextLine()
-    while (!line.isEmpty) {
-      val keys = line.split(" ")
-      for (l <- getImportSuggestions(keys, 20)) {
-        for (s <- l) {
-          println(s.name)
-        }
-      }
-      line = in.nextLine()
-    }
+  def isValidMethod(s: String): Boolean = {
+    LuceneIndex.isValidMethod(s)
   }
 }
+
+
 
 /**
  * Helper mixin for interfacing compiler (Symbols)
@@ -318,4 +228,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
     indexer ! AddSymbolsReq(infos)
   }
 }
+
+
+
 
