@@ -78,6 +78,7 @@ class Indexer(
               config.allFilesOnClasspath,
               config.onlyIncludeInIndex,
               config.excludeFromIndex)
+
           }
           case CommitReq() => {
             index.commit()

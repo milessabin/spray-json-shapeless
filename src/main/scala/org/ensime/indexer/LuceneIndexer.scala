@@ -256,9 +256,9 @@ object LuceneIndex extends StringSimilarity {
     val file = d.get("file")
     val offset = d.get("offset")
     val pos = (file, offset) match {
-      case ("", "") => None
-      case (file, "") => Some((file, 0))
-      case (file, offset) => Some((file, offset.toInt))
+      case (file:String, "") => Some((file, 0))
+      case (file:String, offset:String) => Some((file, offset.toInt))
+      case _ => None
     }
     val owner = Option(d.get("owner"))
     owner match {
