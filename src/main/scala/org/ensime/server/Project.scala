@@ -59,6 +59,7 @@ case class CompletionsReq(
 case class ImportSuggestionsReq(
   file: File, point: Int, names: List[String], maxResults: Int)
 case class PublicSymbolSearchReq(names: List[String], maxResults: Int)
+case class MethodBytecodeReq(sourceName: String, line: Int)
 case class UsesOfSymAtPointReq(file: File, point: Int)
 case class PackageMemberCompletionReq(path: String, prefix: String)
 case class SymbolAtPointReq(file: File, point: Int)

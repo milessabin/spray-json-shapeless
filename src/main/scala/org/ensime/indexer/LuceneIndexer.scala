@@ -396,8 +396,6 @@ trait LuceneIndex {
   private var indexWriter: Option[IndexWriter] = None
   private var indexReader: Option[IndexReader] = None
 
-  def onIndexingComplete()
-
   def initialize(
     root: File,
     files: Set[File],
@@ -442,7 +440,6 @@ trait LuceneIndex {
       }
     }
 
-    onIndexingComplete()
   }
 
   def keywordSearch(
@@ -590,9 +587,6 @@ trait LuceneIndex {
 
 
 object IndexTest extends LuceneIndex {
-  def onIndexingComplete() {
-    println("done")
-  }
 
   def projectConfig() {
     println("done")

@@ -29,7 +29,9 @@ package org.ensime.server
 
 import java.io.File
 import org.ensime.config.ProjectConfig
+import org.ensime.indexer.ClassFileIndex
 import org.ensime.indexer.LuceneIndex
+import org.objectweb.asm.ClassReader
 import org.ensime.model.{
   ImportSuggestions, MethodSearchResult, SymbolSearchResult,
   SymbolSearchResults, TypeInfo, TypeSearchResult}
@@ -45,8 +47,8 @@ case class RebuildStaticIndexReq()
 case class TypeCompletionsReq(prefix: String, maxResults: Int)
 case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
+case class ReindexClassFilesReq(files: Iterable[File])
 case class CommitReq()
-
 
 /**
  * The main index actor.
@@ -58,11 +60,8 @@ class Indexer(
 
   import protocol._
 
-  val index = new LuceneIndex{
-    override def onIndexingComplete() {
-      project ! AsyncEvent(toWF(IndexerReadyEvent()))
-    }
-  }
+  val index = new LuceneIndex{}
+  val classFileIndex = new ClassFileIndex()
 
   def act() {
     loop {
@@ -78,8 +77,12 @@ class Indexer(
               config.allFilesOnClasspath,
               config.onlyIncludeInIndex,
               config.excludeFromIndex)
-
+	    classFileIndex.indexFiles(config.allFilesOnClasspath)
+	    project ! AsyncEvent(toWF(IndexerReadyEvent()))
           }
+          case ReindexClassFilesReq(files: Iterable[File]) => {
+	    classFileIndex.indexFiles(files)
+	  }
           case CommitReq() => {
             index.commit()
           }
@@ -107,6 +110,18 @@ class Indexer(
                 case PublicSymbolSearchReq(keywords: List[String],
                   maxResults: Int) => {
                   println("Received keywords: " + keywords)
+                  val suggestions = SymbolSearchResults(
+                    index.keywordSearch(keywords, maxResults))
+                  project ! RPCResultEvent(toWF(suggestions), callId)
+                }
+                case MethodBytecodeReq(sourceName: String, line: Int) => {
+		  classFileIndex.locateBytecode(sourceName, line) match{
+		    case method :: rest => project ! RPCResultEvent(
+		      toWF(method), callId)
+		    case _ => project.sendRPCError(ErrExceptionInIndexer,
+                      Some(e.toString),
+                      callId)
+		  }
                   val suggestions = SymbolSearchResults(
                     index.keywordSearch(keywords, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
