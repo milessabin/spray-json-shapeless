@@ -102,6 +102,10 @@ trait RPCTarget { self: Project =>
     analyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
   }
 
+  def rpcMethodBytecode(f: String, line: Int, callId: Int) {
+    indexer ! RPCRequestEvent(MethodBytecodeReq(new File(f).getName, line), callId)
+  }
+
   def rpcDebugStartVM(commandLine: String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugStartVMReq(commandLine), callId)
   }

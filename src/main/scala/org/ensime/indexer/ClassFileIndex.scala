@@ -54,14 +54,20 @@ class ClassFileIndex {
     new HashMap[String, HashSet[String]].withDefault(s => HashSet())
 
   def indexFiles(files: Iterable[File]) {
+    val t = System.currentTimeMillis()
     ClassIterator.find(files,
       (location, classReader) =>
         classReader.accept(new EmptyVisitor() {
           override def visitSource(source: String, debug: String) {
-            classFilesForSourceName(source) += location.getAbsolutePath()
+            val set = classFilesForSourceName(source)
+	    set += location.getAbsolutePath()
+	    classFilesForSourceName(source) = set
           }
         }, NoFlags))
-    println("Finished indexing " + files.size + " classpath files.")
+    val elapsed = System.currentTimeMillis() - t
+    println("Finished indexing " +
+      files.size + " classpath files in " +
+      elapsed / 1000.0 + " seconds.")
   }
 
   trait RichClassVisitor extends ClassVisitor {

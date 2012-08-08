@@ -77,7 +77,10 @@ class Indexer(
               config.allFilesOnClasspath,
               config.onlyIncludeInIndex,
               config.excludeFromIndex)
-	    classFileIndex.indexFiles(config.allFilesOnClasspath)
+	    classFileIndex.indexFiles(
+	      config.allFilesOnClasspath
+	      ++ List(config.target, config.testTarget).flatten
+	    )
 	    project ! AsyncEvent(toWF(IndexerReadyEvent()))
           }
           case ReindexClassFilesReq(files: Iterable[File]) => {

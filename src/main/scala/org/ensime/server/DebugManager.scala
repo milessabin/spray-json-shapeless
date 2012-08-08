@@ -603,9 +603,7 @@ class DebugManager(project: Project, indexer: Actor,
           println("VM: " + vm.description + ", " + vm)
           vm
         }
-
       }
-
     }
 
     vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)

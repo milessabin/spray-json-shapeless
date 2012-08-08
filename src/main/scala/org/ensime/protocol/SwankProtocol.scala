@@ -1414,6 +1414,32 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:method-bytecode
+       * Summary:
+       *   Get bytecode for method at file and line.
+       * Arguments:
+       *   String:The file in which the method is defined.
+       *   Int:A line within the method's code.
+       * Return:
+       *   A MethodBytecode
+       * Example call:
+       *   (:swank-rpc (swank:method-bytecode "hello.scala" 12) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:method-bytecode" => {
+        form match {
+          case SExpList(head :: StringAtom(filename) ::
+            IntAtom(line) :: body) => {
+            rpcTarget.rpcMethodBytecode(filename, line, callId)
+          }
+          case _ => oops
+        }
+      }
+
+
+      /**
+       * Doc RPC:
        *   swank:debug-active-vm
        * Summary:
        *   Is a there an active vm? if so return a description.
