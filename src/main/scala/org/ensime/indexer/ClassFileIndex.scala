@@ -56,10 +56,11 @@ class ClassFileIndex {
   def indexFiles(files: Iterable[File]) {
     ClassIterator.find(files,
       (location, classReader) =>
-      classReader.accept(new EmptyVisitor(){
-	  override def visitSource(source:String, debug:String) {
-	    classFilesForSourceName(source) += location.getAbsolutePath()
-	  }}, NoFlags))
+        classReader.accept(new EmptyVisitor() {
+          override def visitSource(source: String, debug: String) {
+            classFilesForSourceName(source) += location.getAbsolutePath()
+          }
+        }, NoFlags))
   }
 
   trait RichClassVisitor extends ClassVisitor {
@@ -72,55 +73,8 @@ class ClassFileIndex {
     type Result = List[MethodBytecode]
     private var quit: Boolean = false
     private var className: String = ""
-    private var methodSignature: String = ""
     private val methods: ListBuffer[MethodBytecode] = ListBuffer()
     def result: Option[List[MethodBytecode]] = Some(methods.toList)
-
-    val methodVisitor:MethodVisitor = new EmptyVisitor() {
-      var maxLine = Int.MinValue
-      var minLine = Int.MaxValue
-      var ops = ListBuffer[Op]()
-      var includesLine = false
-
-      override def visitFieldInsn(
-        opcode: Int, owner: String, name: String, desc: String) {
-      }
-      override def visitIincInsn(variable: Int, increment: Int) {
-      }
-      override def visitInsn(opcode: Int) {
-      }
-      override def visitIntInsn(opcode: Int, operand: Int) {
-      }
-      override def visitJumpInsn(opcode: Int, label: Label) {
-      }
-      override def visitLdcInsn(cst: Object) {
-      }
-      override def visitLookupSwitchInsn(dflt: Label, keys: Array[Int],
-        labels: Array[Label]) {}
-      override def visitMethodInsn(
-        opcode: Int, owner: String, name: String, desc: String) {
-      }
-      override def visitMultiANewArrayInsn(desc: String, dims: Int) {
-      }
-      override def visitTableSwitchInsn(
-        min: Int, max: Int, dflt: Label, labels: Array[Label]) {
-      }
-      override def visitTypeInsn(opcode: Int, tpe: String) {}
-      override def visitVarInsn(opcode: Int, variable: Int) {}
-
-      override def visitLineNumber(line: Int, start: Label) {
-        minLine = scala.math.min(minLine, line)
-        maxLine = scala.math.max(maxLine, line)
-        if (targetLine >= minLine && targetLine <= maxLine) {
-          includesLine = true
-        }
-      }
-      override def visitEnd() {
-        if (includesLine) {
-          methods += MethodBytecode(className, methodSignature, ops.toList)
-        }
-      }
-    }
 
     override def visit(version: Int, access: Int,
       name: String, sig: String, superName: String,
@@ -140,8 +94,51 @@ class ClassFileIndex {
       signature: String,
       exceptions: Array[String]): MethodVisitor = {
       if (!quit) {
-        methodSignature = signature
-        return methodVisitor
+        return new EmptyVisitor() {
+          var maxLine = Int.MinValue
+          var minLine = Int.MaxValue
+          var ops = ListBuffer[Op]()
+          var includesLine = false
+
+          override def visitFieldInsn(
+            opcode: Int, owner: String, name: String, desc: String) {
+          }
+          override def visitIincInsn(variable: Int, increment: Int) {
+          }
+          override def visitInsn(opcode: Int) {
+          }
+          override def visitIntInsn(opcode: Int, operand: Int) {
+          }
+          override def visitJumpInsn(opcode: Int, label: Label) {
+          }
+          override def visitLdcInsn(cst: Object) {
+          }
+          override def visitLookupSwitchInsn(dflt: Label, keys: Array[Int],
+            labels: Array[Label]) {}
+          override def visitMethodInsn(
+            opcode: Int, owner: String, name: String, desc: String) {
+          }
+          override def visitMultiANewArrayInsn(desc: String, dims: Int) {
+          }
+          override def visitTableSwitchInsn(
+            min: Int, max: Int, dflt: Label, labels: Array[Label]) {
+          }
+          override def visitTypeInsn(opcode: Int, tpe: String) {}
+          override def visitVarInsn(opcode: Int, variable: Int) {}
+
+          override def visitLineNumber(line: Int, start: Label) {
+            minLine = scala.math.min(minLine, line)
+            maxLine = scala.math.max(maxLine, line)
+            if (targetLine >= minLine && targetLine <= maxLine) {
+              includesLine = true
+            }
+          }
+          override def visitEnd() {
+            if (includesLine) {
+              methods += MethodBytecode(className, signature, ops.toList)
+            }
+          }
+        }
       } else null
     }
   }

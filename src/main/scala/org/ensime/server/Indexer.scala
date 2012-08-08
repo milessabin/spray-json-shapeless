@@ -119,12 +119,9 @@ class Indexer(
 		    case method :: rest => project ! RPCResultEvent(
 		      toWF(method), callId)
 		    case _ => project.sendRPCError(ErrExceptionInIndexer,
-                      Some(e.toString),
+                      Some("Failed to find method bytecode"),
                       callId)
 		  }
-                  val suggestions = SymbolSearchResults(
-                    index.keywordSearch(keywords, maxResults))
-                  project ! RPCResultEvent(toWF(suggestions), callId)
                 }
               }
             } catch {

@@ -29,6 +29,7 @@ package org.ensime.protocol
 
 import java.io._
 import org.ensime.config.{ ReplConfig, ProjectConfig }
+import org.ensime.indexer.ClassFileIndex
 import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
@@ -240,4 +241,6 @@ trait ProtocolConversions {
   def toWF(value: UndoResult): WireFormat
   def toWF(value: Null): WireFormat
   def toWF(vmStatus: DebugVmStatus): WireFormat
+
+  def toWF(method: ClassFileIndex#MethodBytecode): WireFormat
 }
