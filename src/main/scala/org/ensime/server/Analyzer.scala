@@ -48,6 +48,7 @@ case class CompilerFatalError(e: Throwable)
 
 class Analyzer(
   val project: Project,
+  val indexer: Actor,
   val protocol: ProtocolConversions,
   val config: ProjectConfig)
   extends Actor with RefactoringHandler {
@@ -83,8 +84,6 @@ class Analyzer(
 
   private val reporter = new PresentationReporter(reportHandler)
 
-  protected val indexer: Actor = new Indexer(project, protocol, config)
-
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
     settings, reporter, this, indexer, config)
   protected val javaCompiler: JavaCompiler = new JavaCompiler(
@@ -97,12 +96,6 @@ class Analyzer(
   def act() {
     project.bgMessage("Initializing Analyzer. Please wait...")
     initTime = System.currentTimeMillis()
-
-    println("Initing Indexer...")
-    indexer.start
-    if (!config.disableIndexOnStartup) {
-      indexer ! RebuildStaticIndexReq()
-    }
 
     if (!config.disableSourceLoadOnStartup) {
       println("Building Java sources...")
@@ -122,7 +115,6 @@ class Analyzer(
             javaCompiler.shutdown()
             scalaCompiler.askClearTypeCache()
             scalaCompiler.askShutdown()
-            indexer ! IndexerShutdownReq()
             exit('stop)
           }
 

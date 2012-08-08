@@ -61,6 +61,7 @@ class ClassFileIndex {
             classFilesForSourceName(source) += location.getAbsolutePath()
           }
         }, NoFlags))
+    println("Finished indexing " + files.size + " classpath files.")
   }
 
   trait RichClassVisitor extends ClassVisitor {

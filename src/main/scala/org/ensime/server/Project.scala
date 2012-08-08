@@ -85,8 +85,10 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   protected var config: ProjectConfig = ProjectConfig.nullConfig
 
   protected var analyzer: Actor = actor {}
+  protected var indexer: Actor = actor {}
   protected var builder: Option[Actor] = None
   protected var debugger: Option[Actor] = None
+
 
   private var undoCounter = 0
   private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]
@@ -160,6 +162,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected def initProject(conf: ProjectConfig) {
     config = conf
+    restartIndexer
     restartCompiler
     shutdownBuilder
     shutdownDebugger
@@ -167,9 +170,19 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     undoCounter = 0
   }
 
+  protected def restartIndexer() {
+    indexer ! IndexerShutdownReq()
+    indexer = new Indexer(this, protocol, config)
+    println("Initing Indexer...")
+    indexer.start
+    if (!config.disableIndexOnStartup) {
+      indexer ! RebuildStaticIndexReq()
+    }
+  }
+
   protected def restartCompiler() {
     analyzer ! AnalyzerShutdownEvent()
-    analyzer = new Analyzer(this, protocol, config)
+    analyzer = new Analyzer(this, indexer, protocol, config)
     analyzer.start
   }
 
@@ -191,7 +204,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
       case Some(b) => b
       case None =>
         {
-          val b = new DebugManager(this, protocol, config)
+          val b = new DebugManager(this, indexer, protocol, config)
           debugger = Some(b)
           b.start
           b
