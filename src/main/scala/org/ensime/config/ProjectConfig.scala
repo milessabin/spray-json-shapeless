@@ -56,6 +56,7 @@ trait FormatHandler {
   def formatPrefs(): Map[Symbol, Any]
   def disableIndexOnStartup(): Boolean
   def disableSourceLoadOnStartup(): Boolean
+  def disableScalaJarsOnClasspath(): Boolean
   def onlyIncludeInIndex(): List[Regex]
   def excludeFromIndex(): List[Regex]
   def extraCompilerArgs(): List[String]
@@ -422,6 +423,21 @@ object ProjectConfig {
 
     /**
      * Doc Property:
+     *   :disable-scala-jars-on-classpath
+     * Summary:
+     *   Disable putting standard Scala jars (i.e. scala-library.jar,
+     *     scala-reflect.jar and scala-compiler) on the classpath.
+     *     Useful for compiling against custom Scala builds and for
+     *     development of Scala compiler.
+     * Arguments:
+     *   Boolean: t or nil
+     */
+    lazy val disableScalaJarsOnClasspath_ = new BooleanProp(":disable-scala-jars-on-classpath", None)
+    props += disableScalaJarsOnClasspath_
+    def disableScalaJarsOnClasspath() = disableScalaJarsOnClasspath_(m)
+
+    /**
+     * Doc Property:
      *   :only-include-in-index
      * Summary:
      *   Only classes that match one of the given regular expressions will be
@@ -669,6 +685,7 @@ object ProjectConfig {
       formatPrefs,
       conf.disableIndexOnStartup,
       conf.disableSourceLoadOnStartup,
+      conf.disableScalaJarsOnClasspath,
       conf.onlyIncludeInIndex,
       conf.excludeFromIndex,
       conf.extraCompilerArgs,
@@ -690,9 +707,26 @@ object ProjectConfig {
   }
 
   def nullConfig = new ProjectConfig(
-    None, None, None, None, new File("."), List(),
-    List(), List(), None, None, Map(), false, false,
-    List(), List(), List(), List(), List(), None)
+    name = None,
+    scalaLibraryJar = None,
+    scalaReflectJar = None,
+    scalaCompilerJar = None,
+    root = new File("."),
+    sourceRoots = List(),
+    runtimeDeps = List(),
+    compileDeps = List(),
+    target = None,
+    testTarget = None,
+    formattingPrefsMap = Map(),
+    disableIndexOnStartup = false,
+    disableSourceLoadOnStartup = false,
+    disableScalaJarsOnClasspath = false,
+    onlyIncludeInIndex = List(),
+    excludeFromIndex = List(),
+    extraCompilerArgs = List(),
+    extraBuilderArgs = List(),
+    javaCompilerArgs = List(),
+    javaCompilerVersion = None)
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home");
@@ -737,6 +771,7 @@ class ProjectConfig(
   formattingPrefsMap: Map[Symbol, Any],
   val disableIndexOnStartup: Boolean,
   val disableSourceLoadOnStartup: Boolean,
+  val disableScalaJarsOnClasspath: Boolean,
   val onlyIncludeInIndex: Iterable[Regex],
   val excludeFromIndex: Iterable[Regex],
   val extraCompilerArgs: Iterable[String],
@@ -796,7 +831,8 @@ class ProjectConfig(
     scalaLibraryJar).flatten
 
   def compilerClasspathFilenames: Set[String] = {
-    (scalaJars ++ compileDeps).map(_.getPath).toSet
+    val files = if (disableScalaJarsOnClasspath) compileDeps else scalaJars ++ compileDeps
+    files.map(_.getPath).toSet
   }
 
   def allFilesOnClasspath: Set[File] = {
