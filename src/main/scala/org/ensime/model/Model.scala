@@ -30,6 +30,7 @@ import scala.collection.mutable.{ HashMap, ArrayBuffer }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.util.{ NoPosition, Position }
 import org.ensime.util.CanonFile
+import org.ensime.server.RichPresentationCompiler
 
 abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
 
@@ -204,7 +205,7 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 
   class TypeInspectInfo(val tpe: TypeInfo, val companionId: Option[Int], val supers: Iterable[InterfaceInfo]) {}
 
-  trait ModelBuilders { self: Global with Helpers =>
+  trait ModelBuilders { self: RichPresentationCompiler =>
 
     import self._
     import definitions.{ ObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
@@ -435,11 +436,74 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 	} else None
 	new SymbolInfo(
           name,
-          sym.pos,
+          symPos(sym),
           TypeInfo(sym.tpe),
           isArrowType(sym.tpe),
           ownerTpe.map(cacheType))
       }
+
+      def symPos(sym: Symbol): Position =
+        if (sym.pos != NoPosition) sym.pos
+        else {
+          def getBytecodeFile(sym: Symbol): Option[String] =
+            try {
+              val sym210 = sym.asInstanceOf[{ def associatedFile: { def path: String } }]
+              val path = sym210.associatedFile.path
+              if (path endsWith ".class") Some(path) else None
+            } catch {
+              case ex: Throwable =>
+                None
+            }
+
+          // todo. add support for jar files
+          def unqualifiedFilenameFromBytecode(path: String): Option[String] = {
+            import java.io._
+            var fins: FileInputStream = null
+            var source: Option[String] = None
+            try {
+              import org.objectweb.asm._
+              import org.objectweb.asm.commons._
+              import ClassReader._
+              fins = new FileInputStream(path)
+              val reader = new ClassReader(fins)
+              object visitor extends EmptyVisitor {
+                override def visitSource(source0: String, debug: String) {
+                  source = if (source0 == null) None else Some(source0)
+                }
+              }
+              reader.accept(visitor, SKIP_FRAMES | SKIP_CODE)
+            } catch {
+              case ex: Throwable =>
+                val message = new StringWriter()
+                ex.printStackTrace(new PrintWriter(message))
+                println("Symbol position lookup has failed: \n" + message)
+            } finally {
+              if (fins != null) fins.close()
+            }
+            source
+          }
+
+          println("Looking for a position for " + sym.fullName)
+
+          val bytecode = getBytecodeFile(sym)
+          println("Absolute path to the bytecode file is " + bytecode)
+          if (!bytecode.isDefined) return NoPosition
+
+          var source = unqualifiedFilenameFromBytecode(bytecode.get)
+          source = source map (unqualified => sym.enclosingPackage.fullName.replace(".", "/") + "/" + unqualified)
+          println("Relative path to the source file is " + source)
+          if (!source.isDefined) return NoPosition
+
+          val positions =
+            config.sourceRoots flatMap (wannabe => {
+              val f = CanonFile(wannabe.getAbsolutePath + "/" + source.get)
+              if (f.exists) {
+                println("Nailed it at " + f.getAbsolutePath)
+                Some(f.getAbsolutePath)
+              } else None
+            }) map (path => askLinkPos(sym, path)) filter (_ != NoPosition)
+          positions.headOption getOrElse NoPosition
+        }
 
       def nullInfo() = {
 	new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo, false, None)

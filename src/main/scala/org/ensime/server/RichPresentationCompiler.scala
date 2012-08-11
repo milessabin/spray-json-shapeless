@@ -154,6 +154,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
     _.file.path == path)
 
+  def askLinkPos(sym: Symbol, path: String): Position =
+  askOption(linkPos(sym, createSourceFile(path))).getOrElse(NoPosition)
 }
 
 class RichPresentationCompiler(
@@ -369,6 +371,10 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
       }
     }
 
+    protected def linkPos(sym: Symbol, source: SourceFile): Position = {
+      wrapLinkPos(sym, source)
+    }
+
     // TODO:
     // This hides the core implementation is Contexts.scala, which
     // has been patched. Once this bug is fixed, we can get rid of
@@ -476,6 +482,9 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
 
     def wrapTypedTreeAt(position: Position): Tree =
     wrap[Tree](r => new AskTypeAtItem(position, r).apply(), t => throw t)
+
+    def wrapLinkPos(sym: Symbol, source: SourceFile): Position =
+    wrap[Position](r => new AskLinkPosItem(sym, source, r).apply(), t => throw t)
 
   }
 
