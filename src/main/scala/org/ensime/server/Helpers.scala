@@ -40,7 +40,7 @@ trait Helpers { self: Global =>
     } else if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass) {
       sym.companionModule.tpe.members
     } else { List() }
-    members.filter { _.name.toString == "apply" }
+    members.toList.filter { _.name.toString == "apply" }
   }
 
   def constructorSynonyms(sym: Symbol): List[Symbol] = {
@@ -49,7 +49,7 @@ trait Helpers { self: Global =>
     } else if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
       sym.companionClass.tpe.members
     } else { List() }
-    members.filter { _.isConstructor }
+    members.toList.filter { _.isConstructor }
   }
 
 
