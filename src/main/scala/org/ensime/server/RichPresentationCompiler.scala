@@ -364,11 +364,37 @@ with RefactoringImpl with IndexerInterface with SemanticHighlighting with Comple
     protected def symbolAt(p: Position): Option[Symbol] = {
       p.source.file
       val tree = wrapTypedTreeAt(p)
-      if (tree.symbol != null) {
-	Some(tree.symbol)
-      } else {
-	None
-      }
+      // thanks a lot to ScalaIDE guys!
+      // this code is essentially a reproduction of ScalaDeclarationHyperlinkComputer.scala
+      val wannabes =
+        tree match {
+          case Import(expr, sels) =>
+            if (expr.pos.includes(p)) {
+              @annotation.tailrec
+              def locate(p: Position, inExpr: Tree): Symbol = inExpr match {
+                case Select(qualifier, name) =>
+                  if (qualifier.pos.includes(p)) locate(p, qualifier)
+                  else inExpr.symbol
+                case tree => tree.symbol
+              }
+              List(locate(p, expr))
+            } else {
+              sels.filter(_.namePos < p.point).sortBy(_.namePos).lastOption map { sel =>
+                val tpe = stabilizedType(expr)
+                List(tpe.member(sel.name), tpe.member(sel.name.toTypeName))
+              } getOrElse Nil
+            }
+          case Annotated(atp, _) =>
+            List(atp.symbol)
+          case st: SymTree =>
+            List(tree.symbol)
+          case _ =>
+            // `showRaw` was introduced in 2.10, so I commented it out to be compatible with 2.9
+            // println(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
+            println("[warning] symbolAt for " + tree.getClass + ": " + tree)
+            Nil
+        }
+      wannabes.filter(_.exists).headOption
     }
 
     protected def linkPos(sym: Symbol, source: SourceFile): Position = {
