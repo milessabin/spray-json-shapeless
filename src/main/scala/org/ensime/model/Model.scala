@@ -447,8 +447,9 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
         else {
           def getBytecodeFile(sym: Symbol): Option[String] =
             try {
-              val sym210 = sym.asInstanceOf[{ def associatedFile: { def path: String } }]
-              val path = sym210.associatedFile.path
+              val toplevel = sym.toplevelClass
+              val toplevel210 = toplevel.asInstanceOf[{ def associatedFile: { def path: String } }]
+              val path = toplevel210.associatedFile.path
               if (path endsWith ".class") Some(path) else None
             } catch {
               case ex: Throwable =>
