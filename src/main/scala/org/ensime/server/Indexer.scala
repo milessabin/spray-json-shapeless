@@ -119,11 +119,11 @@ class Indexer(
                 }
                 case MethodBytecodeReq(sourceName: String, line: Int) => {
 		  classFileIndex.locateBytecode(sourceName, line) match{
-		    case method :: rest => project ! RPCResultEvent(
+		    case method :: rest =>
+		      project ! RPCResultEvent(
 		      toWF(method), callId)
 		    case _ => project.sendRPCError(ErrExceptionInIndexer,
-                      Some("Failed to find method bytecode"),
-                      callId)
+                      Some("Failed to find method bytecode"), callId)
 		  }
                 }
               }

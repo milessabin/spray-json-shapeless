@@ -1034,12 +1034,12 @@ class DebugManager(project: Project, indexer: Actor,
               }
               case _ => {}
             }
-            actor { DebugManager.this ! evt }
+            DebugManager.this ! evt
           }
         } catch {
           case t: VMDisconnectedException =>
             {
-              actor { DebugManager.this ! t }
+              DebugManager.this ! t
               finished = true
             }
           case t: Throwable => {

@@ -152,6 +152,7 @@ class ClassFileIndex {
 
   def visitClass[T <: RichClassVisitor](
     classContainerFile: String, visitor: T): Option[T#Result] = {
+    println("Visiting " + classContainerFile)
     ClassIterator.find(
       List(new File(classContainerFile)),
       (location, classReader) => classReader.accept(visitor, NoFlags))

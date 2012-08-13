@@ -84,8 +84,8 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected var config: ProjectConfig = ProjectConfig.nullConfig
 
-  protected var analyzer: Actor = actor {}
-  protected var indexer: Actor = actor {}
+  protected var analyzer: Option[Actor] = None
+  protected var indexer: Option[Actor] = None
   protected var builder: Option[Actor] = None
   protected var debugger: Option[Actor] = None
 
@@ -171,19 +171,32 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def restartIndexer() {
-    indexer ! IndexerShutdownReq()
-    indexer = new Indexer(this, protocol, config)
-    println("Initing Indexer...")
-    indexer.start
-    if (!config.disableIndexOnStartup) {
-      indexer ! RebuildStaticIndexReq()
+    for(ea <- indexer) {
+      ea ! IndexerShutdownReq()
     }
+    val newIndexer = new Indexer(this, protocol, config)
+    println("Initing Indexer...")
+    newIndexer.start
+    if (!config.disableIndexOnStartup) {
+      newIndexer ! RebuildStaticIndexReq()
+    }
+    indexer = Some(newIndexer)
   }
 
   protected def restartCompiler() {
-    analyzer ! AnalyzerShutdownEvent()
-    analyzer = new Analyzer(this, indexer, protocol, config)
-    analyzer.start
+    for(ea <- analyzer) {
+      ea ! AnalyzerShutdownEvent()
+    }
+    indexer match{
+      case Some(indexer) => {
+	val newAnalyzer = new Analyzer(this, indexer, protocol, config)
+	newAnalyzer.start
+	analyzer = Some(newAnalyzer)
+      }
+      case None => {
+	throw new RuntimeException("Indexer must be started before analyzer.")
+      }
+    }
   }
 
   protected def getOrStartBuilder(): Actor = {
@@ -200,16 +213,18 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def getOrStartDebugger(): Actor = {
-    debugger match {
-      case Some(b) => b
-      case None =>
-        {
-          val b = new DebugManager(this, indexer, protocol, config)
-          debugger = Some(b)
-          b.start
-          b
-        }
-    }
+    ((debugger, indexer) match {
+      case (Some(b), _) => Some(b)
+      case (None, Some(indexer)) => {
+        val b = new DebugManager(this, indexer, protocol, config)
+        debugger = Some(b)
+        b.start
+        Some(b)
+      }
+      case _ => None
+    }).getOrElse(throw new RuntimeException(
+      "Indexer must be started before debug manager."
+    ))
   }
 
   protected def shutdownBuilder() {
