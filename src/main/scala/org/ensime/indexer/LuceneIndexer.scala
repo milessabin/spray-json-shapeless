@@ -374,7 +374,7 @@ object LuceneIndex extends StringSimilarity {
     }
 
     println("Updated: Indexing classpath...")
-    ClassIterator.find(files, handler)
+    ClassIterator.findPublicSymbols(files, handler)
     indexWorkQ !? StopEvent
     val elapsed = System.currentTimeMillis() - t
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")

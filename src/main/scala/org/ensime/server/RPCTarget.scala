@@ -99,11 +99,11 @@ trait RPCTarget { self: Project =>
 
   def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes:List[Symbol], callId: Int) {
     val file: File = new File(f)
-    analyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
+    getAnalyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
   }
 
   def rpcMethodBytecode(f: String, line: Int, callId: Int) {
-    indexer ! RPCRequestEvent(MethodBytecodeReq(new File(f).getName, line), callId)
+    getIndexer ! RPCRequestEvent(MethodBytecodeReq(new File(f).getName, line), callId)
   }
 
   def rpcDebugStartVM(commandLine: String, callId: Int) {
@@ -172,93 +172,93 @@ trait RPCTarget { self: Project =>
 
   def rpcPatchSource(f: String, edits: List[PatchOp], callId: Int) {
     val file: File = new File(f)
-    analyzer ! RPCRequestEvent(PatchSourceReq(file, edits), callId)
+    getAnalyzer ! RPCRequestEvent(PatchSourceReq(file, edits), callId)
   }
 
   def rpcTypecheckFile(f: String, callId: Int) {
     val file: File = new File(f)
-    analyzer ! RPCRequestEvent(ReloadFileReq(file), callId)
+    getAnalyzer ! RPCRequestEvent(ReloadFileReq(file), callId)
   }
 
   def rpcRemoveFile(f: String, callId: Int) {
     val file: File = new File(f)
-    analyzer ! RPCRequestEvent(RemoveFileReq(file), callId)
+    getAnalyzer ! RPCRequestEvent(RemoveFileReq(file), callId)
     sendRPCAckOK(callId)
   }
 
   def rpcTypecheckAll(callId: Int) {
-    analyzer ! RPCRequestEvent(ReloadAllReq(), callId)
+    getAnalyzer ! RPCRequestEvent(ReloadAllReq(), callId)
   }
 
   def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int,
     caseSens: Boolean, reload: Boolean, callId: Int) {
-    analyzer ! RPCRequestEvent(
+    getAnalyzer ! RPCRequestEvent(
       CompletionsReq(new File(f), point, maxResults, caseSens, reload), callId)
   }
 
   def rpcPackageMemberCompletion(path: String, prefix: String, callId: Int) {
-    analyzer ! RPCRequestEvent(PackageMemberCompletionReq(path, prefix), callId)
+    getAnalyzer ! RPCRequestEvent(PackageMemberCompletionReq(path, prefix), callId)
   }
 
   def rpcInspectTypeAtPoint(f: String, point: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(InspectTypeReq(new File(f), point), callId)
+    getAnalyzer ! RPCRequestEvent(InspectTypeReq(new File(f), point), callId)
   }
 
   def rpcInspectTypeById(id: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
+    getAnalyzer ! RPCRequestEvent(InspectTypeByIdReq(id), callId)
   }
 
   def rpcSymbolAtPoint(f: String, point: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
+    getAnalyzer ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
   }
 
   def rpcTypeById(id: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(TypeByIdReq(id), callId)
+    getAnalyzer ! RPCRequestEvent(TypeByIdReq(id), callId)
   }
 
   def rpcTypeByName(name: String, callId: Int) {
-    analyzer ! RPCRequestEvent(TypeByNameReq(name), callId)
+    getAnalyzer ! RPCRequestEvent(TypeByNameReq(name), callId)
   }
 
   def rpcTypeByNameAtPoint(name: String, f: String, point: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(TypeByNameAtPointReq(name, new File(f), point), callId)
+    getAnalyzer ! RPCRequestEvent(TypeByNameAtPointReq(name, new File(f), point), callId)
   }
 
   def rpcCallCompletion(id: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(CallCompletionReq(id), callId)
+    getAnalyzer ! RPCRequestEvent(CallCompletionReq(id), callId)
   }
 
   def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(ImportSuggestionsReq(new File(f), point, names, maxResults), callId)
+    getAnalyzer ! RPCRequestEvent(ImportSuggestionsReq(new File(f), point, names, maxResults), callId)
   }
 
   def rpcPublicSymbolSearch(names: List[String], maxResults: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(PublicSymbolSearchReq(names, maxResults), callId)
+    getAnalyzer ! RPCRequestEvent(PublicSymbolSearchReq(names, maxResults), callId)
   }
 
   def rpcUsesOfSymAtPoint(f: String, point: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(UsesOfSymAtPointReq(new File(f), point), callId)
+    getAnalyzer ! RPCRequestEvent(UsesOfSymAtPointReq(new File(f), point), callId)
   }
 
   def rpcTypeAtPoint(f: String, point: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(TypeAtPointReq(new File(f), point), callId)
+    getAnalyzer ! RPCRequestEvent(TypeAtPointReq(new File(f), point), callId)
   }
 
   def rpcInspectPackageByPath(path: String, callId: Int) {
-    analyzer ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
+    getAnalyzer ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
   }
 
   def rpcPrepareRefactor(refactorType: Symbol, procId: Int, params: immutable.Map[Symbol, Any], interactive: Boolean, callId: Int) {
-    analyzer ! RPCRequestEvent(RefactorPerformReq(
+    getAnalyzer ! RPCRequestEvent(RefactorPerformReq(
 	procId, refactorType, params, interactive), callId)
   }
 
   def rpcExecRefactor(refactorType: Symbol, procId: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(RefactorExecReq(procId, refactorType), callId)
+    getAnalyzer ! RPCRequestEvent(RefactorExecReq(procId, refactorType), callId)
   }
 
   def rpcCancelRefactor(procId: Int, callId: Int) {
-    analyzer ! RPCRequestEvent(RefactorCancelReq(procId), callId)
+    getAnalyzer ! RPCRequestEvent(RefactorCancelReq(procId), callId)
   }
 
   def rpcExpandSelection(filename: String, start: Int, stop: Int, callId: Int) {

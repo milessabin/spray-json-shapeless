@@ -2687,7 +2687,8 @@ trait SwankProtocol extends Protocol {
   def toWF(method: ClassFileIndex#MethodBytecode): SExp = {
     SExp.propList(
       (":class-name", method.className),
-      (":signature", method.methodSignature),
+      (":name", method.methodName),
+      (":signature", method.methodSignature.map(strToSExp).getOrElse('nil)),
       (":bytecode", SExpList(method.byteCode.map { op =>
         SExp(op.op, op.description)
       })))

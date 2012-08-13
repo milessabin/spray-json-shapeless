@@ -28,6 +28,7 @@
 package org.ensime.indexer
 import java.io.File
 import org.ensime.util.ClassIterator
+import org.ensime.util.RichClassVisitor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
@@ -45,13 +46,14 @@ class ClassFileIndex {
     description: String)
   case class MethodBytecode(
     className: String,
-    methodSignature: String,
+    methodName: String,
+    methodSignature: Option[String],
     byteCode: List[Op])
-
-  private val NoFlags = 0
 
   private val classFilesForSourceName =
     new HashMap[String, HashSet[String]].withDefault(s => HashSet())
+
+  val ASMAcceptAll = 0
 
   def indexFiles(files: Iterable[File]) {
     val t = System.currentTimeMillis()
@@ -63,16 +65,11 @@ class ClassFileIndex {
 	    set += location.getAbsolutePath()
 	    classFilesForSourceName(source) = set
           }
-        }, NoFlags))
+        }, ASMAcceptAll))
     val elapsed = System.currentTimeMillis() - t
     println("Finished indexing " +
       files.size + " classpath files in " +
       elapsed / 1000.0 + " seconds.")
-  }
-
-  trait RichClassVisitor extends ClassVisitor {
-    type Result
-    def result: Option[Result]
   }
 
   class MethodByteCodeFinder(targetSource: String, targetLine: Int)
@@ -142,7 +139,9 @@ class ClassFileIndex {
           }
           override def visitEnd() {
             if (includesLine) {
-              methods += MethodBytecode(className, signature, ops.toList)
+              methods += MethodBytecode(className,
+		name, Option(signature),
+		ops.toList)
             }
           }
         }
@@ -150,21 +149,13 @@ class ClassFileIndex {
     }
   }
 
-  def visitClass[T <: RichClassVisitor](
-    classContainerFile: String, visitor: T): Option[T#Result] = {
-    println("Visiting " + classContainerFile)
-    ClassIterator.find(
-      List(new File(classContainerFile)),
-      (location, classReader) => classReader.accept(visitor, NoFlags))
-    visitor.result
-  }
-
   def locateBytecode(
     sourceName: String,
     line: Int): List[MethodBytecode] = {
     classFilesForSourceName(sourceName).flatMap { f =>
-      visitClass(
-        f, new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
+      ClassIterator.findInClasses(
+        List(new File(f)),
+	new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
     }.toList
   }
 }

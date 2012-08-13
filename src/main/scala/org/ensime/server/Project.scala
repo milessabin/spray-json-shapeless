@@ -89,6 +89,15 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   protected var builder: Option[Actor] = None
   protected var debugger: Option[Actor] = None
 
+  def getAnalyzer: Actor = {
+    analyzer.getOrElse(throw new RuntimeException(
+	"Analyzer unavailable."))
+  }
+  def getIndexer: Actor = {
+    indexer.getOrElse(throw new RuntimeException(
+	"Indexer unavailable."))
+  }
+
 
   private var undoCounter = 0
   private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]

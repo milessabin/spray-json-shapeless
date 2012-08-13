@@ -30,6 +30,7 @@
  */
 
 package org.ensime.util
+import org.objectweb.asm.ClassVisitor
 import scala.collection.mutable.{ Set => MutableSet }
 import scala.collection.mutable.{ HashMap, HashSet }
 import org.objectweb.asm.FieldVisitor
@@ -48,7 +49,7 @@ trait ClassHandler {
   def onField(className: String, name: String, location: String, flags: Int) {}
 }
 
-private class ClassVisitor(location: File, handler: ClassHandler) extends EmptyVisitor {
+private class PublicSymbolVisitor(location: File, handler: ClassHandler) extends EmptyVisitor {
   var currentClassName: Option[String] = None
   val path: String = location.getPath()
 
@@ -89,19 +90,19 @@ private class ClassVisitor(location: File, handler: ClassHandler) extends EmptyV
   }
 }
 
-object ClassIterator {
+trait RichClassVisitor extends ClassVisitor {
+  type Result
+  def result: Option[Result]
+}
 
-  val ASMAcceptCriteria = 0
+object ClassIterator {
 
   type Callback = (File, ClassReader) => Unit
 
-  def find(path: Iterable[File], handler: ClassHandler) {
-    find(path, { (location, cr) =>
-	val visitor = new ClassVisitor(location, handler)
-	cr.accept(visitor, ClassReader.SKIP_CODE)
-      })
-  }
-
+  /**
+  * Invoke callback for each class found in given .class,.jar,.zip, or directory
+  * files.
+  */
   def find(path: Iterable[File], callback: Callback) {
     for (f <- path) {
       try {
@@ -113,6 +114,30 @@ object ClassIterator {
         }
       }
     }
+  }
+
+  /**
+  * Invoke methods of handler for each top-level symbol found in given
+  * .class,.jar,.zip, or directory files.
+  */
+  def findPublicSymbols(path: Iterable[File], handler: ClassHandler) {
+    find(path, { (location, cr) =>
+	val visitor = new PublicSymbolVisitor(location, handler)
+	cr.accept(visitor, ClassReader.SKIP_CODE)
+      })
+  }
+
+  val ASMAcceptAll = 0
+
+  /**
+  * Visits all classes in given .class,.jar,.zip or directory file with the
+  * given visitor and returns the visitor's final result value.
+  */
+  def findInClasses[T <: RichClassVisitor](
+    path: Iterable[File], visitor: T): Option[T#Result] = {
+    ClassIterator.find(
+      path, (location, classReader) => classReader.accept(visitor, ASMAcceptAll))
+    visitor.result
   }
 
   private def findClassesIn(f: File, callback: Callback) {
