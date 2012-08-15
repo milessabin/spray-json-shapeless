@@ -45,8 +45,8 @@ import scala.collection.mutable.{ArrayBuffer, HashSet, ListBuffer}
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
 case class TypeCompletionsReq(prefix: String, maxResults: Int)
-case class SourceFileCandidatesReq(bytecodeFiles: Iterable[File],
-  enclosingPackage: String)
+case class SourceFileCandidatesReq(enclosingPackage: String,
+  classNamePrefix: String)
 case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 case class ReindexClassFilesReq(files: Iterable[File])
@@ -103,9 +103,10 @@ class Indexer(
             val suggestions = index.keywordSearch(List(prefix), maxResults, true)
 	    sender ! suggestions
           }
-          case SourceFileCandidatesReq(bytecodeFiles, enclosingPackage) => {
-	    sender ! classFileIndex.sourceFileCandidates(bytecodeFiles,
-	      enclosingPackage)
+          case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) => {
+	    sender ! classFileIndex.sourceFileCandidates(
+	      enclosingPackage,
+	      classNamePrefix)
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {

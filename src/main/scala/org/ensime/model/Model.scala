@@ -234,43 +234,24 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
   }
 
-  def getBytecodeFile(sym: Symbol): Option[String] = {
-    // def get29File(): Option[String] = {
-    //   try {
-    //     val top = sym.toplevelClass.asInstanceOf[
-    // 	  { def sourceFile: AbstractFile }]
-    // 	println(top.sourceFile)
-    // 	println(top.sourceFile.path)
-    //     Option(top.sourceFile).map(_.path)
-    //   } catch {case ex: Throwable => ex.printStackTrace();None}
-    // }
-    def get210File(): Option[String] = {
-      try {
-        val top = sym.toplevelClass.asInstanceOf[{
-          def associatedFile: { def path: String }
-        }]
-        Some(top.associatedFile.path)
-      } catch {case ex: Throwable => ex.printStackTrace();None}
-    }
-    get210File
-  }
-
   def symPos(sym: Symbol): Position = {
     if (sym.pos != NoPosition) sym.pos
     else {
-      getBytecodeFile(sym).flatMap { bytecodePath =>
-        val file = CanonFile(bytecodePath)
-        val pack = sym.enclosingPackage.fullName
-        indexer !? (1000, SourceFileCandidatesReq(List(file), pack)) match {
-          case Some(files: Set[File]) => {
-            files.flatMap { f =>
-              askLinkPos(sym, f.getAbsolutePath)
-            }.headOption
-          }
-          case _ => None
+      val pack = sym.enclosingPackage.fullName
+      val top = sym.toplevelClass
+      val name = if (sym.owner.isPackageObjectClass) "package$.class"
+      else top.name + (if (top.isModuleClass) "$" else "")
+      indexer !? (1000, SourceFileCandidatesReq(pack, name)) match {
+        case Some(files: Set[File]) => {
+          files.flatMap { f =>
+	    println("Linking:" + (sym, f))
+            askLinkPos(sym, f.getAbsolutePath)
+          }.filter(_.isDefined).headOption.getOrElse(NoPosition)
         }
-      }.getOrElse(NoPosition)
-    }}
+        case _ => NoPosition
+      }
+    }
+  }
 
   // When inspecting a type, transform a raw list of TypeMembers to a sorted
   // list of InterfaceInfo objects, each with its own list of sorted member infos.

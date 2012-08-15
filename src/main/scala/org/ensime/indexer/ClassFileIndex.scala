@@ -169,22 +169,19 @@ class ClassFileIndex(config: ProjectConfig) {
   }
 
   def sourceFileCandidates(
-    bytecodeFiles: Iterable[File],
-    enclosingPackage: String): Set[File] = {
-    println("Searching for sources of: " + (bytecodeFiles, enclosingPackage))
-    bytecodeFiles.flatMap { f =>
-      sourceNamesForClassFile(f.getAbsolutePath) flatMap { sf =>
-        val file = enclosingPackage.replace(".", "/") + "/" + sf
-	println("Candidate unqualifed: " + file)
-        config.sourceRoots flatMap { root =>
-          val f = CanonFile(root.getAbsolutePath + "/" + sf)
-	  println("Candidate qualified: " + f)
-          if (f.exists) {
-            Some(f)
-          } else None
-        }
-      }
-    }.toSet
+    enclosingPackage: String,
+    classNamePrefix: String): Set[File] = {
+    println("Looking for " + (enclosingPackage, classNamePrefix))
+    val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix
+    // TODO(aemon): Build lookup structure to make this more efficient.
+    val sources = config.sources
+    (sourceNamesForClassFile.filter(_._1.contains(subPath)).flatMap { pair =>
+	pair._2.flatMap { sourceName =>
+	  println("Considering sourceName " + sourceName)
+	  sources.filter(_.getName() == sourceName)
+	}
+      } ++ sources.filter(_.getName().startsWith(classNamePrefix))).toSet
   }
+
 }
 
