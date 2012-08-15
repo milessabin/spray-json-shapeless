@@ -27,8 +27,10 @@
 
 package org.ensime.indexer
 import java.io.File
+import org.ensime.config.ProjectConfig
 import org.ensime.util.ClassIterator
 import org.ensime.util.RichClassVisitor
+import org.ensime.util.CanonFile
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
@@ -39,7 +41,7 @@ import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.MultiMap
 
-class ClassFileIndex {
+class ClassFileIndex(config: ProjectConfig) {
 
   case class Op(
     op: String,
@@ -53,6 +55,9 @@ class ClassFileIndex {
   private val classFilesForSourceName =
     new HashMap[String, HashSet[String]].withDefault(s => HashSet())
 
+  private val sourceNamesForClassFile =
+    new HashMap[String, HashSet[String]].withDefault(s => HashSet())
+
   val ASMAcceptAll = 0
 
   def indexFiles(files: Iterable[File]) {
@@ -61,9 +66,13 @@ class ClassFileIndex {
       (location, classReader) =>
         classReader.accept(new EmptyVisitor() {
           override def visitSource(source: String, debug: String) {
+            val bytecodeFile = location.getAbsolutePath()
             val set = classFilesForSourceName(source)
-	    set += location.getAbsolutePath()
-	    classFilesForSourceName(source) = set
+            set += bytecodeFile
+            classFilesForSourceName(source) = set
+            val sourceSet = sourceNamesForClassFile(bytecodeFile)
+            sourceSet += source
+            sourceNamesForClassFile(bytecodeFile) = sourceSet
           }
         }, ASMAcceptAll))
     val elapsed = System.currentTimeMillis() - t
@@ -140,8 +149,8 @@ class ClassFileIndex {
           override def visitEnd() {
             if (includesLine) {
               methods += MethodBytecode(className,
-		name, Option(signature),
-		ops.toList)
+                name, Option(signature),
+                ops.toList)
             }
           }
         }
@@ -155,8 +164,27 @@ class ClassFileIndex {
     classFilesForSourceName(sourceName).flatMap { f =>
       ClassIterator.findInClasses(
         List(new File(f)),
-	new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
+        new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
     }.toList
+  }
+
+  def sourceFileCandidates(
+    bytecodeFiles: Iterable[File],
+    enclosingPackage: String): Set[File] = {
+    println("Searching for sources of: " + (bytecodeFiles, enclosingPackage))
+    bytecodeFiles.flatMap { f =>
+      sourceNamesForClassFile(f.getAbsolutePath) flatMap { sf =>
+        val file = enclosingPackage.replace(".", "/") + "/" + sf
+	println("Candidate unqualifed: " + file)
+        config.sourceRoots flatMap { root =>
+          val f = CanonFile(root.getAbsolutePath + "/" + sf)
+	  println("Candidate qualified: " + f)
+          if (f.exists) {
+            Some(f)
+          } else None
+        }
+      }
+    }.toSet
   }
 }
 

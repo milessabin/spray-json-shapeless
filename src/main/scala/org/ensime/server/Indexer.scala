@@ -45,6 +45,8 @@ import scala.collection.mutable.{ArrayBuffer, HashSet, ListBuffer}
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
 case class TypeCompletionsReq(prefix: String, maxResults: Int)
+case class SourceFileCandidatesReq(bytecodeFiles: Iterable[File],
+  enclosingPackage: String)
 case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 case class ReindexClassFilesReq(files: Iterable[File])
@@ -61,7 +63,7 @@ class Indexer(
   import protocol._
 
   val index = new LuceneIndex{}
-  val classFileIndex = new ClassFileIndex()
+  val classFileIndex = new ClassFileIndex(config)
 
   def act() {
     loop {
@@ -100,6 +102,10 @@ class Indexer(
           case TypeCompletionsReq(prefix: String, maxResults: Int) => {
             val suggestions = index.keywordSearch(List(prefix), maxResults, true)
 	    sender ! suggestions
+          }
+          case SourceFileCandidatesReq(bytecodeFiles, enclosingPackage) => {
+	    sender ! classFileIndex.sourceFileCandidates(bytecodeFiles,
+	      enclosingPackage)
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
