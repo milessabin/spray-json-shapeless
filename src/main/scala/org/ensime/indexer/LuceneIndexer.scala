@@ -374,7 +374,7 @@ object LuceneIndex extends StringSimilarity {
     }
 
     println("Updated: Indexing classpath...")
-    ClassIterator.find(files, handler)
+    ClassIterator.findPublicSymbols(files, handler)
     indexWorkQ !? StopEvent
     val elapsed = System.currentTimeMillis() - t
     println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
@@ -395,8 +395,6 @@ trait LuceneIndex {
   private var index: FSDirectory = null
   private var indexWriter: Option[IndexWriter] = None
   private var indexReader: Option[IndexReader] = None
-
-  def onIndexingComplete()
 
   def initialize(
     root: File,
@@ -442,7 +440,6 @@ trait LuceneIndex {
       }
     }
 
-    onIndexingComplete()
   }
 
   def keywordSearch(
@@ -590,9 +587,6 @@ trait LuceneIndex {
 
 
 object IndexTest extends LuceneIndex {
-  def onIndexingComplete() {
-    println("done")
-  }
 
   def projectConfig() {
     println("done")

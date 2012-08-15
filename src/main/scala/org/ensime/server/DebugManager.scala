@@ -70,8 +70,7 @@ case class DebugClearBreakReq(file: String, line: Int)
 case class DebugClearAllBreaksReq()
 case class DebugListBreaksReq()
 case class DebugSetStackVarReq(threadId: Long, frame: Int,
-  index: Int, newValue:String)
-
+  index: Int, newValue: String)
 
 abstract class DebugVmStatus
 
@@ -93,7 +92,8 @@ case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 case class DebugOutputEvent(out: String) extends DebugEvent
 
-class DebugManager(project: Project, protocol: ProtocolConversions,
+class DebugManager(project: Project, indexer: Actor,
+  protocol: ProtocolConversions,
   config: ProjectConfig) extends Actor {
 
   import protocol._
@@ -215,19 +215,19 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
       } catch {
         case e: AbsentInformationException => {
           e.printStackTrace()
-	  None
+          None
         }
         case e: VMDisconnectedException =>
           {
             System.err.println("Attempted interaction with disconnected VM:")
             e.printStackTrace()
-	    disconnectDebugVM()
+            disconnectDebugVM()
             None
           }
         case e: Throwable =>
           {
             e.printStackTrace()
-	    None
+            None
           }
       }
     }
@@ -518,12 +518,12 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                 }
                 case DebugSetStackVarReq(
                   threadId: Long, frame: Int, offset: Int,
-		  newValue:String) => {
+                  newValue: String) => {
                   handleRPCWithVMAndThread(callId, threadId) {
                     (vm, thread) =>
                       val result = vm.setStackVar(
-			thread, frame,
-			offset, newValue)
+                        thread, frame,
+                        offset, newValue)
                       project ! RPCResultEvent(toWF(result), callId)
                   }
                 }
@@ -603,9 +603,7 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           println("VM: " + vm.description + ", " + vm)
           vm
         }
-
       }
-
     }
 
     vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
@@ -642,6 +640,12 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
     private val savedObjects = new HashMap[Long, ObjectReference]()
 
     def start() {
+
+      // Re-index the classfiles on disk so our mappings are up
+      // to date.
+      indexer ! ReindexClassFilesReq(
+        List(config.target, config.testTarget).flatten)
+
       evtQ.start()
       monitor.map { _.start() }
     }
@@ -971,27 +975,26 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
       result
     }
 
-    private def mirrorFromString(tpe: Type, toMirror:String): Option[Value] = {
+    private def mirrorFromString(tpe: Type, toMirror: String): Option[Value] = {
       val s = toMirror.trim
       if (s.length > 0) {
-	tpe match {
-	  case tpe:BooleanType => Some(vm.mirrorOf(s.toBoolean))
-	  case tpe:ByteType => Some(vm.mirrorOf(s.toByte))
-	  case tpe:CharType => Some(vm.mirrorOf(s(0)))
-	  case tpe:DoubleType => Some(vm.mirrorOf(s.toDouble))
-	  case tpe:FloatType => Some(vm.mirrorOf(s.toFloat))
-	  case tpe:IntegerType => Some(vm.mirrorOf(s.toInt))
-	  case tpe:LongType => Some(vm.mirrorOf(s.toLong))
-	  case tpe:ShortType => Some(vm.mirrorOf(s.toShort))
-	  case tpe:ReferenceType
-	  if tpe.name == "java.lang.String" =>
-	  {
-	    if (s.startsWith("\"") && s.endsWith("\"")) {
-	      Some(vm.mirrorOf(s.substring(1, s.length - 1)))
-	    } else Some(vm.mirrorOf(s))
-	  }
-	  case _ => None
-	}
+        tpe match {
+          case tpe: BooleanType => Some(vm.mirrorOf(s.toBoolean))
+          case tpe: ByteType => Some(vm.mirrorOf(s.toByte))
+          case tpe: CharType => Some(vm.mirrorOf(s(0)))
+          case tpe: DoubleType => Some(vm.mirrorOf(s.toDouble))
+          case tpe: FloatType => Some(vm.mirrorOf(s.toFloat))
+          case tpe: IntegerType => Some(vm.mirrorOf(s.toInt))
+          case tpe: LongType => Some(vm.mirrorOf(s.toLong))
+          case tpe: ShortType => Some(vm.mirrorOf(s.toShort))
+          case tpe: ReferenceType if tpe.name == "java.lang.String" =>
+            {
+              if (s.startsWith("\"") && s.endsWith("\"")) {
+                Some(vm.mirrorOf(s.substring(1, s.length - 1)))
+              } else Some(vm.mirrorOf(s))
+            }
+          case _ => None
+        }
       } else None
     }
 
@@ -1000,11 +1003,11 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
       if (thread.frameCount > frame &&
         thread.frame(frame).visibleVariables.length > offset) {
         val stackFrame = thread.frame(frame)
-	val localVar = stackFrame.visibleVariables.get(offset)
-	mirrorFromString(localVar.`type`(), newValue) match {
-	  case Some(v) => stackFrame.setValue(localVar, v); true
-	  case None => false
-	}
+        val localVar = stackFrame.visibleVariables.get(offset)
+        mirrorFromString(localVar.`type`(), newValue) match {
+          case Some(v) => stackFrame.setValue(localVar, v); true
+          case None => false
+        }
       } else false
     }
 
@@ -1031,12 +1034,12 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
               }
               case _ => {}
             }
-            actor { DebugManager.this ! evt }
+            DebugManager.this ! evt
           }
         } catch {
           case t: VMDisconnectedException =>
             {
-              actor { DebugManager.this ! t }
+              DebugManager.this ! t
               finished = true
             }
           case t: Throwable => {
