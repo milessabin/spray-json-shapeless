@@ -327,6 +327,15 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
+              def handle_startup_failure(e: Exception): Unit = {
+                maybeVM = None
+                println("e: " + e)
+                // val message = new java.io.StringWriter()
+                // e.printStackTrace(new java.io.PrintWriter(message))
+                val message = e.toString
+                project ! RPCResultEvent(toWF(DebugVmError(1, message.toString)), callId)
+              }
+
               req match {
                 case DebugStartVMReq(commandLine: String) ⇒ {
                   withVM { vm ⇒
@@ -339,9 +348,8 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                     project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
                   } catch {
                     case e: Exception => {
-                      maybeVM = None
                       println("Couldn't start VM")
-                      project ! RPCResultEvent(toWF(DebugVmError(1, e.toString)), callId)
+                      handle_startup_failure(e)
                     }
                   }
                 }
@@ -357,10 +365,8 @@ class DebugManager(project: Project, protocol: ProtocolConversions,
                     project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
                   } catch {
                     case e: Exception => {
-                      maybeVM = None
                       println("Couldn't attach to target VM.")
-                      println("e: " + e)
-                      project ! RPCResultEvent(toWF(DebugVmError(1, e.toString)), callId)
+                      handle_startup_failure(e)
                     }
                   }
                 }
