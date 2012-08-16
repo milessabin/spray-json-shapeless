@@ -23,6 +23,45 @@
  *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ * Portions of this file are:
+ *
+ *  Copyright (c) 2002-2011 EPFL, Lausanne, unless otherwise specified.
+ *  All rights reserved.
+ *
+ *  This software was developed by the Programming Methods Laboratory of the
+ *  Swiss Federal Institute of Technology (EPFL), Lausanne, Switzerland.
+ *
+ *  Permission to use, copy, modify, and distribute this software in source
+ *  or binary form for any purpose with or without fee is hereby granted,
+ *  provided that the following conditions are met:
+ *
+ *     1. Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *
+ *     2. Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *
+ *     3. Neither the name of the EPFL nor the names of its contributors
+ *        may be used to endorse or promote products derived from this
+ *        software without specific prior written permission.
+ *
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ *  ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ *  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ *  SUCH DAMAGE.
+ *
+ *
  */
 
 package org.ensime.server
@@ -359,11 +398,37 @@ class RichPresentationCompiler(
 
   protected def symbolAt(p: Position): Option[Symbol] = {
     val tree = wrapTypedTreeAt(p)
-    if (tree.symbol != null) {
-      Some(tree.symbol)
-    } else {
-      None
-    }
+    // This code taken mostly verbatim from Scala IDE sources. Licensed
+    // under SCALA LICENSE.
+    val wannabes =
+      tree match {
+        case Import(expr, sels) =>
+          if (expr.pos.includes(p)) {
+            @annotation.tailrec
+            def locate(p: Position, inExpr: Tree): Symbol = inExpr match {
+              case Select(qualifier, name) =>
+                if (qualifier.pos.includes(p)) locate(p, qualifier)
+                else inExpr.symbol
+              case tree => tree.symbol
+            }
+            List(locate(p, expr))
+          } else {
+            sels.filter(_.namePos < p.point).sortBy(_.namePos).lastOption map { sel =>
+              val tpe = stabilizedType(expr)
+              List(tpe.member(sel.name), tpe.member(sel.name.toTypeName))
+            } getOrElse Nil
+          }
+        case Annotated(atp, _) =>
+          List(atp.symbol)
+        case st: SymTree =>
+          List(tree.symbol)
+        case _ =>
+          // `showRaw` was introduced in 2.10, so I commented it out to be compatible with 2.9
+          // println(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
+          println("[warning] symbolAt for " + tree.getClass + ": " + tree)
+          Nil
+      }
+    wannabes.filter(_.exists).headOption
   }
 
   protected def linkPos(sym: Symbol, source: SourceFile): Position = {
