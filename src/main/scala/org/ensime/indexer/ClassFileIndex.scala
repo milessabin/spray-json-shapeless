@@ -174,7 +174,7 @@ class ClassFileIndex(config: ProjectConfig) {
     classNamePrefix: String): Set[File] = {
     println("Looking for " + (enclosingPackage, classNamePrefix))
     val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix
-    // TODO(aemon): Build lookup structure to make this more efficient.
+    // TODO(aemoncannon): Build lookup structure to make this more efficient.
     val sources = config.sources
     val sourceNames: Set[String] = sourceNamesForClassFile.collect {
       case (loc, sourceNames) if (
