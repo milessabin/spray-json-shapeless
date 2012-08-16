@@ -53,6 +53,12 @@ class ClassFileIndex(config: ProjectConfig) {
     methodSignature: Option[String],
     byteCode: List[Op])
 
+
+  // TODO(aemoncannon): This set can change over time if new
+  // source files are created. Need to arrange for indexer to
+  // receive a re-up message when new sources are created.
+  private val allSources: Set[CanonFile] = config.sources
+
   private val classFilesForSourceName =
     new HashMap[String, HashSet[ClassLocation]].withDefault(s => HashSet())
 
@@ -175,14 +181,13 @@ class ClassFileIndex(config: ProjectConfig) {
     println("Looking for " + (enclosingPackage, classNamePrefix))
     val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix
     // TODO(aemoncannon): Build lookup structure to make this more efficient.
-    val sources = config.sources
     val sourceNames: Set[String] = sourceNamesForClassFile.collect {
       case (loc, sourceNames) if (
         loc.file.contains(subPath) ||
         loc.entry.contains(subPath)) => sourceNames
     }.flatten.toSet
     sourceNames.flatMap { sourceName =>
-      sources.filter(_.getName() == sourceName)
+      allSources.filter(_.getName() == sourceName)
     }
   }
 
