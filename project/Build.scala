@@ -66,10 +66,10 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++
       Seq(
-        version := "0.9.6.5",
+        version := "0.9.7",
         organization := "org.ensime",
-	scalaVersion := TwoNineVersion,
-	crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
+        scalaVersion := TwoNineVersion,
+        crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
         resolvers <++= (scalaVersion) { scalaVersion =>
           if (scalaVersion == TwoTenVersion)
             // currently SBT will download scala-library and scala-compiler from oss.sonatype.org no matter what
@@ -93,7 +93,7 @@ object EnsimeBuild extends Build {
               "asm" % "asm" % "3.2",
               "asm" % "asm-commons" % "3.2",
               "com.googlecode.json-simple" % "json-simple" % "1.1"
-	    ) ++
+      ) ++
           (if (scalaVersion == TwoTenVersion)
             Seq("org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
                 "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
