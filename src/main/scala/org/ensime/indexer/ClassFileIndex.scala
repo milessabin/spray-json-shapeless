@@ -31,6 +31,7 @@ import org.ensime.config.ProjectConfig
 import org.ensime.util.ClassIterator
 import org.ensime.util.RichClassVisitor
 import org.ensime.util.CanonFile
+import org.ensime.util.ClassLocation
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
@@ -53,10 +54,10 @@ class ClassFileIndex(config: ProjectConfig) {
     byteCode: List[Op])
 
   private val classFilesForSourceName =
-    new HashMap[String, HashSet[String]].withDefault(s => HashSet())
+    new HashMap[String, HashSet[ClassLocation]].withDefault(s => HashSet())
 
   private val sourceNamesForClassFile =
-    new HashMap[String, HashSet[String]].withDefault(s => HashSet())
+    new HashMap[ClassLocation, HashSet[String]].withDefault(s => HashSet())
 
   val ASMAcceptAll = 0
 
@@ -66,13 +67,13 @@ class ClassFileIndex(config: ProjectConfig) {
       (location, classReader) =>
         classReader.accept(new EmptyVisitor() {
           override def visitSource(source: String, debug: String) {
-            val bytecodeFile = location.getAbsolutePath()
             val set = classFilesForSourceName(source)
-            set += bytecodeFile
+            set += location
             classFilesForSourceName(source) = set
-            val sourceSet = sourceNamesForClassFile(bytecodeFile)
+
+            val sourceSet = sourceNamesForClassFile(location)
             sourceSet += source
-            sourceNamesForClassFile(bytecodeFile) = sourceSet
+            sourceNamesForClassFile(location) = sourceSet
           }
         }, ASMAcceptAll))
     val elapsed = System.currentTimeMillis() - t
@@ -163,7 +164,7 @@ class ClassFileIndex(config: ProjectConfig) {
     line: Int): List[MethodBytecode] = {
     classFilesForSourceName(sourceName).flatMap { f =>
       ClassIterator.findInClasses(
-        List(new File(f)),
+        List(new File(f.file)),
         new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
     }.toList
   }
@@ -175,12 +176,14 @@ class ClassFileIndex(config: ProjectConfig) {
     val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix
     // TODO(aemon): Build lookup structure to make this more efficient.
     val sources = config.sources
-    (sourceNamesForClassFile.filter(_._1.contains(subPath)).flatMap { pair =>
-	pair._2.flatMap { sourceName =>
-	  println("Considering sourceName " + sourceName)
-	  sources.filter(_.getName() == sourceName)
-	}
-      } ++ sources.filter(_.getName().startsWith(classNamePrefix))).toSet
+    val sourceNames: Set[String] = sourceNamesForClassFile.collect {
+      case (loc, sourceNames) if (
+        loc.file.contains(subPath) ||
+        loc.entry.contains(subPath)) => sourceNames
+    }.flatten.toSet
+    sourceNames.flatMap { sourceName =>
+      sources.filter(_.getName() == sourceName)
+    }
   }
 
 }

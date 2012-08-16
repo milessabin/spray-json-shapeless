@@ -358,7 +358,6 @@ class RichPresentationCompiler(
   }
 
   protected def symbolAt(p: Position): Option[Symbol] = {
-    p.source.file
     val tree = wrapTypedTreeAt(p)
     if (tree.symbol != null) {
       Some(tree.symbol)

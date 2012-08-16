@@ -30,7 +30,6 @@
  */
 
 package org.ensime.util
-import org.objectweb.asm.ClassVisitor
 import scala.collection.mutable.{ Set => MutableSet }
 import scala.collection.mutable.{ HashMap, HashSet }
 import org.objectweb.asm.FieldVisitor
@@ -90,18 +89,22 @@ private class PublicSymbolVisitor(location: File, handler: ClassHandler) extends
   }
 }
 
-trait RichClassVisitor extends ClassVisitor {
+trait RichClassVisitor extends org.objectweb.asm.ClassVisitor {
   type Result
   def result: Option[Result]
 }
 
+case class ClassLocation(file:String, entry:String)
+
 object ClassIterator {
 
-  type Callback = (File, ClassReader) => Unit
+  type Callback = (ClassLocation, ClassReader) => Unit
 
   /**
   * Invoke callback for each class found in given .class,.jar,.zip, or directory
   * files.
+  * TODO(aemoncannon): Should accept Iterable[ClassLocation] so we could
+  * search in a more directed fashion.
   */
   def find(path: Iterable[File], callback: Callback) {
     for (f <- path) {
@@ -122,7 +125,7 @@ object ClassIterator {
   */
   def findPublicSymbols(path: Iterable[File], handler: ClassHandler) {
     find(path, { (location, cr) =>
-	val visitor = new PublicSymbolVisitor(location, handler)
+	val visitor = new PublicSymbolVisitor(new File(location.file), handler)
 	cr.accept(visitor, ClassReader.SKIP_CODE)
       })
   }
@@ -202,7 +205,8 @@ object ClassIterator {
         try {
           val is = new BufferedInputStream(
             zipFile.getInputStream(e))
-          processClassData(is, file, callback)
+          processClassData(is, ClassLocation(file.getAbsolutePath, e.getName),
+	    callback)
         } finally {
           if (is != null) is.close()
         }
@@ -233,13 +237,13 @@ object ClassIterator {
     var is: BufferedInputStream = null
     try {
       is = new BufferedInputStream(new FileInputStream(f))
-      processClassData(is, f, callback)
+      processClassData(is, ClassLocation(f.getAbsolutePath, ""), callback)
     } finally {
       if (is != null) is.close()
     }
   }
 
-  private def processClassData(is: InputStream, location: File,
+  private def processClassData(is: InputStream, location: ClassLocation,
     callback: Callback) {
     val cr = new ClassReader(is)
     callback(location, cr)
