@@ -234,7 +234,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
   }
 
-  def symPos(sym: Symbol): Position = {
+  def locateSymbolPos(sym: Symbol): Position = {
     if (sym.pos != NoPosition) sym.pos
     else {
       val pack = sym.enclosingPackage.fullName
@@ -398,7 +398,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
               typeFullName(tpe),
               args,
               members,
-              symPos(typeSym),
+              typeSym.pos,
               outerTypeId)
           }
         case _ => nullInfo
@@ -452,7 +452,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       } else None
       new SymbolInfo(
         name,
-        symPos(sym),
+        locateSymbolPos(sym),
         TypeInfo(sym.tpe),
         isArrowType(sym.tpe),
         ownerTpe.map(cacheType))

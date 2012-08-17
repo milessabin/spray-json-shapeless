@@ -95,11 +95,9 @@ object EnsimeBuild extends Build {
               "com.googlecode.json-simple" % "json-simple" % "1.1"
       ) ++
           (if (scalaVersion == TwoTenVersion)
-            Seq("org.apache.ant" % "ant" % "1.8.1" % "compile;runtime;test",
-                "org.apache.ivy" % "ivy" % "2.1.0" % "compile;runtime;test",
-                "org.apache.maven" % "maven-ant-tasks" % "2.1.0" % "compile;runtime;test",
+            Seq(
                 "org.scalariform" %% "scalariform" % "0.1.3-SNAPSHOT" % "compile;runtime;test",
-                // todo. rebuild ScalaTest for 2.10.0-SNAPSHOT
+                // TODO(xeno-by): rebuild ScalaTest for 2.10.0-SNAPSHOT
                 // "org.scalatest" %% "scalatest" % "2.0-SNAPSHOT" % "test",
                 "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test",
                 "org.scala-lang" % "scala-reflect" % scalaVersion % "compile;runtime;test",
@@ -107,7 +105,7 @@ object EnsimeBuild extends Build {
           else if (scalaVersion == TwoNineVersion)
             Seq("org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
                 "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
-                "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test")
+                "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test" withSources())
           else unsupportedScalaVersion(scalaVersion))
         },
         unmanagedJars in Compile <++= (scalaVersion, baseDirectory) map { (scalaVersion, base) =>
@@ -122,7 +120,11 @@ object EnsimeBuild extends Build {
         {
           import org.ensime.sbt.Plugin.Settings.ensimeConfig
           import org.ensime.sbt.util.SExp._
-          ensimeConfig := sexp()
+          ensimeConfig := sexp(
+	    key(":reference-source-roots"), sexp(
+	      "/Users/aemon/lib/scala/src/compiler",
+	      "/Users/aemon/lib/scala/src/library")
+	  )
         }
       ))
   }

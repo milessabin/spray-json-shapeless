@@ -50,6 +50,7 @@ trait FormatHandler {
   def compileJars(): List[String]
   def runtimeJars(): List[String]
   def sourceRoots(): List[String]
+  def referenceSourceRoots(): List[String]
   def target(): Option[String]
   def testTarget(): Option[String]
 
@@ -215,7 +216,7 @@ object ProjectConfig {
      */
     lazy val rootDir_ = new OptionalStringProp(":root-dir", None)
     props += rootDir_
-    def rootDir() = rootDir_(m)
+    def rootDir = rootDir_(m)
 
     /**
      * Doc Property:
@@ -229,7 +230,7 @@ object ProjectConfig {
      */
     lazy val name_ = new OptionalStringProp(":name", Some(":project-name"))
     props += name_
-    def name() = name_(m)
+    def name = name_(m)
 
     /**
      * Doc Property:
@@ -242,7 +243,7 @@ object ProjectConfig {
      */
     lazy val pack_ = new OptionalStringProp(":package", Some(":project-package"))
     props += pack_
-    def pack() = pack_(m)
+    def pack = pack_(m)
 
     /**
      * Doc Property:
@@ -254,7 +255,7 @@ object ProjectConfig {
      */
     lazy val moduleName_ = new OptionalStringProp(":module-name", None)
     props += moduleName_
-    def moduleName() = moduleName_(m)
+    def moduleName = moduleName_(m)
 
     /**
      * Doc Property:
@@ -266,7 +267,7 @@ object ProjectConfig {
      */
     lazy val activeSubproject_ = new OptionalStringProp(":active-subproject", None)
     props += activeSubproject_
-    def activeSubproject() = activeSubproject_(m)
+    def activeSubproject = activeSubproject_(m)
 
     /**
      * Doc Property:
@@ -278,7 +279,7 @@ object ProjectConfig {
      */
     lazy val dependsOnModules_ = new StringListProp(":depends-on-modules", None)
     props += dependsOnModules_
-    def dependsOnModules() = dependsOnModules_(m)
+    def dependsOnModules = dependsOnModules_(m)
 
     /**
      * Doc Property:
@@ -290,7 +291,7 @@ object ProjectConfig {
      */
     lazy val version_ = new OptionalStringProp(":version", None)
     props += version_
-    def version() = version_(m)
+    def version = version_(m)
 
     /**
      * Doc Property:
@@ -303,7 +304,7 @@ object ProjectConfig {
      */
     lazy val compileDeps_ = new StringListProp(":compile-deps", None)
     props += compileDeps_
-    def compileDeps() = compileDeps_(m)
+    def compileDeps = compileDeps_(m)
 
     /**
      * Doc Property:
@@ -316,7 +317,7 @@ object ProjectConfig {
      */
     lazy val compileJars_ = new StringListProp(":compile-jars", None)
     props += compileJars_
-    def compileJars() = compileJars_(m)
+    def compileJars = compileJars_(m)
 
     /**
      * Doc Property:
@@ -329,7 +330,7 @@ object ProjectConfig {
      */
     lazy val runtimeDeps_ = new StringListProp(":runtime-deps", None)
     props += runtimeDeps_
-    def runtimeDeps() = runtimeDeps_(m)
+    def runtimeDeps = runtimeDeps_(m)
 
     /**
      * Doc Property:
@@ -342,7 +343,7 @@ object ProjectConfig {
      */
     lazy val runtimeJars_ = new StringListProp(":runtime-jars", None)
     props += runtimeJars_
-    def runtimeJars() = runtimeJars_(m)
+    def runtimeJars = runtimeJars_(m)
 
     /**
      * Doc Property:
@@ -355,7 +356,7 @@ object ProjectConfig {
      */
     lazy val testDeps_ = new StringListProp(":test-deps", None)
     props += testDeps_
-    def testDeps() = testDeps_(m)
+    def testDeps = testDeps_(m)
 
     /**
      * Doc Property:
@@ -366,9 +367,22 @@ object ProjectConfig {
      *   List of Strings: directory names
      */
     lazy val sourceRoots_ = new StringListProp(":source-roots", Some(":sources"))
-
     props += sourceRoots_
-    def sourceRoots() = sourceRoots_(m)
+    def sourceRoots = sourceRoots_(m)
+
+    /**
+     * Doc Property:
+     *   :reference-source-roots
+     * Summary:
+     *   A list of directories in which to start searching for reference
+     *   sources. Generally these are the sources that correspond to library
+     *   dependencies.
+     * Arguments:
+     *   List of Strings: directory names
+     */
+    lazy val referenceSourceRoots_ = new StringListProp(":reference-source-roots", None)
+    props += referenceSourceRoots_
+    def referenceSourceRoots = referenceSourceRoots_(m)
 
     /**
      * Doc Property:
@@ -380,7 +394,7 @@ object ProjectConfig {
      */
     lazy val target_ = new OptionalStringProp(":target", None)
     props += target_
-    def target() = target_(m)
+    def target = target_(m)
 
     /**
      * Doc Property:
@@ -392,7 +406,7 @@ object ProjectConfig {
      */
     lazy val testTarget_ = new OptionalStringProp(":test-target", None)
     props += testTarget_
-    def testTarget() = testTarget_(m)
+    def testTarget = testTarget_(m)
 
     /**
      * Doc Property:
@@ -406,7 +420,7 @@ object ProjectConfig {
      */
     lazy val disableIndexOnStartup_ = new BooleanProp(":disable-index-on-startup", None)
     props += disableIndexOnStartup_
-    def disableIndexOnStartup() = disableIndexOnStartup_(m)
+    def disableIndexOnStartup = disableIndexOnStartup_(m)
 
     /**
      * Doc Property:
@@ -419,7 +433,7 @@ object ProjectConfig {
      */
     lazy val disableSourceLoadOnStartup_ = new BooleanProp(":disable-source-load-on-startup", None)
     props += disableSourceLoadOnStartup_
-    def disableSourceLoadOnStartup() = disableSourceLoadOnStartup_(m)
+    def disableSourceLoadOnStartup = disableSourceLoadOnStartup_(m)
 
     /**
      * Doc Property:
@@ -434,7 +448,7 @@ object ProjectConfig {
      */
     lazy val disableScalaJarsOnClasspath_ = new BooleanProp(":disable-scala-jars-on-classpath", None)
     props += disableScalaJarsOnClasspath_
-    def disableScalaJarsOnClasspath() = disableScalaJarsOnClasspath_(m)
+    def disableScalaJarsOnClasspath = disableScalaJarsOnClasspath_(m)
 
     /**
      * Doc Property:
@@ -455,7 +469,7 @@ object ProjectConfig {
      */
     lazy val onlyIncludeInIndex_ = new RegexListProp(":only-include-in-index", None)
     props += onlyIncludeInIndex_
-    def onlyIncludeInIndex() = onlyIncludeInIndex_(m)
+    def onlyIncludeInIndex = onlyIncludeInIndex_(m)
 
     /**
      * Doc Property:
@@ -476,7 +490,7 @@ object ProjectConfig {
      */
     lazy val excludeFromIndex_ = new RegexListProp(":exclude-from-index", None)
     props += excludeFromIndex_
-    def excludeFromIndex() = excludeFromIndex_(m)
+    def excludeFromIndex = excludeFromIndex_(m)
 
     /**
      * Doc Property:
@@ -490,7 +504,7 @@ object ProjectConfig {
      */
     lazy val extraCompilerArgs_ = new StringListProp(":compiler-args", None)
     props += extraCompilerArgs_
-    def extraCompilerArgs() = extraCompilerArgs_(m)
+    def extraCompilerArgs = extraCompilerArgs_(m)
 
     /**
      * Doc Property:
@@ -503,7 +517,7 @@ object ProjectConfig {
      */
     lazy val extraBuilderArgs_ = new StringListProp(":builder-args", None)
     props += extraBuilderArgs_
-    def extraBuilderArgs() = extraBuilderArgs_(m)
+    def extraBuilderArgs = extraBuilderArgs_(m)
 
     /**
      * Doc Property:
@@ -518,7 +532,7 @@ object ProjectConfig {
      */
     lazy val javaCompilerArgs_ = new StringListProp(":java-compiler-args", None)
     props += javaCompilerArgs_
-    def javaCompilerArgs() = javaCompilerArgs_(m)
+    def javaCompilerArgs = javaCompilerArgs_(m)
 
     /**
      * Doc Property:
@@ -532,7 +546,7 @@ object ProjectConfig {
     lazy val javaCompilerVersion_ = new OptionalStringProp(
       ":java-compiler-version", None)
     props += javaCompilerVersion_
-    def javaCompilerVersion() = javaCompilerVersion_(m)
+    def javaCompilerVersion = javaCompilerVersion_(m)
 
     /**
      * Doc Property:
@@ -566,7 +580,7 @@ object ProjectConfig {
      */
     lazy val formatPrefs_ = new SymbolMapProp(":formatting-prefs", None)
     props += formatPrefs_
-    def formatPrefs() = formatPrefs_(m)
+    def formatPrefs = formatPrefs_(m)
 
     private def simpleMerge(m1: KeyMap, m2: KeyMap): KeyMap = {
       val keys = Set() ++ m1.keys ++ m2.keys
@@ -622,10 +636,9 @@ object ProjectConfig {
 
     println("Using project root: " + rootDir)
 
-    val sourceRoots = new mutable.HashSet[CanonFile]
     val runtimeDeps = new mutable.HashSet[CanonFile]
     val compileDeps = new mutable.HashSet[CanonFile]
-    var projectName: Option[String] = None
+
 
     {
       val deps = canonicalizeFiles(conf.compileJars, rootDir)
@@ -654,11 +667,11 @@ object ProjectConfig {
       runtimeDeps ++= moreDeps
     }
 
-    {
-      val dirs = canonicalizeDirs(conf.sourceRoots, rootDir)
-      println("Including source roots: " + dirs.mkString(", "))
-      sourceRoots ++= dirs
-    }
+    val sourceRoots = canonicalizeDirs(conf.sourceRoots, rootDir).toSet
+    println("Using source roots: " + sourceRoots)
+
+    val referenceSourceRoots = canonicalizeDirs(conf.referenceSourceRoots, rootDir).toSet
+    println("Using reference source roots: " + referenceSourceRoots)
 
     var target: Option[CanonFile] = ensureDirectory(conf.target, rootDir)
     println("Using target directory: " + target.getOrElse("ERROR"))
@@ -666,18 +679,17 @@ object ProjectConfig {
     var testTarget: Option[CanonFile] = ensureDirectory(conf.testTarget, rootDir)
     println("Using test target directory: " + testTarget.getOrElse("ERROR"))
 
-    projectName = projectName.orElse(conf.name)
-
     val formatPrefs: Map[Symbol, Any] = conf.formatPrefs
     println("Using formatting preferences: " + formatPrefs)
 
     new ProjectConfig(
-      projectName,
+      conf.name,
       canonicalizeFile("lib/scala-library.jar", serverRoot),
       canonicalizeFile("lib/scala-reflect.jar", serverRoot),
       canonicalizeFile("lib/scala-compiler.jar", serverRoot),
       rootDir,
       sourceRoots,
+      referenceSourceRoots,
       runtimeDeps,
       compileDeps,
       target,
@@ -713,6 +725,7 @@ object ProjectConfig {
     scalaCompilerJar = None,
     root = new File("."),
     sourceRoots = List(),
+    referenceSourceRoots = List(),
     runtimeDeps = List(),
     compileDeps = List(),
     target = None,
@@ -764,6 +777,7 @@ class ProjectConfig(
   val scalaCompilerJar: Option[CanonFile],
   val root: CanonFile,
   val sourceRoots: Iterable[CanonFile],
+  val referenceSourceRoots: Iterable[CanonFile],
   val runtimeDeps: Iterable[CanonFile],
   val compileDeps: Iterable[CanonFile],
   val target: Option[CanonFile],
@@ -841,6 +855,10 @@ class ProjectConfig(
 
   def sources: Set[CanonFile] = {
     expandRecursively(root, sourceRoots, isValidSourceFile _).toSet
+  }
+
+  def referenceSources: Set[CanonFile] = {
+    expandRecursively(root, referenceSourceRoots, isValidSourceFile _).toSet
   }
 
   def sourceFilenames: Set[String] = {

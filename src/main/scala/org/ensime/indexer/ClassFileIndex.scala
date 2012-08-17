@@ -57,7 +57,7 @@ class ClassFileIndex(config: ProjectConfig) {
   // TODO(aemoncannon): This set can change over time if new
   // source files are created. Need to arrange for indexer to
   // receive a re-up message when new sources are created.
-  private val allSources: Set[CanonFile] = config.sources
+  private val allSources: Set[CanonFile] = config.sources ++ config.referenceSources
 
   private val classFilesForSourceName =
     new HashMap[String, HashSet[ClassLocation]].withDefault(s => HashSet())

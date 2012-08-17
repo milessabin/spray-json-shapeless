@@ -2403,7 +2403,9 @@ trait SwankProtocol extends Protocol {
   def toWF(config: ProjectConfig): SExp = {
     SExp(
       key(":project-name"), config.name.map(StringAtom).getOrElse('nil),
-      key(":source-roots"), SExp(config.sourceRoots.map { f => StringAtom(f.getPath) }))
+      key(":source-roots"), SExp(
+	(config.sourceRoots ++ config.referenceSourceRoots).map {
+	  f => StringAtom(f.getPath) }))
   }
 
   def toWF(config: ReplConfig): SExp = {
