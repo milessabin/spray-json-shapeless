@@ -122,7 +122,10 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
         case e: IOException =>
           {
             System.err.println("Error in socket reader: " + e)
-            exit('error)
+            if (System.getProperty("ensime.explode.on.disconnect") != null) {
+              println("Tick-tock, tick-tock, tick-tock... boom!")
+              System.exit(-1)
+            } else exit('error)
           }
       }
     }
