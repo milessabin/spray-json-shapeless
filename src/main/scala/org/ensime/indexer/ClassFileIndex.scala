@@ -179,7 +179,7 @@ class ClassFileIndex(config: ProjectConfig) {
     enclosingPackage: String,
     classNamePrefix: String): Set[File] = {
     println("Looking for " + (enclosingPackage, classNamePrefix))
-    val subPath = enclosingPackage.replace(".", File.separator) + File.separator + classNamePrefix
+    val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix
     // TODO(aemoncannon): Build lookup structure to make this more efficient.
     val sourceNames: Set[String] = sourceNamesForClassFile.collect {
       case (loc, sourceNames) if (
