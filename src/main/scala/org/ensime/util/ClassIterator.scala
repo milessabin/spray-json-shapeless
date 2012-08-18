@@ -205,7 +205,7 @@ object ClassIterator {
         try {
           val is = new BufferedInputStream(
             zipFile.getInputStream(e))
-          processClassData(is, ClassLocation(file.getAbsolutePath, e.getName),
+          processClassData(is, ClassLocation(file.getCanonicalPath.replace("\\", "/"), e.getName),
 	    callback)
         } finally {
           if (is != null) is.close()
@@ -237,7 +237,7 @@ object ClassIterator {
     var is: BufferedInputStream = null
     try {
       is = new BufferedInputStream(new FileInputStream(f))
-      processClassData(is, ClassLocation(f.getAbsolutePath, ""), callback)
+      processClassData(is, ClassLocation(f.getCanonicalPath.replace("\\", "/"), ""), callback)
     } finally {
       if (is != null) is.close()
     }
