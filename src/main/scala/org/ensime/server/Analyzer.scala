@@ -301,18 +301,25 @@ class Analyzer(
                     project ! RPCResultEvent(result, callId)
                   }
 
-                  case SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) => {
+                  case SymbolDesignationsReq(file: File, start: Int,
+		    end: Int, tpes: List[Symbol]) => {
+		    if (!FileUtils.isScalaSourceFile(file)) {
+		      project ! RPCResultEvent(
+			toWF(SymbolDesignations(file.getPath, List())), callId)
+		    } else {
                     val f = createSourceFile(file)
                     val clampedEnd = math.max(end, start)
                     val pos = new RangePosition(f, start, start, clampedEnd)
                     if (!tpes.isEmpty) {
-                      val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
+                      val syms = scalaCompiler.askSymbolDesignationsInRegion(
+			pos, tpes)
                       project ! RPCResultEvent(toWF(syms), callId)
                     } else {
-                      project ! RPCResultEvent(toWF(SymbolDesignations(f.path, List())), callId)
+                      project ! RPCResultEvent(
+			toWF(SymbolDesignations(f.path, List())), callId)
                     }
                   }
-
+		}
                 }
               }
             } catch {

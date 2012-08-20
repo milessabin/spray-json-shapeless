@@ -166,6 +166,12 @@ object FileUtils {
     f.exists && !f.isHidden && (f.getName.endsWith(".scala") ||
       f.getName.endsWith(".java"))
   }
+  def isJavaSourceFile(f: File): Boolean = {
+    f.exists && (f.getName.endsWith(".java"))
+  }
+  def isScalaSourceFile(f: File): Boolean = {
+    f.exists && (f.getName.endsWith(".scala"))
+  }
 
   def createDirectory(dir: File): Unit = {
     def failBase = "Could not create directory " + dir
