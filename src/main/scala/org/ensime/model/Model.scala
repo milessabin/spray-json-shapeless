@@ -119,6 +119,22 @@ case class PatchReplace(
 case class Breakpoint(pos: SourcePosition)
 case class BreakpointList(val active: List[Breakpoint], val pending: List[Breakpoint])
 
+
+sealed trait DebugLocation {}
+
+case class DebugObjectReference(
+  val objectId: Long) extends DebugLocation
+
+case class DebugStackSlot(
+  val threadId: Long, val frame: Int, val offset: Int) extends DebugLocation
+
+case class DebugArrayElement(
+  val objectId: Long, val index: Int) extends DebugLocation
+
+case class DebugObjectField(
+  val objectId: Long, val name: String) extends DebugLocation
+
+
 sealed trait DebugValue {
   def typeName: String;
 }
@@ -130,25 +146,25 @@ case class DebugPrimitiveValue(
   val summary: String,
   val typeName: String) extends DebugValue
 
-case class DebugObjectField(
+case class DebugClassField(
   val index: Int,
   val name: String,
   val typeName: String,
   val summary: String)
 
-case class DebugObjectReference(
+case class DebugObjectInstance(
   val summary: String,
-  val fields: List[DebugObjectField],
+  val fields: List[DebugClassField],
   val typeName: String,
   val objectId: Long) extends DebugValue
 
-case class DebugStringReference(
+case class DebugStringInstance(
   val summary: String,
-  val fields: List[DebugObjectField],
+  val fields: List[DebugClassField],
   val typeName: String,
   val objectId: Long) extends DebugValue
 
-case class DebugArrayReference(
+case class DebugArrayInstance(
   val length: Int,
   val typeName: String,
   val elementTypeName: String,

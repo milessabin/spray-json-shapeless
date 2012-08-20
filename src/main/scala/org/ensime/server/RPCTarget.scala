@@ -145,23 +145,11 @@ trait RPCTarget { self: Project =>
   def rpcDebugValueForName(threadId: Long, name:String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueForNameReq(threadId,name), callId)
   }
-  def rpcDebugValueForField(objectId: Long, name:String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugValueForFieldReq(objectId,name), callId)
+  def rpcDebugValue(loc: DebugLocation, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugValueReq(loc), callId)
   }
-  def rpcDebugValueForStackVar(threadId: Long, frame: Int, index: Int, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugValueForStackVarReq(
-	threadId, frame, index), callId)
-  }
-  def rpcDebugSetStackVar(threadId: Long, frame: Int, index: Int,
-    newValue:String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugSetStackVarReq(
-	threadId, frame, index, newValue), callId)
-  }
-  def rpcDebugValueForId(objectId: Long, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugValueForIdReq(objectId), callId)
-  }
-  def rpcDebugValueForIndex(objectId: Long, index:Int, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugValueForIndexReq(objectId,index), callId)
+  def rpcDebugSetValue(loc: DebugLocation, newValue:String, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugSetValueReq(loc, newValue), callId)
   }
   def rpcDebugBacktrace(threadId: Long, index:Int, count: Int, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugBacktraceReq(threadId,index,count), callId)

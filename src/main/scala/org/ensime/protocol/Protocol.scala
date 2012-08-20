@@ -194,10 +194,10 @@ trait ProtocolConversions {
   def toWF(obj: DebugValue): WireFormat
   def toWF(evt: DebugNullValue): WireFormat
   def toWF(evt: DebugPrimitiveValue): WireFormat
-  def toWF(evt: DebugObjectField): WireFormat
-  def toWF(obj: DebugStringReference): WireFormat
-  def toWF(evt: DebugObjectReference): WireFormat
-  def toWF(evt: DebugArrayReference): WireFormat
+  def toWF(evt: DebugClassField): WireFormat
+  def toWF(obj: DebugStringInstance): WireFormat
+  def toWF(evt: DebugObjectInstance): WireFormat
+  def toWF(evt: DebugArrayInstance): WireFormat
   def toWF(evt: DebugStackLocal): WireFormat
   def toWF(evt: DebugStackFrame): WireFormat
   def toWF(evt: DebugBacktrace): WireFormat

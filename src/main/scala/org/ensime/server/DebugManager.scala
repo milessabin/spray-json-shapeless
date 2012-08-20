@@ -59,18 +59,14 @@ case class DebugNextReq(threadId: Long)
 case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugValueForNameReq(threadId: Long, name: String)
-case class DebugValueForFieldReq(objectId: Long, name: String)
-case class DebugValueForStackVarReq(threadId: Long, frame: Int, index: Int)
-case class DebugValueForIdReq(objectId: Long)
-case class DebugValueForIndexReq(objectId: Long, index: Int)
+case class DebugValueReq(loc: DebugLocation)
+case class DebugSetValueReq(loc: DebugLocation, newValue: String)
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
 case class DebugActiveVMReq()
 case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
 case class DebugClearAllBreaksReq()
 case class DebugListBreaksReq()
-case class DebugSetStackVarReq(threadId: Long, frame: Int,
-  index: Int, newValue: String)
 
 abstract class DebugVmStatus
 
@@ -475,62 +471,26 @@ class DebugManager(project: Project, indexer: Actor,
                       project ! RPCResultEvent(toWF(bt), callId)
                   }
                 }
-                case DebugValueForIdReq(objectId: Long) => {
+                case DebugValueReq(location) => {
                   handleRPCWithVM(callId) {
                     (vm) =>
-                      vm.valueForId(objectId) match {
-                        case Some(value) =>
-                          project ! RPCResultEvent(toWF(value), callId)
-                        case None =>
-                          project ! RPCResultEvent(toWF(false), callId)
-                      }
-                  }
-
-                }
-                case DebugValueForFieldReq(objectId: Long, name: String) => {
-                  handleRPCWithVM(callId) {
-                    (vm) =>
-                      vm.valueForField(objectId, name) match {
-                        case Some(value) =>
-                          project ! RPCResultEvent(toWF(value), callId)
-                        case None =>
-                          project ! RPCResultEvent(toWF(false), callId)
+                      vm.valueAtLocation(location).map(toWF) match {
+                        case Some(payload) => project ! RPCResultEvent(payload, callId)
+                        case None => project ! RPCResultEvent(toWF(false), callId)
                       }
                   }
                 }
-                case DebugValueForStackVarReq(
-                  threadId: Long, frame: Int, offset: Int) => {
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.valueForStackVar(thread, frame, offset) match {
-                        case Some(value) =>
-                          project ! RPCResultEvent(toWF(value), callId)
-                        case None =>
-                          project ! RPCResultEvent(toWF(false), callId)
+                case DebugSetValueReq(location, newValue) => {
+                  handleRPCWithVM(callId) { vm =>
+                    location match {
+                      case DebugStackSlot(threadId, frame, offset) => vm.threadById(threadId) match {
+                        case Some(thread) => {
+                          val status = vm.setStackVar(thread, frame, offset, newValue)
+                          project ! RPCResultEvent(toWF(status), callId)
+                        }
+                        case _ =>
                       }
-                  }
-                }
-
-                case DebugValueForIndexReq(objectId: Long, index: Int) => {
-                  handleRPCWithVM(callId) {
-                    (vm) =>
-                      vm.valueForIndex(objectId, index) match {
-                        case Some(value) =>
-                          project ! RPCResultEvent(toWF(value), callId)
-                        case None =>
-                          project ! RPCResultEvent(toWF(false), callId)
-                      }
-                  }
-                }
-                case DebugSetStackVarReq(
-                  threadId: Long, frame: Int, offset: Int,
-                  newValue: String) => {
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      val result = vm.setStackVar(
-                        thread, frame,
-                        offset, newValue)
-                      project ! RPCResultEvent(toWF(result), callId)
+                    }
                   }
                 }
               }
@@ -801,17 +761,17 @@ class DebugManager(project: Project, indexer: Actor,
 
     private def makeFields(
       tpeIn: ReferenceType,
-      obj: ObjectReference): List[DebugObjectField] = {
+      obj: ObjectReference): List[DebugClassField] = {
       tpeIn match {
         case tpeIn: ClassType => {
-          var fields = List[DebugObjectField]()
+          var fields = List[DebugClassField]()
           var tpe = tpeIn
           while (tpe != null) {
             var i = -1
             fields = tpe.fields().map { f =>
               i += 1
               val value = obj.getValue(f)
-              DebugObjectField(
+              DebugClassField(
                 i, f.name(),
                 f.typeName(),
                 valueSummary(value))
@@ -842,24 +802,24 @@ class DebugManager(project: Project, indexer: Actor,
       }
     }
 
-    def makeDebugObj(value: ObjectReference): DebugObjectReference = {
-      DebugObjectReference(
+    def makeDebugObj(value: ObjectReference): DebugObjectInstance = {
+      DebugObjectInstance(
         valueSummary(value),
         makeFields(value.referenceType(), value),
         value.referenceType().name(),
         value.uniqueID())
     }
 
-    def makeDebugStr(value: StringReference): DebugStringReference = {
-      DebugStringReference(
+    def makeDebugStr(value: StringReference): DebugStringInstance = {
+      DebugStringInstance(
         valueSummary(value),
         makeFields(value.referenceType(), value),
         value.referenceType().name(),
         value.uniqueID())
     }
 
-    def makeDebugArr(value: ArrayReference): DebugArrayReference = {
-      DebugArrayReference(
+    def makeDebugArr(value: ArrayReference): DebugArrayInstance = {
+      DebugArrayInstance(
         value.length,
         value.referenceType().name,
         value.referenceType().asInstanceOf[ArrayType].componentTypeName(),
@@ -917,6 +877,23 @@ class DebugManager(project: Project, indexer: Actor,
             Some(objRef.getValue(f))
           }).map { v =>
             makeDebugValue(remember(v))
+          }
+      }
+    }
+
+    def valueAtLocation(location: DebugLocation): Option[DebugValue] = {
+      location match {
+        case DebugObjectReference(objectId) =>
+          valueForId(objectId)
+        case DebugObjectField(objectId, name) =>
+          valueForField(objectId, name)
+        case DebugArrayElement(objectId, index) =>
+          valueForIndex(objectId, index)
+        case DebugStackSlot(threadId, frame, offset) =>
+          threadById(threadId) match {
+            case Some(thread) =>
+              valueForStackVar(thread, frame, offset)
+            case None => None
           }
       }
     }

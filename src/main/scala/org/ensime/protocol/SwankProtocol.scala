@@ -493,6 +493,40 @@ trait SwankProtocol extends Protocol {
    *   )
    */
 
+  /**
+   * Doc DataStructure:
+   *   DebugLocation
+   * Summary:
+   *   A unique location in the VM under debug. Note: this datastructure
+   *   is a union of several location types.
+   * Structure:
+   *   (
+   *     :type   //Symbol:One of 'reference, 'field, 'element, 'slot
+   *
+   *     [ // if type is 'reference
+   *     :object-id  //String:The unique id of the object.
+   *     ]
+   *
+   *     [ // if type is 'field
+   *     :object-id  //String:The unique id of the object.
+   *     :field  //String:Name of the field of the object.
+   *     ]
+   *
+   *     [ // if type is 'element
+   *     :object-id  //String:The unique id of the array.
+   *     :index  //Int:A zero-indexed offset within array.
+   *     ]
+   *
+   *     [ // if type is 'slot
+   *     :thread-id  //String:The unique id of the thread.
+   *     :frame  //Int:Select the zero-indexed frame in the thread's call stack.
+   *     :offset  //Int:A zero-indexed offset within frame.
+   *     ]
+   *
+   *
+   *   )
+   */
+
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
     println("\nHandling RPC: " + form)
@@ -1437,7 +1471,6 @@ trait SwankProtocol extends Protocol {
         }
       }
 
-
       /**
        * Doc RPC:
        *   swank:debug-active-vm
@@ -1774,22 +1807,24 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
-       *   swank:debug-value-for-id
+       *   swank:debug-value
        * Summary:
-       *   Get the current binding for the given object id.
+       *   Get the value at the given location.
        * Arguments:
-       *   String: The object id to look up.
+       *   DebugLocation: The location from which to load the value.
        * Return:
        *   A DebugValue
        * Example call:
-       *   (:swank-rpc (swank:debug-value-for-id "obj-1") 42)
+       *   (:swank-rpc (swank:debug-value (:type 'element
+       *    :object-id "23" :index 2)) 42)
        * Example return:
-       *   (:return (:ok "23") 42)
+       *   (:return (:ok (:val-type 'prim :summary "23"
+       *    :type-name "Integer")) 42)
        */
-      case "swank:debug-value-for-id" => {
+      case "swank:debug-value" => {
         form match {
-          case SExpList(head :: StringAtom(objectId) :: body) => {
-            rpcTarget.rpcDebugValueForId(objectId.toLong, callId)
+          case SExpList(head :: DebugLocationExtractor(loc) :: body) => {
+            rpcTarget.rpcDebugValue(loc, callId)
           }
           case _ => oops
         }
@@ -1797,104 +1832,30 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
-       *   swank:debug-value-for-field
+       *   swank:debug-set-value
        * Summary:
-       *   Get the value bound to the given name in the given object instance.
+       *   Set the value at the given location.
        * Arguments:
-       *   String: The unique id of the object to search.
-       *   String: The name of the field to search for.
-       * Return:
-       *   A DebugValue
-       * Example call:
-       *   (:swank-rpc (swank:debug-value-for-field "obj-22" "name") 42)
-       * Example return:
-       *   (:return (:ok "Horatio Hornblower") 42)
-       */
-      case "swank:debug-value-for-field" => {
-        form match {
-          case SExpList(head :: StringAtom(objectId) :: StringAtom(name) :: body) => {
-            rpcTarget.rpcDebugValueForField(objectId.toLong, name, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      /**
-       * Doc RPC:
-       *   swank:debug-value-for-stack-var
-       * Summary:
-       *   Get the value at the given offset in the given stack frame.
-       * Arguments:
-       *   Int: The stack frame in which the local is found.
-       *   Int: The offset within the stack frame.
-       * Return:
-       *   A DebugValue
-       * Example call:
-       *   (:swank-rpc (swank:debug-value-for-stack-var 0 2) 42)
-       * Example return:
-       *   (:return (:ok "Horatio Hornblower") 42)
-       */
-      case "swank:debug-value-for-stack-var" => {
-        form match {
-          case SExpList(head :: StringAtom(threadId) :: IntAtom(frame) ::
-            IntAtom(offset) :: body) => {
-            rpcTarget.rpcDebugValueForStackVar(
-              threadId.toLong, frame, offset, callId)
-          }
-          case _ => oops
-        }
-      }
-
-      /**
-       * Doc RPC:
-       *   swank:debug-set-stack-var
-       * Summary:
-       *   Set the value at the given offset in the given stack frame.
-       * Arguments:
-       *   Int: The stack frame in which the local is found.
-       *   Int: The offset within the stack frame.
+       *   DebugLocation: Location to set value.
        *   String: A string encoded value.
        * Return:
        *   Boolean: t on success, nil otherwise
        * Example call:
-       *   (:swank-rpc (swank:debug-set-stack-var 0 2 "true") 42)
+       *   (:swank-rpc (swank:debug-set-stack-var (:type 'element
+       *    :object-id "23" :index 2) "1") 42)
        * Example return:
        *   (:return (:ok t) 42)
        */
-      case "swank:debug-set-stack-var" => {
+      case "swank:debug-set-value" => {
         form match {
-          case SExpList(head :: StringAtom(threadId) :: IntAtom(frame) ::
-            IntAtom(offset) :: StringAtom(newValue) :: body) => {
-            rpcTarget.rpcDebugSetStackVar(
-              threadId.toLong, frame, offset, newValue, callId)
+          case SExpList(head :: DebugLocationExtractor(loc) :: IntAtom(frame) ::
+            StringAtom(newValue) :: body) => {
+            rpcTarget.rpcDebugSetValue(loc, newValue, callId)
           }
           case _ => oops
         }
       }
 
-      /**
-       * Doc RPC:
-       *   swank:debug-value-for-index
-       * Summary:
-       *   Get the value at the given offset in the array specified by object id
-       * Arguments:
-       *   String: The unique id of the object to search.
-       *   Int: The index of the element to return
-       * Return:
-       *   A DebugValue
-       * Example call:
-       *   (:swank-rpc (swank:debug-value-for-index "obj-22" 0) 42)
-       * Example return:
-       *   (:return (:ok "Captain Bracegirdle") 42)
-       */
-      case "swank:debug-value-for-index" => {
-        form match {
-          case SExpList(head :: StringAtom(objectId) :: IntAtom(index) :: body) => {
-            rpcTarget.rpcDebugValueForIndex(objectId.toLong, index, callId: Int)
-          }
-          case _ => oops
-        }
-      }
 
       /**
        * Doc RPC:
@@ -2024,12 +1985,78 @@ trait SwankProtocol extends Protocol {
 
   import SExpConversion._
 
+  object DebugLocationExtractor {
+    def unapply(sexp: SExpList): Option[DebugLocation] = {
+      val m = sexp.toKeywordMap()
+      m.get(key(":type")).flatMap {
+	case SymbolAtom("reference") => {
+	  for(StringAtom(id) <- m.get(key(":object-id"))) yield {
+	    DebugObjectReference(id.toLong)
+	  }
+	}
+	case SymbolAtom("field") => {
+	  for(StringAtom(id) <- m.get(key(":object-id"));
+	    StringAtom(name) <- m.get(key(":name"))) yield {
+	    DebugObjectField(id.toLong, name)
+	  }
+	}
+	case SymbolAtom("element") => {
+	  for(StringAtom(id) <- m.get(key(":object-id"));
+	    IntAtom(index) <- m.get(key(":index"))) yield {
+	    DebugArrayElement(id.toLong, index)
+	  }
+	}
+	case SymbolAtom("slot") => {
+	  for(StringAtom(id) <- m.get(key(":thread-id"));
+	    IntAtom(frame) <- m.get(key(":frame"));
+	    IntAtom(offset) <- m.get(key(":offset"))) yield {
+	    DebugStackSlot(id.toLong, frame, offset)
+	  }
+	}
+	case _ => None
+      }
+    }
+  }
+
+  def toWF(obj: DebugLocation): SExp = {
+    obj match {
+      case obj: DebugObjectReference => toWF(obj)
+      case obj: DebugArrayElement => toWF(obj)
+      case obj: DebugObjectField => toWF(obj)
+      case obj: DebugStackSlot => toWF(obj)
+    }
+  }
+  def toWF(obj: DebugObjectReference): SExp = {
+    SExp(
+      key(":type"), 'reference,
+      key(":object-id"), obj.objectId.toString)
+  }
+  def toWF(obj: DebugArrayElement): SExp = {
+    SExp(
+      key(":type"), 'element,
+      key(":object-id"), obj.objectId.toString,
+      key(":index"), obj.index)
+  }
+  def toWF(obj: DebugObjectField): SExp = {
+    SExp(
+      key(":type"), 'field,
+      key(":object-id"), obj.objectId.toString,
+      key(":field"), obj.name)
+  }
+  def toWF(obj: DebugStackSlot): SExp = {
+    SExp(
+      key(":type"), 'slot,
+      key(":thread-id"), obj.threadId.toString,
+      key(":frame"), obj.frame,
+      key(":offset"), obj.offset)
+  }
+
   def toWF(obj: DebugValue): SExp = {
     obj match {
       case obj: DebugPrimitiveValue => toWF(obj)
-      case obj: DebugObjectReference => toWF(obj)
-      case obj: DebugArrayReference => toWF(obj)
-      case obj: DebugStringReference => toWF(obj)
+      case obj: DebugObjectInstance => toWF(obj)
+      case obj: DebugArrayInstance => toWF(obj)
+      case obj: DebugStringInstance => toWF(obj)
       case obj: DebugNullValue => toWF(obj)
     }
   }
@@ -2044,21 +2071,21 @@ trait SwankProtocol extends Protocol {
       key(":summary"), obj.summary,
       key(":type-name"), obj.typeName)
   }
-  def toWF(obj: DebugObjectField): SExp = {
+  def toWF(obj: DebugClassField): SExp = {
     SExp(
       key(":index"), obj.index,
       key(":name"), obj.name,
       key(":summary"), obj.summary,
       key(":type-name"), obj.typeName)
   }
-  def toWF(obj: DebugObjectReference): SExp = {
+  def toWF(obj: DebugObjectInstance): SExp = {
     SExp(
       key(":val-type"), 'obj,
       key(":fields"), SExpList(obj.fields.map(toWF)),
       key(":type-name"), obj.typeName,
       key(":object-id"), obj.objectId.toString)
   }
-  def toWF(obj: DebugStringReference): SExp = {
+  def toWF(obj: DebugStringInstance): SExp = {
     SExp(
       key(":val-type"), 'str,
       key(":summary"), obj.summary,
@@ -2066,7 +2093,7 @@ trait SwankProtocol extends Protocol {
       key(":type-name"), obj.typeName,
       key(":object-id"), obj.objectId.toString)
   }
-  def toWF(obj: DebugArrayReference): SExp = {
+  def toWF(obj: DebugArrayInstance): SExp = {
     SExp(
       key(":val-type"), 'arr,
       key(":length"), obj.length,
@@ -2404,8 +2431,9 @@ trait SwankProtocol extends Protocol {
     SExp(
       key(":project-name"), config.name.map(StringAtom).getOrElse('nil),
       key(":source-roots"), SExp(
-	(config.sourceRoots ++ config.referenceSourceRoots).map {
-	  f => StringAtom(f.getPath) }))
+        (config.sourceRoots ++ config.referenceSourceRoots).map {
+          f => StringAtom(f.getPath)
+        }))
   }
 
   def toWF(config: ReplConfig): SExp = {
