@@ -529,7 +529,7 @@ trait SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
-    println("\nHandling RPC: " + form)
+    println("\nHandling RPC: " + form.toReadableString)
 
     def oops = sendRPCError(ErrMalformedRPC,
       Some("Malformed " + callType + " call: " + form), callId)
@@ -1848,7 +1848,7 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:debug-set-value" => {
         form match {
-          case SExpList(head :: DebugLocationExtractor(loc) :: IntAtom(frame) ::
+          case SExpList(head :: DebugLocationExtractor(loc) ::
             StringAtom(newValue) :: body) => {
             rpcTarget.rpcDebugSetValue(loc, newValue, callId)
           }

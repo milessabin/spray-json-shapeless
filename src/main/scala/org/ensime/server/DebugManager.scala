@@ -112,6 +112,7 @@ class DebugManager(project: Project, indexer: Actor,
     }
   }
 
+  // Map unqualified file names to sets of fully qualified paths.
   private val sourceMap = HashMap[String, HashSet[CanonFile]]()
   def rebuildSourceMap() {
     sourceMap.clear()
@@ -490,6 +491,10 @@ class DebugManager(project: Project, indexer: Actor,
                         }
                         case _ =>
                       }
+                      case _ => {
+			System.err.println("Unsupported location type for debug-set-value.")
+			project ! RPCResultEvent(toWF(false), callId)
+		      }
                     }
                   }
                 }
@@ -802,7 +807,7 @@ class DebugManager(project: Project, indexer: Actor,
       }
     }
 
-    def makeDebugObj(value: ObjectReference): DebugObjectInstance = {
+    private def makeDebugObj(value: ObjectReference): DebugObjectInstance = {
       DebugObjectInstance(
         valueSummary(value),
         makeFields(value.referenceType(), value),
@@ -810,7 +815,7 @@ class DebugManager(project: Project, indexer: Actor,
         value.uniqueID())
     }
 
-    def makeDebugStr(value: StringReference): DebugStringInstance = {
+    private def makeDebugStr(value: StringReference): DebugStringInstance = {
       DebugStringInstance(
         valueSummary(value),
         makeFields(value.referenceType(), value),
@@ -818,7 +823,7 @@ class DebugManager(project: Project, indexer: Actor,
         value.uniqueID())
     }
 
-    def makeDebugArr(value: ArrayReference): DebugArrayInstance = {
+    private def makeDebugArr(value: ArrayReference): DebugArrayInstance = {
       DebugArrayInstance(
         value.length,
         value.referenceType().name,
@@ -826,35 +831,13 @@ class DebugManager(project: Project, indexer: Actor,
         value.uniqueID)
     }
 
-    def makeDebugPrim(value: PrimitiveValue): DebugPrimitiveValue = DebugPrimitiveValue(
+    private def makeDebugPrim(value: PrimitiveValue): DebugPrimitiveValue = DebugPrimitiveValue(
       valueSummary(value),
       value.`type`().name())
 
-    def makeStackFrame(index: Int, frame: StackFrame): DebugStackFrame = {
-      val locals = ignoreErr({
-        frame.visibleVariables.zipWithIndex.map {
-          case (v, i) =>
-            DebugStackLocal(i, v.name, v.typeName(),
-              valueSummary(frame.getValue(v)))
-        }.toList
-      }, List())
+    private def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
 
-      val numArgs = ignoreErr(frame.getArgumentValues().length, 0)
-      val methodName = ignoreErr(frame.location.method().name(), "Method")
-      val className = ignoreErr(frame.location.declaringType().name(), "Class")
-      val pcLocation = locToPos(frame.location).getOrElse(
-        SourcePosition(
-          CanonFile(
-            frame.location.sourcePath()),
-          frame.location.lineNumber))
-      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
-      DebugStackFrame(index, locals, numArgs, className,
-        methodName, pcLocation, thisObjId)
-    }
-
-    def makeDebugNull(): DebugNullValue = DebugNullValue("Null")
-
-    def makeDebugValue(value: Value): DebugValue = {
+    private def makeDebugValue(value: Value): DebugValue = {
       if (value == null) makeDebugNull()
       else {
         value match {
@@ -884,61 +867,48 @@ class DebugManager(project: Project, indexer: Actor,
     def valueAtLocation(location: DebugLocation): Option[DebugValue] = {
       location match {
         case DebugObjectReference(objectId) =>
-          valueForId(objectId)
+          valueForId(objectId).map(makeDebugObj)
         case DebugObjectField(objectId, name) =>
-          valueForField(objectId, name)
+          valueForField(objectId, name).map(makeDebugValue)
         case DebugArrayElement(objectId, index) =>
-          valueForIndex(objectId, index)
+          valueForIndex(objectId, index).map(makeDebugValue)
         case DebugStackSlot(threadId, frame, offset) =>
           threadById(threadId) match {
             case Some(thread) =>
-              valueForStackVar(thread, frame, offset)
+              valueForStackVar(thread, frame, offset).map(makeDebugValue)
             case None => None
           }
       }
     }
 
-    def valueForId(objectId: Long): Option[DebugValue] = {
-      savedObjects.get(objectId).map {
-        obj => makeDebugValue(obj)
-      }
+    private def valueForId(objectId: Long): Option[ObjectReference] = {
+      savedObjects.get(objectId)
     }
 
-    def valueForField(objectId: Long, name: String): Option[DebugValue] = {
-      (for (
+    private def valueForField(objectId: Long, name: String): Option[Value] = {
+      for (
         obj <- savedObjects.get(objectId);
         f <- fieldByName(obj, name)
       ) yield {
         remember(obj.getValue(f))
-      }).map(makeDebugValue(_))
+      }
     }
 
-    def valueForStackVar(
-      thread: ThreadReference, frame: Int, offset: Int): Option[DebugValue] = {
+    private def valueForIndex(objectId: Long, index: Int): Option[Value] = {
+      savedObjects.get(objectId) match {
+        case Some(arr: ArrayReference) => Some(remember(arr.getValue(index)))
+        case _ => None
+      }
+    }
+
+    private def valueForStackVar(
+      thread: ThreadReference, frame: Int, offset: Int): Option[Value] = {
       if (thread.frameCount > frame &&
         thread.frame(frame).visibleVariables.length > offset) {
         val stackFrame = thread.frame(frame)
         val value = stackFrame.getValue(stackFrame.visibleVariables.get(offset))
-        Some(makeDebugValue(remember(value)))
+        Some(remember(value))
       } else None
-    }
-
-    def valueForIndex(objectId: Long, index: Int): Option[DebugValue] = {
-      (savedObjects.get(objectId) match {
-        case Some(arr: ArrayReference) => Some(remember(arr.getValue(index)))
-        case _ => None
-      }).map(makeDebugValue(_))
-    }
-
-    def backtrace(thread: ThreadReference, index: Int, count: Int): DebugBacktrace = {
-      val frames = ListBuffer[DebugStackFrame]()
-      var i = index
-      while (i < thread.frameCount && (count == -1 || i < count)) {
-        val stackFrame = thread.frame(i)
-        frames += makeStackFrame(i, thread.frame(i))
-        i += 1
-      }
-      DebugBacktrace(frames.toList, thread.uniqueID(), thread.name())
     }
 
     private def stackValueNamed(thread: ThreadReference, name: String): Option[Value] = {
@@ -956,6 +926,39 @@ class DebugManager(project: Project, indexer: Actor,
         i += 1
       }
       result
+    }
+
+    private def makeStackFrame(index: Int, frame: StackFrame): DebugStackFrame = {
+      val locals = ignoreErr({
+        frame.visibleVariables.zipWithIndex.map {
+          case (v, i) =>
+            DebugStackLocal(i, v.name, v.typeName(),
+              valueSummary(frame.getValue(v)))
+        }.toList
+      }, List())
+
+      val numArgs = ignoreErr(frame.getArgumentValues().length, 0)
+      val methodName = ignoreErr(frame.location.method().name(), "Method")
+      val className = ignoreErr(frame.location.declaringType().name(), "Class")
+      val pcLocation = locToPos(frame.location).getOrElse(
+        SourcePosition(
+          CanonFile(
+            frame.location.sourcePath()),
+          frame.location.lineNumber))
+      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
+      DebugStackFrame(index, locals, numArgs, className,
+        methodName, pcLocation, thisObjId)
+    }
+
+    def backtrace(thread: ThreadReference, index: Int, count: Int): DebugBacktrace = {
+      val frames = ListBuffer[DebugStackFrame]()
+      var i = index
+      while (i < thread.frameCount && (count == -1 || i < count)) {
+        val stackFrame = thread.frame(i)
+        frames += makeStackFrame(i, thread.frame(i))
+        i += 1
+      }
+      DebugBacktrace(frames.toList, thread.uniqueID(), thread.name())
     }
 
     private def mirrorFromString(tpe: Type, toMirror: String): Option[Value] = {
