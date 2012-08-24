@@ -68,6 +68,7 @@ class ClassFileIndex(config: ProjectConfig) {
   val ASMAcceptAll = 0
 
   def indexFiles(files: Iterable[File]) {
+    println("Indexing source names for files: " + files)
     val t = System.currentTimeMillis()
     ClassIterator.find(files,
       (location, classReader) =>
