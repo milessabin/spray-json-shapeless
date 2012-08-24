@@ -50,7 +50,7 @@ object Environment {
   }
 
   private def scalaVersion: String =
-    scala.util.Properties.versionNumberString
+    scala.util.Properties.versionString
 
   private def ensimeVersion: String =
     try {
