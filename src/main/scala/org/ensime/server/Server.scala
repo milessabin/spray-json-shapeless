@@ -31,6 +31,7 @@ import java.io._
 import java.net.{ ServerSocket, Socket }
 import org.ensime.protocol._
 import org.ensime.util.WireFormat
+import org.ensime.config.Environment
 import scala.actors._
 import scala.actors.Actor._
 
@@ -43,6 +44,9 @@ object Server {
     args match {
       case Array(portfile) =>
         {
+          println("Starting up Ensime...")
+          println(Environment.info)
+
           // TODO add an option to change the protocol
           val protocol: Protocol = SwankProtocol
           val project: Project = new Project(protocol)
