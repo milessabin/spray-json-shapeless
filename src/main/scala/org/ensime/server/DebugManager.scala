@@ -324,11 +324,9 @@ class DebugManager(project: Project, indexer: Actor,
           }
           case RPCRequestEvent(req: Any, callId: Int) => {
             try {
-              def handle_startup_failure(e: Exception): Unit = {
+              def handleStartupFailure(e: Exception): Unit = {
                 maybeVM = None
-                println("e: " + e)
-                // val message = new java.io.StringWriter()
-                // e.printStackTrace(new java.io.PrintWriter(message))
+                e.printStackTrace()
                 val message = e.toString
                 project ! RPCResultEvent(toWF(DebugVmError(1, message.toString)), callId)
               }
@@ -346,7 +344,7 @@ class DebugManager(project: Project, indexer: Actor,
                   } catch {
                     case e: Exception => {
                       println("Couldn't start VM")
-                      handle_startup_failure(e)
+                      handleStartupFailure(e)
                     }
                   }
                 }
@@ -363,7 +361,7 @@ class DebugManager(project: Project, indexer: Actor,
                   } catch {
                     case e: Exception => {
                       println("Couldn't attach to target VM.")
-                      handle_startup_failure(e)
+                      handleStartupFailure(e)
                     }
                   }
                 }
@@ -492,9 +490,9 @@ class DebugManager(project: Project, indexer: Actor,
                         case _ =>
                       }
                       case _ => {
-			System.err.println("Unsupported location type for debug-set-value.")
-			project ! RPCResultEvent(toWF(false), callId)
-		      }
+                        System.err.println("Unsupported location type for debug-set-value.")
+                        project ! RPCResultEvent(toWF(false), callId)
+                      }
                     }
                   }
                 }
@@ -1001,13 +999,47 @@ class DebugManager(project: Project, indexer: Actor,
 
   private class VMEventManager(val eventQueue: EventQueue) extends Thread {
     @volatile var finished = false
+
+    // Wrapper for defining arbitrary equivalence classes among VM events.
+    // Allows us to weed out multiple breakpoints for the same location,
+    // for example.
+    case class EventEquivalence(evt: Event) {
+      private def locationsEqual(loc1: Location, loc2: Location): Boolean = {
+        loc1.sourcePath == loc2.sourcePath &&
+        loc1.sourceName == loc2.sourceName &&
+	loc1.lineNumber == loc2.lineNumber
+      }
+      private def locationHashcode(loc: Location): Int = {
+        loc.lineNumber.hashCode ^ loc.sourceName.hashCode
+      }
+      override def equals(that: Any): Boolean = that match {
+	case EventEquivalence(thatEvt) => {
+          (evt, thatEvt) match {
+            case (e1: BreakpointEvent, e2: BreakpointEvent) =>
+              locationsEqual(e1.location, e2.location)
+            case _ => false
+          }
+	}
+	case _ => false
+      }
+      override def hashCode: Int = {
+        evt match {
+          case evt: BreakpointEvent => locationHashcode(evt.location)
+          case evt => evt.hashCode
+        }
+      }
+    }
+
     override def run() {
       do {
         try {
-          val eventSet = eventQueue.remove();
+          val uniqueEvents = HashSet[EventEquivalence]()
+          val eventSet = eventQueue.remove()
           val it = eventSet.eventIterator()
           while (it.hasNext()) {
-            val evt = it.nextEvent();
+            uniqueEvents += EventEquivalence(it.nextEvent())
+          }
+          for (EventEquivalence(evt) <- uniqueEvents) {
             evt match {
               case e: VMDisconnectEvent => {
                 finished = true
