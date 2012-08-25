@@ -169,7 +169,15 @@ trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
     tpe: scala.Symbol,
     effect: RefactorEffect): Either[RefactorFailure, RefactorResult] = {
     askOption(execRefactor(procId, tpe, effect)).getOrElse(
-      Left(RefactorFailure(procId, "Refactor exec call failed.")))
+      Left(RefactorFailure(procId, "Refactor exec call failed."))) match {
+      case Right(result) => {
+	// Reload all files touched by refactoring, so subsequent refactorings
+	// will see consistent state.
+	askReloadFiles(result.touched.map(f => createSourceFile(f.getPath)))
+	Right(result)
+      }
+      case Left(failure) => Left(failure)
+    }
   }
 
 }
