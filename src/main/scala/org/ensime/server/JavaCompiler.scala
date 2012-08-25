@@ -202,13 +202,12 @@ class JavaCompiler(
     }
   }
 
-  def compileFile(f: File) = {
+  def compileFiles(files: List[File]) = {
     reportHandler.clearAllJavaNotes()
-    addFile(f)
+    files.foreach(addFile)
     try {
-      for (u <- javaUnitForFile.get(f.getCanonicalPath)) {
-        compiler.compile(Array(u))
-      }
+      val units = files.flatMap(f => javaUnitForFile.get(f.getCanonicalPath))
+      compiler.compile(units.toArray)
     } catch {
       case e: Exception => {
         System.err.println("Java compilation failed.")

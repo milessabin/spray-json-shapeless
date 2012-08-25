@@ -45,8 +45,43 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.2"
+    val protocolVersion: String = "0.8.3"
   }
+
+  /**
+   * Protocol Version: 0.8.3
+   *
+   * Protocol Change Log:
+   *   0.8.3
+   *     Adds typecheck-files
+   *     Unifies debug location structure DebugLocation
+   *   0.8.2
+   *     Debug attachment to remote VM
+   *     CompletionInfo type-sig now has structure
+   *   0.8.1
+   *     Add patch-source.
+   *     Completions now takes a 'reload' argument.
+   *   0.8
+   *     Add RPC calls for debugging
+   *     Protocol is now explicitely UTF-8
+   *   0.7.4
+   *     Add optional 'owner-type-id' key to SymbolInfo
+   *     Add optional 'case-sens' option to swank:completions call
+   *   0.7.3
+   *     Add optional 'to-insert' key to CompletionInfo
+   *     Add optional a max results argument to swank:completions call
+   *   0.7.2
+   *     Get rid of scope and type completion in favor of unified
+   *     swank:completions call.
+   *     Wrap completion result in CompletionInfoList.
+   *   0.7.1
+   *     Remove superfluous status values for events such as :compiler-ready,
+   *     :clear-scala-notes, etc.
+   *   0.7
+   *     Rename swank:perform-refactor to swank:prepare-refactor.
+   *     Include status flag in return of swank:exec-refactor.
+   */
+
 
   import SwankProtocol._
   import ProtocolConst._
@@ -143,36 +178,7 @@ trait SwankProtocol extends Protocol {
     }
   }
 
-  /**
-   * Protocol Version: 0.8.2
-   *
-   * Protocol Change Log:
-   *   0.8.2
-   *     Debug attachement
-   *     CompletionInfo type-sig now has structure
-   *   0.8.1
-   *     Add patch-source.
-   *     Completions now takes a 'reload' argument.
-   *   0.8
-   *     Add RPC calls for debugging
-   *     Protocol is now explicitely UTF-8
-   *   0.7.4
-   *     Add optional 'owner-type-id' key to SymbolInfo
-   *     Add optional 'case-sens' option to swank:completions call
-   *   0.7.3
-   *     Add optional 'to-insert' key to CompletionInfo
-   *     Add optional a max results argument to swank:completions call
-   *   0.7.2
-   *     Get rid of scope and type completion in favor of unified
-   *     swank:completions call.
-   *     Wrap completion result in CompletionInfoList.
-   *   0.7.1
-   *     Remove superfluous status values for events such as :compiler-ready,
-   *     :clear-scala-notes, etc.
-   *   0.7
-   *     Rename swank:perform-refactor to swank:prepare-refactor.
-   *     Include status flag in return of swank:exec-refactor.
-   */
+
 
   ////////////////////
   // Datastructures //
@@ -814,7 +820,31 @@ trait SwankProtocol extends Protocol {
       case "swank:typecheck-file" => {
         form match {
           case SExpList(head :: StringAtom(file) :: body) => {
-            rpcTarget.rpcTypecheckFile(file, callId)
+            rpcTarget.rpcTypecheckFiles(List(file), callId)
+          }
+          case _ => oops
+        }
+      }
+
+      /**
+       * Doc RPC:
+       *   swank:typecheck-files
+       * Summary:
+       *   Request immediate load and check the given source files.
+       * Arguments:
+       *   List of String:Filenames, absolute or relative to the project.
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:typecheck-files ("Analyzer.scala")) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case "swank:typecheck-files" => {
+        form match {
+          case SExpList(head :: SExpList(strings) :: body) => {
+	    val filenames = strings.collect{case StringAtom(s) => s}.toList
+            rpcTarget.rpcTypecheckFiles(filenames, callId)
           }
           case _ => oops
         }

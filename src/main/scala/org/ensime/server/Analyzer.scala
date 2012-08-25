@@ -155,19 +155,17 @@ class Analyzer(
                     project ! RPCResultEvent(toWF(true), callId)
                   }
 
-                  case ReloadFileReq(file: File) => {
-                    if (!file.exists()) {
-                      project.sendRPCError(ErrFileDoesNotExist,
-                        Some(file.getPath()), callId)
-                    } else {
-                      if (file.getAbsolutePath().endsWith(".java")) {
-                        javaCompiler.compileFile(file)
-                      }
-                      val f = createSourceFile(file)
-                      scalaCompiler.askReloadFile(f)
+                  case ReloadFilesReq(files: List[File]) => {
+		    val (javas, scalas) = files.filter(_.exists).partition(
+		      _.getName.endsWith(".java"))
+		    if (!javas.isEmpty) {
+		      javaCompiler.compileFiles(javas)
+		    }
+		    if (!scalas.isEmpty) {
+		      scalaCompiler.askReloadFiles(scalas.map(createSourceFile))
                       scalaCompiler.askNotifyWhenReady()
                       project ! RPCResultEvent(toWF(true), callId)
-                    }
+		    }
                   }
 
                   case PatchSourceReq(

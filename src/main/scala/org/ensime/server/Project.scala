@@ -50,7 +50,7 @@ case class AnalyzerReadyEvent()
 case class AnalyzerShutdownEvent()
 case class IndexerReadyEvent()
 
-case class ReloadFileReq(file: File)
+case class ReloadFilesReq(files: List[File])
 case class ReloadAllReq()
 case class PatchSourceReq(file: File, edits: List[PatchOp])
 case class RemoveFileReq(file: File)
@@ -161,7 +161,12 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
       case Some(u) => {
         undos.remove(u.id)
         FileUtils.writeChanges(u.changes) match {
-          case Right(touched) => Right(UndoResult(undoId, touched))
+          case Right(touched) => {
+	    for(ea <- analyzer) {
+	      ea ! ReloadFilesReq(touched.toList)
+	    }
+	    Right(UndoResult(undoId, touched))
+	  }
           case Left(e) => Left(e.getMessage())
         }
       }
