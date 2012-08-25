@@ -893,7 +893,7 @@ class DebugManager(project: Project, indexer: Actor,
       valueAtLocation(location).map(makeDebugValue)
     }
 
-    def callMethod(obj: ObjectReference, name: String, signature: String, args: java.util.List[Value]): Option[Value] = {
+    private def callMethod(obj: ObjectReference, name: String, signature: String, args: java.util.List[Value]): Option[Value] = {
       if (!vm.canBeModified) {
         println("Sorry, this debug VM is read-only.")
         None
