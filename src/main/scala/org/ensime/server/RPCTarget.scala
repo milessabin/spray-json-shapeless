@@ -142,11 +142,14 @@ trait RPCTarget { self: Project =>
   def rpcDebugStepOut(threadId: Long, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugStepOutReq(threadId), callId)
   }
-  def rpcDebugValueForName(threadId: Long, name:String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugValueForNameReq(threadId,name), callId)
+  def rpcDebugLocateName(threadId: Long, name:String, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugLocateNameReq(threadId,name), callId)
   }
   def rpcDebugValue(loc: DebugLocation, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueReq(loc), callId)
+  }
+  def rpcDebugToString(loc: DebugLocation, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugToStringReq(loc), callId)
   }
   def rpcDebugSetValue(loc: DebugLocation, newValue:String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugSetValueReq(loc, newValue), callId)

@@ -58,8 +58,9 @@ case class DebugContinueReq(threadId: Long)
 case class DebugNextReq(threadId: Long)
 case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
-case class DebugValueForNameReq(threadId: Long, name: String)
+case class DebugLocateNameReq(threadId: Long, name: String)
 case class DebugValueReq(loc: DebugLocation)
+case class DebugToStringReq(loc: DebugLocation)
 case class DebugSetValueReq(loc: DebugLocation, newValue: String)
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
 case class DebugActiveVMReq()
@@ -451,12 +452,12 @@ class DebugManager(project: Project, indexer: Actor,
                   }
                 }
 
-                case DebugValueForNameReq(threadId: Long, name: String) => {
+                case DebugLocateNameReq(threadId: Long, name: String) => {
                   handleRPCWithVMAndThread(callId, threadId) {
                     (vm, thread) =>
-                      vm.valueForName(thread, name) match {
-                        case Some(value) =>
-                          project ! RPCResultEvent(toWF(value), callId)
+                      vm.locationForName(thread, name) match {
+                        case Some(loc) =>
+                          project ! RPCResultEvent(toWF(loc), callId)
                         case None =>
                           project ! RPCResultEvent(toWF(false), callId)
                       }
@@ -473,7 +474,16 @@ class DebugManager(project: Project, indexer: Actor,
                 case DebugValueReq(location) => {
                   handleRPCWithVM(callId) {
                     (vm) =>
-                      vm.valueAtLocation(location).map(toWF) match {
+                      vm.debugValueAtLocation(location).map(toWF) match {
+                        case Some(payload) => project ! RPCResultEvent(payload, callId)
+                        case None => project ! RPCResultEvent(toWF(false), callId)
+                      }
+                  }
+                }
+                case DebugToStringReq(location) => {
+                  handleRPCWithVM(callId) {
+                    (vm) =>
+                      vm.debugValueAtLocationToString(location).map(toWF) match {
                         case Some(payload) => project ! RPCResultEvent(payload, callId)
                         case None => project ! RPCResultEvent(toWF(false), callId)
                       }
@@ -847,35 +857,70 @@ class DebugManager(project: Project, indexer: Actor,
       }
     }
 
-    def valueForName(thread: ThreadReference, name: String): Option[DebugValue] = {
+    def locationForName(thread: ThreadReference, name: String): Option[DebugLocation] = {
       val stackFrame = thread.frame(0)
       val objRef = stackFrame.thisObject();
       if (name == "this") {
-        Some(makeDebugValue(remember(objRef)))
+        Some(DebugObjectReference(remember(objRef).uniqueID))
       } else {
-        stackValueNamed(thread, name).orElse(
+        stackSlotForName(thread, name).map({ slot =>
+          DebugStackSlot(thread.uniqueID, slot._1, slot._2)
+        }).orElse(
           fieldByName(objRef, name).flatMap { f =>
-            Some(objRef.getValue(f))
-          }).map { v =>
-            makeDebugValue(remember(v))
+            Some(DebugObjectField(objRef.uniqueID, f.name))
+          })
+      }
+    }
+
+    private def valueAtLocation(location: DebugLocation): Option[Value] = {
+      location match {
+        case DebugObjectReference(objectId) =>
+          valueForId(objectId)
+        case DebugObjectField(objectId, name) =>
+          valueForField(objectId, name)
+        case DebugArrayElement(objectId, index) =>
+          valueForIndex(objectId, index)
+        case DebugStackSlot(threadId, frame, offset) =>
+          threadById(threadId) match {
+            case Some(thread) =>
+              valueForStackVar(thread, frame, offset)
+            case None => None
           }
       }
     }
 
-    def valueAtLocation(location: DebugLocation): Option[DebugValue] = {
-      location match {
-        case DebugObjectReference(objectId) =>
-          valueForId(objectId).map(makeDebugObj)
-        case DebugObjectField(objectId, name) =>
-          valueForField(objectId, name).map(makeDebugValue)
-        case DebugArrayElement(objectId, index) =>
-          valueForIndex(objectId, index).map(makeDebugValue)
-        case DebugStackSlot(threadId, frame, offset) =>
-          threadById(threadId) match {
-            case Some(thread) =>
-              valueForStackVar(thread, frame, offset).map(makeDebugValue)
-            case None => None
+    def debugValueAtLocation(location: DebugLocation): Option[DebugValue] = {
+      valueAtLocation(location).map(makeDebugValue)
+    }
+
+    def debugValueAtLocationToString(location: DebugLocation): Option[String] = {
+      if (!vm.canBeModified) {
+        println("Sorry, this debug VM is read-only.")
+	None
+      } else {
+        valueAtLocation(location) match {
+          case Some(obj: ObjectReference) => {
+            obj.referenceType.methodsByName("toString", "()Ljava/lang/String;").headOption match {
+              case Some(m) => {
+                println("Invoking: " + m)
+                obj.invokeMethod(obj.owningThread(), m, new java.util.Vector(),
+                  ObjectReference.INVOKE_SINGLE_THREADED) match {
+                    case v: StringReference => {
+                      Some(v.value.toString())
+                    }
+                    case null => Some("null")
+                    case _ => None
+                  }
+              }
+              case other => {
+                System.err.println("toString method not found: " + other)
+                None
+              }
+            }
           }
+          case Some(value) => Some(valueSummary(value))
+          case _ => System.out.println("No value found at location."); None
+        }
       }
     }
 
@@ -909,17 +954,19 @@ class DebugManager(project: Project, indexer: Actor,
       } else None
     }
 
-    private def stackValueNamed(thread: ThreadReference, name: String): Option[Value] = {
-      var result: Option[Value] = None
+    type StackSlot = (Int, Int) // frame, offset
+    private def stackSlotForName(thread: ThreadReference, name: String): Option[StackSlot] = {
+      var result: Option[(Int, Int)] = None
       var i = 0
       while (result.isEmpty && i < thread.frameCount) {
         val stackFrame = thread.frame(i)
         val visVars = stackFrame.visibleVariables()
-        visVars.find(_.name() == name) match {
-          case Some(visibleVar) => {
-            result = Some(stackFrame.getValue(visibleVar))
+        var j = 0
+        while (j < visVars.length) {
+          if (visVars(j).name == name) {
+            result = Some((i, j))
           }
-          case _ =>
+          j += 1
         }
         i += 1
       }
@@ -1006,21 +1053,21 @@ class DebugManager(project: Project, indexer: Actor,
     case class EventEquivalence(evt: Event) {
       private def locationsEqual(loc1: Location, loc2: Location): Boolean = {
         loc1.sourcePath == loc2.sourcePath &&
-        loc1.sourceName == loc2.sourceName &&
-	loc1.lineNumber == loc2.lineNumber
+          loc1.sourceName == loc2.sourceName &&
+          loc1.lineNumber == loc2.lineNumber
       }
       private def locationHashcode(loc: Location): Int = {
         loc.lineNumber.hashCode ^ loc.sourceName.hashCode
       }
       override def equals(that: Any): Boolean = that match {
-	case EventEquivalence(thatEvt) => {
+        case EventEquivalence(thatEvt) => {
           (evt, thatEvt) match {
             case (e1: BreakpointEvent, e2: BreakpointEvent) =>
               locationsEqual(e1.location, e2.location)
             case _ => false
           }
-	}
-	case _ => false
+        }
+        case _ => false
       }
       override def hashCode: Int = {
         evt match {

@@ -53,6 +53,8 @@ trait SwankProtocol extends Protocol {
    *
    * Protocol Change Log:
    *   0.8.3
+   *     Add debug-to-string call.
+   *     Refactor debug-value-for-name to debug-locate-name + debug-value
    *     Adds typecheck-files
    *     Unifies debug locations under DebugLocation
    *   0.8.2
@@ -1812,24 +1814,24 @@ trait SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
-       *   swank:debug-value-for-name
+       *   swank:debug-locate-name
        * Summary:
-       *   Get the local binding for the given name at this point
+       *   Get the binding location for the given name at this point
        *     in the program's execution.
        * Arguments:
        *   String: The thread-id in which to search.
        *   String: The name to search for.
        * Return:
-       *   A DebugValue
+       *   A DebugLocation
        * Example call:
-       *   (:swank-rpc (swank:debug-value-for-name "thread-2" "apple") 42)
+       *   (:swank-rpc (swank:debug-locate-name "thread-2" "apple") 42)
        * Example return:
-       *   (:return (:ok "23") 42)
+       *   (:return (:ok (:slot :thread-id "thread-2" :frame 2 :offset 0)) 42)
        */
-      case "swank:debug-value-for-name" => {
+      case "swank:debug-locate-name" => {
         form match {
           case SExpList(head :: StringAtom(threadId) :: StringAtom(name) :: body) => {
-            rpcTarget.rpcDebugValueForName(threadId.toLong, name, callId)
+            rpcTarget.rpcDebugLocateName(threadId.toLong, name, callId)
           }
           case _ => oops
         }
@@ -1859,6 +1861,32 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
+
+      /**
+       * Doc RPC:
+       *   swank:debug-to-string
+       * Summary:
+       *   Returns the result of calling toString on the value at the
+       *   given location
+       * Arguments:
+       *   DebugLocation: The location from which to load the value.
+       * Return:
+       *   A DebugValue
+       * Example call:
+       *   (:swank-rpc (swank:debug-to-string (:type 'element
+       *    :object-id "23" :index 2)) 42)
+       * Example return:
+       *   (:return (:ok "A little lamb") 42)
+       */
+      case "swank:debug-to-string" => {
+        form match {
+          case SExpList(head :: DebugLocationExtractor(loc) :: body) => {
+            rpcTarget.rpcDebugToString(loc, callId)
+          }
+          case _ => oops
+        }
+      }
+
 
       /**
        * Doc RPC:
