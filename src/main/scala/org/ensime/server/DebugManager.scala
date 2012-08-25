@@ -667,12 +667,13 @@ class DebugManager(project: Project, indexer: Actor,
     def setBreakpoint(file: CanonFile, line: Int): Boolean = {
       val locs = locations(file, line)
       if (!locs.isEmpty) {
+        project.bgMessage("Resolved breakpoint at: " + file + " : " + line)
+        project.bgMessage("Installing breakpoint at locations: " + locs)
         for (loc <- locs) {
           val request = erm.createBreakpointRequest(loc)
           request.setSuspendPolicy(EventRequest.SUSPEND_ALL)
           request.enable();
         }
-        project.bgMessage("Resolved breakpoint at: " + file + " : " + line)
         true
       } else {
         false
@@ -715,22 +716,37 @@ class DebugManager(project: Project, indexer: Actor,
       }
     }
 
-    def locations(file: CanonFile, line: Int): List[Location] = {
-      val buf = ListBuffer[Location]()
+    def locations(file: CanonFile, line: Int): Set[Location] = {
+
+      // Group locations by file and line
+      case class LocationClass(loc: Location) {
+        override def equals(that: Any): Boolean = that match {
+          case that: Location => {
+            loc.sourcePath == that.sourcePath &&
+              loc.sourceName == that.sourceName &&
+              loc.lineNumber == that.lineNumber
+          }
+          case _ => false
+        }
+        override def hashCode: Int = loc.lineNumber.hashCode ^ loc.sourceName.hashCode
+      }
+
+
+      val buf = HashSet[LocationClass]()
       val key = file.getName
       for (types <- fileToUnits.get(key)) {
         for (t <- types) {
           for (m <- t.methods()) {
-            try { buf ++= m.locationsOfLine(line) } catch {
+            try { buf ++= m.locationsOfLine(line).map(LocationClass.apply) } catch {
               case e: AbsentInformationException =>
             }
           }
-          try { buf ++= t.locationsOfLine(line) } catch {
+          try { buf ++= t.locationsOfLine(line).map(LocationClass.apply) } catch {
             case e: AbsentInformationException =>
           }
         }
       }
-      buf.toList
+      buf.map(_.loc).toSet
     }
 
     def threadById(id: Long): Option[ThreadReference] = {
@@ -1050,47 +1066,13 @@ class DebugManager(project: Project, indexer: Actor,
 
   private class VMEventManager(val eventQueue: EventQueue) extends Thread {
     @volatile var finished = false
-
-    // Wrapper for defining arbitrary equivalence classes among VM events.
-    // Allows us to weed out multiple breakpoints for the same location,
-    // for example.
-    case class EventEquivalence(evt: Event) {
-      private def locationsEqual(loc1: Location, loc2: Location): Boolean = {
-        loc1.sourcePath == loc2.sourcePath &&
-          loc1.sourceName == loc2.sourceName &&
-          loc1.lineNumber == loc2.lineNumber
-      }
-      private def locationHashcode(loc: Location): Int = {
-        loc.lineNumber.hashCode ^ loc.sourceName.hashCode
-      }
-      override def equals(that: Any): Boolean = that match {
-        case EventEquivalence(thatEvt) => {
-          (evt, thatEvt) match {
-            case (e1: BreakpointEvent, e2: BreakpointEvent) =>
-              locationsEqual(e1.location, e2.location)
-            case _ => false
-          }
-        }
-        case _ => false
-      }
-      override def hashCode: Int = {
-        evt match {
-          case evt: BreakpointEvent => locationHashcode(evt.location)
-          case evt => evt.hashCode
-        }
-      }
-    }
-
     override def run() {
       do {
         try {
-          val uniqueEvents = HashSet[EventEquivalence]()
           val eventSet = eventQueue.remove()
           val it = eventSet.eventIterator()
           while (it.hasNext()) {
-            uniqueEvents += EventEquivalence(it.nextEvent())
-          }
-          for (EventEquivalence(evt) <- uniqueEvents) {
+            val evt = it.nextEvent()
             evt match {
               case e: VMDisconnectEvent => {
                 finished = true
