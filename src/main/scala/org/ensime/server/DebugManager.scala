@@ -893,34 +893,38 @@ class DebugManager(project: Project, indexer: Actor,
       valueAtLocation(location).map(makeDebugValue)
     }
 
-    def debugValueAtLocationToString(location: DebugLocation): Option[String] = {
+    def callMethod(obj: ObjectReference, name: String, signature: String, args: java.util.List[Value]): Option[Value] = {
       if (!vm.canBeModified) {
         println("Sorry, this debug VM is read-only.")
-	None
+        None
       } else {
-        valueAtLocation(location) match {
-          case Some(obj: ObjectReference) => {
-            obj.referenceType.methodsByName("toString", "()Ljava/lang/String;").headOption match {
-              case Some(m) => {
-                println("Invoking: " + m)
-                obj.invokeMethod(obj.owningThread(), m, new java.util.Vector(),
-                  ObjectReference.INVOKE_SINGLE_THREADED) match {
-                    case v: StringReference => {
-                      Some(v.value.toString())
-                    }
-                    case null => Some("null")
-                    case _ => None
-                  }
-              }
-              case other => {
-                System.err.println("toString method not found: " + other)
-                None
-              }
-            }
+        obj.referenceType.methodsByName("toString", "()Ljava/lang/String;").headOption match {
+          case Some(m) => {
+            println("Invoking: " + m)
+            Some(obj.invokeMethod(obj.owningThread(), m, new java.util.Vector(),
+              ObjectReference.INVOKE_SINGLE_THREADED))
           }
-          case Some(value) => Some(valueSummary(value))
-          case _ => System.out.println("No value found at location."); None
+          case other => {
+            System.err.println("toString method not found: " + other)
+            None
+          }
         }
+      }
+    }
+
+    def debugValueAtLocationToString(location: DebugLocation): Option[String] = {
+      valueAtLocation(location) match {
+        case Some(obj: ObjectReference) => {
+          callMethod(obj, "toString", "()Ljava/lang/String;", new java.util.Vector()) match {
+            case Some(v: StringReference) => {
+              Some(v.value.toString())
+            }
+            case Some(null) => Some("null")
+            case _ => None
+          }
+        }
+        case Some(value) => Some(valueSummary(value))
+        case _ => System.out.println("No value found at location."); None
       }
     }
 
