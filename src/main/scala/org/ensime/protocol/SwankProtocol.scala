@@ -54,10 +54,10 @@ trait SwankProtocol extends Protocol {
    * Protocol Change Log:
    *   0.8.3
    *     Adds typecheck-files
-   *     Unifies debug location structure DebugLocation
+   *     Unifies debug locations under DebugLocation
    *   0.8.2
    *     Debug attachment to remote VM
-   *     CompletionInfo type-sig now has structure
+   *     CompletionInfo type-sig now has structure see CompletionSignature
    *   0.8.1
    *     Add patch-source.
    *     Completions now takes a 'reload' argument.
