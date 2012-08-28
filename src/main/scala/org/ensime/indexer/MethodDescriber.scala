@@ -182,7 +182,7 @@ trait MethodDescriber extends MethodVisitor {
   override def visitLdcInsn(cst: Object) {
     appendOp("LDC",
       if (cst.isInstanceOf[String]) {
-	cst.toString
+	"\"" + cst.toString + "\""
       } else if (cst.isInstanceOf[Type]) {
 	cst.asInstanceOf[Type].getDescriptor()
       } else {
