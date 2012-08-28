@@ -29,7 +29,7 @@ package org.ensime.protocol
 
 import java.io._
 import org.ensime.config.{ ProjectConfig, ReplConfig }
-import org.ensime.indexer.ClassFileIndex
+import org.ensime.indexer.MethodBytecode
 import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
@@ -2772,7 +2772,7 @@ trait SwankProtocol extends Protocol {
     }
   }
 
-  def toWF(method: ClassFileIndex#MethodBytecode): SExp = {
+  def toWF(method: MethodBytecode): SExp = {
     SExp.propList(
       (":class-name", method.className),
       (":name", method.methodName),

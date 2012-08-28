@@ -90,8 +90,9 @@ object EnsimeBuild extends Build {
         libraryDependencies <++= (scalaVersion) { scalaVersion =>
           Seq("org.apache.lucene" % "lucene-core" % "3.5.0",
               "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
-              "asm" % "asm" % "3.2",
-              "asm" % "asm-commons" % "3.2",
+              "asm" % "asm" % "3.3",
+              "asm" % "asm-commons" % "3.3",
+              "asm" % "asm-util" % "3.3",
               "com.googlecode.json-simple" % "json-simple" % "1.1"
       ) ++
           (if (scalaVersion == TwoTenVersion)

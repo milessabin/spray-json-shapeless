@@ -42,17 +42,18 @@ import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.MultiMap
 
+case class Op(
+  op: String,
+  description: String)
+case class MethodBytecode(
+  className: String,
+  methodName: String,
+  methodSignature: Option[String],
+  byteCode: List[Op],
+  startLine: Int,
+  endLine: Int)
+
 class ClassFileIndex(config: ProjectConfig) {
-
-  case class Op(
-    op: String,
-    description: String)
-  case class MethodBytecode(
-    className: String,
-    methodName: String,
-    methodSignature: Option[String],
-    byteCode: List[Op])
-
 
   // TODO(aemoncannon): This set can change over time if new
   // source files are created. Need to arrange for indexer to
@@ -115,37 +116,15 @@ class ClassFileIndex(config: ProjectConfig) {
       signature: String,
       exceptions: Array[String]): MethodVisitor = {
       if (!quit) {
-        return new EmptyVisitor() {
+        return new EmptyVisitor() with MethodDescriber {
           var maxLine = Int.MinValue
           var minLine = Int.MaxValue
           var ops = ListBuffer[Op]()
           var includesLine = false
 
-          override def visitFieldInsn(
-            opcode: Int, owner: String, name: String, desc: String) {
+          def appendOp(name: String, args: String): Unit = {
+            ops += Op(name, args)
           }
-          override def visitIincInsn(variable: Int, increment: Int) {
-          }
-          override def visitInsn(opcode: Int) {
-          }
-          override def visitIntInsn(opcode: Int, operand: Int) {
-          }
-          override def visitJumpInsn(opcode: Int, label: Label) {
-          }
-          override def visitLdcInsn(cst: Object) {
-          }
-          override def visitLookupSwitchInsn(dflt: Label, keys: Array[Int],
-            labels: Array[Label]) {}
-          override def visitMethodInsn(
-            opcode: Int, owner: String, name: String, desc: String) {
-          }
-          override def visitMultiANewArrayInsn(desc: String, dims: Int) {
-          }
-          override def visitTableSwitchInsn(
-            min: Int, max: Int, dflt: Label, labels: Array[Label]) {
-          }
-          override def visitTypeInsn(opcode: Int, tpe: String) {}
-          override def visitVarInsn(opcode: Int, variable: Int) {}
 
           override def visitLineNumber(line: Int, start: Label) {
             minLine = scala.math.min(minLine, line)
@@ -158,7 +137,9 @@ class ClassFileIndex(config: ProjectConfig) {
             if (includesLine) {
               methods += MethodBytecode(className,
                 name, Option(signature),
-                ops.toList)
+                ops.toList,
+                minLine,
+                maxLine)
             }
           }
         }
@@ -169,11 +150,15 @@ class ClassFileIndex(config: ProjectConfig) {
   def locateBytecode(
     sourceName: String,
     line: Int): List[MethodBytecode] = {
-    classFilesForSourceName(sourceName).flatMap { f =>
-      ClassIterator.findInClasses(
-        List(new File(f.file)),
-        new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
-    }.toList
+    def forFileType(extension: String): List[MethodBytecode] = {
+      classFilesForSourceName(sourceName).filter { loc => loc.file.endsWith(".class") }.flatMap { f =>
+        ClassIterator.findInClasses(
+          List(new File(f.file)),
+          new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
+      }.toList.sortBy(_.startLine * -1)
+    }
+    val fromClasses = forFileType(".class")
+    if (!fromClasses.isEmpty) fromClasses else forFileType(".jar")
   }
 
   def sourceFileCandidates(
