@@ -1,6 +1,12 @@
 #!/bin/bash
 set -f
 
+if [ `uname -s` = 'Darwin' ]; then
+    if [ -z $JAVA_HOME ]; then
+	JAVA_HOME=`/usr/libexec/java_home`
+    fi
+fi
+
 case "$1" in
   -h|--help|"")
     echo "$0 should be run by emacs plugin. M-x ensime should start the server for you"
