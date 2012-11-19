@@ -89,9 +89,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     } catch {
       case fi: FailedInterrupt =>
         fi.getCause() match {
-          case e @ InvalidCompanions(c1, c2) =>
-            richReporter.warning(c1.pos, e.getMessage)
-            None
+          // xeno.by: InvalidCompanions has been removed in 2.10
+          // case e @ InvalidCompanions(c1, c2) =>
+          //   richReporter.warning(c1.pos, e.getMessage)
+          //   None
           case e: InterruptedException =>
             Thread.currentThread().interrupt()
             e.printStackTrace()
