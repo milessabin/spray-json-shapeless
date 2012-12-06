@@ -235,6 +235,7 @@ trait SwankProtocol extends Protocol {
    *   :name //String:Qualified name of symbol.
    *   :local-name //String:Unqualified name of symbol
    *   :decl-as //Symbol:What kind of symbol this is.
+   *   :owner-name //String:If symbol is a method, gives the qualified owner type.
    *   :pos //Position:Where is this symbol declared?
    *   )
    */
@@ -1402,7 +1403,7 @@ trait SwankProtocol extends Protocol {
        * Example call:
        *   (:swank-rpc (swank:cancel-refactor 1) 42)
        * Example return:
-       *   (:return (:ok t))
+       *   (:return (:ok t) 42)
        */
       case "swank:cancel-refactor" => {
         form match {
@@ -1491,7 +1492,14 @@ trait SwankProtocol extends Protocol {
        * Example call:
        *   (:swank-rpc (swank:method-bytecode "hello.scala" 12) 42)
        * Example return:
-       *   (:return (:ok t) 42)
+       *   (:return
+       *   (:ok (
+       *   :class-name "SomeClassName"
+       *   :name "SomeMethodName"
+       *   :signature ??
+       *   :bytcode ("opName" "opDescription" ...
+       *   )
+       *   42)
        */
       case "swank:method-bytecode" => {
         form match {
@@ -1682,7 +1690,7 @@ trait SwankProtocol extends Protocol {
        * Example call:
        *   (:swank-rpc (swank:debug-list-breakpoints) 42)
        * Example return:
-       *   (:return ((:file "hello.scala" :line 1)
+       *   (:return (:ok (:file "hello.scala" :line 1)
        *   (:file "hello.scala" :line 23)) 42)
        */
       case "swank:debug-list-breakpoints" => {
