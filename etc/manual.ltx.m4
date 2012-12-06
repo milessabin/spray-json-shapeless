@@ -608,7 +608,7 @@ At the application level, the s-expressions encode RPC calls, RPC responses, and
 
 # Server asks client to display a user message. 
 # Note: this is not part of any RPC call - it's just an event from the server.
-(:background-message "Initializing Analyzer. Please wait...")
+(:background-message 105 "Initializing Analyzer. Please wait...")
 
 # Server alerts client that the analyzer is now ready for RPC requests.
 (:compiler-ready t)

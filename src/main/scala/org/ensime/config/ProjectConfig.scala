@@ -272,7 +272,7 @@ object ProjectConfig {
 
     /**
      * Doc Property:
-     *   :name
+     *   :depends-on-modules
      * Summary:
      *   A list of module-names on which this project depends.
      * Arguments:
