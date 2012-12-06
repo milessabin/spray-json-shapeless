@@ -1847,10 +1847,10 @@ trait SwankProtocol extends Protocol {
        * Return:
        *   A DebugValue
        * Example call:
-       *   (:swank-rpc (swank:debug-value (:type 'element
+       *   (:swank-rpc (swank:debug-value (:type element
        *    :object-id "23" :index 2)) 42)
        * Example return:
-       *   (:return (:ok (:val-type 'prim :summary "23"
+       *   (:return (:ok (:val-type prim :summary "23"
        *    :type-name "Integer")) 42)
        */
       case "swank:debug-value" => {
@@ -1873,7 +1873,7 @@ trait SwankProtocol extends Protocol {
        * Return:
        *   A DebugValue
        * Example call:
-       *   (:swank-rpc (swank:debug-to-string (:type 'element
+       *   (:swank-rpc (swank:debug-to-string (:type element
        *    :object-id "23" :index 2)) 42)
        * Example return:
        *   (:return (:ok "A little lamb") 42)
@@ -1899,7 +1899,7 @@ trait SwankProtocol extends Protocol {
        * Return:
        *   Boolean: t on success, nil otherwise
        * Example call:
-       *   (:swank-rpc (swank:debug-set-stack-var (:type 'element
+       *   (:swank-rpc (swank:debug-set-stack-var (:type element
        *    :object-id "23" :index 2) "1") 42)
        * Example return:
        *   (:return (:ok t) 42)
