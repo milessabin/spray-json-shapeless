@@ -53,7 +53,7 @@ object EnsimeBuild extends Build {
   val root = Path(".")
 
   val TwoNineVersion = "2.9.2"
-  val TwoTenVersion = "2.10.0-SNAPSHOT"
+  val TwoTenVersion = "2.10.0-RC3"
   val supportedScalaVersions = Seq(TwoNineVersion, TwoTenVersion)
   def unsupportedScalaVersion(scalaVersion: String): Nothing =
     sys.error(
@@ -68,7 +68,7 @@ object EnsimeBuild extends Build {
       Seq(
         version := "0.9.8.2",
         organization := "org.ensime",
-        scalaVersion := TwoNineVersion,
+        scalaVersion := TwoTenVersion,
         crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
         resolvers <++= (scalaVersion) { scalaVersion =>
           if (scalaVersion == TwoTenVersion)
@@ -97,7 +97,7 @@ object EnsimeBuild extends Build {
       ) ++
           (if (scalaVersion == TwoTenVersion)
             Seq(
-                "org.scalariform" %% "scalariform" % "0.1.3-SNAPSHOT" % "compile;runtime;test",
+                "org.scalariform" %% "scalariform" % "0.1.3" % "compile;runtime;test",
                 // TODO(xeno-by): rebuild ScalaTest for 2.10.0-SNAPSHOT
                 // "org.scalatest" %% "scalatest" % "2.0-SNAPSHOT" % "test",
                 "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test",
