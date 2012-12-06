@@ -21,13 +21,13 @@ the ENhanced Scala Interaction Mode for Emacs
 - Automated Refactorings (rename, organize imports, extract method)
 - Source Formatting
 - AST-based selection
-- Supports sbt7,10,11
+- Supports 11,12
 - Embedded sbt shell
 - REPL
 - Debug support
 
 
-## Demo Videos
+## Demo Videos (some are very out of date!)
 
 - [Overview (a bit out of date)](http://www.youtube.com/watch?v=A2Lai8IjLoY)
 - [Searching](http://www.youtube.com/watch?v=fcgnAJz98QE)
