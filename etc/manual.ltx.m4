@@ -52,7 +52,7 @@ ENSIME is the ENhanced Scala Interaction Mode for Emacs. It provides many featur
 
 \noindent
 \textbf{scala-mode}:\\
-Although it's not required, ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under misc/scala-tool-support/emacs/\\
+Although it's not required, ENSIME is designed to compliment an existing scala major mode. scala-mode2 is an excellent scala mode, and can be found at https://github.com/hvesalai/scala-mode2\\
 
 \noindent
 \textbf{ensime-mode}:\\

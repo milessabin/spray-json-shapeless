@@ -51,10 +51,9 @@ the ENhanced Scala Interaction Mode for Emacs
 
 ## Getting Started
 
-__1) Install scala-mode__
+__1) Install scala-mode2__
 
-Although it's not required, ENSIME is designed to compliment scala-mode. scala-mode can be found in the Scala distribution under ./misc/scala-tool-support/emacs/.
-
+Although it's not required, ENSIME is designed to compliment an existing scala major mode. scala-mode2 is an excellent scala mode, and can be found at https://github.com/hvesalai/scala-mode2
 
 __2) Install the ENSIME Server__
 
