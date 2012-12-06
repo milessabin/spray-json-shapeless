@@ -93,6 +93,7 @@ object ProjectConfig {
     }
     def getBool(m: KeyMap, name: String): Boolean = m.get(keyword(name)) match {
       case Some(TruthAtom()) => true
+      case Some(NilAtom()) => false
       case None => false
       case _ => matchError("Expecting a nil or t value at key: " + name); false
     }
