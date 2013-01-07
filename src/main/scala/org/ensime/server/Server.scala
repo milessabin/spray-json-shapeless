@@ -91,9 +91,9 @@ object Server {
   }
 
   private def writePort(filename: String, port: Int) {
-    val out = new OutputStreamWriter(new FileOutputStream(filename))
+    val out = new PrintWriter(filename)
     try {
-      out.write(port.toString)
+      out.println(port)
       out.flush()
       System.out.println("Wrote port " + port + " to " + filename + ".")
     } catch {
