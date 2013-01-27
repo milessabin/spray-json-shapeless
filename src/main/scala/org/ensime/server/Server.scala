@@ -91,23 +91,26 @@ object Server {
   }
 
   private def writePort(filename: String, port: Int) {
-    val out = new OutputStreamWriter(new FileOutputStream(filename))
     try {
-      out.write(port.toString)
+      val out = new PrintWriter(filename)
+      out.println(port)
       out.flush()
-      System.out.println("Wrote port " + port + " to " + filename + ".")
+      out.close()
+      if (!out.checkError()) {
+        System.out.println("Wrote port " + port + " to " + filename + ".")
+      } else {
+        throw new IOException
+      }
     } catch {
-      case e: IOException => {
-        System.err.println("Could not write port to " + filename + ". " + e)
+      case e:IOException => {
+        System.err.println("Could not write port to " + filename + ".")
         System.exit(-1)
       }
     } finally {
-      out.close()
       Runtime.getRuntime.addShutdownHook(
         new Thread { override def run { new java.io.File(filename).delete } })
     }
   }
-
 }
 
 class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
