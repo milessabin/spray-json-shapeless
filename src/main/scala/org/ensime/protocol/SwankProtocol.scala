@@ -49,9 +49,11 @@ trait SwankProtocol extends Protocol {
   }
 
   /**
-   * Protocol Version: 0.8.3
+   * Protocol Version: 0.8.4
    *
    * Protocol Change Log:
+   *   0.8.5
+   *     Add local-name to SymbolInfo
    *   0.8.3
    *     Add debug-to-string call.
    *     Refactor debug-value-for-name to debug-locate-name + debug-value
@@ -332,6 +334,7 @@ trait SwankProtocol extends Protocol {
    * Structure:
    *   (
    *   :name //String:Name of this symbol.
+   *   :local-name //String:Unqualified name of this symbol.
    *   :type //TypeInfo:The type of this symbol.
    *   :decl-pos //Position:Source location of this symbol's declaration.
    *   :is-callable //Bool:Is this symbol a method or function?
@@ -2575,6 +2578,7 @@ trait SwankProtocol extends Protocol {
   def toWF(value: SymbolInfo): SExp = {
     SExp.propList(
       (":name", value.name),
+      (":local-name", value.localName),
       (":type", toWF(value.tpe)),
       (":decl-pos", value.declPos),
       (":is-callable", value.isCallable),

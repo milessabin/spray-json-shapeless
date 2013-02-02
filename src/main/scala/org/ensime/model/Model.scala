@@ -78,6 +78,7 @@ case class SymbolDesignation(
 
 class SymbolInfo(
   val name: String,
+  val localName: String,
   val declPos: Position,
   val tpe: TypeInfo,
   val isCallable: Boolean,
@@ -463,11 +464,13 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       } else {
         sym.nameString
       }
+      val localName = sym.nameString
       val ownerTpe = if (sym.owner != NoSymbol && sym.owner.tpe != NoType) {
         Some(sym.owner.tpe)
       } else None
       new SymbolInfo(
         name,
+        localName,
         locateSymbolPos(sym),
         TypeInfo(sym.tpe),
         isArrowType(sym.tpe),
@@ -475,7 +478,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo() = {
-      new SymbolInfo("NA", NoPosition, TypeInfo.nullInfo, false, None)
+      new SymbolInfo("NA", "NA", NoPosition, TypeInfo.nullInfo, false, None)
     }
 
   }
