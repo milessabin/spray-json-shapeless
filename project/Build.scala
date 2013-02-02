@@ -211,6 +211,11 @@ object EnsimeBuild extends Build {
 
     copyFile(root / "README.md", root / distDir / "README.md")
     copyFile(root / "LICENSE", root / distDir / "LICENSE")
+
+    val distCommon = "dist"
+    delete(file(distCommon))
+    log.info("Symlinking to ./" + distCommon + "....")
+    doSh("ln -s  " + distDir + " " + distCommon)!!(log)
   }
 
 
