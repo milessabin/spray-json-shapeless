@@ -2,7 +2,8 @@
 the ENhanced Scala Interaction Mode for Emacs
 
 # Links
-- [ Downloads ](https://github.com/aemoncannon/ensime/downloads)
+- [ Download releases ](https://www.dropbox.com/sh/ryd981hq08swyqr/V9o9rDvxkS/ENSIME%20Releases)
+- [ Older releases ](https://github.com/aemoncannon/ensime/downloads)
 - [ Manual ](http://aemoncannon.github.com/ensime/index.html)
 - [ Manual as PDF ](http://aemoncannon.github.com/ensime/manual.pdf)
 - [ Discussion Group ](http://groups.google.com/group/ensime?hl=en)
@@ -57,7 +58,7 @@ Although it's not required, ENSIME is designed to compliment an existing scala m
 
 __2) Install the ENSIME Server__
 
-Download the ENSIME distribution from the github [downloads page](http://github.com/aemoncannon/ensime/downloads). Unpack the ENSIME distribution into a directory of your choosing. 
+Download the ENSIME distribution from the [releases page](https://www.dropbox.com/sh/ryd981hq08swyqr/V9o9rDvxkS/ENSIME%20Releases). Unpack the ENSIME distribution into a directory of your choosing. 
 
 Add the following lines to your .emacs file:
 
