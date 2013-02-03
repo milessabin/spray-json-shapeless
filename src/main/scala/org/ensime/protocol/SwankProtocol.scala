@@ -45,7 +45,7 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.3"
+    val protocolVersion: String = "0.8.4"
   }
 
   /**
