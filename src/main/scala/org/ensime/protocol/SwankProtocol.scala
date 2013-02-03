@@ -52,7 +52,7 @@ trait SwankProtocol extends Protocol {
    * Protocol Version: 0.8.4
    *
    * Protocol Change Log:
-   *   0.8.5
+   *   0.8.4
    *     Add local-name to SymbolInfo
    *   0.8.3
    *     Add debug-to-string call.
