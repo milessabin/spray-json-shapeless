@@ -930,6 +930,11 @@ class DebugManager(project: Project, indexer: Actor,
 
     def debugValueAtLocationToString(location: DebugLocation): Option[String] = {
       valueAtLocation(location) match {
+        case Some(arr: ArrayReference) =>
+          val quantifier = if (arr.length == 1) "element" else "elements" // TODO: replace with something less naive
+          Some("<array of " + arr.length + " " + quantifier + ">")
+        case Some(str: StringReference) =>
+          Some(str.value)
         case Some(obj: ObjectReference) => {
           callMethod(obj, "toString", "()Ljava/lang/String;", new java.util.Vector()) match {
             case Some(v: StringReference) => {
