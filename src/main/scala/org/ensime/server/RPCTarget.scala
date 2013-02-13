@@ -148,8 +148,8 @@ trait RPCTarget { self: Project =>
   def rpcDebugValue(loc: DebugLocation, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueReq(loc), callId)
   }
-  def rpcDebugToString(loc: DebugLocation, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugToStringReq(loc), callId)
+  def rpcDebugToString(threadId: Long, loc: DebugLocation, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugToStringReq(threadId, loc), callId)
   }
   def rpcDebugSetValue(loc: DebugLocation, newValue:String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugSetValueReq(loc, newValue), callId)

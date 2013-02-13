@@ -60,7 +60,7 @@ case class DebugStepReq(threadId: Long)
 case class DebugStepOutReq(threadId: Long)
 case class DebugLocateNameReq(threadId: Long, name: String)
 case class DebugValueReq(loc: DebugLocation)
-case class DebugToStringReq(loc: DebugLocation)
+case class DebugToStringReq(threadId: Long, loc: DebugLocation)
 case class DebugSetValueReq(loc: DebugLocation, newValue: String)
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
 case class DebugActiveVMReq()
@@ -480,10 +480,10 @@ class DebugManager(project: Project, indexer: Actor,
                       }
                   }
                 }
-                case DebugToStringReq(location) => {
+                case DebugToStringReq(threadId, location) => {
                   handleRPCWithVM(callId) {
                     (vm) =>
-                      vm.debugValueAtLocationToString(location).map(toWF) match {
+                      vm.debugValueAtLocationToString(threadId, location).map(toWF) match {
                         case Some(payload) => project ! RPCResultEvent(payload, callId)
                         case None => project ! RPCResultEvent(toWF(false), callId)
                       }
@@ -909,16 +909,17 @@ class DebugManager(project: Project, indexer: Actor,
       valueAtLocation(location).map(makeDebugValue)
     }
 
-    private def callMethod(obj: ObjectReference, name: String, signature: String, args: java.util.List[Value]): Option[Value] = {
+    private def callMethod(thread: ThreadReference, obj: ObjectReference, name: String, signature: String, args: java.util.List[Value]): Option[Value] = {
       if (!vm.canBeModified) {
         println("Sorry, this debug VM is read-only.")
         None
       } else {
+        println("DebugManager.callMethod(obj = " + obj + " of type " + obj.referenceType + ", name = " + name + ", signature = " + signature + ", args = " + args)
+        // println("obj.referenceType.allMethods = " + obj.referenceType.allMethods.toList.map(m => "name = " + m.name + ", signature = " + m.signature))
         obj.referenceType.methodsByName("toString", "()Ljava/lang/String;").headOption match {
           case Some(m) => {
             println("Invoking: " + m)
-            Some(obj.invokeMethod(obj.owningThread(), m, new java.util.Vector(),
-              ObjectReference.INVOKE_SINGLE_THREADED))
+            Some(obj.invokeMethod(thread, m, args, ObjectReference.INVOKE_SINGLE_THREADED))
           }
           case other => {
             System.err.println("toString method not found: " + other)
@@ -928,7 +929,7 @@ class DebugManager(project: Project, indexer: Actor,
       }
     }
 
-    def debugValueAtLocationToString(location: DebugLocation): Option[String] = {
+    def debugValueAtLocationToString(threadId: Long, location: DebugLocation): Option[String] = {
       valueAtLocation(location) match {
         case Some(arr: ArrayReference) =>
           val quantifier = if (arr.length == 1) "element" else "elements" // TODO: replace with something less naive
@@ -936,12 +937,14 @@ class DebugManager(project: Project, indexer: Actor,
         case Some(str: StringReference) =>
           Some(str.value)
         case Some(obj: ObjectReference) => {
-          callMethod(obj, "toString", "()Ljava/lang/String;", new java.util.Vector()) match {
-            case Some(v: StringReference) => {
-              Some(v.value.toString())
+          threadById(threadId) flatMap { thread =>
+            callMethod(thread, obj, "toString", "()Ljava/lang/String;", new java.util.Vector()) match {
+              case Some(v: StringReference) => {
+                Some(v.value.toString())
+              }
+              case Some(null) => Some("null")
+              case _ => None
             }
-            case Some(null) => Some("null")
-            case _ => None
           }
         }
         case Some(value) => Some(valueSummary(value))
