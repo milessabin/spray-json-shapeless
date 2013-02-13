@@ -45,13 +45,14 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.4"
+    val protocolVersion: String = "0.8.5"
   }
 
   /**
-   * Protocol Version: 0.8.4
+   * Protocol Version: 0.8.5
    *
    * Protocol Change Log:
+   *   0.8.5
    *   0.8.4
    *     Add local-name to SymbolInfo
    *   0.8.3
