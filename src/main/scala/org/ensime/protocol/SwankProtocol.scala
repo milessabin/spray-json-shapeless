@@ -53,6 +53,7 @@ trait SwankProtocol extends Protocol {
    *
    * Protocol Change Log:
    *   0.8.5
+   *     DebugLocation of type 'field now gets field name from :field, not from :name
    *   0.8.4
    *     Add local-name to SymbolInfo
    *   0.8.3
@@ -2066,8 +2067,8 @@ trait SwankProtocol extends Protocol {
 	}
 	case SymbolAtom("field") => {
 	  for(StringAtom(id) <- m.get(key(":object-id"));
-	    StringAtom(name) <- m.get(key(":name"))) yield {
-	    DebugObjectField(id.toLong, name)
+	    StringAtom(field) <- m.get(key(":field"))) yield {
+	    DebugObjectField(id.toLong, field)
 	  }
 	}
 	case SymbolAtom("element") => {
