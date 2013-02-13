@@ -580,6 +580,9 @@ class DebugManager(project: Project, indexer: Actor,
           println("Attach to VM")
           val vm = connector.attach(env)
           println("VM: " + vm.description + ", " + vm)
+          // if the remote VM has been started in suspended state, we need to nudge it
+          // if the remote VM has been started in running state, this call seems to be a no-op
+          vm.resume()
           vm
         }
       }
