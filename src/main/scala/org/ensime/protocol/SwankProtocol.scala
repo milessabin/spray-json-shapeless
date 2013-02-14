@@ -45,13 +45,16 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.4"
+    val protocolVersion: String = "0.8.5"
   }
 
   /**
-   * Protocol Version: 0.8.4
+   * Protocol Version: 0.8.5
    *
    * Protocol Change Log:
+   *   0.8.5
+   *     DebugLocation of type 'field now gets field name from :field, not from :name
+   *     The debug-to-string call now requires thread id
    *   0.8.4
    *     Add local-name to SymbolInfo
    *   0.8.3
@@ -1880,19 +1883,20 @@ trait SwankProtocol extends Protocol {
        *   Returns the result of calling toString on the value at the
        *   given location
        * Arguments:
+       *   String: The thread-id in which to call toString.
        *   DebugLocation: The location from which to load the value.
        * Return:
        *   A DebugValue
        * Example call:
-       *   (:swank-rpc (swank:debug-to-string (:type element
-       *    :object-id "23" :index 2)) 42)
+       *   (:swank-rpc (swank:debug-to-string "thread-2"
+       *    (:type element :object-id "23" :index 2)) 42)
        * Example return:
        *   (:return (:ok "A little lamb") 42)
        */
       case "swank:debug-to-string" => {
         form match {
-          case SExpList(head :: DebugLocationExtractor(loc) :: body) => {
-            rpcTarget.rpcDebugToString(loc, callId)
+          case SExpList(head :: StringAtom(threadId) :: DebugLocationExtractor(loc) :: body) => {
+            rpcTarget.rpcDebugToString(threadId.toLong, loc, callId)
           }
           case _ => oops
         }
@@ -2065,8 +2069,8 @@ trait SwankProtocol extends Protocol {
 	}
 	case SymbolAtom("field") => {
 	  for(StringAtom(id) <- m.get(key(":object-id"));
-	    StringAtom(name) <- m.get(key(":name"))) yield {
-	    DebugObjectField(id.toLong, name)
+	    StringAtom(field) <- m.get(key(":field"))) yield {
+	    DebugObjectField(id.toLong, field)
 	  }
 	}
 	case SymbolAtom("element") => {
