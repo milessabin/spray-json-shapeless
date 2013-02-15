@@ -87,7 +87,7 @@ Note: Currently, it may be necessary to first delete your project/target directo
 You should now have a .ensime file in the root of your project. There's no need to edit this file manually as you can now specify ENSIME settings directly from your sbt build file. Check the [manual](http://aemoncannon.github.com/ensime/index.html#tth_sEc3.1.1) for details.
 
 
-__5) Start ENSIME__
+__4) Start ENSIME__
 
 From inside Emacs, execute M-x ensime
 
