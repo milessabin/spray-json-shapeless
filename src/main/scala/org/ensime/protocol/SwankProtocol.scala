@@ -45,13 +45,16 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.5"
+    val protocolVersion: String = "0.8.6"
   }
 
   /**
-   * Protocol Version: 0.8.5
+   * Protocol Version: 0.8.6
    *
    * Protocol Change Log:
+   *   0.8.6
+   *     Add support for ranges to type-at-point, inspect-type-at-point,
+   *       type-by-name-at-point
    *   0.8.5
    *     DebugLocation of type 'field now gets field name from :field, not from :name
    *     The debug-to-string call now requires thread id
@@ -1178,7 +1181,7 @@ trait SwankProtocol extends Protocol {
        * Arguments:
        *   String:The local or qualified name of the type.
        *   String:A source filename.
-       *   Int:A character offset in the file.
+       *   Int or (Int, Int):A character offset (or range) in the file.a
        * Return:
        *   A TypeInfo
        * Example call:
@@ -1205,7 +1208,7 @@ trait SwankProtocol extends Protocol {
        *   Lookup type of thing at given position.
        * Arguments:
        *   String:A source filename.
-       *   Int:A character offset in the file.
+       *   Int or (Int, Int):A character offset (or range) in the file.
        * Return:
        *   A TypeInfo
        * Example call:
@@ -1232,7 +1235,7 @@ trait SwankProtocol extends Protocol {
        *   Lookup detailed type of thing at given position.
        * Arguments:
        *   String:A source filename.
-       *   Int:A character offset in the file.
+       *   Int or (Int, Int):A character offset (or range) in the file.
        * Return:
        *   A TypeInspectInfo
        * Example call:
