@@ -31,6 +31,7 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 
 import org.ensime.model.PatchOp
+import org.ensime.model.OffsetRange
 import org.ensime.protocol._
 import org.ensime.util._
 import scala.actors._
@@ -63,14 +64,14 @@ case class MethodBytecodeReq(sourceName: String, line: Int)
 case class UsesOfSymAtPointReq(file: File, point: Int)
 case class PackageMemberCompletionReq(path: String, prefix: String)
 case class SymbolAtPointReq(file: File, point: Int)
-case class InspectTypeReq(file: File, point: Int)
+case class InspectTypeReq(file: File, range: OffsetRange)
 case class InspectTypeByIdReq(id: Int)
 case class InspectPackageByPathReq(path: String)
 case class TypeByIdReq(id: Int)
 case class TypeByNameReq(name: String)
-case class TypeByNameAtPointReq(name: String, file: File, point: Int)
+case class TypeByNameAtPointReq(name: String, file: File, range: OffsetRange)
 case class CallCompletionReq(id: Int)
-case class TypeAtPointReq(file: File, point: Int)
+case class TypeAtPointReq(file: File, range: OffsetRange)
 case class SymbolDesignationsReq(
   file: File, start: Int, end: Int, tpes: List[Symbol])
 

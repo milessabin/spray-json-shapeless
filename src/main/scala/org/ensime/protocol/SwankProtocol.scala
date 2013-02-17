@@ -1191,8 +1191,8 @@ trait SwankProtocol extends Protocol {
       case "swank:type-by-name-at-point" => {
         form match {
           case SExpList(head :: StringAtom(name) :: StringAtom(file) ::
-            IntAtom(point) :: body) => {
-            rpcTarget.rpcTypeByNameAtPoint(name, file, point, callId)
+            OffsetRangeExtractor(range) :: body) => {
+            rpcTarget.rpcTypeByNameAtPoint(name, file, range, callId)
           }
           case _ => oops
         }
@@ -1217,8 +1217,9 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:type-at-point" => {
         form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
-            rpcTarget.rpcTypeAtPoint(file, point, callId)
+          case SExpList(head :: StringAtom(file) ::
+              OffsetRangeExtractor(range) :: body) => {
+            rpcTarget.rpcTypeAtPoint(file, range, callId)
           }
           case _ => oops
         }
@@ -1244,8 +1245,9 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:inspect-type-at-point" => {
         form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: body) => {
-            rpcTarget.rpcInspectTypeAtPoint(file, point, callId)
+          case SExpList(head :: StringAtom(file) ::
+              OffsetRangeExtractor(range) :: body) => {
+            rpcTarget.rpcInspectTypeAtPoint(file, range, callId)
           }
           case _ => oops
         }
@@ -2057,6 +2059,14 @@ trait SwankProtocol extends Protocol {
   }
 
   import SExpConversion._
+
+  object OffsetRangeExtractor {
+    def unapply(sexp: SExp): Option[OffsetRange] = sexp match {
+      case IntAtom(a) => Some(OffsetRange(a, a))
+      case SExpList(IntAtom(a)::IntAtom(b)::Nil) => Some(OffsetRange(a, b))
+      case _ => None
+    }
+  }
 
   object DebugLocationExtractor {
     def unapply(sexp: SExpList): Option[DebugLocation] = {

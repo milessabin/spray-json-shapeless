@@ -191,8 +191,8 @@ trait RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(PackageMemberCompletionReq(path, prefix), callId)
   }
 
-  def rpcInspectTypeAtPoint(f: String, point: Int, callId: Int) {
-    getAnalyzer ! RPCRequestEvent(InspectTypeReq(new File(f), point), callId)
+  def rpcInspectTypeAtPoint(f: String, range: OffsetRange, callId: Int) {
+    getAnalyzer ! RPCRequestEvent(InspectTypeReq(new File(f), range), callId)
   }
 
   def rpcInspectTypeById(id: Int, callId: Int) {
@@ -211,8 +211,8 @@ trait RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(TypeByNameReq(name), callId)
   }
 
-  def rpcTypeByNameAtPoint(name: String, f: String, point: Int, callId: Int) {
-    getAnalyzer ! RPCRequestEvent(TypeByNameAtPointReq(name, new File(f), point), callId)
+  def rpcTypeByNameAtPoint(name: String, f: String, range: OffsetRange, callId: Int) {
+    getAnalyzer ! RPCRequestEvent(TypeByNameAtPointReq(name, new File(f), range), callId)
   }
 
   def rpcCallCompletion(id: Int, callId: Int) {
@@ -231,8 +231,8 @@ trait RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(UsesOfSymAtPointReq(new File(f), point), callId)
   }
 
-  def rpcTypeAtPoint(f: String, point: Int, callId: Int) {
-    getAnalyzer ! RPCRequestEvent(TypeAtPointReq(new File(f), point), callId)
+  def rpcTypeAtPoint(f: String, range: OffsetRange, callId: Int) {
+    getAnalyzer ! RPCRequestEvent(TypeAtPointReq(new File(f), range), callId)
   }
 
   def rpcInspectPackageByPath(path: String, callId: Int) {

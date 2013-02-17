@@ -30,6 +30,7 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.model.SymbolDesignations
 import org.ensime.model.PatchOp
+import org.ensime.model.OffsetRange
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
@@ -222,8 +223,8 @@ class Analyzer(
                     project ! RPCResultEvent(toWF(members.map(toWF)), callId)
                   }
 
-                  case InspectTypeReq(file: File, point: Int) => {
-                    val p = pos(file, point)
+                  case InspectTypeReq(file: File, range: OffsetRange) => {
+                    val p = pos(file, range)
                     val result = scalaCompiler.askInspectTypeAt(p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -256,8 +257,8 @@ class Analyzer(
                     project ! RPCResultEvent(result, callId)
                   }
 
-                  case TypeAtPointReq(file: File, point: Int) => {
-                    val p = pos(file, point)
+                  case TypeAtPointReq(file: File, range: OffsetRange) => {
+                    val p = pos(file, range)
                     val result = scalaCompiler.askTypeInfoAt(p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -281,8 +282,9 @@ class Analyzer(
                     project ! RPCResultEvent(result, callId)
                   }
 
-                  case TypeByNameAtPointReq(name: String, file: File, point: Int) => {
-                    val p = pos(file, point)
+                  case TypeByNameAtPointReq(name: String, file: File,
+                    range: OffsetRange) => {
+                    val p = pos(file, range)
                     val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
                       case Some(info) => toWF(info)
                       case None => toWF(null)
@@ -340,6 +342,12 @@ class Analyzer(
         }
       }
     }
+  }
+
+  def pos(file: File, range: OffsetRange) = {
+    val f = scalaCompiler.createSourceFile(file.getCanonicalPath())
+    if (range.from == range.to) new OffsetPosition(f, range.from)
+    else new RangePosition(f, range.from, range.from, range.to)
   }
 
   def pos(file: File, offset: Int) = {
