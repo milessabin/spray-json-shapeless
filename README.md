@@ -22,7 +22,7 @@ the ENhanced Scala Interaction Mode for Emacs
 - Automated Refactorings (rename, organize imports, extract method)
 - Source Formatting
 - AST-based selection
-- Supports 11,12
+- Supports sbt 11,12
 - Embedded sbt shell
 - REPL
 - Debug support
