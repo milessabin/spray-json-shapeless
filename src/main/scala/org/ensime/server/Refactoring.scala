@@ -26,14 +26,14 @@
  */
 
 package org.ensime.server
+
 import java.io.File
 import org.ensime.util._
-import scala.collection.{ immutable, mutable }
+import scala.collection.{immutable, mutable}
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
-import scala.tools.refactoring.common.CompilerAccess
-import scala.tools.refactoring.common.{ Change, Selections }
+import scala.tools.refactoring.common.{Change, CompilerAccess, Selections}
 import scala.tools.refactoring.implementations._
 
 case class RefactorFailure(val procedureId: Int, val message: String)
