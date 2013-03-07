@@ -239,7 +239,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     }.result
 
   protected def doAddImport(procId: Int, tpe: scala.Symbol, qualName: String,
-    file: CanonFile, start: Int, end: Int) = {
+    file: CanonFile) = {
     val refactoring = new AddImportStatement {
       val global = RefactoringImpl.this
     }
@@ -319,12 +319,11 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
           }
         }
         case S.AddImport => {
-          (params.get(S.QualifiedName), params.get(S.File),
-            params.get(S.Start), params.get(S.End)) match {
-              case (Some(n: String), Some(f: String), Some(s: Int), Some(e: Int)) => {
+          (params.get(S.QualifiedName), params.get(S.File)) match {
+              case (Some(n: String), Some(f: String)) => {
                 val file = CanonFile(f)
                 reloadAndType(file)
-                doAddImport(procId, tpe, n, file, s, e)
+                doAddImport(procId, tpe, n, file)
               }
               case _ => badArgs
             }
