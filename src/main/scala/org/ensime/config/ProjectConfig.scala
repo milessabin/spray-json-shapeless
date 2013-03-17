@@ -759,30 +759,30 @@ object ProjectConfig {
     val bootClassPath = detectBootClassPath
     bootClassPath match {
       case Some(cpText) => {
-    	expandRecursively(
-    	  new File("."), 
-    	  cpText.split(':').map{ new File(_) },
-    	  isValidJar)
+        expandRecursively(
+          new File("."),
+          cpText.split(File.pathSeparatorChar).map{ new File(_) },
+          isValidJar)
       }
-     case _ => {
-	val javaHome = getJavaHome();
-	javaHome match {
-	  case Some(javaHome) => {
+      case _ => {
+        val javaHome = getJavaHome();
+        javaHome match {
+          case Some(javaHome) => {
             if (System.getProperty("os.name").startsWith("Mac")) {
               expandRecursively(
-		new File("."),
-		List(new File(javaHome, "../Classes")),
-		isValidJar)
+                new File("."),
+                List(new File(javaHome, "../Classes")),
+                isValidJar)
             } else {
               expandRecursively(
-		new File("."),
-		List(new File(javaHome, "lib")),
-		isValidJar)
+                new File("."),
+                List(new File(javaHome, "lib")),
+                isValidJar)
             }
-	  }
-	  case None => Set()
-	}
-     }
+          }
+          case None => Set()
+        }
+      }
     }
   }
 }
