@@ -1,6 +1,12 @@
 # ENSIME
 the ENhanced Scala Interaction Mode for Emacs
 
+A quick note on status: 
+Events in my life have conspired to give me less free time to work on ENSIME. However, I still believe
+in this project, and will try to respond to pull requests / bug fixes in a timely manner. I do hope to
+move it back to the front burner some day 
+Best, Aemon
+
 # Links
 - [ Download releases ](https://www.dropbox.com/sh/ryd981hq08swyqr/V9o9rDvxkS/ENSIME%20Releases)
 - [ Older releases ](https://github.com/aemoncannon/ensime/downloads)
