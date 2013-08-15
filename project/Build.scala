@@ -53,7 +53,7 @@ object EnsimeBuild extends Build {
   val root = Path(".")
 
   val TwoNineVersion = "2.9.2"
-  val TwoTenVersion = "2.10.0"
+  val TwoTenVersion = "2.10.2"
   val supportedScalaVersions = Seq(TwoNineVersion, TwoTenVersion)
   def unsupportedScalaVersion(scalaVersion: String): Nothing =
     sys.error(
@@ -66,13 +66,14 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++
       Seq(
-        version := "0.9.8.9",
+        version := "0.9.8.10",
         organization := "org.ensime",
         scalaVersion := TwoTenVersion,
         crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
         resolvers <++= (scalaVersion) { scalaVersion =>
           Seq("Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
               "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
+              "Sonatype OSS Repository 2" at "https://oss.sonatype.org/content/groups/scala-tools/",
               "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
               "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
               "repo.codahale.com" at "http://repo.codahale.com")
@@ -88,6 +89,7 @@ object EnsimeBuild extends Build {
           (if (scalaVersion == TwoTenVersion)
             Seq(
                 "org.scalatest" % "scalatest_2.10.0" % "1.8" % "test",
+                "org.scalariform" % "scalariform_2.10" % "0.1.4" % "compile;runtime;test",
                 "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test",
                 "org.scala-lang" % "scala-reflect" % scalaVersion % "compile;runtime;test",
                 "org.scala-lang" % "scala-actors" % scalaVersion % "compile;runtime;test")
