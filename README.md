@@ -69,7 +69,7 @@ Download the ENSIME distribution from the [releases page](https://www.dropbox.co
 Add the following lines to your .emacs file:
 
     ;; load the ensime lisp code...
-    (add-to-list 'load-path "ENSIME_ROOT/elisp/")
+    (add-to-list 'load-path "ENSIME_ROOT/src/main/elisp/")
     (require 'ensime)
 
     ;; This step causes the ensime-mode to be started whenever
