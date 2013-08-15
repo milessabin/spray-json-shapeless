@@ -33,6 +33,7 @@ import org.ensime.util.RichFile._
 import org.ensime.util.SExp._
 import scala.actors.Actor._
 import scala.collection.mutable
+import scala.collection.immutable.StringOps
 import scala.util.matching.Regex
 import scalariform.formatter.preferences._
 
@@ -748,23 +749,40 @@ object ProjectConfig {
     else Some(new File(javaHome))
   }
 
+  def detectBootClassPath() = {
+    Stream(System.getProperty("sun.boot.class.path"),
+      System.getProperty("vm.boot.class.path"),
+      System.getProperty("org.apache.harmony.boot.class.path")).find( _ != null )
+  }
+
   def javaBootJars: Set[CanonFile] = {
-    val javaHome = getJavaHome();
-    javaHome match {
-      case Some(javaHome) => {
-        if (System.getProperty("os.name").startsWith("Mac")) {
-          expandRecursively(
-            new File("."),
-            List(new File(javaHome, "../Classes")),
-            isValidJar)
-        } else {
-          expandRecursively(
-            new File("."),
-            List(new File(javaHome, "lib")),
-            isValidJar)
+    val bootClassPath = detectBootClassPath
+    bootClassPath match {
+      case Some(cpText) => {
+        expandRecursively(
+          new File("."),
+          cpText.split(File.pathSeparatorChar).map{ new File(_) },
+          isValidJar)
+      }
+      case _ => {
+        val javaHome = getJavaHome();
+        javaHome match {
+          case Some(javaHome) => {
+            if (System.getProperty("os.name").startsWith("Mac")) {
+              expandRecursively(
+                new File("."),
+                List(new File(javaHome, "../Classes")),
+                isValidJar)
+            } else {
+              expandRecursively(
+                new File("."),
+                List(new File(javaHome, "lib")),
+                isValidJar)
+            }
+          }
+          case None => Set()
         }
       }
-      case None => Set()
     }
   }
 }
