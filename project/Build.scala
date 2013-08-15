@@ -136,8 +136,7 @@ object EnsimeBuild extends Build {
     createDirectories(List(
       file(distDir),
       file(distDir + "/bin"),
-      file(distDir + "/lib"),
-      file(distDir + "/elisp")))
+      file(distDir + "/lib")))
 
     // Scalac components
     val scalaComponents = if(scalaBuildVersion == TwoTenVersion) {
@@ -152,7 +151,7 @@ object EnsimeBuild extends Build {
     // Copy the emacs lisp to dist
     val elisp_base = root / "src" / "main" / "elisp"
     val elisp = ( elisp_base ** "*.el" ) +++ ( elisp_base ** "Makefile" )
-    copy(elisp x flat(root / distDir / "elisp"))
+    copy(elisp x flat(root / distDir ))
 
     // Copy the runtime jars
     val deps = (depCP ++ exportedCP).map(_.data)
