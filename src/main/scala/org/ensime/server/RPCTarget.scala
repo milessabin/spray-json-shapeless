@@ -166,9 +166,8 @@ trait RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(PatchSourceReq(file, edits), callId)
   }
 
-  def rpcTypecheckFiles(fs: List[String], callId: Int) {
-    val files = fs.map(new File(_))
-    getAnalyzer ! RPCRequestEvent(ReloadFilesReq(files), callId)
+  def rpcTypecheckFiles(fs: List[SourceFileInfo], callId: Int) {
+    getAnalyzer ! RPCRequestEvent(ReloadFilesReq(fs), callId)
   }
 
   def rpcRemoveFile(f: String, callId: Int) {

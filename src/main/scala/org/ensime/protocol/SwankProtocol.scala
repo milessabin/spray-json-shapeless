@@ -822,6 +822,7 @@ trait SwankProtocol extends Protocol {
        *   Request immediate load and check the given source file.
        * Arguments:
        *   String:A filename, absolute or relative to the project.
+       *   String(optional): if set, it is substituted for the file's contents
        * Return:
        *   None
        * Example call:
@@ -831,8 +832,11 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:typecheck-file" => {
         form match {
+          case SExpList(head :: StringAtom(file) :: StringAtom(contents) :: body) => {
+            rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(new File(file), contents)), callId)
+          }
           case SExpList(head :: StringAtom(file) :: body) => {
-            rpcTarget.rpcTypecheckFiles(List(file), callId)
+            rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(file)), callId)
           }
           case _ => oops
         }
@@ -855,7 +859,7 @@ trait SwankProtocol extends Protocol {
       case "swank:typecheck-files" => {
         form match {
           case SExpList(head :: SExpList(strings) :: body) => {
-	    val filenames = strings.collect{case StringAtom(s) => s}.toList
+	    val filenames = strings.collect{case StringAtom(s) => SourceFileInfo(s)}.toList
             rpcTarget.rpcTypecheckFiles(filenames, callId)
           }
           case _ => oops
