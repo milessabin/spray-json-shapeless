@@ -17,7 +17,7 @@ Best, Aemon
 
 ## Features
 
-- Highlight errors and warnings in your code buffers.
+- Highlight errors and warnings in your code buffers, as you type.
 - Inspect the type of any expression.
 - Browse packages
 - Completion for variables, methods, constructors, etc.

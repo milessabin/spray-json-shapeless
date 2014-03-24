@@ -27,6 +27,10 @@ class ProjectConfigSpec extends Spec with ShouldMatchers{
       assert(parse("(:name \"dude\")").name.get == "dude")
     }
 
+    it("should parse a name with backslashes and quotes") {
+      assert(parse("""(:name "d\\u\"d\e")""").name.get == "d\\u\"d\\e")
+    }
+
     it("should parse name's synonym") {
       assert(parse("(:project-name \"dude\")").name.get == "dude")
     }
