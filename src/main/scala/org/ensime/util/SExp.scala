@@ -31,8 +31,8 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.input
 
 abstract class SExp extends WireFormat {
-  def toReadableString: String = toString
-  override def toWireString: String = toReadableString
+  def toReadableString(debug: Boolean): String = toString
+  override def toWireString: String = toReadableString(false)
   def toScala: Any = toString
 }
 
@@ -42,8 +42,8 @@ case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
 
   override def toString = "(" + items.mkString(" ") + ")"
 
-  override def toReadableString = {
-    "(" + items.map { _.toReadableString }.mkString(" ") + ")"
+  override def toReadableString(debug: Boolean) = {
+    "(" + items.map { _.toReadableString(debug) }.mkString(" ") + ")"
   }
 
   def toKeywordMap(): Map[KeywordAtom, SExp] = {
@@ -97,8 +97,15 @@ case class TruthAtom() extends BooleanAtom {
 }
 case class StringAtom(value: String) extends SExp {
   override def toString = value
-  override def toReadableString = {
-    val printable = value.replace("\\", "\\\\").replace("\"", "\\\"");
+  override def toReadableString(debug: Boolean) = {
+    if (debug && value.length() > 500) {
+      escape_string(value.substring(0, 500) + "...")
+    } else {
+      escape_string(value)
+    }
+  }
+  def escape_string(s: String) = {
+    val printable = s.replace("\\", "\\\\").replace("\"", "\\\"");
     "\"" + printable + "\""
   }
 }

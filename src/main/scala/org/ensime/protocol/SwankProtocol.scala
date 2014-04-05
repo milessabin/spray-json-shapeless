@@ -161,7 +161,7 @@ trait SwankProtocol extends Protocol {
         handleEmacsRex(form, callId)
       }
       case _ => {
-        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString))
+        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString(false)))
       }
     }
   }
@@ -547,7 +547,7 @@ trait SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
-    println("\nHandling RPC: " + form.toReadableString)
+    println("\nHandling RPC: " + form.toReadableString(true))
 
     def oops = sendRPCError(ErrMalformedRPC,
       Some("Malformed " + callType + " call: " + form), callId)
