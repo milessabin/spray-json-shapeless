@@ -198,8 +198,8 @@ class JavaCompiler(
     val path = f.file.getCanonicalPath()
     if (path.endsWith(".java")) {
       val contents = f.contents match {
-        case null => null
-        case _    => f.contents.toCharArray()
+        case None    => null
+        case Some(s) => s.toCharArray()
       }
       javaUnitForFile(path) = new CompilationUnit(contents, path, defaultEncoding)
     }

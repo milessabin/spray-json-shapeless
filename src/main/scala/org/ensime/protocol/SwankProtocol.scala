@@ -833,7 +833,7 @@ trait SwankProtocol extends Protocol {
       case "swank:typecheck-file" => {
         form match {
           case SExpList(head :: StringAtom(file) :: StringAtom(contents) :: body) => {
-            rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(new File(file), contents)), callId)
+            rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(new File(file), Some(contents))), callId)
           }
           case SExpList(head :: StringAtom(file) :: body) => {
             rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(file)), callId)

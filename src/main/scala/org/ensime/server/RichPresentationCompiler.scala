@@ -191,8 +191,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 
   def createSourceFile(path: String) = getSourceFile(path)
   def createSourceFile(file: SourceFileInfo) = file match {
-    case SourceFileInfo(f: File, null) => getSourceFile(f.getCanonicalPath())
-    case SourceFileInfo(f: File, contents: String) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath()), contents)
+    case SourceFileInfo(f: File, None) => getSourceFile(f.getCanonicalPath())
+    case SourceFileInfo(f: File, Some(contents)) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath()), contents)
   }
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
     _.file.path == path)
