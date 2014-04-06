@@ -185,6 +185,15 @@ CONFIG_DOCUMENTATION
 \subsection{Startup}
 To start ensime type \emph{M-x ensime}. You only need to do this once per project session. Follow the minibuffer instructions to specify the location of your .ensime project file. Bear in mind that the server may take several seconds to finish loading and analyzing your project's sources. To watch the progress of the ENSIME startup, switch to the \emph{*inferior-ensime-server*} buffer.
 
+\subsection{Error Highlighting}
+Ensime will highlight errors and warnings in source files through the use of the Scala presentation compiler, a lightweight version of the Scala compiler. This is triggered in several ways:
+\begin{itemize}
+\item when you save a file
+\item when you type \emph{C-c C-v c} or \emph{C-c C-v a}
+\item after a short pause in typing. The frequency of these checks is controlled through the variables ensime-typecheck-idle-interval and ensime-typecheck-interval. This feature can be disabled by setting ensime-typecheck-when-idle to nil.
+\end{itemize}
+
+
 \subsection{Symbol and Member Completion}
 ENSIME completion is initiated by pressing the \emph{TAB} key. To complete a symbol, type the first couple characters, then press \emph{TAB}. Currently this works for local variables, method parameters, unqualified method names, and type names. To complete a type member, type '.' or \emph{SPACE} followed by \emph{TAB}.\\
 
