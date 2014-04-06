@@ -161,7 +161,7 @@ class Analyzer(
 		    val (javas, scalas) = files.filter(_.file.exists).partition(
 		      _.file.getName.endsWith(".java"))
 		    if (!javas.isEmpty) {
-		      javaCompiler.compileFiles(javas.map{_.file})
+		      javaCompiler.compileFiles(javas)
 		    }
 		    if (!scalas.isEmpty) {
 		      scalaCompiler.askReloadFiles(scalas.map(createSourceFile))
