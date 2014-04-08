@@ -39,6 +39,12 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 
 case class SourcePosition(file: CanonFile, line: Int)
 
+case class SourceFileInfo(file: File, contents: Option[String]) { }
+object SourceFileInfo {
+  def apply(file: String) = new SourceFileInfo(new File(file), None)
+  def apply(file: File) = new SourceFileInfo(file, None)
+}
+
 class PackageInfo(
   override val name: String,
   val fullname: String,

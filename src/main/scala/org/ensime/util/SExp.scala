@@ -1,7 +1,7 @@
 /**
 *  Copyright (c) 2010, Aemon Cannon
 *  All rights reserved.
-*  
+*
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions are met:
 *      * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
 *      * Neither the name of ENSIME nor the
 *        names of its contributors may be used to endorse or promote products
 *        derived from this software without specific prior written permission.
-*  
+*
 *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,8 +31,8 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.input
 
 abstract class SExp extends WireFormat {
-  def toReadableString: String = toString
-  override def toWireString: String = toReadableString
+  def toReadableString(debug: Boolean): String = toString
+  override def toWireString: String = toReadableString(false)
   def toScala: Any = toString
 }
 
@@ -42,8 +42,8 @@ case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
 
   override def toString = "(" + items.mkString(" ") + ")"
 
-  override def toReadableString = {
-    "(" + items.map { _.toReadableString }.mkString(" ") + ")"
+  override def toReadableString(debug: Boolean) = {
+    "(" + items.map { _.toReadableString(debug) }.mkString(" ") + ")"
   }
 
   def toKeywordMap(): Map[KeywordAtom, SExp] = {
@@ -97,8 +97,15 @@ case class TruthAtom() extends BooleanAtom {
 }
 case class StringAtom(value: String) extends SExp {
   override def toString = value
-  override def toReadableString = {
-    val printable = value.replace("\\", "\\\\").replace("\"", "\\\"");
+  override def toReadableString(debug: Boolean) = {
+    if (debug && value.length() > 500) {
+      escape_string(value.substring(0, 500) + "...")
+    } else {
+      escape_string(value)
+    }
+  }
+  def escape_string(s: String) = {
+    val printable = s.replace("\\", "\\\\").replace("\"", "\\\"");
     "\"" + printable + "\""
   }
 }
@@ -113,14 +120,38 @@ case class KeywordAtom(value: String) extends SExp {
   override def toString = value
 }
 
+object StringParser extends RegexParsers {
+  import scala.util.matching.Regex
+  override def skipWhitespace = false;
+
+  def string = "\"" ~ rep(string_char) ~ "\"" ^^ {
+    case "\"" ~ l ~ "\"" => l.mkString
+  }
+  lazy val string_char = string_escaped_char | string_lone_backslash | string_normal_chars
+  lazy val string_escaped_char = """\\["\\]""".r ^^ { _.charAt(1) }
+  lazy val string_lone_backslash = "\\"
+  lazy val string_normal_chars = """[^"\\]+""".r ^^ { _.mkString }
+}
+
 object SExp extends RegexParsers {
 
   import scala.util.matching.Regex
 
-  lazy val string = regexGroups("""\"((?:[^\"\\]|\\.)*)\"""".r) ^^ { m => 
-    StringAtom(m.group(1).replace("\\\\", "\\")) 
+  // Parse strings using an auxiliary parser. This is because
+  // spaces inside strings shouldn't be skipped.
+  lazy val string = new Parser[StringAtom] {
+    def apply(in: Input) = {
+      val source = in.source
+      val offset = in.offset
+      val start = handleWhiteSpace(source, offset)
+      StringParser.string(in.drop(start - offset)) match {
+        case StringParser.Success(value, next) => Success(StringAtom(value), next)
+        case StringParser.Failure(errMsg, next) => Failure(errMsg, next)
+        case StringParser.Error(errMsg, next) => Error(errMsg, next)
+      }
+    }
   }
-  lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ { s => 
+  lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ { s =>
     if(s == "nil") NilAtom()
     else if(s == "t") TruthAtom()
     else SymbolAtom(s)
@@ -132,6 +163,7 @@ object SExp extends RegexParsers {
 
   def read(r: input.Reader[Char]): SExp = {
     val result: ParseResult[SExp] = expr(r)
+
     result match {
       case Success(value, next) => value
       case Failure(errMsg, next) => {
@@ -147,22 +179,6 @@ object SExp extends RegexParsers {
 
   def read(s:String):SExp = {
     SExp.read(new input.CharSequenceReader(s))
-  }
-
-  /** A parser that matches a regex string and returns the match groups */
-  def regexGroups(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
-    def apply(in: Input) = {
-      val source = in.source
-      val offset = in.offset
-      val start = handleWhiteSpace(source, offset)
-      (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
-        case Some(matched) => Success(matched, in.drop(start + matched.end - offset))
-        case None =>
-        Failure("string matching regex `" + r +
-          "' expected but `" +
-          in.first + "' found", in.drop(start - offset))
-      }
-    }
   }
 
   def apply(items: SExp*): SExpList = {
@@ -231,7 +247,7 @@ object SExp extends RegexParsers {
     def toSExp = o
   }
 
-  implicit def listToSExpable(o: Iterable[SExpable]): SExpable = 
+  implicit def listToSExpable(o: Iterable[SExpable]): SExpable =
   new Iterable[SExpable] with SExpable {
     override def iterator = o.iterator
     override def toSExp = SExp(o.map { _.toSExp })
@@ -242,4 +258,3 @@ object SExp extends RegexParsers {
 abstract trait SExpable {
   implicit def toSExp(): SExp
 }
-

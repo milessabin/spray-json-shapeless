@@ -194,19 +194,22 @@ class JavaCompiler(
     }
   }
 
-  def addFile(f: File) = {
-    val path = f.getCanonicalPath()
-    if (path.endsWith(".java") &&
-      !javaUnitForFile.contains(path)) {
-      javaUnitForFile(path) = new CompilationUnit(null, path, defaultEncoding)
+  def addFile(f: SourceFileInfo) = {
+    val path = f.file.getCanonicalPath()
+    if (path.endsWith(".java")) {
+      val contents = f.contents match {
+        case None    => null
+        case Some(s) => s.toCharArray()
+      }
+      javaUnitForFile(path) = new CompilationUnit(contents, path, defaultEncoding)
     }
   }
 
-  def compileFiles(files: List[File]) = {
+  def compileFiles(files: List[SourceFileInfo]) = {
     reportHandler.clearAllJavaNotes()
     files.foreach(addFile)
     try {
-      val units = files.flatMap(f => javaUnitForFile.get(f.getCanonicalPath))
+      val units = files.flatMap(f => javaUnitForFile.get(f.file.getCanonicalPath))
       compiler.compile(units.toArray)
     } catch {
       case e: Exception => {

@@ -45,13 +45,15 @@ trait SwankProtocol extends Protocol {
   class ConnectionInfo {
     val pid = None
     val serverName: String = "ENSIME-ReferenceServer"
-    val protocolVersion: String = "0.8.6"
+    val protocolVersion: String = "0.8.7"
   }
 
   /**
-   * Protocol Version: 0.8.6
+   * Protocol Version: 0.8.7
    *
    * Protocol Change Log:
+   *   0.8.7
+   *     Add optional file contents parameter to typecheck-file
    *   0.8.6
    *     Add support for ranges to type-at-point, inspect-type-at-point,
    *       type-by-name-at-point
@@ -161,7 +163,7 @@ trait SwankProtocol extends Protocol {
         handleEmacsRex(form, callId)
       }
       case _ => {
-        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString))
+        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString(false)))
       }
     }
   }
@@ -547,7 +549,7 @@ trait SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
-    println("\nHandling RPC: " + form.toReadableString)
+    println("\nHandling RPC: " + form.toReadableString(true))
 
     def oops = sendRPCError(ErrMalformedRPC,
       Some("Malformed " + callType + " call: " + form), callId)
@@ -822,6 +824,7 @@ trait SwankProtocol extends Protocol {
        *   Request immediate load and check the given source file.
        * Arguments:
        *   String:A filename, absolute or relative to the project.
+       *   String(optional): if set, it is substituted for the file's contents
        * Return:
        *   None
        * Example call:
@@ -831,8 +834,11 @@ trait SwankProtocol extends Protocol {
        */
       case "swank:typecheck-file" => {
         form match {
+          case SExpList(head :: StringAtom(file) :: StringAtom(contents) :: body) => {
+            rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(new File(file), Some(contents))), callId)
+          }
           case SExpList(head :: StringAtom(file) :: body) => {
-            rpcTarget.rpcTypecheckFiles(List(file), callId)
+            rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(file)), callId)
           }
           case _ => oops
         }
@@ -855,7 +861,7 @@ trait SwankProtocol extends Protocol {
       case "swank:typecheck-files" => {
         form match {
           case SExpList(head :: SExpList(strings) :: body) => {
-	    val filenames = strings.collect{case StringAtom(s) => s}.toList
+	    val filenames = strings.collect{case StringAtom(s) => SourceFileInfo(s)}.toList
             rpcTarget.rpcTypecheckFiles(filenames, callId)
           }
           case _ => oops

@@ -28,6 +28,7 @@
 package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
+import org.ensime.model.SourceFileInfo
 import org.ensime.model.SymbolDesignations
 import org.ensime.model.PatchOp
 import org.ensime.model.OffsetRange
@@ -156,9 +157,9 @@ class Analyzer(
                     project ! RPCResultEvent(toWF(true), callId)
                   }
 
-                  case ReloadFilesReq(files: List[File]) => {
-		    val (javas, scalas) = files.filter(_.exists).partition(
-		      _.getName.endsWith(".java"))
+                  case ReloadFilesReq(files: List[SourceFileInfo]) => {
+		    val (javas, scalas) = files.filter(_.file.exists).partition(
+		      _.file.getName.endsWith(".java"))
 		    if (!javas.isEmpty) {
 		      javaCompiler.compileFiles(javas)
 		    }
@@ -362,6 +363,10 @@ class Analyzer(
 
   def createSourceFile(file: File) = {
     scalaCompiler.createSourceFile(file.getCanonicalPath())
+  }
+
+  def createSourceFile(file: SourceFileInfo) = {
+    scalaCompiler.createSourceFile(file)
   }
 
   override def finalize() {

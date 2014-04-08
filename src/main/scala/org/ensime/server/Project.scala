@@ -31,6 +31,7 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 
 import org.ensime.model.PatchOp
+import org.ensime.model.SourceFileInfo
 import org.ensime.model.OffsetRange
 import org.ensime.protocol._
 import org.ensime.util._
@@ -51,7 +52,7 @@ case class AnalyzerReadyEvent()
 case class AnalyzerShutdownEvent()
 case class IndexerReadyEvent()
 
-case class ReloadFilesReq(files: List[File])
+case class ReloadFilesReq(files: List[SourceFileInfo])
 case class ReloadAllReq()
 case class PatchSourceReq(file: File, edits: List[PatchOp])
 case class RemoveFileReq(file: File)
@@ -164,7 +165,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
         FileUtils.writeChanges(u.changes) match {
           case Right(touched) => {
 	    for(ea <- analyzer) {
-	      ea ! ReloadFilesReq(touched.toList)
+	      ea ! ReloadFilesReq(touched.toList.map{SourceFileInfo(_)})
 	    }
 	    Right(UndoResult(undoId, touched))
 	  }
