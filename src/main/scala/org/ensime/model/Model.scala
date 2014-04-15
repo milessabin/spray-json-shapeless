@@ -28,6 +28,7 @@
 package org.ensime.model
 import java.io.File
 import scala.collection.mutable.{ HashMap, ArrayBuffer }
+import scala.reflect.io.AbstractFile
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.util.{ NoPosition, Position }
 import scala.tools.nsc.io.{ AbstractFile }
@@ -266,10 +267,10 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       val name = if (sym.owner.isPackageObjectClass) "package$.class"
       else top.name + (if (top.isModuleClass) "$" else "")
       indexer !? (1000, SourceFileCandidatesReq(pack, name)) match {
-        case Some(files: Set[File]) => {
+        case Some(files: Set[AbstractFile]) => {
           files.flatMap { f =>
 	    println("Linking:" + (sym, f))
-            askLinkPos(sym, f.getAbsolutePath)
+            askLinkPos(sym, f)
           }.filter(_.isDefined).headOption.getOrElse(NoPosition)
         }
         case _ => NoPosition
