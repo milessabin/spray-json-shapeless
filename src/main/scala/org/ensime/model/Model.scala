@@ -28,7 +28,6 @@
 package org.ensime.model
 import java.io.File
 import scala.collection.mutable.{ HashMap, ArrayBuffer }
-import scala.reflect.io.AbstractFile
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
 import scala.tools.nsc.util.{ NoPosition, Position }
 import scala.tools.nsc.io.{ AbstractFile }

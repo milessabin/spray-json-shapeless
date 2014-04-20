@@ -8,11 +8,8 @@ import org.ensime.indexer.ClassFileIndex
 import org.ensime.util.SExp
 import org.ensime.util.FileUtils._
 import org.ensime.util.CanonFile
-import scala.reflect.io.AbstractFile
-import scala.reflect.io.PlainFile
-import scala.reflect.io.ZipArchive
 import scala.tools.nsc.{ Global, Settings }
-import scala.tools.nsc.io.{ Jar, File, Directory, Path }
+import scala.tools.nsc.io.{ Jar, File, Directory, Path, AbstractFile, PlainFile, ZipArchive }
 import scala.tools.nsc.reporters.{ConsoleReporter}
 
 class ClassFileIndexSpec extends Spec with ShouldMatchers{

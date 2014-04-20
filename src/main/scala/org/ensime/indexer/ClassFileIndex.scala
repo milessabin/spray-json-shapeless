@@ -42,7 +42,7 @@ import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.MultiMap
-import scala.reflect.io.AbstractFile
+import scala.tools.nsc.io.AbstractFile
 
 case class Op(
   op: String,

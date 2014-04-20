@@ -35,7 +35,7 @@ import java.nio.charset.Charset
 import java.security.MessageDigest
 import scala.collection.Seq
 import scala.collection.mutable
-import scala.reflect.io.{ AbstractFile, PlainFile, FileZipArchive }
+import scala.tools.nsc.io.{ AbstractFile, ZipArchive }
 
 // This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
@@ -146,9 +146,9 @@ object FileUtils {
   def expandSourceJars(fileList: Iterable[CanonFile]): Iterable[AbstractFile] = {
     fileList.flatMap { f =>
       if (isValidJar(f)) {
-        new FileZipArchive(f).deepIterator.filter(f => isValidSourceName(f.name))
+        ZipArchive.fromFile(f).deepIterator.filter(f => isValidSourceName(f.name))
       } else {
-        Seq(new PlainFile(f))
+        Seq(AbstractFile.getFile(f))
       }
     }
   }
