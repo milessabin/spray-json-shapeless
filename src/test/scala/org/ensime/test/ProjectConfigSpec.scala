@@ -1,5 +1,6 @@
 package org.ensime.test
-import org.scalatest.Spec
+
+import org.scalatest.FunSpec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.config.ProjectConfig
 import org.ensime.util.SExp
@@ -8,7 +9,7 @@ import org.ensime.util.CanonFile
 
 
 
-class ProjectConfigSpec extends Spec with ShouldMatchers{
+class ProjectConfigSpec extends FunSpec with ShouldMatchers{
 
   def parse(s:String): ProjectConfig = {
     ProjectConfig.fromSExp(SExp.read(s)) match{

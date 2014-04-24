@@ -53,7 +53,7 @@ object EnsimeBuild extends Build {
   val root = Path(".")
 
   val TwoNineVersion = "2.9.2"
-  val TwoTenVersion = "2.10.2"
+  val TwoTenVersion = "2.10.4"
   val supportedScalaVersions = Seq(TwoNineVersion, TwoTenVersion)
   def unsupportedScalaVersion(scalaVersion: String): Nothing =
     sys.error(
@@ -66,41 +66,50 @@ object EnsimeBuild extends Build {
       base = file ("."),
       settings = Project.defaultSettings ++
       Seq(
-        version := "0.9.8.10",
+        version := "0.9.8.11-SNAPSHOT",
         organization := "org.ensime",
+//        scalaVersion := TwoNineVersion,
         scalaVersion := TwoTenVersion,
         crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
-        resolvers <++= (scalaVersion) { scalaVersion =>
-          Seq("Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
-              "Sonatype OSS Repository" at "https://oss.sonatype.org/service/local/staging/deploy/maven2",
-              "Sonatype OSS Repository 2" at "https://oss.sonatype.org/content/groups/scala-tools/",
-              "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
-              "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
-              "repo.codahale.com" at "http://repo.codahale.com")
-        },
-        libraryDependencies <++= (scalaVersion) { scalaVersion =>
-          Seq("org.apache.lucene" % "lucene-core" % "3.5.0",
-              "org.sonatype.tycho" % "org.eclipse.jdt.core" % "3.6.0.v_A58" % "compile;runtime;test",
-              "asm" % "asm" % "3.3",
-              "asm" % "asm-commons" % "3.3",
-              "asm" % "asm-util" % "3.3",
-              "com.googlecode.json-simple" % "json-simple" % "1.1"
-      ) ++
-          (if (scalaVersion == TwoTenVersion)
-            Seq(
-                "org.scalatest" % "scalatest_2.10.0" % "1.8" % "test",
-                "org.scalariform" % "scalariform_2.10" % "0.1.4" % "compile;runtime;test",
-                "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test",
-                "org.scala-lang" % "scala-reflect" % scalaVersion % "compile;runtime;test",
-                "org.scala-lang" % "scala-actors" % scalaVersion % "compile;runtime;test")
-          else if (scalaVersion == TwoNineVersion)
-            Seq("org.scalariform" % "scalariform_2.9.1" % "0.1.1" % "compile;runtime;test",
-                "org.scalatest" % "scalatest_2.9.1" % "1.6.1" % "test",
-                "org.scala-lang" % "scala-compiler" % scalaVersion % "compile;runtime;test" withSources())
-          else unsupportedScalaVersion(scalaVersion))
+        resolvers ++= Seq(
+          Resolver.mavenLocal,
+          Resolver.typesafeRepo("releases"),
+          Resolver.sonatypeRepo("snapshots"),
+          // are the following really needed?
+          "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots",
+          "Sonatype OSS Repository 2" at "https://oss.sonatype.org/content/groups/scala-tools/",
+          "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots",
+          "JBoss Maven 2 Repo" at "http://repository.jboss.org/maven2",
+          "repo.codahale.com" at "http://repo.codahale.com"
+          )
+        ,
+        libraryDependencies  <++= (scalaVersion) { scalaVersion => Seq(
+          "org.apache.lucene"          %  "lucene-core"          % "3.5.0",
+          "org.sonatype.tycho"         %  "org.eclipse.jdt.core" % "3.6.2.v_A76_R36x",
+          "asm"                        %  "asm"                  % "3.3.1",
+          "asm"                        %  "asm-commons"          % "3.3.1",
+          "asm"                        %  "asm-util"             % "3.3.1",
+          "com.googlecode.json-simple" %  "json-simple"          % "1.1.1",
+          "org.scalatest"              %% "scalatest"            % "1.9.2" % "test",
+          "org.scalariform"            %% "scalariform"          % "0.1.4",
+          "org.scala-lang"             %  "scala-compiler"       % scalaVersion
+        ) ++ {scalaVersion match {
+          case TwoTenVersion => Seq(
+            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2-SNAPSHOT",
+            "org.scala-lang"           %  "scala-reflect"        % scalaVersion,
+            "org.scala-lang"           %  "scala-actors"         % scalaVersion
+          )
+          case TwoNineVersion => Seq.empty
+            // https://github.com/scala-ide/scala-refactoring/issues/50
+          case _ => unsupportedScalaVersion(scalaVersion)
+        }}
         },
         unmanagedJars in Compile <++= (scalaVersion, baseDirectory) map { (scalaVersion, base) =>
-          (((base / "lib") +++ (base / ("lib_" + scalaVersion))) ** "*.jar").classpath
+          scalaVersion match {
+            case TwoNineVersion =>
+              (((base / "lib") +++ (base / ("lib_" + scalaVersion))) ** "*.jar").classpath
+            case _ => Seq.empty
+          }
         },
         unmanagedClasspath in Compile ++= toolsJar.toList,
         scalacOptions ++= Seq("-g:vars","-deprecation"),
