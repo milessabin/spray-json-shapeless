@@ -29,6 +29,7 @@ package org.ensime.indexer
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.util.ClassIterator
+import org.ensime.util.FileUtils
 import org.ensime.util.RichClassVisitor
 import org.ensime.util.CanonFile
 import org.ensime.util.ClassLocation
@@ -41,6 +42,7 @@ import scala.collection.mutable.HashMap
 import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.MultiMap
+import scala.tools.nsc.io.AbstractFile
 
 case class Op(
   op: String,
@@ -58,7 +60,9 @@ class ClassFileIndex(config: ProjectConfig) {
   // TODO(aemoncannon): This set can change over time if new
   // source files are created. Need to arrange for indexer to
   // receive a re-up message when new sources are created.
-  private val allSources: Set[CanonFile] = config.sources ++ config.referenceSources
+  private val allSources: Set[AbstractFile] = FileUtils.expandSourceJars(
+    config.sources ++ config.referenceSources
+  ).toSet
 
   private val classFilesForSourceName =
     new HashMap[String, HashSet[ClassLocation]].withDefault(s => HashSet())
@@ -163,7 +167,7 @@ class ClassFileIndex(config: ProjectConfig) {
 
   def sourceFileCandidates(
     enclosingPackage: String,
-    classNamePrefix: String): Set[File] = {
+    classNamePrefix: String): Set[AbstractFile] = {
     println("Looking for " + (enclosingPackage, classNamePrefix))
     val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix
     // TODO(aemoncannon): Build lookup structure to make this more efficient.
@@ -177,9 +181,8 @@ class ClassFileIndex(config: ProjectConfig) {
         loc.entry.contains(subPath)) => sourceNames
     }.flatten.toSet
     sourceNames.flatMap { sourceName =>
-      allSources.filter(_.getName() == sourceName)
+      allSources.filter(_.name == sourceName)
     }
   }
 
 }
-

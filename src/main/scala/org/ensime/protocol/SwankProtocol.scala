@@ -35,6 +35,7 @@ import org.ensime.server._
 import org.ensime.util._
 import org.ensime.util.SExp._
 import scala.actors._
+import scala.tools.nsc.io.ZipArchive
 import scala.tools.nsc.util.{ Position, RangePosition }
 import scala.util.parsing.input
 
@@ -2047,7 +2048,15 @@ trait SwankProtocol extends Protocol {
 
     implicit def posToSExp(pos: Position): SExp = {
       if (pos.isDefined) {
-        SExp.propList((":file", pos.source.path), (":offset", pos.point))
+        val underlying = pos.source.file.underlyingSource.getOrElse(null)
+        val archive: SExp = underlying match {
+          case a: ZipArchive if a !=  pos.source.file => a.path
+          case _ => 'nil
+      }
+        SExp.propList(
+          (":file", pos.source.path),
+          (":archive", archive),
+          (":offset", pos.point))
       } else {
         'nil
       }
@@ -2055,8 +2064,14 @@ trait SwankProtocol extends Protocol {
 
     implicit def posToSExp(pos: RangePosition): SExp = {
       if (pos.isDefined) {
+        val underlying = pos.source.file.underlyingSource.getOrElse(null)
+        val archive: SExp = underlying match {
+          case a: ZipArchive if a !=  pos.source.file => a.path
+          case _ => 'nil
+        }
         SExp.propList(
           (":file", pos.source.path),
+          (":archive", archive),
           (":offset", pos.point),
           (":start", pos.start),
           (":end", pos.end))

@@ -35,6 +35,7 @@ import java.nio.charset.Charset
 import java.security.MessageDigest
 import scala.collection.Seq
 import scala.collection.mutable
+import scala.tools.nsc.io.{ AbstractFile, ZipArchive }
 
 // This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
@@ -142,6 +143,16 @@ object FileUtils {
     }).toSet
   }
 
+  def expandSourceJars(fileList: Iterable[CanonFile]): Iterable[AbstractFile] = {
+    fileList.flatMap { f =>
+      if (isValidJar(f)) {
+        ZipArchive.fromFile(f).deepIterator.filter(f => isValidSourceName(f.name))
+      } else {
+        Seq(AbstractFile.getFile(f))
+      }
+    }
+  }
+
   def canonicalizeDirs(names: Iterable[String], baseDir: File): Iterable[CanonFile] = {
     names.map { s => canonicalizeDir(s, baseDir) }.flatten
   }
@@ -162,9 +173,14 @@ object FileUtils {
 
   def isValidJar(f: File): Boolean = f.exists && f.getName.endsWith(".jar")
   def isValidClassDir(f: File): Boolean = f.exists && f.isDirectory
+  def isValidSourceName(filename: String) = {
+    filename.endsWith(".scala") || filename.endsWith(".java")
+  }
   def isValidSourceFile(f: File): Boolean = {
-    f.exists && !f.isHidden && (f.getName.endsWith(".scala") ||
-      f.getName.endsWith(".java"))
+    f.exists && !f.isHidden && isValidSourceName(f.getName)
+  }
+  def isValidSourceOrJarFile(f: File): Boolean = {
+    isValidSourceFile(f) || isValidJar(f)
   }
   def isJavaSourceFile(f: File): Boolean = {
     f.exists && (f.getName.endsWith(".java"))

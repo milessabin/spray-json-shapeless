@@ -672,7 +672,7 @@ object ProjectConfig {
     val sourceRoots = canonicalizeDirs(conf.sourceRoots, rootDir).toSet
     println("Using source roots: " + sourceRoots)
 
-    val referenceSourceRoots = canonicalizeDirs(conf.referenceSourceRoots, rootDir).toSet
+    val referenceSourceRoots = canonicalizeFiles(conf.referenceSourceRoots, rootDir).toSet
     println("Using reference source roots: " + referenceSourceRoots)
 
     var target: Option[CanonFile] = ensureDirectory(conf.target, rootDir)
@@ -877,7 +877,7 @@ class ProjectConfig(
   }
 
   def referenceSources: Set[CanonFile] = {
-    expandRecursively(root, referenceSourceRoots, isValidSourceFile _).toSet
+    expandRecursively(root, referenceSourceRoots, isValidSourceOrJarFile _).toSet
   }
 
   def sourceFilenames: Set[String] = {

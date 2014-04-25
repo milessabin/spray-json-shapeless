@@ -190,6 +190,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askNotifyWhenReady() = ask(setNotifyWhenReady)
 
   def createSourceFile(path: String) = getSourceFile(path)
+  def createSourceFile(file: AbstractFile) = new BatchSourceFile(file)
   def createSourceFile(file: SourceFileInfo) = file match {
     case SourceFileInfo(f: File, None) => getSourceFile(f.getCanonicalPath())
     case SourceFileInfo(f: File, Some(contents)) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath()), contents)
@@ -197,7 +198,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
     _.file.path == path)
 
-  def askLinkPos(sym: Symbol, path: String): Option[Position] =
+  def askLinkPos(sym: Symbol, path: AbstractFile): Option[Position] =
     askOption(linkPos(sym, createSourceFile(path)))
 }
 
