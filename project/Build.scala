@@ -99,17 +99,12 @@ object EnsimeBuild extends Build {
             "org.scala-lang"           %  "scala-reflect"        % scalaVersion,
             "org.scala-lang"           %  "scala-actors"         % scalaVersion
           )
-          case TwoNineVersion => Seq.empty
+          case TwoNineVersion => Seq(
             // https://github.com/scala-ide/scala-refactoring/issues/50
+            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2-SNAPSHOT"
+          )
           case _ => unsupportedScalaVersion(scalaVersion)
         }}
-        },
-        unmanagedJars in Compile <++= (scalaVersion, baseDirectory) map { (scalaVersion, base) =>
-          scalaVersion match {
-            case TwoNineVersion =>
-              (((base / "lib") +++ (base / ("lib_" + scalaVersion))) ** "*.jar").classpath
-            case _ => Seq.empty
-          }
         },
         unmanagedClasspath in Compile ++= toolsJar.toList,
         scalacOptions ++= Seq("-g:vars","-deprecation"),
