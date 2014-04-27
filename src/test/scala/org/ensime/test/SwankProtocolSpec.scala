@@ -1,6 +1,6 @@
 package org.ensime.test
 import java.io.File
-import org.scalatest.Spec
+import org.scalatest.FunSpec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.util.SExp
 import org.ensime.protocol.SwankProtocol
@@ -9,7 +9,7 @@ import scala.tools.nsc.util.{ BatchSourceFile }
 import scala.tools.nsc.io.{ VirtualFile, PlainFile, AbstractFile, ZipArchive }
 
 
-class SwankProtocolSpec extends Spec with ShouldMatchers{
+class SwankProtocolSpec extends FunSpec with ShouldMatchers{
 
   class MockZipEntry(entry: String, archive: ZipArchive) extends VirtualFile(entry, entry) {
     override def underlyingSource: Option[ZipArchive] = Some(archive)

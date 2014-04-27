@@ -1,7 +1,7 @@
 package org.ensime.test
 
 import java.io.{ File => JFile }
-import org.scalatest.Spec
+import org.scalatest.FunSpec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
@@ -12,7 +12,7 @@ import scala.tools.nsc.{ Global, Settings }
 import scala.tools.nsc.io.{ Jar, File, Directory, Path, AbstractFile, PlainFile, ZipArchive }
 import scala.tools.nsc.reporters.{ConsoleReporter}
 
-class ClassFileIndexSpec extends Spec with ShouldMatchers{
+class ClassFileIndexSpec extends FunSpec with ShouldMatchers{
 
   def config(s:String): ProjectConfig = {
     ProjectConfig.fromSExp(SExp.read(s)) match{
