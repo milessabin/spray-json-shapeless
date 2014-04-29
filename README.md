@@ -9,9 +9,9 @@ Best, Aemon
 
 # Links
 - [ Download releases ](https://www.dropbox.com/sh/ryd981hq08swyqr/V9o9rDvxkS/ENSIME%20Releases)
-- [ Older releases ](https://github.com/aemoncannon/ensime/downloads)
-- [ Manual ](http://aemoncannon.github.com/ensime/index.html)
-- [ Manual as PDF ](http://aemoncannon.github.com/ensime/manual.pdf)
+- [ Older releases ](https://github.com/ensime/ensime-src/downloads)
+- [ Manual ](http://ensime.github.com/ensime-src/index.html)
+- [ Manual as PDF ](http://ensime.github.com/ensime-src/manual.pdf)
 - [ Discussion Group ](http://groups.google.com/group/ensime?hl=en)
 
 
@@ -53,7 +53,7 @@ Best, Aemon
 
 ## Documentation
 
-- [The ENSIME User Manual](http://aemoncannon.github.com/ensime/index.html)
+- [The ENSIME User Manual](http://ensime.github.com/ensime-src/index.html)
 
 
 ## Getting Started
@@ -78,19 +78,19 @@ Add the following lines to your .emacs file:
     (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
 
-__3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://aemoncannon.github.com/ensime/index.html#tth_sEc3.1.2))__
+__3) If you are using sbt, install the ENSIME Sbt Plugin (otherwise, see the [manual](http://ensime.github.com/ensime-src/index.html#tth_sEc3.1.2))__
 
 Add the following lines to your project/plugins.sbt file:
 
     addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "VERSION")
 
-Replace VERSION with the latest version of the plugin, available on [the plugin page](https://github.com/aemoncannon/ensime-sbt-cmd).  Then, from an sbt shell, generate your ENSIME project:
+Replace VERSION with the latest version of the plugin, available on [the plugin page](https://github.com/ensime/ensime-sbt-cmd).  Then, from an sbt shell, generate your ENSIME project:
     
     ensime generate
 
 Note: Currently, it may be necessary to first delete your project/target directories before running 'ensime generate'.
 
-You should now have a .ensime file in the root of your project. There's no need to edit this file manually as you can now specify ENSIME settings directly from your sbt build file. Check the [manual](http://aemoncannon.github.com/ensime/index.html#tth_sEc3.1.1) for details.
+You should now have a .ensime file in the root of your project. There's no need to edit this file manually as you can now specify ENSIME settings directly from your sbt build file. Check the [manual](http://ensime.github.com/ensime-src/index.html#tth_sEc3.1.1) for details.
 
 
 __4) Start ENSIME__
