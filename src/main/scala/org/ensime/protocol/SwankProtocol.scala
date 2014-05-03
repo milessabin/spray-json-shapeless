@@ -53,6 +53,8 @@ trait SwankProtocol extends Protocol {
    * Protocol Version: 0.8.7
    *
    * Protocol Change Log:
+   *   0.8.8
+   *     Add optional :archive member to Position and RangePosition
    *   0.8.7
    *     Add optional file contents parameter to typecheck-file
    *   0.8.6
@@ -204,7 +206,8 @@ trait SwankProtocol extends Protocol {
    *   A source position.
    * Structure:
    *   (
-   *     :file   //String:A filename
+   *     :file    //String:A filename. If :archive is set, :file is the entry within the archive
+   *     :archive //String(optional): If set, a jar or zip archive that contains :file
    *     :offset  //Int:The zero-indexed character offset of this position.
    *   )
    */
@@ -216,7 +219,8 @@ trait SwankProtocol extends Protocol {
    *   A source position that describes a range of characters in a file.
    * Structure:
    *   (
-   *     :file   //String:A filename
+   *     :file   //String:A filename. If :archive is set, :file is the entry within the archive
+   *     :archive //String(optional): If set, a jar or zip archive that contains :file
    *     :start  //Int:The character offset of the start of the range.
    *     :end    //Int:The character offset of the end of the range.
    *   )
