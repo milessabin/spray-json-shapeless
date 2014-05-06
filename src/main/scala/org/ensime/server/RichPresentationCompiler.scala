@@ -376,16 +376,26 @@ class RichPresentationCompiler(
   }
 
   protected def typeByName(name: String): Option[Type] = {
-    def maybeType(sym: Symbol) = sym match {
+    symbolByName(name).flatMap {
       case NoSymbol => None
-      case sym: Symbol => Some(sym.tpe)
-      case _ => None
+      case sym: Symbol => sym.tpe match {
+        case NoType => None
+        case tpe: Type => Some(tpe)
+      }
     }
+  }
+
+  protected def symbolByName(name: String): Option[Symbol] = {
     try {
-      if (name.endsWith("$")) {
-        maybeType(definitions.getModule(newTermName(name.substring(0, name.length - 1))))
+      val sym = if (name.endsWith("$")) {
+        definitions.getModule(newTermName(name.substring(0, name.length - 1)))
       } else {
-        maybeType(definitions.getClass(newTypeName(name)))
+        definitions.getClass(newTypeName(name))
+      }
+      sym match {
+        case NoSymbol => None
+        case sym: Symbol => Some(sym)
+        case _ => None
       }
     } catch {
       case e: Throwable => None
