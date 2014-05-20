@@ -27,6 +27,7 @@ dist_*
 etc/pres_compiler.txt
 etc/_region_.tex
 etc/manual.ltx
+etc/emacs.d
 scratch
 
 test_projects/sbt-deps
