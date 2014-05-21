@@ -95,7 +95,7 @@ object EnsimeBuild extends Build {
           "org.scala-lang"             %  "scala-compiler"       % scalaVersion
         ) ++ {scalaVersion match {
           case TwoTenVersion => Seq(
-            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2-SNAPSHOT",
+            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2",
             "org.scala-lang"           %  "scala-reflect"        % scalaVersion,
             "org.scala-lang"           %  "scala-actors"         % scalaVersion
           )
