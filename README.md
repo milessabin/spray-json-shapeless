@@ -1,11 +1,11 @@
 # ENSIME
 the ENhanced Scala Interaction Mode for Emacs
 
-A quick note on status: 
-Events in my life have conspired to give me less free time to work on ENSIME. However, I still believe
-in this project, and will try to respond to pull requests / bug fixes in a timely manner. I do hope to
-move it back to the front burner some day 
-Best, Aemon
+# Help wanted!
+
+Please help developing this project. You'll find hacking instructions at the end of the document.
+Also QA help is of high value so please go to the [project's Code Triage page](http://www.codetriage.com/ensime/ensime-src)
+and start commenting on issues.
 
 # Links
 - [ Download releases ](https://www.dropbox.com/sh/ryd981hq08swyqr/V9o9rDvxkS/ENSIME%20Releases)
@@ -28,7 +28,7 @@ Best, Aemon
 - Automated Refactorings (rename, organize imports, extract method)
 - Source Formatting
 - AST-based selection
-- Supports sbt 11,12
+- Supports sbt 12,13
 - Embedded sbt shell
 - REPL featuring stack trace highlighting with links to source code
 - Debug support
@@ -48,7 +48,7 @@ Best, Aemon
 - Emacs 22 or later.
 - Linux, Mac OSX, Windows
 - Java Runtime
-- A Scala 2.8.x or 2.9.x project
+- A Scala 2.9.x, 2.10.x, and 2.11.x (comming soon) project
 
 
 ## Documentation
