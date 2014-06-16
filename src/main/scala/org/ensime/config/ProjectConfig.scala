@@ -877,7 +877,7 @@ class ProjectConfig(
   }
 
   def referenceSources: Set[CanonFile] = {
-    expandRecursively(root, referenceSourceRoots, isValidSourceOrJarFile _).toSet
+    expandRecursively(root, referenceSourceRoots, isValidSourceOrArchive _).toSet
   }
 
   def sourceFilenames: Set[String] = {
