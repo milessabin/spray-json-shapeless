@@ -259,7 +259,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
   }
 
   def locateSymbolPos(sym: Symbol): Position = {
-    if (sym.pos != NoPosition) sym.pos
+    if (sym == NoSymbol) NoPosition
+    else if (sym.pos != NoPosition) sym.pos
     else {
       val pack = sym.enclosingPackage.fullName
       val top = sym.toplevelClass
@@ -414,6 +415,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
           {
             val args = tpe.typeArgs.map(TypeInfo(_))
             val typeSym = tpe.typeSymbol
+            val sym = if (typeSym.isModuleClass)
+              typeSym.sourceModule else typeSym
             val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
             new TypeInfo(
               typeShortName(tpe),
@@ -422,7 +425,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
               typeFullName(tpe),
               args,
               members,
-              typeSym.pos,
+              locateSymbolPos(sym),
               outerTypeId)
           }
         case _ => nullInfo
@@ -465,9 +468,13 @@ trait ModelBuilders { self: RichPresentationCompiler =>
   object SymbolInfo {
 
     def apply(sym: Symbol): SymbolInfo = {
+      val tpe = askOption(sym.tpe) match {
+        case None => NoType
+        case Some(tpe) => tpe
+      }
       val name = if (sym.isClass || sym.isTrait || sym.isModule ||
         sym.isModuleClass || sym.isPackageClass) {
-        typeFullName(sym.tpe)
+        typeFullName(tpe)
       } else {
         sym.nameString
       }
@@ -479,8 +486,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         name,
         localName,
         locateSymbolPos(sym),
-        TypeInfo(sym.tpe),
-        isArrowType(sym.tpe),
+        TypeInfo(tpe),
+        isArrowType(tpe),
         ownerTpe.map(cacheType))
     }
 

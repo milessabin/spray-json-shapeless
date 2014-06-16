@@ -23,14 +23,14 @@ Best, Aemon
 - Completion for variables, methods, constructors, etc.
 - Incrementally search through classpath symbols
 - Find all references to a symbol
-- Jump to symbol definitions.
+- Jump to symbol definitions, including inside source jars
 - Semantic Highlighting
 - Automated Refactorings (rename, organize imports, extract method)
 - Source Formatting
 - AST-based selection
 - Supports sbt 11,12
 - Embedded sbt shell
-- REPL
+- REPL featuring stack trace highlighting with links to source code
 - Debug support
 
 

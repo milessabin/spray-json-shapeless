@@ -16,21 +16,9 @@ object Helpers{
 
   def withPresCompiler(action:RichCompilerControl => Any ) =  {
     val settings = new Settings(Console.println)
-
-
-    val propFile = new File("./project/build.properties")
-    val props = JavaProperties.load(propFile)
-    val v = props.get("build.scala.versions") match {
-      case Some(s) => s
-      case None => throw new IllegalStateException("Failed to load sbt build version.")
-    }
-    settings.processArguments(List(
-	"-classpath", "project/boot/scala-" + v + "/lib/scala-library.jar",
-	"-verbose"
-      ), false)
-    settings.usejavacp.value = false
+    settings.embeddedDefaults[RichCompilerControl]
     val reporter = new StoreReporter()
-    val cc:RichCompilerControl = new RichPresentationCompiler(
+    val cc = new RichPresentationCompiler(
       settings, reporter, actor{}, actor{}, ProjectConfig.nullConfig)
     action(cc)
     cc.askShutdown()
