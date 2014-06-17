@@ -101,7 +101,7 @@ object EnsimeBuild extends Build {
           )
           case TwoNineVersion => Seq(
             // https://github.com/scala-ide/scala-refactoring/issues/50
-            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2-SNAPSHOT"
+            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2"
           )
           case _ => unsupportedScalaVersion(scalaVersion)
         }}
