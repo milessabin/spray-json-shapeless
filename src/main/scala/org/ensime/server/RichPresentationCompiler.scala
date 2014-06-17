@@ -111,16 +111,16 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     }
 
   def askSymbolInfoAt(p: Position): Option[SymbolInfo] =
-    askOption(symbolAt(p).map(SymbolInfo(_))).flatten
+    askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
 
   def askTypeInfoAt(p: Position): Option[TypeInfo] =
-    askOption(typeAt(p).map(TypeInfo(_))).flatten
+    askOption(typeAt(p).map(TypeInfo(_))).getOrElse(None)
 
   def askTypeInfoById(id: Int): Option[TypeInfo] =
-    askOption(typeById(id).map(TypeInfo(_))).flatten
+    askOption(typeById(id).map(TypeInfo(_))).getOrElse(None)
 
   def askTypeInfoByName(name: String): Option[TypeInfo] =
-    askOption(typeByName(name).map(TypeInfo(_))).flatten
+    askOption(typeByName(name).map(TypeInfo(_))).getOrElse(None)
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = {
     val nameSegs = name.split("\\.")
@@ -139,7 +139,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   }
 
   def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] =
-    askOption(typeById(id).map(CallCompletionInfo(_))).flatten
+    askOption(typeById(id).map(CallCompletionInfo(_))).getOrElse(None)
 
   def askPackageByPath(path: String): Option[PackageInfo] =
     askOption(PackageInfo.fromPath(path))
@@ -165,10 +165,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   }
 
   def askInspectTypeById(id: Int): Option[TypeInspectInfo] =
-    askOption(typeById(id).map(inspectType(_))).flatten
+    askOption(typeById(id).map(inspectType(_))).getOrElse(None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] =
-    askOption(inspectTypeAt(p)).flatten
+    askOption(inspectTypeAt(p)).getOrElse(None)
 
   def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] =
     askOption(completePackageMember(path, prefix)).getOrElse(List())
