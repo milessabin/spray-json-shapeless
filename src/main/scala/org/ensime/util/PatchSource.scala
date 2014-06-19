@@ -26,7 +26,7 @@
  */
 
 package org.ensime.util
-import scala.tools.nsc.util.{ SourceFile, BatchSourceFile }
+import scala.reflect.internal.util.{ SourceFile, BatchSourceFile }
 import org.ensime.model.PatchOp
 import org.ensime.model.PatchInsert
 import org.ensime.model.PatchDelete

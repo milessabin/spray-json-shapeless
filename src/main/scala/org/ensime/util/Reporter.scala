@@ -29,7 +29,7 @@ package org.ensime.util
 
 import scala.tools.nsc.interactive.CompilerControl
 import scala.tools.nsc.reporters.{ ConsoleReporter, Reporter }
-import scala.tools.nsc.util.{ OffsetPosition, Position }
+import scala.reflect.internal.util.{ OffsetPosition, Position }
 
 trait ReportHandler {
   def messageUser(str: String) {}

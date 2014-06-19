@@ -38,12 +38,12 @@ import org.ensime.util._
 import org.ensime.util.RichFile._
 import scala.actors._
 import scala.actors.Actor._
-import scala.collection.{ Iterable }
-import scala.collection.mutable.{ ListBuffer }
-import scala.tools.nsc.util.RangePosition
-import scala.tools.nsc.{ Settings }
+import scala.collection.Iterable
+import scala.collection.mutable.ListBuffer
+import scala.reflect.internal.util.RangePosition
+import scala.tools.nsc.Settings
 import scala.tools.nsc.ast._
-import scala.tools.nsc.util.{ OffsetPosition }
+import scala.reflect.internal.util.OffsetPosition
 
 case class FullTypeCheckCompleteEvent()
 case class CompilerFatalError(e: Throwable)
@@ -324,12 +324,11 @@ class Analyzer(
                 }
               }
             } catch {
-              case e => {
+              case e : Throwable =>
                 System.err.println("Error handling RPC: " + e + " :\n" +
                   e.getStackTraceString)
                 project.sendRPCError(ErrExceptionInAnalyzer,
                   Some("Error occurred in Analyzer. Check the server log."), callId)
-              }
             }
           }
           case other => {

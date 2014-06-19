@@ -128,7 +128,7 @@ object FileUtils {
   def expandRecursively(rootDir: File, fileList: Iterable[File], isValid: (File => Boolean)): Set[CanonFile] = {
     (for (
       f <- fileList;
-      val files = if (f.isAbsolute) f.andTree else (new File(rootDir, f.getPath)).andTree;
+      files = if (f.isAbsolute) f.andTree else (new File(rootDir, f.getPath)).andTree;
       file <- files if isValid(file)
     ) yield { toCanonFile(file) }).toSet
   }
@@ -136,7 +136,7 @@ object FileUtils {
   def expand(rootDir: File, fileList: Iterable[File], isValid: (File => Boolean)): Set[CanonFile] = {
     (for (
       f <- fileList;
-      val files = List(if (f.isAbsolute) f else (new File(rootDir, f.getPath)));
+      files = List(if (f.isAbsolute) f else (new File(rootDir, f.getPath)));
       file <- files if isValid(file)
     ) yield {
       toCanonFile(file)

@@ -29,8 +29,8 @@ package org.ensime.model
 import java.io.File
 import scala.collection.mutable.{ HashMap, ArrayBuffer }
 import scala.tools.nsc.interactive.{ Global, CompilerControl }
-import scala.tools.nsc.util.{ NoPosition, Position }
-import scala.tools.nsc.io.{ AbstractFile }
+import scala.reflect.internal.util.{ NoPosition, Position }
+import scala.tools.nsc.io.AbstractFile
 import org.ensime.util.CanonFile
 import org.ensime.server.RichPresentationCompiler
 import org.ensime.server.SourceFileCandidatesReq
