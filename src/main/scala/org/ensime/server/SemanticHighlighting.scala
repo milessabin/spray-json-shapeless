@@ -29,7 +29,7 @@ package org.ensime.server
 import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
 import scala.collection.mutable.ListBuffer
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
-import scala.tools.nsc.util.RangePosition
+import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.symtab.Flags._
 import scala.math
 

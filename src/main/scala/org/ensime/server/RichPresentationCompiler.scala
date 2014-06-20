@@ -74,9 +74,10 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.tools.nsc.interactive.{ FreshRunReq, CompilerControl, Global, MissingResponse }
 import scala.tools.nsc.util._
+import scala.reflect.internal.util._
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
-import scala.tools.nsc.util.{ Position, RangePosition, SourceFile }
+import scala.reflect.internal.util.{ Position, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 

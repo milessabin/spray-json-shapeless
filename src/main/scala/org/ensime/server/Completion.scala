@@ -28,7 +28,7 @@
 package org.ensime.server
 import org.ensime.model.CompletionInfoList
 import scala.collection.mutable.HashMap
-import scala.tools.nsc.util.{ Position, RangePosition, SourceFile, BatchSourceFile }
+import scala.reflect.internal.util.{ Position, RangePosition, SourceFile, BatchSourceFile }
 import org.ensime.util.Arrays
 import scala.tools.nsc.interactive.{ Response, CompilerControl, Global }
 import scala.collection.mutable.{ ListBuffer, LinkedHashSet }

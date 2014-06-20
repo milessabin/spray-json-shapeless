@@ -34,7 +34,7 @@ import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
 import scala.actors._
-import scala.tools.nsc.util.{ Position, RangePosition }
+import scala.reflect.internal.util.{ Position, RangePosition }
 
 case class IncomingMessageEvent(obj: Any)
 case class OutgoingMessageEvent(obj: Any)
