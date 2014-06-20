@@ -3,6 +3,8 @@
 OS_NAME=`uname -s`
 JDK=
 PORT_FILE=
+SERVER_HOST=
+SERVER_PORT=
 
 usage()
 {
@@ -86,6 +88,9 @@ case $1 in
         PORT_FILE=$1 ;;
 esac
 
+SERVER_HOST=$2
+SERVER_PORT=$3
+
 determine_jdk
 
 if [ -z "$ENSIME_JVM_ARGS" ]; then
@@ -97,7 +102,7 @@ BOOTCLASSPATH=<RUNTIME_BOOTCLASSPATH>
 CLASSPATH=<RUNTIME_CLASSPATH>
 
 CMD="${JDK}/bin/java -Dscala.usejavacp=true -Xbootclasspath/a:${BOOTCLASSPATH} -classpath ${CLASSPATH} \
-    ${ENSIME_JVM_ARGS} org.ensime.server.Server ${PORT_FILE}"
+    ${ENSIME_JVM_ARGS} org.ensime.server.Server ${PORT_FILE} ${SERVER_HOST} ${SERVER_PORT}"
 
 echo ""
 echo "${CMD}" | /usr/bin/fmt

@@ -28,7 +28,7 @@
 package org.ensime.server
 
 import java.io._
-import java.net.{ ServerSocket, Socket }
+import java.net.{ ServerSocket, Socket, InetAddress }
 import org.ensime.protocol._
 import org.ensime.util.WireFormat
 import org.ensime.config.Environment
@@ -42,9 +42,9 @@ object Server {
     System.setProperty("actors.maxPoolSize", "100")
 
     args match {
-      case Array(portfile) =>
+      case Array(portfile, serverHost, serverPort) =>
         {
-          println("Starting up Ensime...")
+          println("Starting up Ensime using host address " + serverHost + " and port " + serverPort + " ...")
           println(Environment.info)
 
           // TODO add an option to change the protocol
@@ -54,8 +54,14 @@ object Server {
 
           try {
             // 0 will cause socket to bind to first available port
-            val requestedPort = 0
-            val listener = new ServerSocket(requestedPort)
+            val requestedPort = serverPort.toInt
+            // the "requested maximum number of pending connections on the socket"
+            // with 0 being an implementation-specific default
+            val backlog = 0 
+            // The address to bind the server to. A value of null, "", or 127.0.0.1 represents
+            // the local loopback interface, thus only allowing local connections
+            val bindAddr = InetAddress.getByName(serverHost)
+            val listener = new ServerSocket(requestedPort, backlog, bindAddr)
             val actualPort = listener.getLocalPort
             println("Server listening on " + actualPort + "..")
             writePort(portfile, actualPort)
@@ -83,7 +89,7 @@ object Server {
           }
         }
       case _ => {
-        println("Usage: PROGRAM <portfile>")
+        println("Usage: PROGRAM <portfile> <server-host> <server-port>")
         System.exit(0)
 
       }
