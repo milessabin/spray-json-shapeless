@@ -96,7 +96,7 @@ fi
 BOOTCLASSPATH=<RUNTIME_BOOTCLASSPATH>
 CLASSPATH=<RUNTIME_CLASSPATH>
 
-CMD="${JDK}/bin/java -Xbootclasspath/a:${BOOTCLASSPATH} -classpath ${CLASSPATH} \
+CMD="${JDK}/bin/java -Dscala.usejavacp=true -Xbootclasspath/a:${BOOTCLASSPATH} -classpath ${CLASSPATH} \
     ${ENSIME_JVM_ARGS} org.ensime.server.Server ${PORT_FILE}"
 
 echo ""
