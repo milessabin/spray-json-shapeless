@@ -180,6 +180,7 @@ object ProjectConfig {
         sourceRoots_.key,
         runtimeDeps_.key,
         compileDeps_.key,
+        referenceSourceRoots_.key,
         testDeps_.key).foldLeft(main)(withMerged)
     }
 
