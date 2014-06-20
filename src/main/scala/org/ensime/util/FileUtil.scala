@@ -145,7 +145,7 @@ object FileUtils {
 
   def expandSourceJars(fileList: Iterable[CanonFile]): Iterable[AbstractFile] = {
     fileList.flatMap { f =>
-      if (isValidJar(f)) {
+      if (isValidArchive(f)) {
         ZipArchive.fromFile(f).deepIterator.filter(f => isValidSourceName(f.name))
       } else {
         Seq(AbstractFile.getFile(f))
@@ -172,6 +172,7 @@ object FileUtils {
   }
 
   def isValidJar(f: File): Boolean = f.exists && f.getName.endsWith(".jar")
+  def isValidArchive(f: File): Boolean = f.exists && (f.getName.endsWith(".jar") || f.getName.endsWith(".zip"))
   def isValidClassDir(f: File): Boolean = f.exists && f.isDirectory
   def isValidSourceName(filename: String) = {
     filename.endsWith(".scala") || filename.endsWith(".java")
@@ -179,8 +180,8 @@ object FileUtils {
   def isValidSourceFile(f: File): Boolean = {
     f.exists && !f.isHidden && isValidSourceName(f.getName)
   }
-  def isValidSourceOrJarFile(f: File): Boolean = {
-    isValidSourceFile(f) || isValidJar(f)
+  def isValidSourceOrArchive(f: File): Boolean = {
+    isValidSourceFile(f) || isValidArchive(f)
   }
   def isJavaSourceFile(f: File): Boolean = {
     f.exists && (f.getName.endsWith(".java"))
