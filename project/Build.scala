@@ -52,10 +52,6 @@ object EnsimeBuild extends Build {
 
   val root = Path(".")
 
-  val TwoNineVersion = "2.9.2"
-  val TwoTenVersion = "2.10.4"
-  val supportedScalaVersions = Seq(TwoNineVersion, TwoTenVersion)
-
   lazy val project = {
     Project(
       id = "ensime",
@@ -64,12 +60,7 @@ object EnsimeBuild extends Build {
       Seq(
         version := "0.9.8.11-SNAPSHOT",
         organization := "org.ensime",
-        scalaVersion := {System.getenv("TRAVIS_SCALA_VERSION") match {
-          case "2.9.2" => TwoNineVersion
-          case "2.10.4" => TwoTenVersion
-          case _ => TwoTenVersion
-        }},
-        crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
+        scalaVersion := "2.10.4",
         resolvers ++= Seq(
           Resolver.mavenLocal,
           Resolver.typesafeRepo("releases"),
@@ -91,18 +82,11 @@ object EnsimeBuild extends Build {
           "com.googlecode.json-simple" %  "json-simple"          % "1.1.1",
           "org.scalatest"              %% "scalatest"            % "1.9.2" % "test",
           "org.scalariform"            %% "scalariform"          % "0.1.4",
-          "org.scala-lang"             %  "scala-compiler"       % scalaVersion
-        ) ++ {scalaVersion match {
-          case TwoTenVersion => Seq(
-            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2",
-            "org.scala-lang"           %  "scala-reflect"        % scalaVersion,
-            "org.scala-lang"           %  "scala-actors"         % scalaVersion
+          "org.scala-lang"             %  "scala-compiler"       % scalaVersion,
+          "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2",
+          "org.scala-lang"           %  "scala-reflect"        % scalaVersion,
+          "org.scala-lang"           %  "scala-actors"         % scalaVersion
           )
-          case TwoNineVersion => Seq(
-            // https://github.com/scala-ide/scala-refactoring/issues/50
-            "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2"
-          )
-        }}
         },
         unmanagedClasspath in Compile ++= toolsJar.toList,
         scalacOptions ++= Seq("-g:vars","-deprecation"),
@@ -143,11 +127,7 @@ object EnsimeBuild extends Build {
       file(distDir + "/lib")))
 
     // Scalac components
-    val scalaComponents = if(scalaBuildVersion == TwoTenVersion) {
-      List("library", "reflect", "compiler", "actors")
-    } else {
-      List("library", "compiler")
-    }
+    val scalaComponents = List("library", "reflect", "compiler", "actors")
 
     val jars = scalaComponents map (c => "scala-" + c + ".jar")
     val scala = jars
@@ -160,17 +140,6 @@ object EnsimeBuild extends Build {
     // Copy the runtime jars
     val deps = (depCP ++ exportedCP).map(_.data)
     copy(deps x flat(root / distDir / "lib"))
-
-    if(scalaBuildVersion == TwoTenVersion) {
-      // todo. fixup scala-reflect.jar, don't know why it gets its version appended
-      // I think that's because sbt treats scala-library and scala-compiler specially
-      // but the version we use (0.11.3) doesn't yet know about scala-reflect
-      // would be lovely to update to 0.12, but I'm afraid it will break in new fancy ways
-      val scalaReflectWeirdJar = root / distDir / "lib" / "scala-reflect-2.10.0-SNAPSHOT.jar"
-      val scalaReflectJar = root / distDir / "lib" / "scala-reflect.jar"
-      scalaReflectWeirdJar.renameTo(scalaReflectJar)
-      scalaReflectWeirdJar.delete()
-    }
 
     // Grab all jars..
     val cpLibs = (root / distDir / "lib" ** "*.jar").get.flatMap(
