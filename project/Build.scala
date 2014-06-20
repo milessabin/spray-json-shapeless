@@ -55,10 +55,6 @@ object EnsimeBuild extends Build {
   val TwoNineVersion = "2.9.2"
   val TwoTenVersion = "2.10.4"
   val supportedScalaVersions = Seq(TwoNineVersion, TwoTenVersion)
-  def unsupportedScalaVersion(scalaVersion: String): Nothing =
-    sys.error(
-      "Unsupported scala version: " + scalaVersion + ". " +
-      "Supported versions: " + supportedScalaVersions.mkString(", "))
 
   lazy val project = {
     Project(
@@ -68,8 +64,11 @@ object EnsimeBuild extends Build {
       Seq(
         version := "0.9.8.11-SNAPSHOT",
         organization := "org.ensime",
-//        scalaVersion := TwoNineVersion,
-        scalaVersion := TwoTenVersion,
+        scalaVersion := {System.getenv("TRAVIS_SCALA_VERSION") match {
+          case "2.9.2" => TwoNineVersion
+          case "2.10.4" => TwoTenVersion
+          case _ => TwoTenVersion
+        }},
         crossScalaVersions := Seq(TwoNineVersion, TwoTenVersion),
         resolvers ++= Seq(
           Resolver.mavenLocal,
@@ -103,7 +102,6 @@ object EnsimeBuild extends Build {
             // https://github.com/scala-ide/scala-refactoring/issues/50
             "org.scala-refactoring"    %% "org.scala-refactoring.library" % "0.6.2"
           )
-          case _ => unsupportedScalaVersion(scalaVersion)
         }}
         },
         unmanagedClasspath in Compile ++= toolsJar.toList,
