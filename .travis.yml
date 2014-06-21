@@ -1,7 +1,10 @@
 language: scala
 scala:
-  - "2.10.4"
+- 2.10.4
 branches:
   only:
-    - master
-    - scala-2.9
+  - master
+  - scala-2.9
+env:
+  global:
+    secure: aCoGM5RlD3eopbRc12aZAng47SrDjQAAHyKesc3LnCeFShV7/gV22dpxIa/k+QbkEOcWCcWGCQ7EER4Xakc0iB+bPtae1eNp6r77dtJFxI0izjWJXjWTxlqtwF4bdRh0yBGpgFp/zPcGL+o9c/CDwtcE5ko3hRsuU2Ix8RnnepY=
