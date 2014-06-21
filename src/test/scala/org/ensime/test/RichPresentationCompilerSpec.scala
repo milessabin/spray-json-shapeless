@@ -2,7 +2,6 @@ package org.ensime.test
 
 import java.io.{ File => JFile }
 import org.ensime.model.SymbolInfo
-import org.ensime.server.RichPresentationCompiler
 import org.scalatest.FunSpec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.test.util.Helpers
@@ -19,7 +18,7 @@ class RichPresentationCompilerSpec extends FunSpec with ShouldMatchers {
         val file = Helpers.srcFile("abc.scala", Helpers.contents(
           "package com.example",
           "class A { }"))
-        cc.askReloadFile(file)
+        cc.askLoadedTyped(file)
         val info = cc.askTypeInfoByName("com.example.A").get
         assert(info.declaredAs == 'class)
         assert(info.name == "A")
@@ -33,7 +32,7 @@ class RichPresentationCompilerSpec extends FunSpec with ShouldMatchers {
         val file = Helpers.srcFile("abc.scala", Helpers.contents(
           "package com.example",
           "object A { }"))
-        cc.askReloadFile(file)
+        cc.askLoadedTyped(file)
         val info = cc.askTypeInfoByName("com.example.A$").get
         assert(info.declaredAs == 'object)
         assert(info.name == "A$")
