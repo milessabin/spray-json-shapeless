@@ -377,11 +377,12 @@ object ProjectConfig {
      * Doc Property:
      *   :reference-source-roots
      * Summary:
-     *   A list of directories in which to start searching for reference
+     *   A list of files or directories in which to start searching for reference
      *   sources. Generally these are the sources that correspond to library
      *   dependencies.
      * Arguments:
-     *   List of Strings: directory names
+     *   List of Strings: a combination of directory names or .jar or .zip
+     *     file names
      */
     lazy val referenceSourceRoots_ = new StringListProp(":reference-source-roots", None)
     props += referenceSourceRoots_

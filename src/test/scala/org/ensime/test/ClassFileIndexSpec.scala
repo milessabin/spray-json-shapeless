@@ -37,6 +37,11 @@ class Test2 {}
 """,
       "com/example1/Unique.scala" -> """package com.example2
 class Test1 {}
+class Class {}
+object Object {}
+class Outer {
+  class Inner {}
+}
 """,
       "com/example2/Duplicate.scala" -> """package com.example3
 class Test1 {}
@@ -120,6 +125,33 @@ class Test1 {}
       val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString)
       val expected = Set(
         tmpdir/Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
+      )
+      assert(cand == expected, "assert " + cand + " != " + expected)
+    }
+
+    it("should find a class when looking for an object") {
+      val index = get_index(tmpdir / "src", tmpdir / "target")
+      val cand = index.sourceFileCandidates("com.example2", "Class$")
+      val expected = Set(
+        new PlainFile(tmpdir / "src/com/example1/Unique.scala")
+      )
+      assert(cand == expected, "assert " + cand + " != " + expected)
+    }
+
+    it("should find an object when looking for an object") {
+      val index = get_index(tmpdir / "src", tmpdir / "target")
+      val cand = index.sourceFileCandidates("com.example2", "Object$")
+      val expected = Set(
+        new PlainFile(tmpdir / "src/com/example1/Unique.scala")
+      )
+      assert(cand == expected, "assert " + cand + " != " + expected)
+    }
+
+    it("should find an inner class") {
+      val index = get_index(tmpdir / "src", tmpdir / "target")
+      val cand = index.sourceFileCandidates("com.example2", "Outer$Inner")
+      val expected = Set(
+        new PlainFile(tmpdir / "src/com/example1/Unique.scala")
       )
       assert(cand == expected, "assert " + cand + " != " + expected)
     }
