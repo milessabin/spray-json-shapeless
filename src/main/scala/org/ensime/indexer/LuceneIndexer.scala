@@ -87,12 +87,12 @@ import scala.util.matching.Regex
 import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
 import org.objectweb.asm.Opcodes;
 import org.json.simple._
+import scala.util.Properties._
 
 object LuceneIndex extends StringSimilarity {
   val KeyIndexVersion = "indexVersion"
   val KeyFileHashes = "fileHashes"
   val IndexVersion: Int = 5
-  val DirName = ".ensime_lucene"
 
   val Similarity = new DefaultSimilarity {
     override def computeNorm(field: String, state: FieldInvertState): Float = {
@@ -402,7 +402,7 @@ trait LuceneIndex {
     includes: Iterable[Regex],
     excludes: Iterable[Regex]): Unit = {
 
-    val dir: File = new File(root, DirName)
+    val dir: File = new File(propOrNull("ensime.cachedir"), "lucene")
 
     val hashed = files.map { f =>
       if (f.exists) {

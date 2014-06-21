@@ -1,11 +1,14 @@
 language: scala
+jdk:
+- openjdk6
 scala:
 - 2.10.4
 branches:
   only:
   - master
   - scala-2.9
-  - scala-2.9-auto_download
 env:
   global:
-    secure: aCoGM5RlD3eopbRc12aZAng47SrDjQAAHyKesc3LnCeFShV7/gV22dpxIa/k+QbkEOcWCcWGCQ7EER4Xakc0iB+bPtae1eNp6r77dtJFxI0izjWJXjWTxlqtwF4bdRh0yBGpgFp/zPcGL+o9c/CDwtcE5ko3hRsuU2Ix8RnnepY=
+    # to generate this (when in the correct branch of the correct repo):
+    # travis encrypt BINTRAY_TOKEN=<YOUR PRIVATE API KEY> --add
+    secure: aCoGM5RlD3eopbRc12aZAng47SrDjQAAHyKesc3LnCeFShV7/gV22dpxIa/k+QbkEOcWCcWGCQ7EER4Xakc0iB+bPtae1eNp6r77dtJFxI0izjWJXjWTxlqtwF4bdRh0yBGpgFp/zPcGL+o9c/CDwtcE5ko3hRsuU2Ix8RnnepY
