@@ -1,4 +1,4 @@
-#!bash
+#!/usr/bin/env bash
 WARNING="This file was generated using gen_manual.sh. Do not manually edit!"
 MODIFIED_DATE=`date "+%m/%d/%Y"`
 PROTOCOL_SOURCE="../src/main/scala/org/ensime/protocol/SwankProtocol.scala"
@@ -29,7 +29,7 @@ cat manual_head.html > $TMP_TARGET
 tth -r -u -e2 -Lmanual < manual.ltx >> $TMP_TARGET
 cat manual_tail.html >> $TMP_TARGET
 
-ORIGIN="https://github.com/aemoncannon/ensime.git"
+ORIGIN="git@github.com:ensime/ensime-src.git"
 PAGES_BRANCH="gh-pages"
 
 rm -rf $PAGES_BRANCH
