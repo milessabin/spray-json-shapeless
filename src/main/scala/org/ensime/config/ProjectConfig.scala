@@ -839,6 +839,8 @@ class ProjectConfig(
           fp.setPreference(IndentWithTabs, value)
         case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
           fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
+        case ('placeScaladocAsterisksBeneathSecondAsterisk, value: Boolean) =>
+          fp.setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, value)
         case ('preserveDanglingCloseParenthesis, value: Boolean) =>
           fp.setPreference(PreserveDanglingCloseParenthesis, value)
         case ('preserveSpaceBeforeArguments, value: Boolean) =>
