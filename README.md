@@ -9,9 +9,8 @@ and start commenting on issues.
 
 # Links
 - [ Download releases ](https://www.dropbox.com/sh/ryd981hq08swyqr/V9o9rDvxkS/ENSIME%20Releases)
-- [ Older releases ](https://github.com/ensime/ensime-src/downloads)
-- [ Manual ](http://ensime.github.com/ensime-src/index.html)
-- [ Manual as PDF ](http://ensime.github.com/ensime-src/manual.pdf)
+- [ Manual ](http://ensime.github.io/)
+- [ Manual as PDF ](http://ensime.github.io/manual.pdf)
 - [ Discussion Group ](http://groups.google.com/group/ensime?hl=en)
 
 
