@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/ensime/ensime-server.png?label=ready&title=Ready)](https://waffle.io/ensime/ensime-server)
 # ENSIME
 the ENhanced Scala Interaction Mode for Emacs
 
