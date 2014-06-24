@@ -1,16 +1,14 @@
 package org.ensime.test
 
-import java.io.{ File => JFile }
 import org.scalatest.FunSpec
 import org.scalatest.matchers.ShouldMatchers
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
 import org.ensime.util.SExp
 import org.ensime.util.FileUtils._
-import org.ensime.util.CanonFile
 import scala.tools.nsc.{ Global, Settings }
-import scala.tools.nsc.io.{ Jar, File, Directory, Path, AbstractFile, PlainFile, ZipArchive }
-import scala.tools.nsc.reporters.{ConsoleReporter}
+import scala.tools.nsc.io.{ Jar, File, Directory, Path, PlainFile }
+import scala.tools.nsc.reporters.ConsoleReporter
 
 class ClassFileIndexSpec extends FunSpec with ShouldMatchers{
 
@@ -22,7 +20,7 @@ class ClassFileIndexSpec extends FunSpec with ShouldMatchers{
   }
 
   def setup_sources() = {
-    val tmpdir = Path(createTemporaryDirectory)
+    val tmpdir = Path(createTemporaryDirectory).toCanonical
     val src = tmpdir / Directory("src")
     val target = tmpdir / Directory("target")
     val jars = tmpdir / Directory("jars")
@@ -52,10 +50,10 @@ class Test1 {}
       path.parent.createDirectory()
       path.toFile.writeAll(contents)
     }
-    val paths = (sources.map { case (path, _) => path.toString }).toList
+    val paths = sources.map { case (path, _) => path.toString()}.toList
 
     val settings = new Settings
-    settings.outputDirs.setSingleOutput(target.toString)
+    settings.outputDirs.setSingleOutput(target.toString())
     val reporter = new ConsoleReporter(settings)
     settings.embeddedDefaults[ClassFileIndexSpec]
     val g = new Global(settings, reporter)
@@ -113,7 +111,7 @@ class Test1 {}
 
     it("should find candidates in source jar") {
       val index = get_index("/FOO", tmpdir / "target", tmpdir / "jars")
-      val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString)
+      val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString())
       val expected = Set(
         tmpdir/Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
       )
@@ -122,7 +120,7 @@ class Test1 {}
 
     it("should allow indexing jar files directly") {
       val index = get_index("/FOO", tmpdir / "target", tmpdir / "jars/sources.jar")
-      val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString)
+      val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString())
       val expected = Set(
         tmpdir/Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
       )
