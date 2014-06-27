@@ -28,7 +28,7 @@ class RichPresentationCompilerSpec extends FunSpec with ShouldMatchers {
     }
 
     it("can call askTypeInfoByName on an object") {
-      Helpers.withPresCompiler  { cc =>
+      Helpers.withPresCompiler { cc =>
         val file = Helpers.srcFile("abc.scala", Helpers.contents(
           "package com.example",
           "object A { }"))

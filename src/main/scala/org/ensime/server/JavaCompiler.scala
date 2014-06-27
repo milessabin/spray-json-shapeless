@@ -47,9 +47,9 @@ import scala.collection.JavaConversions._
 import scala.tools.nsc.ast._
 
 class JavaCompiler(
-  config: ProjectConfig,
-  val reportHandler: ReportHandler,
-  val indexer: Actor) {
+    config: ProjectConfig,
+    val reportHandler: ReportHandler,
+    val indexer: Actor) {
 
   private val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
 
@@ -141,7 +141,7 @@ class JavaCompiler(
   private val extraOptions: Map[String, String] = {
     var m = Map[String, String]()
     config.javaCompilerArgs.sliding(2, 2).foreach {
-      case key :: value :: rest => m += ( key -> value )
+      case key :: value :: rest => m += (key -> value)
       case _ =>
     }
     m
@@ -198,7 +198,7 @@ class JavaCompiler(
     val path = f.file.getCanonicalPath()
     if (path.endsWith(".java")) {
       val contents = f.contents match {
-        case None    => null
+        case None => null
         case Some(s) => s.toCharArray()
       }
       javaUnitForFile(path) = new CompilationUnit(contents, path, defaultEncoding)

@@ -97,7 +97,6 @@ trait SwankProtocol extends Protocol {
    *     Include status flag in return of swank:exec-refactor.
    */
 
-
   import SwankProtocol._
   import ProtocolConst._
 
@@ -192,8 +191,6 @@ trait SwankProtocol extends Protocol {
       }
     }
   }
-
-
 
   ////////////////////
   // Datastructures //
@@ -866,7 +863,7 @@ trait SwankProtocol extends Protocol {
       case "swank:typecheck-files" => {
         form match {
           case SExpList(head :: SExpList(strings) :: body) => {
-	    val filenames = strings.collect{case StringAtom(s) => SourceFileInfo(s)}.toList
+            val filenames = strings.collect { case StringAtom(s) => SourceFileInfo(s) }.toList
             rpcTarget.rpcTypecheckFiles(filenames, callId)
           }
           case _ => oops
@@ -1232,7 +1229,7 @@ trait SwankProtocol extends Protocol {
       case "swank:type-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) ::
-              OffsetRangeExtractor(range) :: body) => {
+            OffsetRangeExtractor(range) :: body) => {
             rpcTarget.rpcTypeAtPoint(file, range, callId)
           }
           case _ => oops
@@ -1260,7 +1257,7 @@ trait SwankProtocol extends Protocol {
       case "swank:inspect-type-at-point" => {
         form match {
           case SExpList(head :: StringAtom(file) ::
-              OffsetRangeExtractor(range) :: body) => {
+            OffsetRangeExtractor(range) :: body) => {
             rpcTarget.rpcInspectTypeAtPoint(file, range, callId)
           }
           case _ => oops
@@ -1918,7 +1915,6 @@ trait SwankProtocol extends Protocol {
         }
       }
 
-
       /**
        * Doc RPC:
        *   swank:debug-set-value
@@ -1944,7 +1940,6 @@ trait SwankProtocol extends Protocol {
           case _ => oops
         }
       }
-
 
       /**
        * Doc RPC:
@@ -2054,9 +2049,9 @@ trait SwankProtocol extends Protocol {
       if (pos.isDefined) {
         val underlying = pos.source.file.underlyingSource.getOrElse(null)
         val archive: SExp = underlying match {
-          case a: ZipArchive if a !=  pos.source.file => a.path
+          case a: ZipArchive if a != pos.source.file => a.path
           case _ => 'nil
-      }
+        }
         SExp.propList(
           (":file", pos.source.path),
           (":archive", archive),
@@ -2070,7 +2065,7 @@ trait SwankProtocol extends Protocol {
       if (pos.isDefined) {
         val underlying = pos.source.file.underlyingSource.getOrElse(null)
         val archive: SExp = underlying match {
-          case a: ZipArchive if a !=  pos.source.file => a.path
+          case a: ZipArchive if a != pos.source.file => a.path
           case _ => 'nil
         }
         SExp.propList(
@@ -2091,7 +2086,7 @@ trait SwankProtocol extends Protocol {
   object OffsetRangeExtractor {
     def unapply(sexp: SExp): Option[OffsetRange] = sexp match {
       case IntAtom(a) => Some(OffsetRange(a, a))
-      case SExpList(IntAtom(a)::IntAtom(b)::Nil) => Some(OffsetRange(a, b))
+      case SExpList(IntAtom(a) :: IntAtom(b) :: Nil) => Some(OffsetRange(a, b))
       case _ => None
     }
   }
@@ -2100,31 +2095,37 @@ trait SwankProtocol extends Protocol {
     def unapply(sexp: SExpList): Option[DebugLocation] = {
       val m = sexp.toKeywordMap()
       m.get(key(":type")).flatMap {
-	case SymbolAtom("reference") => {
-	  for(StringAtom(id) <- m.get(key(":object-id"))) yield {
-	    DebugObjectReference(id.toLong)
-	  }
-	}
-	case SymbolAtom("field") => {
-	  for(StringAtom(id) <- m.get(key(":object-id"));
-	    StringAtom(field) <- m.get(key(":field"))) yield {
-	    DebugObjectField(id.toLong, field)
-	  }
-	}
-	case SymbolAtom("element") => {
-	  for(StringAtom(id) <- m.get(key(":object-id"));
-	    IntAtom(index) <- m.get(key(":index"))) yield {
-	    DebugArrayElement(id.toLong, index)
-	  }
-	}
-	case SymbolAtom("slot") => {
-	  for(StringAtom(id) <- m.get(key(":thread-id"));
-	    IntAtom(frame) <- m.get(key(":frame"));
-	    IntAtom(offset) <- m.get(key(":offset"))) yield {
-	    DebugStackSlot(id.toLong, frame, offset)
-	  }
-	}
-	case _ => None
+        case SymbolAtom("reference") => {
+          for (StringAtom(id) <- m.get(key(":object-id"))) yield {
+            DebugObjectReference(id.toLong)
+          }
+        }
+        case SymbolAtom("field") => {
+          for (
+            StringAtom(id) <- m.get(key(":object-id"));
+            StringAtom(field) <- m.get(key(":field"))
+          ) yield {
+            DebugObjectField(id.toLong, field)
+          }
+        }
+        case SymbolAtom("element") => {
+          for (
+            StringAtom(id) <- m.get(key(":object-id"));
+            IntAtom(index) <- m.get(key(":index"))
+          ) yield {
+            DebugArrayElement(id.toLong, index)
+          }
+        }
+        case SymbolAtom("slot") => {
+          for (
+            StringAtom(id) <- m.get(key(":thread-id"));
+            IntAtom(frame) <- m.get(key(":frame"));
+            IntAtom(offset) <- m.get(key(":offset"))
+          ) yield {
+            DebugStackSlot(id.toLong, frame, offset)
+          }
+        }
+        case _ => None
       }
     }
   }

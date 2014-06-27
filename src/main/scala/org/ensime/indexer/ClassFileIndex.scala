@@ -95,7 +95,7 @@ class ClassFileIndex(config: ProjectConfig) {
   }
 
   class MethodByteCodeFinder(targetSource: String, targetLine: Int)
-    extends EmptyVisitor with RichClassVisitor {
+      extends EmptyVisitor with RichClassVisitor {
     type Result = List[MethodBytecode]
     private var quit: Boolean = false
     private var className: String = ""

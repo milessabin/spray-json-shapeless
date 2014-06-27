@@ -1,38 +1,37 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*  
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*  
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.model
-import scala.tools.nsc.interactive.{CompilerControl, Global}
+import scala.tools.nsc.interactive.{ CompilerControl, Global }
 
 trait Helpers { self: Global =>
 
   import definitions.{ ObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
   import scala.tools.nsc.symtab.Flags._
-
 
   def applySynonyms(sym: Symbol): List[Symbol] = {
     val members = if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
@@ -51,7 +50,6 @@ trait Helpers { self: Global =>
     } else { List() }
     members.toList.filter { _.isConstructor }
   }
-
 
   def isArrowType(tpe: Type) = {
     tpe match {
@@ -77,47 +75,44 @@ trait Helpers { self: Global =>
     }
   }
 
-
   def completionSignatureForType(tpe: Type): CompletionSignature = {
     if (isArrowType(tpe)) {
       CompletionSignature(tpe.paramss.map { sect =>
-          sect.map { p => (p.name.toString, typeShortNameWithArgs(p.tpe)) }
-	},
-	typeShortNameWithArgs(tpe.finalResultType))
+        sect.map { p => (p.name.toString, typeShortNameWithArgs(p.tpe)) }
+      },
+        typeShortNameWithArgs(tpe.finalResultType))
     } else CompletionSignature(List(), resultTypeName(tpe))
   }
 
-
   /**
-  * Convenience method to generate a String describing the type. Omit
-  * the package name. Include the arguments postfix.
-  *
-  * Used for type-names of symbol and member completions
-  */
+   * Convenience method to generate a String describing the type. Omit
+   * the package name. Include the arguments postfix.
+   *
+   * Used for type-names of symbol and member completions
+   */
   def typeShortNameWithArgs(tpe: Type): String = {
     if (isArrowType(tpe)) {
       (tpe.paramss.map { sect =>
-          "(" +
+        "(" +
           sect.map { p => typeShortNameWithArgs(p.tpe) }.mkString(", ") +
           ")"
-	}.mkString(" => ")
+      }.mkString(" => ")
         + " => " +
         typeShortNameWithArgs(tpe.finalResultType))
     } else resultTypeName(tpe)
   }
 
-  def resultTypeName(tpe: Type) : String = {
+  def resultTypeName(tpe: Type): String = {
     typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
-        "[" +
+      "[" +
         tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
         "]"
-      } else { "" })
+    } else { "" })
   }
 
-
   /**
-  * Generate qualified name, without args postfix.
-  */
+   * Generate qualified name, without args postfix.
+   */
   def typeFullName(tpe: Type): String = {
     def nestedClassName(sym: Symbol): String = {
       outerClass(sym) match {
@@ -209,8 +204,8 @@ trait Helpers { self: Global =>
     def filterAndSort(symbols: Iterable[Symbol]) = {
       val validSyms = symbols.filter { s =>
         s != EmptyPackage && !isRoot(s) &&
-        // This check is necessary to prevent infinite looping..
-        ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
+          // This check is necessary to prevent infinite looping..
+          ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
       }
       validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
     }
@@ -227,26 +222,26 @@ trait Helpers { self: Global =>
   def declaredAs(sym: Symbol): scala.Symbol = {
     import org.ensime.util.{ Symbols => S }
     if (sym.isMethod)
-    S.Method
+      S.Method
     else if (sym.isTrait)
-    S.Trait
+      S.Trait
     else if (sym.isTrait && sym.hasFlag(JAVA))
-    S.Interface
+      S.Interface
     else if (sym.isInterface)
-    S.Interface
+      S.Interface
     else if (sym.isModule)
-    S.Object
+      S.Object
     else if (sym.isModuleClass)
-    S.Object
+      S.Object
     else if (sym.isClass)
-    S.Class
+      S.Class
     else if (sym.isPackageClass)
-    S.Class
+      S.Class
 
     // check this last so objects are not
     // classified as fields
     else if (sym.isValue || sym.isVariable)
-    S.Field
+      S.Field
     else S.Nil
   }
 

@@ -82,8 +82,7 @@ bintrayOrganization in bintray := Some("ensime")
 
 net.virtualvoid.sbt.graph.Plugin.graphSettings
 
-// TODO: tests should fail if anything is reformatted
-//scalariformSettings
+scalariformSettings
 
 instrumentSettings
 

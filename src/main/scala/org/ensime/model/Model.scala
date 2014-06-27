@@ -39,7 +39,7 @@ abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {
 
 case class SourcePosition(file: CanonFile, line: Int)
 
-case class SourceFileInfo(file: File, contents: Option[String]) { }
+case class SourceFileInfo(file: File, contents: Option[String]) {}
 object SourceFileInfo {
   def apply(file: String) = new SourceFileInfo(new File(file), None)
   def apply(file: File) = new SourceFileInfo(file, None)
@@ -141,7 +141,6 @@ case class DebugArrayElement(
 
 case class DebugObjectField(
   val objectId: Long, val name: String) extends DebugLocation
-
 
 sealed trait DebugValue {
   def typeName: String;
@@ -269,7 +268,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       indexer !? (1000, SourceFileCandidatesReq(pack, name)) match {
         case Some(files: Set[AbstractFile]) => {
           files.flatMap { f =>
-	    println("Linking:" + (sym, f))
+            println("Linking:" + (sym, f))
             askLinkPos(sym, f)
           }.filter(_.isDefined).headOption.getOrElse(NoPosition)
         }

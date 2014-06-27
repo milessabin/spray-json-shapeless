@@ -49,15 +49,15 @@ object Server {
 
     val (cacheDir, host, requestedPort) = if (args.length > 0) {
       // legacy interface
-      System.err.println (
+      System.err.println(
         "WARNING: org.ensime.server.Server now takes properties instead of arguments"
       )
       args match {
         case Array(a, b, c) => (
-            new File(new File(a).getParentFile(), ".ensime_cache"), b, c.toInt)
+          new File(new File(a).getParentFile(), ".ensime_cache"), b, c.toInt)
         case Array(portfile) => (
-            new File(new File(portfile).getParentFile(), ".ensime_cache"),
-            "127.0.0.1", 0)
+          new File(new File(portfile).getParentFile(), ".ensime_cache"),
+          "127.0.0.1", 0)
         case _ =>
           throw new IllegalArgumentException("org.ensime.server.Server invoked incorrectly")
       }
@@ -91,7 +91,7 @@ object Server {
           println("Got connection, creating handler...")
           val handler = new SocketHandler(socket, protocol, project)
           handler.start()
-      } catch {
+        } catch {
           case e: IOException =>
             System.err.println("[ERROR] ENSIME Server: " + e)
         }

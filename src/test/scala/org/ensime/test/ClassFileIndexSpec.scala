@@ -10,10 +10,10 @@ import scala.tools.nsc.{ Global, Settings }
 import scala.tools.nsc.io.{ Jar, File, Directory, Path, PlainFile }
 import scala.tools.nsc.reporters.ConsoleReporter
 
-class ClassFileIndexSpec extends FunSpec with ShouldMatchers{
+class ClassFileIndexSpec extends FunSpec with ShouldMatchers {
 
-  def config(s:String): ProjectConfig = {
-    ProjectConfig.fromSExp(SExp.read(s)) match{
+  def config(s: String): ProjectConfig = {
+    ProjectConfig.fromSExp(SExp.read(s)) match {
       case Right(c) => c
       case Left(t) => throw t
     }
@@ -46,11 +46,12 @@ class Test1 {}
 """
     ).map { case (subpath, contents) => src / subpath -> contents }
 
-    sources.foreach { case (path, contents) =>
-      path.parent.createDirectory()
-      path.toFile.writeAll(contents)
+    sources.foreach {
+      case (path, contents) =>
+        path.parent.createDirectory()
+        path.toFile.writeAll(contents)
     }
-    val paths = sources.map { case (path, _) => path.toString()}.toList
+    val paths = sources.map { case (path, _) => path.toString() }.toList
 
     val settings = new Settings
     settings.outputDirs.setSingleOutput(target.toString())
@@ -113,7 +114,7 @@ class Test1 {}
       val index = get_index("/FOO", tmpdir / "target", tmpdir / "jars")
       val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString())
       val expected = Set(
-        tmpdir/Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
+        tmpdir / Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
       )
       assert(cand == expected, "assert " + cand + " != " + expected)
     }
@@ -122,7 +123,7 @@ class Test1 {}
       val index = get_index("/FOO", tmpdir / "target", tmpdir / "jars/sources.jar")
       val cand = index.sourceFileCandidates("com.example2", "Test1").map(_.toString())
       val expected = Set(
-        tmpdir/Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
+        tmpdir / Directory("jars/sources.jar") + "(com/example1/Unique.scala)"
       )
       assert(cand == expected, "assert " + cand + " != " + expected)
     }

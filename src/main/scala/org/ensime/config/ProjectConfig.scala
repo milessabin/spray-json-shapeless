@@ -643,7 +643,6 @@ object ProjectConfig {
     val runtimeDeps = new mutable.HashSet[CanonFile]
     val compileDeps = new mutable.HashSet[CanonFile]
 
-
     {
       val deps = canonicalizeFiles(conf.compileJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar)
@@ -754,7 +753,7 @@ object ProjectConfig {
   def detectBootClassPath() = {
     Stream(System.getProperty("sun.boot.class.path"),
       System.getProperty("vm.boot.class.path"),
-      System.getProperty("org.apache.harmony.boot.class.path")).find( _ != null )
+      System.getProperty("org.apache.harmony.boot.class.path")).find(_ != null)
   }
 
   def javaBootJars: Set[CanonFile] = {
@@ -763,7 +762,7 @@ object ProjectConfig {
       case Some(cpText) => {
         expandRecursively(
           new File("."),
-          cpText.split(File.pathSeparatorChar).map{ new File(_) },
+          cpText.split(File.pathSeparatorChar).map { new File(_) },
           isValidJar)
       }
       case _ => {
@@ -792,27 +791,27 @@ object ProjectConfig {
 class ReplConfig(val classpath: String) {}
 
 class ProjectConfig(
-  val name: Option[String],
-  val scalaLibraryJar: Option[CanonFile],
-  val scalaReflectJar: Option[CanonFile],
-  val scalaCompilerJar: Option[CanonFile],
-  val root: CanonFile,
-  val sourceRoots: Iterable[CanonFile],
-  val referenceSourceRoots: Iterable[CanonFile],
-  val runtimeDeps: Iterable[CanonFile],
-  val compileDeps: Iterable[CanonFile],
-  val target: Option[CanonFile],
-  val testTarget: Option[CanonFile],
-  formattingPrefsMap: Map[Symbol, Any],
-  val disableIndexOnStartup: Boolean,
-  val disableSourceLoadOnStartup: Boolean,
-  val disableScalaJarsOnClasspath: Boolean,
-  val onlyIncludeInIndex: Iterable[Regex],
-  val excludeFromIndex: Iterable[Regex],
-  val extraCompilerArgs: Iterable[String],
-  val extraBuilderArgs: Iterable[String],
-  val javaCompilerArgs: Iterable[String],
-  val javaCompilerVersion: Option[String]) {
+    val name: Option[String],
+    val scalaLibraryJar: Option[CanonFile],
+    val scalaReflectJar: Option[CanonFile],
+    val scalaCompilerJar: Option[CanonFile],
+    val root: CanonFile,
+    val sourceRoots: Iterable[CanonFile],
+    val referenceSourceRoots: Iterable[CanonFile],
+    val runtimeDeps: Iterable[CanonFile],
+    val compileDeps: Iterable[CanonFile],
+    val target: Option[CanonFile],
+    val testTarget: Option[CanonFile],
+    formattingPrefsMap: Map[Symbol, Any],
+    val disableIndexOnStartup: Boolean,
+    val disableSourceLoadOnStartup: Boolean,
+    val disableScalaJarsOnClasspath: Boolean,
+    val onlyIncludeInIndex: Iterable[Regex],
+    val excludeFromIndex: Iterable[Regex],
+    val extraCompilerArgs: Iterable[String],
+    val extraBuilderArgs: Iterable[String],
+    val javaCompilerArgs: Iterable[String],
+    val javaCompilerVersion: Option[String]) {
 
   val formattingPrefs = formattingPrefsMap.
     foldLeft(FormattingPreferences()) { (fp, p) =>
