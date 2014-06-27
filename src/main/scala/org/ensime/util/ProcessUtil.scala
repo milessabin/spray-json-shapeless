@@ -5,10 +5,10 @@ object ProcessUtil {
 
   def readAllOutput(proc: Process, outputWriter: Writer, errorWriter: Writer): Either[Throwable, Int] = {
     try {
-      val outputStream = proc.getInputStream()
+      val outputStream = proc.getInputStream
       val outputReaderThread = new StreamReaderThread(outputStream, outputWriter)
 
-      val errorStream = proc.getErrorStream()
+      val errorStream = proc.getErrorStream
       val errorReaderThread = new StreamReaderThread(errorStream, errorWriter)
 
       errorReaderThread.start()
@@ -29,7 +29,7 @@ object ProcessUtil {
     val errorWriter = new StringWriter()
     readAllOutput(proc, outputWriter, errorWriter) match {
       case Left(t) => Left(t)
-      case Right(_) => Right(outputWriter.toString(), errorWriter.toString())
+      case Right(_) => Right(outputWriter.toString, errorWriter.toString)
     }
   }
 
@@ -52,8 +52,8 @@ object ProcessUtil {
   class StreamReaderThread(is: InputStream, ow: Writer) extends Thread {
     override def run() {
       try {
-        val isr = new InputStreamReader(is);
-        val br = new BufferedReader(isr);
+        val isr = new InputStreamReader(is)
+        val br = new BufferedReader(isr)
         var line: String = br.readLine()
         while (line != null) {
           ow.write(line + "\n")

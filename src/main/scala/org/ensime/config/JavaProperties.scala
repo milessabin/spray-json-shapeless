@@ -38,10 +38,10 @@ object JavaProperties {
     try {
       val fis = new FileInputStream(file)
       try {
-        props.load(fis);
+        props.load(fis)
         props.toMap
       } finally {
-        fis.close();
+        fis.close()
       }
     } catch {
       case e: Throwable => Map()

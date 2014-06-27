@@ -31,12 +31,7 @@ import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
-import scala.actors._
-import scala.actors.Actor._
 import scala.collection.immutable
-import scala.tools.nsc.io.AbstractFile
-import scala.tools.nsc.util.BatchSourceFile
-import scala.tools.refactoring.common.{ TextChange, Change }
 import scalariform.astselect.AstSelector
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
@@ -47,7 +42,7 @@ trait RPCTarget { self: Project =>
   import protocol._
 
   def rpcShutdownServer(callId: Int) {
-    sendRPCReturn(toWF(true), callId)
+    sendRPCReturn(toWF(value = true), callId)
     shutdownServer()
   }
 
@@ -253,7 +248,7 @@ trait RPCTarget { self: Project =>
   def rpcExpandSelection(filename: String, start: Int, stop: Int, callId: Int) {
     try {
       FileUtils.readFile(new File(filename)) match {
-        case Right(contents) => {
+        case Right(contents) =>
           val selectionRange = Range(start, stop - start)
           AstSelector.expandSelection(contents, selectionRange) match {
             case Some(range) => sendRPCReturn(
@@ -261,7 +256,6 @@ trait RPCTarget { self: Project =>
             case _ => sendRPCReturn(
               toWF(FileRange(filename, start, stop)), callId)
           }
-        }
         case Left(e) => throw e
       }
     } catch {
@@ -276,11 +270,10 @@ trait RPCTarget { self: Project =>
     try {
       val changeList = files.map { f =>
         FileUtils.readFile(f) match {
-          case Right(contents) => {
+          case Right(contents) =>
             val formatted = ScalaFormatter.format(
               contents, config.formattingPrefs)
             TextEdit(f, 0, contents.length, formatted)
-          }
           case Left(e) => throw e
         }
       }

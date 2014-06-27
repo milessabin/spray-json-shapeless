@@ -32,7 +32,7 @@ import scala.util.parsing.input
 
 abstract class SExp extends WireFormat {
   def toReadableString(debug: Boolean): String = toString
-  override def toWireString: String = toReadableString(false)
+  override def toWireString: String = toReadableString(debug = false)
   def toScala: Any = toString
 }
 
@@ -40,30 +40,28 @@ case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
 
   override def iterator = items.iterator
 
-  override def toString = "(" + items.mkString(" ") + ")"
+  override def toString() = "(" + items.mkString(" ") + ")"
 
   override def toReadableString(debug: Boolean) = {
     "(" + items.map { _.toReadableString(debug) }.mkString(" ") + ")"
   }
 
-  def toKeywordMap(): Map[KeywordAtom, SExp] = {
+  def toKeywordMap: Map[KeywordAtom, SExp] = {
     var m = Map[KeywordAtom, SExp]()
     items.sliding(2, 2).foreach {
-      case (key: KeywordAtom) :: (sexp: SExp) :: rest => {
+      case (key: KeywordAtom) :: (sexp: SExp) :: rest =>
         m += (key -> sexp)
-      }
-      case _ => {}
+      case _ =>
     }
     m
   }
 
-  def toSymbolMap(): Map[scala.Symbol, Any] = {
+  def toSymbolMap: Map[scala.Symbol, Any] = {
     var m = Map[scala.Symbol, Any]()
     items.sliding(2, 2).foreach {
-      case SymbolAtom(key) :: (sexp: SExp) :: rest => {
+      case SymbolAtom(key) :: (sexp: SExp) :: rest =>
         m += (Symbol(key) -> sexp.toScala)
-      }
-      case _ => {}
+      case _ =>
     }
     m
   }
@@ -104,7 +102,7 @@ case class StringAtom(value: String) extends SExp {
     }
   }
   def escape_string(s: String) = {
-    val printable = s.replace("\\", "\\\\").replace("\"", "\\\"");
+    val printable = s.replace("\\", "\\\\").replace("\"", "\\\"")
     "\"" + printable + "\""
   }
 }
@@ -120,8 +118,7 @@ case class KeywordAtom(value: String) extends SExp {
 }
 
 object StringParser extends RegexParsers {
-  import scala.util.matching.Regex
-  override def skipWhitespace = false;
+  override def skipWhitespace = false
 
   def string = "\"" ~ rep(string_char) ~ "\"" ^^ {
     case "\"" ~ l ~ "\"" => l.mkString
@@ -133,8 +130,6 @@ object StringParser extends RegexParsers {
 }
 
 object SExp extends RegexParsers {
-
-  import scala.util.matching.Regex
 
   // Parse strings using an auxiliary parser. This is because
   // spaces inside strings shouldn't be skipped.
@@ -165,14 +160,12 @@ object SExp extends RegexParsers {
 
     result match {
       case Success(value, next) => value
-      case Failure(errMsg, next) => {
+      case Failure(errMsg, next) =>
         println(errMsg)
         NilAtom()
-      }
-      case Error(errMsg, next) => {
+      case Error(errMsg, next) =>
         println(errMsg)
         NilAtom()
-      }
     }
   }
 
@@ -230,7 +223,7 @@ object SExp extends RegexParsers {
     if (value == 'nil) {
       NilAtom()
     } else {
-      SymbolAtom(value.toString.drop(1))
+      SymbolAtom(value.toString().drop(1))
     }
   }
 
@@ -239,11 +232,11 @@ object SExp extends RegexParsers {
   }
 
   implicit def toSExp(o: SExpable): SExp = {
-    o.toSExp
+    o.toSExp()
   }
 
   implicit def toSExpable(o: SExp): SExpable = new SExpable {
-    def toSExp = o
+    override def toSExp = o
   }
 
   implicit def listToSExpable(o: Iterable[SExpable]): SExpable =
@@ -254,6 +247,6 @@ object SExp extends RegexParsers {
 
 }
 
-abstract trait SExpable {
+trait SExpable {
   implicit def toSExp(): SExp
 }

@@ -27,9 +27,9 @@
 
 package org.ensime.server
 import scala.collection.mutable.ArrayBuffer
-import java.io.{ ByteArrayOutputStream, File }
+import java.io.ByteArrayOutputStream
 import java.util.Locale
-import org.eclipse.jdt.core.compiler.{ IProblem, CharOperation }
+import org.eclipse.jdt.core.compiler.CharOperation
 import org.eclipse.jdt.internal.compiler.{ Compiler, ClassFile, CompilationResult, ICompilerRequestor, DefaultErrorHandlingPolicies }
 import org.eclipse.jdt.internal.compiler.batch.{ CompilationUnit, FileSystem }
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
@@ -39,12 +39,9 @@ import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import org.ensime.util._
-import org.ensime.util.RichFile._
 import scala.actors._
-import scala.actors.Actor._
 import scala.collection.{ mutable, Iterable }
 import scala.collection.JavaConversions._
-import scala.tools.nsc.ast._
 
 class JavaCompiler(
     config: ProjectConfig,
@@ -83,7 +80,7 @@ class JavaCompiler(
           val localName = if (cn.length > 0) {
             CharOperation.charToString(cn(cn.length - 1))
           } else "NA"
-          val pos = Some((CharOperation.charToString(reader.getFileName()), 0))
+          val pos = Some((CharOperation.charToString(reader.getFileName), 0))
           infos += TypeSearchResult(
             key,
             localName,
@@ -96,7 +93,7 @@ class JavaCompiler(
         while (i > -1) {
           val packName = key.substring(0, i)
           knownPackages += packName
-          i = key.indexOf(".", i + 1);
+          i = key.indexOf(".", i + 1)
         }
       }
       indexer ! AddSymbolsReq(infos)
@@ -109,12 +106,10 @@ class JavaCompiler(
     override def findType(compoundTypeName: Array[Array[Char]]) = {
       val key = CharOperation.toString(compoundTypeName)
       compiledClasses.get(key) match {
-        case Some(binType) => {
+        case Some(binType) =>
           new NameEnvironmentAnswer(binType, null)
-        }
-        case None => {
+        case None =>
           super.findType(compoundTypeName)
-        }
       }
     }
 
@@ -182,24 +177,23 @@ class JavaCompiler(
 
   def compileAll() = {
     val units = javaUnitForFile.values
-    if (!(units.isEmpty)) {
+    if (units.nonEmpty) {
       try {
         compiler.compile(units.toArray)
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           System.err.println("Java compilation failed.")
           e.printStackTrace(System.err)
-        }
       }
     }
   }
 
   def addFile(f: SourceFileInfo) = {
-    val path = f.file.getCanonicalPath()
+    val path = f.file.getCanonicalPath
     if (path.endsWith(".java")) {
       val contents = f.contents match {
         case None => null
-        case Some(s) => s.toCharArray()
+        case Some(s) => s.toCharArray
       }
       javaUnitForFile(path) = new CompilationUnit(contents, path, defaultEncoding)
     }
@@ -212,25 +206,24 @@ class JavaCompiler(
       val units = files.flatMap(f => javaUnitForFile.get(f.file.getCanonicalPath))
       compiler.compile(units.toArray)
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         System.err.println("Java compilation failed.")
         e.printStackTrace(System.err)
-      }
     }
   }
 
   def allNotes: Iterable[Note] = {
-    requestor.allNotes
+    requestor.allNotes()
   }
 
   def reset() {
-    compiler.reset
+    compiler.reset()
     reportHandler.clearAllJavaNotes()
   }
 
   def shutdown() {
-    compiler.reset
-    javaUnitForFile.clear
+    compiler.reset()
+    javaUnitForFile.clear()
   }
 
 }

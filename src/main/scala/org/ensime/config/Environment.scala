@@ -27,8 +27,6 @@
 
 package org.ensime.config
 
-import scala.collection.mutable.ArrayBuffer
-import java.util.jar._
 import java.net._
 
 object Environment {
@@ -55,8 +53,8 @@ object Environment {
   private def ensimeVersion: String =
     try {
       val pathToEnsimeJar = getClass.getProtectionDomain.getCodeSource.getLocation
-      val ensimeJar = new URL("jar:" + pathToEnsimeJar.toString + "!/").openConnection().asInstanceOf[JarURLConnection].getJarFile()
-      ensimeJar.getManifest.getMainAttributes().getValue("Implementation-Version")
+      val ensimeJar = new URL("jar:" + pathToEnsimeJar.toString + "!/").openConnection().asInstanceOf[JarURLConnection].getJarFile
+      ensimeJar.getManifest.getMainAttributes.getValue("Implementation-Version")
     } catch {
       case _: Exception => "unknown"
     }

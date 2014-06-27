@@ -49,7 +49,7 @@
  *        software without specific prior written permission.
  *
  *
- *  THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ *  THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS "AS IS" AND
  *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  *  ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
@@ -68,16 +68,14 @@ package org.ensime.server
 import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
-import scala.actors.Actor._
 import scala.actors.Actor
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.tools.nsc.interactive.{ FreshRunReq, CompilerControl, Global, MissingResponse }
+import scala.tools.nsc.interactive.{ CompilerControl, Global }
 import scala.tools.nsc.util._
 import scala.reflect.internal.util._
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
-import scala.reflect.internal.util.{ Position, RangePosition, SourceFile }
+import scala.reflect.internal.util.{ RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 
@@ -89,7 +87,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       Some(ask(() => op))
     } catch {
       case fi: FailedInterrupt =>
-        fi.getCause() match {
+        fi.getCause match {
           // TODO(aemon): Remove.
           // xeno.by: InvalidCompanions has been removed in 2.10
           // case e @ InvalidCompanions(c1, c2) =>
@@ -131,10 +129,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     (for (
       members <- x.get.left.toOption;
       infos <- askOption {
-        val roots = filterMembersByPrefix(members, firstName, true, true).map { _.sym }
+        val roots = filterMembersByPrefix(members, firstName, matchEntire = true, caseSens = true).map { _.sym }
         val restOfPath = nameSegs.drop(1).mkString(".")
         val syms = roots.flatMap { symsAtQualifiedPath(restOfPath, _) }
-        syms.filter { _.tpe != NoType }.headOption.map { sym => TypeInfo(sym.tpe) }
+        syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe) }
       }
     ) yield infos).getOrElse(None)
   }
@@ -166,13 +164,13 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askRemoveDeleted(f: File) = askOption(removeDeleted(AbstractFile.getFile(f)))
 
   def askReloadAllFiles() = {
-    val all = ((config.sourceFilenames.map(getSourceFile(_))) ++
+    val all = (config.sourceFilenames.map(getSourceFile) ++
       allSources).toSet.toList
     askReloadFiles(all)
   }
 
   def askInspectTypeById(id: Int): Option[TypeInspectInfo] =
-    askOption(typeById(id).map(inspectType(_))).getOrElse(None)
+    askOption(typeById(id).map(inspectType)).getOrElse(None)
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] =
     askOption(inspectTypeAt(p)).getOrElse(None)
@@ -192,15 +190,15 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations =
     askOption(symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List()))
 
-  def askClearTypeCache() = clearTypeCache
+  def askClearTypeCache() = clearTypeCache()
 
   def askNotifyWhenReady() = ask(setNotifyWhenReady)
 
   def createSourceFile(path: String) = getSourceFile(path)
   def createSourceFile(file: AbstractFile) = new BatchSourceFile(file)
   def createSourceFile(file: SourceFileInfo) = file match {
-    case SourceFileInfo(f: File, None) => getSourceFile(f.getCanonicalPath())
-    case SourceFileInfo(f: File, Some(contents)) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath()), contents)
+    case SourceFileInfo(f: File, None) => getSourceFile(f.getCanonicalPath)
+    case SourceFileInfo(f: File, Some(contents)) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
   }
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
     _.file.path == path)
@@ -294,44 +292,41 @@ class RichPresentationCompiler(
       }
     }
     for (sym <- tpe.decls) {
-      addTypeMember(sym, tpe, false, NoSymbol)
+      addTypeMember(sym, tpe, inherited = false, NoSymbol)
     }
     for (sym <- tpe.members) {
-      addTypeMember(sym, tpe, true, NoSymbol)
+      addTypeMember(sym, tpe, inherited = true, NoSymbol)
     }
     members.values
   }
 
   protected def getMembersForTypeAt(p: Position): Iterable[Member] = {
     typeAt(p) match {
-      case Some(tpe) => {
+      case Some(tpe) =>
         if (isNoParamArrowType(tpe)) {
           typePublicMembers(typeOrArrowTypeResult(tpe))
         } else {
           val members: Iterable[Member] = try {
             wrapTypeMembers(p)
           } catch {
-            case e: Throwable => {
+            case e: Throwable =>
               System.err.println("Error retrieving type members:")
               e.printStackTrace(System.err)
               List()
-            }
           }
           // Remove duplicates
           // Filter out synthetic things
           val bySym = new mutable.LinkedHashMap[Symbol, Member]
-          for (m <- (members ++ typePublicMembers(tpe))) {
+          for (m <- members ++ typePublicMembers(tpe)) {
             if (!m.sym.nameString.contains("$")) {
               bySym(m.sym) = m
             }
           }
           bySym.values
         }
-      }
-      case None => {
+      case None =>
         System.err.println("ERROR: Failed to get any type information :(  ")
         List()
-      }
     }
   }
 
@@ -356,18 +351,14 @@ class RichPresentationCompiler(
   private def typeOfTree(t: Tree): Option[Type] = {
     var tree = t
     tree = tree match {
-      case Select(qual, name) if tree.tpe == ErrorType => {
+      case Select(qual, name) if tree.tpe == ErrorType =>
         qual
-      }
-      case t: ImplDef if t.impl != null => {
+      case t: ImplDef if t.impl != null =>
         t.impl
-      }
-      case t: ValOrDefDef if t.tpt != null => {
+      case t: ValOrDefDef if t.tpt != null =>
         t.tpt
-      }
-      case t: ValOrDefDef if t.rhs != null => {
+      case t: ValOrDefDef if t.rhs != null =>
         t.rhs
-      }
       case t => t
     }
     if (tree.tpe != null) {
@@ -395,9 +386,9 @@ class RichPresentationCompiler(
   protected def symbolByName(name: String): Option[Symbol] = {
     try {
       val sym = if (name.endsWith("$")) {
-        definitions.getModule(newTermName(name.substring(0, name.length - 1)))
+        rootMirror.getModuleByName(newTermName(name.substring(0, name.length - 1)))
       } else {
-        definitions.getClass(newTypeName(name))
+        rootMirror.getClassByName(newTypeName(name))
       }
       sym match {
         case NoSymbol => None
@@ -411,12 +402,12 @@ class RichPresentationCompiler(
 
   protected def filterMembersByPrefix(members: List[Member], prefix: String,
     matchEntire: Boolean, caseSens: Boolean): List[Member] = members.filter { m =>
-    val prefixUpper = prefix.toUpperCase()
+    val prefixUpper = prefix.toUpperCase
     val sym = m.sym
     val ns = sym.nameString
     (((matchEntire && ns == prefix) ||
       (!matchEntire && caseSens && ns.startsWith(prefix)) ||
-      (!matchEntire && !caseSens && ns.toUpperCase().startsWith(prefixUpper)))
+      (!matchEntire && !caseSens && ns.toUpperCase.startsWith(prefixUpper)))
       && !sym.nameString.contains("$"))
   }
 
@@ -452,7 +443,7 @@ class RichPresentationCompiler(
           println("[warning] symbolAt for " + tree.getClass + ": " + tree)
           Nil
       }
-    wannabes.filter(_.exists).headOption
+    wannabes.find(_.exists)
   }
 
   protected def linkPos(sym: Symbol, source: SourceFile): Position = {
@@ -466,7 +457,7 @@ class RichPresentationCompiler(
   private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
     case List() => List()
     case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
-    case ImportSelector(from, _, to, _) :: _ if (from.toString == sym.name.toString) =>
+    case ImportSelector(from, _, to, _) :: _ if from.toString == sym.name.toString =>
       if (to == nme.WILDCARD) List()
       else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
     case _ :: rest => transformImport(rest, sym)
@@ -474,7 +465,7 @@ class RichPresentationCompiler(
 
   protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
     symbolAt(p) match {
-      case Some(s) => {
+      case Some(s) =>
         val gi = new GlobalIndexes {
           val global = RichPresentationCompiler.this
           val sym = s.asInstanceOf[global.Symbol]
@@ -492,7 +483,6 @@ class RichPresentationCompiler(
           }
         }
         gi.result
-      }
       case None => List()
     }
   }
@@ -514,7 +504,7 @@ class RichPresentationCompiler(
   protected def reloadAndTypeFiles(sources: Iterable[SourceFile]) = {
     wrapReloadSources(sources.toList)
     sources.foreach { s =>
-      wrapTypedTree(s, true)
+      wrapTypedTree(s, forceReload = true)
     }
   }
 

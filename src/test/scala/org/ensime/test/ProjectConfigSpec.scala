@@ -1,7 +1,7 @@
 package org.ensime.test
 
 import org.scalatest.FunSpec
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.ShouldMatchers
 import org.ensime.config.ProjectConfig
 import org.ensime.util.SExp
 import org.ensime.util.FileUtils._

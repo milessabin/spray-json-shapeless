@@ -26,10 +26,6 @@
  */
 
 package org.ensime.debug
-import org.ensime.util._
-import org.ensime.util.RichFile._
-import org.ensime.util.FileUtils._
-import scala.collection.mutable.{ HashMap, ArrayBuffer }
 import java.io._
 import org.objectweb.asm._
 import org.objectweb.asm.commons.EmptyVisitor
@@ -116,10 +112,9 @@ object DebugInfo {
 
       }, 0)
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         System.err.println("Error reading classfile.")
         e.printStackTrace(System.err)
-      }
     } finally {
       fs.close()
     }

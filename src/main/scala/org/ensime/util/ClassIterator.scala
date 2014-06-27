@@ -50,7 +50,7 @@ trait ClassHandler {
 
 private class PublicSymbolVisitor(location: File, handler: ClassHandler) extends EmptyVisitor {
   var currentClassName: Option[String] = None
-  val path: String = location.getPath()
+  val path: String = location.getPath
 
   override def visit(version: Int,
     access: Int,
@@ -111,10 +111,9 @@ object ClassIterator {
       try {
         findClassesIn(f, callback)
       } catch {
-        case e: IOException => {
+        case e: IOException =>
           System.err.println("Failed to open: " + f)
           e.printStackTrace(System.err)
-        }
       }
     }
   }
@@ -221,7 +220,7 @@ object ClassIterator {
   }
 
   private def isClass(e: FileEntry): Boolean =
-    (!e.isDirectory) && (e.getName.toLowerCase.endsWith(".class"))
+    (!e.isDirectory) && e.getName.toLowerCase.endsWith(".class")
 
   private def processDirectory(dir: File, callback: Callback) {
     import FileUtils._

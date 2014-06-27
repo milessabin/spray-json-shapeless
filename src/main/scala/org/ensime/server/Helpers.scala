@@ -26,12 +26,11 @@
  */
 
 package org.ensime.model
-import scala.tools.nsc.interactive.{ CompilerControl, Global }
+import scala.tools.nsc.interactive.Global
 
 trait Helpers { self: Global =>
 
-  import definitions.{ ObjectClass, RootPackage, EmptyPackage, NothingClass, AnyClass, AnyRefClass }
-  import scala.tools.nsc.symtab.Flags._
+  import rootMirror.{ RootPackage, EmptyPackage }
 
   def applySynonyms(sym: Symbol): List[Symbol] = {
     val members = if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
@@ -116,9 +115,8 @@ trait Helpers { self: Global =>
   def typeFullName(tpe: Type): String = {
     def nestedClassName(sym: Symbol): String = {
       outerClass(sym) match {
-        case Some(outerSym) => {
+        case Some(outerSym) =>
           nestedClassName(outerSym) + "$" + typeShortName(sym)
-        }
         case None => typeShortName(sym)
       }
     }
@@ -132,7 +130,7 @@ trait Helpers { self: Global =>
 
   def typeShortName(tpe: Type): String = {
     if (tpe.typeSymbol != NoSymbol) typeShortName(tpe.typeSymbol)
-    else tpe.toString
+    else tpe.toString()
   }
 
   def typeShortName(sym: Symbol): String = {

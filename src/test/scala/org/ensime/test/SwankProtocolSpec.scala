@@ -1,12 +1,10 @@
 package org.ensime.test
-import java.io.File
 import org.scalatest.FunSpec
-import org.scalatest.matchers.ShouldMatchers
-import org.ensime.util.SExp
+import org.scalatest.ShouldMatchers
 import org.ensime.protocol.SwankProtocol
-import scala.tools.nsc.util.RangePosition
-import scala.tools.nsc.util.{ BatchSourceFile }
-import scala.tools.nsc.io.{ VirtualFile, PlainFile, AbstractFile, ZipArchive }
+import scala.reflect.internal.util.RangePosition
+import scala.reflect.internal.util.BatchSourceFile
+import scala.tools.nsc.io.{ VirtualFile, PlainFile, ZipArchive }
 
 class SwankProtocolSpec extends FunSpec with ShouldMatchers {
 
@@ -20,7 +18,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers {
       val p = f.position(2)
       val s = SwankProtocol.SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :offset 2)"""
-      val got = s.toReadableString(false)
+      val got = s.toReadableString(debug = false)
       assert(got == expected, got + " != " + expected)
     }
 
@@ -30,7 +28,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers {
       val p = f.position(2)
       val s = SwankProtocol.SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :archive "stuff.zip" :offset 2)"""
-      val got = s.toReadableString(false)
+      val got = s.toReadableString(debug = false)
       assert(got == expected, got + " != " + expected)
     }
 
@@ -39,7 +37,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers {
       val p = new RangePosition(f, 1, 2, 3)
       val s = SwankProtocol.SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :offset 2 :start 1 :end 3)"""
-      val got = s.toReadableString(false)
+      val got = s.toReadableString(debug = false)
       assert(got == expected, got + " != " + expected)
     }
 
@@ -49,7 +47,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers {
       val p = new RangePosition(f, 1, 2, 3)
       val s = SwankProtocol.SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :archive "stuff.zip" :offset 2 :start 1 :end 3)"""
-      val got = s.toReadableString(false)
+      val got = s.toReadableString(debug = false)
       assert(got == expected, got + " != " + expected)
     }
   }

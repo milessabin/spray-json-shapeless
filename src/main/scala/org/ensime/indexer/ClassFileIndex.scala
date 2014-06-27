@@ -31,17 +31,12 @@ import org.ensime.config.ProjectConfig
 import org.ensime.util.ClassIterator
 import org.ensime.util.FileUtils
 import org.ensime.util.RichClassVisitor
-import org.ensime.util.CanonFile
 import org.ensime.util.ClassLocation
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.EmptyVisitor
-import scala.collection.mutable.HashMap
-import scala.collection.mutable.HashSet
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.MultiMap
 import scala.tools.nsc.io.AbstractFile
 
 case class Op(
@@ -65,10 +60,10 @@ class ClassFileIndex(config: ProjectConfig) {
   ).toSet
 
   private val classFilesForSourceName =
-    new HashMap[String, HashSet[ClassLocation]].withDefault(s => HashSet())
+    new mutable.HashMap[String, mutable.HashSet[ClassLocation]].withDefault(s => mutable.HashSet())
 
   private val sourceNamesForClassFile =
-    new HashMap[ClassLocation, HashSet[String]].withDefault(s => HashSet())
+    new mutable.HashMap[ClassLocation, mutable.HashSet[String]].withDefault(s => mutable.HashSet())
 
   val ASMAcceptAll = 0
 
@@ -120,7 +115,7 @@ class ClassFileIndex(config: ProjectConfig) {
       signature: String,
       exceptions: Array[String]): MethodVisitor = {
       if (!quit) {
-        return new EmptyVisitor() with MethodDescriber {
+        new EmptyVisitor() with MethodDescriber {
           var maxLine = Int.MinValue
           var minLine = Int.MaxValue
           var ops = ListBuffer[Op]()
@@ -162,7 +157,7 @@ class ClassFileIndex(config: ProjectConfig) {
       }.toList.sortBy(_.startLine * -1)
     }
     val fromClasses = forFileType(".class")
-    if (!fromClasses.isEmpty) fromClasses else forFileType(".jar")
+    if (fromClasses.nonEmpty) fromClasses else forFileType(".jar")
   }
 
   def sourceFileCandidates(
@@ -171,9 +166,8 @@ class ClassFileIndex(config: ProjectConfig) {
     println("Looking for " + (enclosingPackage, classNamePrefix))
     val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix.replaceAll("[$]$", "")
     val sourceNames: Set[String] = sourceNamesForClassFile.collect {
-      case (loc, sourceNames) if (
-        loc.file.contains(subPath) ||
-        loc.entry.contains(subPath)) => sourceNames
+      case (loc, sourceNames) if loc.file.contains(subPath) ||
+        loc.entry.contains(subPath) => sourceNames
     }.flatten.toSet
     sourceNames.flatMap { sourceName =>
       allSources.filter(_.name == sourceName)
