@@ -5,7 +5,7 @@ the ENhanced Scala Interaction Mode for Emacs
 # Help wanted!
 
 Please help developing this project. You'll find hacking instructions at the end of the document.
-Also QA help is of high value so please go to the [project's Code Triage page](http://www.codetriage.com/ensime/ensime-src)
+Also QA help is of high value so please go to the [project's Code Triage page](http://www.codetriage.com/ensime/ensime-server)
 and start commenting on issues.
 
 # Links
