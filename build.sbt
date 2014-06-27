@@ -6,27 +6,30 @@ import java.io.File
 import sbt.IO
 
 import AssemblyKeys._
+import CoverallsPlugin.CoverallsKeys._
 
 organization := "org.ensime"
 
 name := "ensime"
 
-scalaVersion := "2.9.3"
+scalaVersion := "2.10.4"
 
 git.baseVersion := "1.0"
 
 // rolling release has the git hash in the version
 versionWithGit
 
-libraryDependencies <<= scalaVersion { scala_version => Seq(
+libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "org.apache.lucene"          %  "lucene-core"          % "3.5.0",
   "org.sonatype.tycho"         %  "org.eclipse.jdt.core" % "3.6.2.v_A76_R36x",
   "asm"                        %  "asm-commons"          % "3.3.1",
   "asm"                        %  "asm-util"             % "3.3.1",
   "com.googlecode.json-simple" %  "json-simple"          % "1.1.1" intransitive(),
-  "org.scalatest"              %% "scalatest"            % "1.9.2" % "test",
+  "org.scalatest"              %% "scalatest"            % "2.2.0" % "test",
   "org.scalariform"            %% "scalariform"          % "0.1.4",
-  "org.scala-lang"             %  "scala-compiler"       % scala_version,
+  "org.scala-lang"             %  "scala-compiler"       % scalaVersion,
+  "org.scala-lang"             %  "scala-reflect"        % scalaVersion,
+  "org.scala-lang"             %  "scala-actors"         % scalaVersion,
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )}
 
@@ -76,4 +79,14 @@ net.virtualvoid.sbt.graph.Plugin.graphSettings
 // TODO: tests should fail if anything is reformatted
 //scalariformSettings
 
-//instrumentSettings
+instrumentSettings
+
+// let's bump this every time we get more tests
+ScoverageKeys.minimumCoverage := 12
+
+// might be buggy
+ScoverageKeys.highlighting := true
+
+ScoverageKeys.failOnMinimumCoverage := true
+
+coverallsSettings

@@ -15,12 +15,6 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.11.2")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
 
-// no scoverage in scala 2.9 :-(
-// https://github.com/scoverage/sbt-scoverage/issues/20
+addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "0.99.5.1")
 
-//resolvers += Classpaths.sbtPluginReleases
-
-//addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "0.99.5.1")
-
-// TODO https://coveralls.io
-
+addSbtPlugin("org.scoverage" %% "sbt-coveralls" % "0.98.0")

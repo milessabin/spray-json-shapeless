@@ -1,12 +1,18 @@
+branches:
+  only:
+  - master
+  - scala-2.9
 language: scala
 jdk:
 - openjdk6
 scala:
 - 2.10.4
-branches:
-  only:
-  - master
-  - scala-2.9
+before_script:
+- "./bintray.sh"
+script:
+- "sbt coveralls"
+after_success:
+- sbt publish
 env:
   global:
     # to generate this (when in the correct branch of the correct repo):
