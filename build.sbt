@@ -49,8 +49,8 @@ addCompilerPlugin("org.brianmckenna" %% "wartremover" % "0.9")
 
 scalacOptions in Compile ++= Seq(
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", //"-Xfatal-warnings",
-  "-language:postfixOps", "-language:implicitConversions",
-  "-P:wartremover:only-warn-traverser:org.brianmckenna.wartremover.warts.Unsafe"
+  "-language:postfixOps", "-language:implicitConversions"
+  //"-P:wartremover:only-warn-traverser:org.brianmckenna.wartremover.warts.Unsafe"
   //"-P:wartremover:traverser:org.brianmckenna.wartremover.warts.Unsafe"
 )
 
