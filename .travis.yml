@@ -8,13 +8,15 @@ jdk:
 scala:
 - 2.10.4
 before_script:
-- "./bintray.sh"
+- ./bintray.sh
 script:
-- "sbt coveralls"
+- sbt scoverage:test
 after_success:
 - sbt publish
+# https://github.com/scoverage/sbt-coveralls/issues/18
+#- sbt coveralls
 env:
   global:
     # to generate this (when in the correct branch of the correct repo):
     # travis encrypt BINTRAY_TOKEN=<YOUR PRIVATE API KEY> --add
-    secure: aCoGM5RlD3eopbRc12aZAng47SrDjQAAHyKesc3LnCeFShV7/gV22dpxIa/k+QbkEOcWCcWGCQ7EER4Xakc0iB+bPtae1eNp6r77dtJFxI0izjWJXjWTxlqtwF4bdRh0yBGpgFp/zPcGL+o9c/CDwtcE5ko3hRsuU2Ix8RnnepY
+    - secure: aCoGM5RlD3eopbRc12aZAng47SrDjQAAHyKesc3LnCeFShV7/gV22dpxIa/k+QbkEOcWCcWGCQ7EER4Xakc0iB+bPtae1eNp6r77dtJFxI0izjWJXjWTxlqtwF4bdRh0yBGpgFp/zPcGL+o9c/CDwtcE5ko3hRsuU2Ix8RnnepY
