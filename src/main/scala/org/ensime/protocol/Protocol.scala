@@ -208,7 +208,8 @@ trait ProtocolConversions {
   def toWF(value: Boolean): WireFormat
   def toWF(value: String): WireFormat
   def toWF(value: Note): WireFormat
-  def toWF(notelist: NoteList): WireFormat;
+  def toWF(notelist: NoteList): WireFormat
+
   def toWF(values: Iterable[WireFormat]): WireFormat
   def toWF(value: CompletionInfo): WireFormat
   def toWF(value: CompletionInfoList): WireFormat

@@ -31,27 +31,22 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
 import org.ensime.indexer.LuceneIndex
-import org.objectweb.asm.ClassReader
 import org.ensime.model.{
   ImportSuggestions,
   MethodSearchResult,
   SymbolSearchResult,
   SymbolSearchResults,
-  TypeInfo,
   TypeSearchResult
 }
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.protocol.ProtocolConversions
-import org.ensime.util._
 import scala.actors._
-import scala.actors.Actor._
-import scala.collection.mutable.{ ArrayBuffer, HashSet, ListBuffer }
+import scala.collection.mutable.ArrayBuffer
 
 case class IndexerShutdownReq()
 case class RebuildStaticIndexReq()
 case class TypeCompletionsReq(prefix: String, maxResults: Int)
-case class SourceFileCandidatesReq(enclosingPackage: String,
-  classNamePrefix: String)
+case class SourceFileCandidatesReq(enclosingPackage: String, classNamePrefix: String)
 case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 case class ReindexClassFilesReq(files: Iterable[File])
@@ -74,11 +69,10 @@ class Indexer(
     loop {
       try {
         receive {
-          case IndexerShutdownReq() => {
+          case IndexerShutdownReq() =>
             index.close()
             exit('stop)
-          }
-          case RebuildStaticIndexReq() => {
+          case RebuildStaticIndexReq() =>
             index.initialize(
               config.root,
               config.allFilesOnClasspath,
@@ -89,47 +83,36 @@ class Indexer(
                 ++ List(config.target, config.testTarget).flatten
             )
             project ! AsyncEvent(toWF(IndexerReadyEvent()))
-          }
-          case ReindexClassFilesReq(files: Iterable[File]) => {
+          case ReindexClassFilesReq(files) =>
             classFileIndex.indexFiles(files)
-          }
-          case CommitReq() => {
+          case CommitReq() =>
             index.commit()
-          }
-          case AddSymbolsReq(syms: Iterable[SymbolSearchResult]) => {
+          case AddSymbolsReq(syms) =>
             syms.foreach { info =>
               index.insert(info)
             }
-          }
-          case RemoveSymbolsReq(syms: Iterable[String]) => {
+          case RemoveSymbolsReq(syms) =>
             syms.foreach { s => index.remove(s) }
-          }
-          case TypeCompletionsReq(prefix: String, maxResults: Int) => {
-            val suggestions = index.keywordSearch(List(prefix), maxResults, true)
+          case TypeCompletionsReq(prefix: String, maxResults: Int) =>
+            val suggestions = index.keywordSearch(List(prefix), maxResults, restrictToTypes = true)
             sender ! suggestions
-          }
-          case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) => {
+          case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
             sender ! classFileIndex.sourceFileCandidates(
               enclosingPackage,
               classNamePrefix)
-          }
-          case RPCRequestEvent(req: Any, callId: Int) => {
+          case RPCRequestEvent(req: Any, callId: Int) =>
             try {
               req match {
-                case ImportSuggestionsReq(file: File, point: Int,
-                  names: List[String], maxResults: Int) => {
+                case ImportSuggestionsReq(file, point, names, maxResults) =>
                   val suggestions = ImportSuggestions(index.getImportSuggestions(
                     names, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
-                }
-                case PublicSymbolSearchReq(keywords: List[String],
-                  maxResults: Int) => {
+                case PublicSymbolSearchReq(keywords, maxResults) =>
                   println("Received keywords: " + keywords)
                   val suggestions = SymbolSearchResults(
                     index.keywordSearch(keywords, maxResults))
                   project ! RPCResultEvent(toWF(suggestions), callId)
-                }
-                case MethodBytecodeReq(sourceName: String, line: Int) => {
+                case MethodBytecodeReq(sourceName: String, line: Int) =>
                   classFileIndex.locateBytecode(sourceName, line) match {
                     case method :: rest =>
                       project ! RPCResultEvent(
@@ -137,31 +120,24 @@ class Indexer(
                     case _ => project.sendRPCError(ErrExceptionInIndexer,
                       Some("Failed to find method bytecode"), callId)
                   }
-                }
               }
             } catch {
               case e: Exception =>
-                {
-                  System.err.println("Error handling RPC: " +
-                    e + " :\n" +
-                    e.getStackTraceString)
-                  project.sendRPCError(ErrExceptionInIndexer,
-                    Some("Error occurred in indexer. Check the server log."),
-                    callId)
-                }
+                System.err.println("Error handling RPC: " +
+                  e + " :\n" +
+                  e.getStackTraceString)
+                project.sendRPCError(ErrExceptionInIndexer,
+                  Some("Error occurred in indexer. Check the server log."),
+                  callId)
             }
-          }
           case other =>
-            {
-              println("Indexer: WTF, what's " + other)
-            }
+            println("Indexer: WTF, what's " + other)
         }
 
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           System.err.println("Error at Indexer message loop: " +
             e + " :\n" + e.getStackTraceString)
-        }
       }
     }
   }
@@ -243,7 +219,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
       if (Indexer.isValidType(typeSymName(sym))) {
         val key = lookupKey(sym)
         infos += sym
-        for (mem <- try { sym.tpe.members } catch { case e: Throwable => { List() } }) {
+        for (mem <- try { sym.tpe.members } catch { case e: Throwable => List() }) {
           if (Indexer.isValidMethod(mem.nameString)) {
             val key = lookupKey(mem)
             infos += mem

@@ -12,6 +12,8 @@
 *.json
 *.elc
 .history
+.idea/
+.idea_modules/
 target/
 lib_managed
 src_managed/

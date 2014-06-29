@@ -58,26 +58,25 @@
 
 package org.ensime.indexer
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.commons.EmptyVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 import org.objectweb.asm.Opcodes
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 
 trait MethodDescriber extends MethodVisitor {
 
   import org.objectweb.asm.util.AbstractVisitor._
 
-  val INTERNAL_NAME = 0;
-  val FIELD_DESCRIPTOR = 1;
-  val FIELD_SIGNATURE = 2;
-  val METHOD_DESCRIPTOR = 3;
-  val METHOD_SIGNATURE = 4;
-  val CLASS_SIGNATURE = 5;
-  val TYPE_DECLARATION = 6;
-  val CLASS_DECLARATION = 7;
-  val PARAMETERS_DECLARATION = 8;
-  val HANDLE_DESCRIPTOR = 9;
+  val INTERNAL_NAME = 0
+  val FIELD_DESCRIPTOR = 1
+  val FIELD_SIGNATURE = 2
+  val METHOD_DESCRIPTOR = 3
+  val METHOD_SIGNATURE = 4
+  val CLASS_SIGNATURE = 5
+  val TYPE_DECLARATION = 6
+  val CLASS_DECLARATION = 7
+  val PARAMETERS_DECLARATION = 8
+  val HANDLE_DESCRIPTOR = 9
 
   def appendOp(name: String, args: String): Unit
   def appendOp(name: String): Unit = appendOp(name, "")
@@ -91,15 +90,14 @@ trait MethodDescriber extends MethodVisitor {
     } else { desc }
   }
 
-  val labelNames = new HashMap[Label, String]()
+  val labelNames = new mutable.HashMap[Label, String]()
   private def label(l: Label): String = {
     labelNames.get(l) match {
       case Some(name) => name
-      case _ => {
+      case _ =>
         val name = "L" + labelNames.size
         labelNames(l) = name
         name
-      }
     }
   }
 
@@ -179,12 +177,13 @@ trait MethodDescriber extends MethodVisitor {
 
   override def visitLdcInsn(cst: Object) {
     appendOp("LDC",
-      if (cst.isInstanceOf[String]) {
-        "\"" + cst.toString + "\""
-      } else if (cst.isInstanceOf[Type]) {
-        cst.asInstanceOf[Type].getDescriptor()
-      } else {
-        cst.toString
+      cst match {
+        case _: String =>
+          "\"" + cst.toString + "\""
+        case value: Type =>
+          value.getDescriptor
+        case _ =>
+          cst.toString
       })
   }
 
@@ -201,7 +200,7 @@ trait MethodDescriber extends MethodVisitor {
   override def visitLookupSwitchInsn(dflt: Label, keys: Array[Int],
     labels: Array[Label]) {
     appendOp("LOOKUPSWITCH",
-      labels.zipWithIndex.map { pair => (keys(pair._2)) + ": " + label(pair._1) }.mkString(",") +
+      labels.zipWithIndex.map { pair => keys(pair._2) + ": " + label(pair._1) }.mkString(",") +
         "default: " + label(dflt))
   }
 

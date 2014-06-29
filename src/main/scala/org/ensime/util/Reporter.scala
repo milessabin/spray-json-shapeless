@@ -47,8 +47,8 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
   def enable() { enabled = true }
   def disable() { enabled = false }
 
-  override def reset {
-    super.reset
+  override def reset() {
+    super.reset()
     if (enabled) {
       handler.clearAllScalaNotes()
     }
@@ -81,7 +81,7 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
         }
       }
     } catch {
-      case ex: UnsupportedOperationException => {}
+      case ex: UnsupportedOperationException =>
     }
   }
 

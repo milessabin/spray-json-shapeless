@@ -1,15 +1,12 @@
 package org.ensime.test.util
 
-import java.io.File
 import scala.actors.Actor._
-import scala.tools.nsc.interactive.{ Global, CompilerControl }
-import scala.tools.nsc.{ Settings, FatalError }
-import scala.tools.nsc.reporters.{ StoreReporter }
-import scala.tools.nsc.util.{ SourceFile, BatchSourceFile, Position }
-import scala.tools.nsc.reporters.{ Reporter }
+import scala.tools.nsc.Settings
+import scala.tools.nsc.reporters.StoreReporter
+import scala.reflect.internal.util.BatchSourceFile
 import org.ensime.server._
 import org.ensime.config._
-import org.scalatest.TestFailedException
+import org.scalatest.exceptions.TestFailedException
 
 object Helpers {
 
@@ -32,12 +29,10 @@ object Helpers {
       throw new IllegalStateException("Expected failure! Should not have succeeded!")
     } catch {
       case e: TestFailedException =>
-        {
-          System.err.println("\n***************************************")
-          System.err.println("Expected Failure:")
-          System.err.println(msgLines.mkString("\n"))
-          System.err.println("***************************************\n")
-        }
+        System.err.println("\n***************************************")
+        System.err.println("Expected Failure:")
+        System.err.println(msgLines.mkString("\n"))
+        System.err.println("***************************************\n")
       case e: Throwable => throw e
     }
   }

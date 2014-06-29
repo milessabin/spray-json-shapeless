@@ -54,9 +54,9 @@ object Server {
       )
       args match {
         case Array(a, b, c) => (
-          new File(new File(a).getParentFile(), ".ensime_cache"), b, c.toInt)
+          new File(new File(a).getParentFile, ".ensime_cache"), b, c.toInt)
         case Array(portfile) => (
-          new File(new File(portfile).getParentFile(), ".ensime_cache"),
+          new File(new File(portfile).getParentFile, ".ensime_cache"),
           "127.0.0.1", 0)
         case _ =>
           throw new IllegalArgumentException("org.ensime.server.Server invoked incorrectly")
@@ -126,7 +126,8 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
   protocol.setOutputActor(this)
 
   class SocketReader(socket: Socket, handler: SocketHandler) extends Actor {
-    val in = new BufferedInputStream(socket.getInputStream());
+    val in = new BufferedInputStream(socket.getInputStream)
+
     def act() {
       var running = true
       try {
@@ -136,28 +137,24 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
         }
       } catch {
         case e: IOException =>
-          {
-            System.err.println("Error in socket reader: " + e)
-            if (System.getProperty("ensime.explode.on.disconnect") != null) {
-              println("Tick-tock, tick-tock, tick-tock... boom!")
-              System.exit(-1)
-            } else exit('error)
-          }
+          System.err.println("Error in socket reader: " + e)
+          if (System.getProperty("ensime.explode.on.disconnect") != null) {
+            println("Tick-tock, tick-tock, tick-tock... boom!")
+            System.exit(-1)
+          } else exit('error)
       }
     }
   }
 
-  val out = new BufferedOutputStream(socket.getOutputStream())
+  val out = new BufferedOutputStream(socket.getOutputStream)
 
   def write(value: WireFormat) {
     try {
       protocol.writeMessage(value, out)
     } catch {
       case e: IOException =>
-        {
-          System.err.println("Write to client failed: " + e)
-          exit('error)
-        }
+        System.err.println("Write to client failed: " + e)
+        exit('error)
     }
   }
 
@@ -167,12 +164,10 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
     reader.start()
     loop {
       receive {
-        case IncomingMessageEvent(value: WireFormat) => {
+        case IncomingMessageEvent(value: WireFormat) =>
           project ! IncomingMessageEvent(value)
-        }
-        case OutgoingMessageEvent(value: WireFormat) => {
+        case OutgoingMessageEvent(value: WireFormat) =>
           write(value)
-        }
         case Exit(_: SocketReader, reason) => exit(reason)
       }
     }

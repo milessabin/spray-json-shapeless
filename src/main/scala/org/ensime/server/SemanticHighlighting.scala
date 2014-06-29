@@ -28,10 +28,9 @@
 package org.ensime.server
 import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
 import scala.collection.mutable.ListBuffer
-import scala.tools.nsc.interactive.{ CompilerControl, Global }
+import scala.tools.nsc.interactive.Global
 import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.symtab.Flags._
-import scala.math
 
 trait SemanticHighlighting { self: Global with Helpers =>
 
@@ -56,14 +55,13 @@ trait SemanticHighlighting { self: Global with Helpers =>
       if (!treeP.isTransparent && p.overlaps(treeP)) {
         try {
           t match {
-            case Import(expr, selectors) => {
+            case Import(expr, selectors) =>
               for (impSel <- selectors) {
                 val start = impSel.namePos
                 val end = start + impSel.name.decode.length()
                 addAt(start, end, 'importedName)
               }
-            }
-            case Ident(_) => {
+            case Ident(_) =>
               val sym = t.symbol
               if (sym != NoSymbol) {
                 if (sym.isCaseApplyOrUnapply) {
@@ -97,8 +95,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                   add('valField)
                 }
               }
-            }
-            case Select(qual, selector: Name) => {
+            case Select(qual, selector: Name) =>
               val sym = t.symbol
               val start = try {
                 qual.pos.end + 1
@@ -145,9 +142,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
               } else {
                 addAt(start, end, 'functionCall)
               }
-            }
 
-            case ValDef(mods, name, tpt, rhs) => {
+            case ValDef(mods, name, tpt, rhs) =>
               val sym = t.symbol
               if (sym != NoSymbol) {
 
@@ -176,9 +172,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
                   addAt(start, end, 'valField)
                 }
               }
-            }
 
-            case TypeTree() => {
+            case TypeTree() =>
               val sym = t.symbol
               val start = treeP.start
               val end = treeP.end
@@ -199,14 +194,12 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 // Works, but this is *way* under-constrained.
                 addAt(start, end, 'object)
               }
-            }
-            case _ => {}
+            case _ =>
           }
         } catch {
-          case e: Throwable => {
+          case e: Throwable =>
             System.err.println("Error in AST traverse:")
             e.printStackTrace(System.err);
-          }
         }
         super.traverse(t)
       }
@@ -217,9 +210,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
     tpes: List[scala.Symbol]): SymbolDesignations = {
     val tpeSet = Set[scala.Symbol]() ++ tpes
     val typed: Response[Tree] = new Response[Tree]
-    askType(p.source, false, typed)
+    askType(p.source, forceReload = false, typed)
     typed.get.left.toOption match {
-      case Some(tree) => {
+      case Some(tree) =>
 
         // TODO: Disable designations for
         // regions with errors?
@@ -238,7 +231,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
         SymbolDesignations(
           p.source.file.path,
           traverser.syms.toList)
-      }
       case None => SymbolDesignations("", List())
     }
   }

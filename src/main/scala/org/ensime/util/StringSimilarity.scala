@@ -32,7 +32,7 @@ trait StringSimilarity {
   def getLevenshteinDistance(s: String, t: String): Int = {
 
     if (s == null || t == null) {
-      throw new IllegalArgumentException("Strings must not be null");
+      throw new IllegalArgumentException("Strings must not be null")
     }
 
     /*
@@ -56,9 +56,9 @@ trait StringSimilarity {
     val m = t.length // length of t
 
     if (n == 0) {
-      return m;
+      return m
     } else if (m == 0) {
-      return n;
+      return n
     }
 
     var p = new Array[Int](n + 1) //'previous' cost array, horizontally
@@ -75,20 +75,20 @@ trait StringSimilarity {
 
     i = 0
     while (i <= n) {
-      p(i) = i;
+      p(i) = i
       i += 1
     }
 
     j = 1
     while (j <= m) {
-      t_j = t.charAt(j - 1);
-      d(0) = j;
+      t_j = t.charAt(j - 1)
+      d(0) = j
 
       i = 1
       while (i <= n) {
         cost = if (s.charAt(i - 1) == t_j) 0 else 1
         // minimum of cell to the left+1, to the top+1, diagonally left and up +cost				
-        d(i) = scala.math.min(scala.math.min(d(i - 1) + 1, p(i) + 1), p(i - 1) + cost);
+        d(i) = scala.math.min(scala.math.min(d(i - 1) + 1, p(i) + 1), p(i - 1) + cost)
         i += 1
       }
 

@@ -27,11 +27,9 @@
 
 package org.ensime.server
 import org.ensime.model.CompletionInfoList
-import scala.collection.mutable.HashMap
-import scala.reflect.internal.util.{ Position, RangePosition, SourceFile, BatchSourceFile }
+import scala.collection.mutable
+import scala.reflect.internal.util.{ SourceFile, BatchSourceFile }
 import org.ensime.util.Arrays
-import scala.tools.nsc.interactive.{ Response, CompilerControl, Global }
-import scala.collection.mutable.{ ListBuffer, LinkedHashSet }
 import org.ensime.model.{ CompletionInfo, CompletionSignature, SymbolSearchResult }
 
 trait CompletionControl {
@@ -79,12 +77,11 @@ trait CompletionControl {
     def makeTypeSearchCompletions(prefix: String): List[CompletionInfo] = {
       val req = TypeCompletionsReq(prefix, maxResults)
       indexer !? (1000, req) match {
-        case Some(syms: List[SymbolSearchResult]) => {
+        case Some(syms: List[SymbolSearchResult]) =>
           syms.map { s =>
             CompletionInfo(s.localName, CompletionSignature(List(), s.name),
-              -1, false, 40, Some(s.name))
+              -1, isCallable = false, 40, Some(s.name))
           }
-        }
         case _ => List()
       }
     }
@@ -93,31 +90,29 @@ trait CompletionControl {
       x: Response[List[Member]],
       prefix: String,
       constructing: Boolean): List[CompletionInfo] = {
-      val buff = new LinkedHashSet[CompletionInfo]()
+      val buff = new mutable.LinkedHashSet[CompletionInfo]()
       var members = List[Member]()
       do {
         x.get match {
           case Left(mems) => members ++= mems
-          case _ => {}
+          case _ =>
         }
       } while (!x.isComplete)
       println("Found " + members.size + " members.")
 
       askOption[Unit] {
-        val filtered = filterMembersByPrefix(members, prefix, false, caseSens)
+        val filtered = filterMembersByPrefix(members, prefix, matchEntire = false, caseSens = caseSens)
         println("Filtered down to " + filtered.size + ".")
         for (m <- filtered) {
           m match {
-            case m @ ScopeMember(sym, tpe, accessible, viaView) => {
+            case m @ ScopeMember(sym, tpe, accessible, viaView) =>
               if (!sym.isConstructor) {
-                buff ++= makeCompletions(prefix, sym, tpe, constructing, false, NoSymbol)
+                buff ++= makeCompletions(prefix, sym, tpe, constructing, inherited = false, NoSymbol)
               }
-            }
-            case m @ TypeMember(sym, tpe, accessible, inherited, viaView) => {
+            case m @ TypeMember(sym, tpe, accessible, inherited, viaView) =>
               if (!sym.isConstructor) {
                 buff ++= makeCompletions(prefix, sym, tpe, constructing, inherited, viaView)
               }
-            }
             case _ =>
           }
         }
@@ -126,31 +121,27 @@ trait CompletionControl {
     }
 
     val (prefix, results) = completionContext(p) match {
-      case Some(PackageContext(path, prefix)) => {
+      case Some(PackageContext(path, prefix)) =>
         askReloadFile(p.source)
-        val typeSearchSyms = if (path.isEmpty()) {
+        val typeSearchSyms = if (path.isEmpty) {
           makeTypeSearchCompletions(prefix)
         } else List()
         (prefix,
           askCompletePackageMember(path, prefix) ++
           typeSearchSyms)
-      }
-      case Some(SymbolContext(p, prefix, constructing)) => {
+      case Some(SymbolContext(p, prefix, constructing)) =>
         askReloadFile(p.source)
         val x = new Response[List[Member]]
         askScopeCompletion(p, x)
         (prefix, makeAll(x, prefix, constructing))
-      }
-      case Some(MemberContext(p, prefix, constructing)) => {
+      case Some(MemberContext(p, prefix, constructing)) =>
         askReloadFile(p.source)
         val x = new Response[List[Member]]
         askTypeCompletion(p, x)
         (prefix, makeAll(x, prefix, constructing))
-      }
-      case _ => {
+      case _ =>
         System.err.println("Unrecognized completion context.")
         ("", List())
-      }
     }
     CompletionInfoList(prefix, results.sortWith({ (c1, c2) =>
       c1.relevance > c2.relevance ||
@@ -222,25 +213,25 @@ trait CompletionControl {
     if (mo.isDefined) {
       val m = mo.get
       println("Matched sym after ws context.")
-      return Some(SymbolContext(p, m.group(1), false))
+      return Some(SymbolContext(p, m.group(1), constructing = false))
     }
     mo = nameFollowingSyntaxRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
       println("Matched sym following syntax context.")
-      return Some(SymbolContext(p, m.group(2), false))
+      return Some(SymbolContext(p, m.group(2), constructing = false))
     }
     mo = constructorNameRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
       println("Matched constructing context.")
-      return Some(SymbolContext(p, m.group(1), true))
+      return Some(SymbolContext(p, m.group(1), constructing = true))
     }
     mo = nameFollowingReservedRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
       println("Matched sym following reserved context.")
-      return Some(SymbolContext(p, m.group(1), false))
+      return Some(SymbolContext(p, m.group(1), constructing = false))
     }
     mo = nameFollowingControl.findFirstMatchIn(preceding)
     if (mo.isDefined) {
@@ -251,7 +242,7 @@ trait CompletionControl {
       if (parenBalanced(m.group(1))) {
 
         println("Matched sym following control structure context.")
-        return Some(SymbolContext(p, m.group(2), false))
+        return Some(SymbolContext(p, m.group(2), constructing = false))
       }
     }
     None
@@ -270,7 +261,7 @@ trait CompletionControl {
 
   def memberContext(p: Position, preceding: String): Option[MemberContext] = {
     memberRE.findFirstMatchIn(preceding) match {
-      case Some(m) => {
+      case Some(m) =>
         val constructing = memberConstructorRE.findFirstMatchIn(preceding).isDefined
         println("Matched member context. Constructing? " + constructing)
         val dot = m.group(1)
@@ -287,7 +278,6 @@ trait CompletionControl {
         val newP = p.withSource(src, 0).withPoint(p.point - prefix.length - dot.length)
 
         Some(MemberContext(newP, prefix, constructing))
-      }
       case None => None
     }
   }
@@ -309,21 +299,18 @@ trait CompletionControl {
 
 trait Completion { self: RichPresentationCompiler =>
 
-  import self._
-
   def completePackageMember(path: String, prefix: String): List[CompletionInfo] = {
     packageSymFromPath(path) match {
-      case Some(sym) => {
+      case Some(sym) =>
         val memberSyms = packageMembers(sym).filterNot { s =>
           s == NoSymbol || s.nameString.contains("$")
         }
         memberSyms.flatMap { s =>
           val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
           if (name.startsWith(prefix)) {
-            Some(CompletionInfo(name, CompletionSignature(List(), ""), -1, false, 50, None))
+            Some(CompletionInfo(name, CompletionSignature(List(), ""), -1, isCallable = false, 50, None))
           } else None
         }.toList
-      }
       case _ => List()
     }
   }

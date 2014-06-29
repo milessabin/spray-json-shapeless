@@ -32,18 +32,11 @@ import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.actors._
-import scala.actors.Actor._
-import scala.collection.mutable.{ HashSet, SynchronizedSet }
-import scala.collection.{ Iterable, Map }
-import scala.tools.nsc.{ Settings }
+import scala.collection.{ mutable, Iterable }
+import scala.tools.nsc.Settings
 
-import scala.tools.nsc.interactive.{
-  Global,
-  BuildManager,
-  SimpleBuildManager,
-  RefinedBuildManager
-}
-import scala.tools.nsc.io.{ AbstractFile }
+import scala.tools.nsc.interactive.{ BuildManager, RefinedBuildManager }
+import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
 
 case class BuilderShutdownEvent()
@@ -60,7 +53,7 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
     class IncrementalGlobal(settings: Settings, reporter: Reporter)
         extends scala.tools.nsc.Global(settings, reporter) {
       override def computeInternalPhases() {
-        super.computeInternalPhases
+        super.computeInternalPhases()
         phasesSet += dependencyAnalysis
       }
       def newRun() = new Run()
@@ -71,14 +64,14 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
   import protocol._
 
   private val settings = new Settings(Console.println)
-  settings.processArguments(config.builderArgs, false)
+  settings.processArguments(config.builderArgs, processAll = false)
 
   private val reportHandler = new ReportHandler {
     override def messageUser(str: String) {
       project ! AsyncEvent(toWF(
         SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))))
     }
-    private val notes = new HashSet[Note] with SynchronizedSet[Note]
+    private val notes = new mutable.HashSet[Note] with mutable.SynchronizedSet[Note]
     def allNotes: Iterable[Note] = notes.toList
     override def reportScalaNotes(n: List[Note]) {
       notes ++= n
@@ -92,78 +85,64 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
 
   private val bm: BuildManager = new IncrementalBuildManager(settings, reporter)
 
-  import bm._
-
   def act() {
 
     loop {
       try {
         receive {
-          case BuilderShutdownEvent => {
+          case BuilderShutdownEvent =>
             exit('stop)
-          }
-          case RPCRequestEvent(req: Any, callId: Int) => {
+          case RPCRequestEvent(req: Any, callId: Int) =>
             try {
               req match {
 
-                case RebuildAllReq() => {
+                case RebuildAllReq() =>
                   project ! AsyncEvent(toWF(SendBackgroundMessageEvent(
                     MsgBuildingEntireProject, Some("Building entire project. Please wait..."))))
                   val files = config.sourceFilenames.map(s => AbstractFile.getFile(s))
-                  reporter.reset
+                  reporter.reset()
                   bm.addSourceFiles(files)
                   project ! AsyncEvent(toWF(SendBackgroundMessageEvent(
                     MsgBuildComplete, Some("Build complete."))))
                   val result = toWF(reportHandler.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
-                }
-                case AddSourceFilesReq(files: Iterable[File]) => {
+                case AddSourceFilesReq(files) =>
                   val fileSet = files.map(AbstractFile.getFile(_)).toSet
                   bm.addSourceFiles(fileSet)
                   val result = toWF(reportHandler.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
-                }
-                case RemoveSourceFilesReq(files: Iterable[File]) => {
+                case RemoveSourceFilesReq(files) =>
                   val fileSet = files.map(AbstractFile.getFile(_)).toSet
-                  project ! RPCResultEvent(toWF(true), callId)
-                  reporter.reset
+                  project ! RPCResultEvent(toWF(value = true), callId)
+                  reporter.reset()
                   bm.removeFiles(fileSet)
                   val result = toWF(reportHandler.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
-                }
-                case UpdateSourceFilesReq(files: Iterable[File]) => {
+                case UpdateSourceFilesReq(files) =>
                   val fileSet = files.map(AbstractFile.getFile(_)).toSet
-                  reporter.reset
+                  reporter.reset()
                   bm.update(fileSet, Set())
                   val result = toWF(reportHandler.allNotes.map(toWF))
                   project ! RPCResultEvent(result, callId)
-                }
 
               }
             } catch {
               case e: Exception =>
-                {
-                  System.err.println("Error handling RPC: " +
-                    e + " :\n" +
-                    e.getStackTraceString)
+                System.err.println("Error handling RPC: " +
+                  e + " :\n" +
+                  e.getStackTraceString)
 
-                  project.sendRPCError(ErrExceptionInBuilder,
-                    Some("Error occurred in incremental builder. Check the server log."),
-                    callId)
-                }
+                project.sendRPCError(ErrExceptionInBuilder,
+                  Some("Error occurred in incremental builder. Check the server log."),
+                  callId)
             }
-          }
           case other =>
-            {
-              println("Incremental Builder: WTF, what's " + other)
-            }
+            println("Incremental Builder: WTF, what's " + other)
         }
 
       } catch {
         case e: Exception =>
-          {
-            System.err.println("Error at Incremental Builder message loop: " + e + " :\n" + e.getStackTraceString)
-          }
+          System.err.println("Error at Incremental Builder message loop: " + e + " :\n" + e.getStackTraceString)
       }
     }
   }

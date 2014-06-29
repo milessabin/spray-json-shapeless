@@ -1,13 +1,8 @@
 package org.ensime.test
 
-import java.io.{ File => JFile }
-import org.ensime.model.SymbolInfo
 import org.scalatest.FunSpec
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.ShouldMatchers
 import org.ensime.test.util.Helpers
-import scala.tools.nsc.util.BatchSourceFile
-import scala.tools.nsc.io.PlainFile
-import scala.tools.nsc.util.OffsetPosition
 
 class RichPresentationCompilerSpec extends FunSpec with ShouldMatchers {
 

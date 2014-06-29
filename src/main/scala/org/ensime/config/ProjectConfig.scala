@@ -29,42 +29,39 @@ package org.ensime.config
 import java.io.File
 import org.ensime.util._
 import org.ensime.util.FileUtils._
-import org.ensime.util.RichFile._
 import org.ensime.util.SExp._
-import scala.actors.Actor._
 import scala.collection.mutable
-import scala.collection.immutable.StringOps
 import scala.util.matching.Regex
 import scalariform.formatter.preferences._
 
 trait FormatHandler {
 
-  def rootDir(): Option[String]
+  def rootDir: Option[String]
 
-  def name(): Option[String]
-  def pack(): Option[String]
-  def version(): Option[String]
+  def name: Option[String]
+  def pack: Option[String]
+  def version: Option[String]
 
-  def compileDeps(): List[String]
-  def runtimeDeps(): List[String]
-  def testDeps(): List[String]
-  def compileJars(): List[String]
-  def runtimeJars(): List[String]
-  def sourceRoots(): List[String]
+  def compileDeps: List[String]
+  def runtimeDeps: List[String]
+  def testDeps: List[String]
+  def compileJars: List[String]
+  def runtimeJars: List[String]
+  def sourceRoots: List[String]
   def referenceSourceRoots(): List[String]
-  def target(): Option[String]
-  def testTarget(): Option[String]
+  def target: Option[String]
+  def testTarget: Option[String]
 
-  def formatPrefs(): Map[Symbol, Any]
-  def disableIndexOnStartup(): Boolean
-  def disableSourceLoadOnStartup(): Boolean
-  def disableScalaJarsOnClasspath(): Boolean
-  def onlyIncludeInIndex(): List[Regex]
-  def excludeFromIndex(): List[Regex]
-  def extraCompilerArgs(): List[String]
-  def extraBuilderArgs(): List[String]
-  def javaCompilerArgs(): List[String]
-  def javaCompilerVersion(): Option[String]
+  def formatPrefs: Map[Symbol, Any]
+  def disableIndexOnStartup: Boolean
+  def disableSourceLoadOnStartup: Boolean
+  def disableScalaJarsOnClasspath: Boolean
+  def onlyIncludeInIndex: List[Regex]
+  def excludeFromIndex: List[Regex]
+  def extraCompilerArgs: List[String]
+  def extraBuilderArgs: List[String]
+  def javaCompilerArgs: List[String]
+  def javaCompilerVersion: Option[String]
 }
 
 object ProjectConfig {
@@ -109,11 +106,10 @@ object ProjectConfig {
       case _ => matchError("Expecting a list of string-encoded regexps at key: " + name); List()
     }
     def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
-      case Some(list: SExpList) => {
+      case Some(list: SExpList) =>
         list.toKeywordMap.map {
           case (KeywordAtom(key), sexp: SExp) => (Symbol(key.substring(1)), sexp.toScala)
         }
-      }
       case _ => Map[Symbol, Any]()
     }
   }
@@ -124,7 +120,7 @@ object ProjectConfig {
   }
 
   class BooleanProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.map(getBool(m, _)).getOrElse(false)
+    def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.exists(getBool(m, _))
     def defaultTypeHint: String = "[t or nil]"
   }
 
@@ -632,10 +628,9 @@ object ProjectConfig {
 
     val rootDir: CanonFile = conf.rootDir match {
       case Some(str) => new File(str)
-      case _ => {
+      case _ =>
         System.err.println("No project root specified!")
         serverRoot
-      }
     }
 
     println("Using project root: " + rootDir)
@@ -745,30 +740,29 @@ object ProjectConfig {
     javaCompilerVersion = None)
 
   def getJavaHome(): Option[File] = {
-    val javaHome: String = System.getProperty("java.home");
+    val javaHome: String = System.getProperty("java.home")
     if (javaHome == null) None
     else Some(new File(javaHome))
   }
 
-  def detectBootClassPath() = {
+  def detectBootClassPath(): Option[String] = {
     Stream(System.getProperty("sun.boot.class.path"),
       System.getProperty("vm.boot.class.path"),
       System.getProperty("org.apache.harmony.boot.class.path")).find(_ != null)
   }
 
   def javaBootJars: Set[CanonFile] = {
-    val bootClassPath = detectBootClassPath
+    val bootClassPath = detectBootClassPath()
     bootClassPath match {
-      case Some(cpText) => {
+      case Some(cpText) =>
         expandRecursively(
           new File("."),
           cpText.split(File.pathSeparatorChar).map { new File(_) },
           isValidJar)
-      }
-      case _ => {
-        val javaHome = getJavaHome();
-        javaHome match {
-          case Some(javaHome) => {
+      case _ =>
+        val javaHomeOpt = getJavaHome()
+        javaHomeOpt match {
+          case Some(javaHome) =>
             if (System.getProperty("os.name").startsWith("Mac")) {
               expandRecursively(
                 new File("."),
@@ -780,10 +774,8 @@ object ProjectConfig {
                 List(new File(javaHome, "lib")),
                 isValidJar)
             }
-          }
           case None => Set()
         }
-      }
     }
   }
 }
@@ -854,10 +846,9 @@ class ProjectConfig(
           fp.setPreference(SpacesWithinPatternBinders, value)
         case ('rewriteArrowSymbols, value: Boolean) =>
           fp.setPreference(RewriteArrowSymbols, value)
-        case (name, _) => {
+        case (name, _) =>
           System.err.println("Oops, unrecognized formatting option: " + name)
           fp
-        }
       }
     }
 
@@ -876,11 +867,11 @@ class ProjectConfig(
   }
 
   def sources: Set[CanonFile] = {
-    expandRecursively(root, sourceRoots, isValidSourceFile _).toSet
+    expandRecursively(root, sourceRoots, isValidSourceFile).toSet
   }
 
   def referenceSources: Set[CanonFile] = {
-    expandRecursively(root, referenceSourceRoots, isValidSourceOrArchive _).toSet
+    expandRecursively(root, referenceSourceRoots, isValidSourceOrArchive).toSet
   }
 
   def sourceFilenames: Set[String] = {

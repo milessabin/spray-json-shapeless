@@ -27,14 +27,7 @@
 
 package org.ensime.indexer
 import java.io.IOException
-import java.io.Reader
 import org.apache.lucene.analysis.SimpleAnalyzer
-import org.apache.lucene.analysis.ReusableAnalyzerBase
-import org.apache.lucene.analysis.LetterTokenizer
-import org.apache.lucene.analysis.TokenFilter
-import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.CharTokenizer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.CorruptIndexException
@@ -48,44 +41,20 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.DefaultSimilarity
 import org.apache.lucene.search.FuzzyQuery
 import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.search.MultiTermQuery
 import org.apache.lucene.search.PrefixQuery
 import org.apache.lucene.search.ScoringRewrite
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.TopScoreDocCollector
 import org.apache.lucene.store.FSDirectory
-import org.apache.lucene.store.FSDirectory
-import org.apache.lucene.store.RAMDirectory
-import org.apache.lucene.queryParser.QueryParser
-import org.apache.lucene.store.NIOFSDirectory
 import org.apache.lucene.util.Version
-import org.eclipse.jdt.core.compiler.CharOperation
-import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader
 import java.io.File
-import org.ensime.config.ProjectConfig
-import org.ensime.protocol.ProtocolConversions
-import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
-import scala.Char
 import scala.actors._
-import scala.actors.Actor._
-import org.ensime.model.{
-  TypeInfo,
-  SymbolSearchResult,
-  TypeSearchResult,
-  MethodSearchResult,
-  SymbolSearchResults,
-  ImportSuggestions
-}
-import scala.collection.JavaConversions
-import org.ardverk.collection._
-import io.prelink.critbit.MCritBitTree
-import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.util.{ NoPosition }
+import org.ensime.model.{ SymbolSearchResult, TypeSearchResult, MethodSearchResult }
+import scala.collection.{ mutable, JavaConversions }
 import scala.util.matching.Regex
-import scala.collection.mutable.{ HashMap, HashSet, ArrayBuffer, ListBuffer }
-import org.objectweb.asm.Opcodes;
+import scala.collection.mutable.ListBuffer
+import org.objectweb.asm.Opcodes
 import org.json.simple._
 import scala.util.Properties._
 
@@ -96,7 +65,7 @@ object LuceneIndex extends StringSimilarity {
 
   val Similarity = new DefaultSimilarity {
     override def computeNorm(field: String, state: FieldInvertState): Float = {
-      state.getBoost() * (1F / (state.getLength()))
+      state.getBoost * (1F / state.getLength)
     }
   }
 
@@ -118,7 +87,7 @@ object LuceneIndex extends StringSimilarity {
     keywords.toList
   }
 
-  private val cache = new HashMap[(String, String), Int]
+  private val cache = new mutable.HashMap[(String, String), Int]
   def editDist(a: String, b: String): Int = {
     cache.getOrElseUpdate((a, b), getLevenshteinDistance(a, b))
   }
@@ -138,17 +107,15 @@ object LuceneIndex extends StringSimilarity {
         var index = FSDirectory.open(dir)
         val reader = IndexReader.open(index)
         println("Num docs: " + reader.numDocs())
-        val userData = reader.getCommitUserData()
+        val userData = reader.getCommitUserData
         val onDiskIndexVersion = Option(
           userData.get(KeyIndexVersion)).getOrElse("0").toInt
         val src = Option(userData.get(KeyFileHashes)).getOrElse("{}")
         val indexedFiles: Map[String, String] = try {
           JSONValue.parse(src) match {
             case obj: java.util.Map[String, Object] =>
-              {
-                val m = JavaConversions.mapAsScalaMap[String, Object](obj)
-                m.map { ea => (ea._1, ea._2.toString) }.toMap
-              }
+              val m = JavaConversions.mapAsScalaMap[String, Object](obj)
+              m.map { ea => (ea._1, ea._2.toString) }.toMap
             case _ => Map()
           }
         } catch {
@@ -173,10 +140,10 @@ object LuceneIndex extends StringSimilarity {
     proposed: Set[(String, String)]): Boolean = {
 
     // Very conservative.
-    // Re-index whenver the proposed set
+    // Re-index whenever the proposed set
     // contains unindexed files.
-    (version < IndexVersion ||
-      !(proposed -- onDisk.toList).isEmpty)
+    version < IndexVersion ||
+      (proposed -- onDisk.toList).nonEmpty
   }
 
   def tokenize(nm: String): String = {
@@ -201,7 +168,7 @@ object LuceneIndex extends StringSimilarity {
     if (i != k) {
       tokens.append(nm.substring(k))
     }
-    tokens.toString
+    tokens.toString()
   }
 
   private def buildDoc(value: SymbolSearchResult): Document = {
@@ -217,36 +184,32 @@ object LuceneIndex extends StringSimilarity {
     doc.add(new Field("localName",
       value.localName, Field.Store.YES, Field.Index.NOT_ANALYZED))
     doc.add(new Field("type",
-      value.declaredAs.toString, Field.Store.YES,
+      value.declaredAs.toString(), Field.Store.YES,
       Field.Index.NOT_ANALYZED))
     value.pos match {
-      case Some((file, offset)) => {
+      case Some((file, offset)) =>
         doc.add(new Field("file", file, Field.Store.YES,
           Field.Index.NOT_ANALYZED))
         doc.add(new Field("offset", offset.toString, Field.Store.YES,
           Field.Index.NOT_ANALYZED))
-      }
-      case None => {
+      case None =>
         doc.add(new Field("file", "", Field.Store.YES,
           Field.Index.NOT_ANALYZED))
         doc.add(new Field("offset", "", Field.Store.YES,
           Field.Index.NOT_ANALYZED))
-      }
     }
     value match {
-      case value: TypeSearchResult => {
+      case value: TypeSearchResult =>
         doc.add(new Field("docType",
           "type", Field.Store.NO,
           Field.Index.ANALYZED))
-      }
-      case value: MethodSearchResult => {
+      case value: MethodSearchResult =>
         doc.add(new Field("owner",
           value.owner, Field.Store.YES,
           Field.Index.NOT_ANALYZED))
         doc.add(new Field("docType",
           "method", Field.Store.NO,
           Field.Index.ANALYZED))
-      }
     }
     doc
   }
@@ -264,12 +227,10 @@ object LuceneIndex extends StringSimilarity {
     }
     val owner = Option(d.get("owner"))
     owner match {
-      case Some(owner) => {
+      case Some(owner) =>
         MethodSearchResult(name, localName, tpe, pos, owner)
-      }
-      case None => {
+      case None =>
         TypeSearchResult(name, localName, tpe, pos)
-      }
     }
   }
 
@@ -296,7 +257,7 @@ object LuceneIndex extends StringSimilarity {
     excludes: Iterable[Regex]) {
     val t = System.currentTimeMillis()
 
-    sealed abstract trait IndexEvent
+    sealed trait IndexEvent
     case class ClassEvent(name: String,
       location: String, flags: Int) extends IndexEvent
     case class MethodEvent(className: String, name: String,
@@ -317,7 +278,7 @@ object LuceneIndex extends StringSimilarity {
       def act() {
         loop {
           receive {
-            case ClassEvent(name: String, location: String, flags: Int) => {
+            case ClassEvent(name: String, location: String, flags: Int) =>
               val i = name.lastIndexOf(".")
               val localName = if (i > -1) name.substring(i + 1) else name
               val value = TypeSearchResult(name,
@@ -326,10 +287,9 @@ object LuceneIndex extends StringSimilarity {
                 Some((location, -1)))
               val doc = buildDoc(value)
               writer.addDocument(doc)
-            }
             case MethodEvent(className: String, name: String,
-              location: String, flags: Int) => {
-              val isStatic = ((flags & Opcodes.ACC_STATIC) != 0)
+              location: String, flags: Int) =>
+              val isStatic = (flags & Opcodes.ACC_STATIC) != 0
               val revisedClassName = if (isStatic) className + "$"
               else className
               val lookupKey = revisedClassName + "." + name
@@ -340,11 +300,9 @@ object LuceneIndex extends StringSimilarity {
                 revisedClassName)
               val doc = buildDoc(value)
               writer.addDocument(doc)
-            }
-            case StopEvent => {
+            case StopEvent =>
               reply(StopEvent)
               exit()
-            }
           }
         }
       }
@@ -357,9 +315,9 @@ object LuceneIndex extends StringSimilarity {
       var methodCount = 0
       var validClass = false
       override def onClass(name: String, location: String, flags: Int) {
-        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
-        validClass = (isPublic && isValidType(name) && include(name,
-          includes, excludes))
+        val isPublic = (flags & Opcodes.ACC_PUBLIC) != 0
+        validClass = isPublic && isValidType(name) && include(name,
+          includes, excludes)
         if (validClass) {
           indexWorkQ ! ClassEvent(name, location, flags)
           classCount += 1
@@ -367,7 +325,7 @@ object LuceneIndex extends StringSimilarity {
       }
       override def onMethod(className: String, name: String,
         location: String, flags: Int) {
-        val isPublic = ((flags & Opcodes.ACC_PUBLIC) != 0)
+        val isPublic = (flags & Opcodes.ACC_PUBLIC) != 0
         if (validClass && isPublic && isValidMethod(name)) {
           indexWorkQ ! MethodEvent(className, name, location, flags)
           methodCount += 1
@@ -408,9 +366,9 @@ trait LuceneIndex {
 
     val hashed = files.map { f =>
       if (f.exists) {
-        (f.getAbsolutePath(), FileUtils.md5(f))
+        (f.getAbsolutePath, FileUtils.md5(f))
       } else {
-        (f.getAbsolutePath(), "")
+        (f.getAbsolutePath, "")
       }
     }
     val (version, indexedFiles) = loadIndexUserData(dir)
@@ -460,15 +418,14 @@ trait LuceneIndex {
     maxResults: Int = 0): List[List[SymbolSearchResult]] = {
     def suggestions(typeName: String): List[SymbolSearchResult] = {
       val keywords = typeName :: splitTypeName(typeName)
-      val candidates = new HashSet[SymbolSearchResult]
+      val candidates = new mutable.HashSet[SymbolSearchResult]
 
       search(keywords,
         maxResults, true, true,
-        (r: SymbolSearchResult) =>
-          r match {
-            case r: TypeSearchResult => candidates += r
-            case _ => // nothing
-          })
+        {
+          case r: TypeSearchResult => candidates += r
+          case _ => // nothing
+        })
 
       // Sort by edit distance of type name primarily, and
       // length of full name secondarily.

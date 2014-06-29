@@ -36,9 +36,7 @@ import org.ensime.model.OffsetRange
 import org.ensime.protocol._
 import org.ensime.util._
 import scala.actors._
-import scala.actors.Actor._
-import scala.tools.nsc.{ Settings }
-import scala.collection.mutable.{ LinkedHashMap }
+import scala.collection.mutable
 
 case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: Option[String], callId: Int)
@@ -56,10 +54,8 @@ case class ReloadFilesReq(files: List[SourceFileInfo])
 case class ReloadAllReq()
 case class PatchSourceReq(file: File, edits: List[PatchOp])
 case class RemoveFileReq(file: File)
-case class CompletionsReq(
-  file: File, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean)
-case class ImportSuggestionsReq(
-  file: File, point: Int, names: List[String], maxResults: Int)
+case class CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean)
+case class ImportSuggestionsReq(file: File, point: Int, names: List[String], maxResults: Int)
 case class PublicSymbolSearchReq(names: List[String], maxResults: Int)
 case class MethodBytecodeReq(sourceName: String, line: Int)
 case class UsesOfSymAtPointReq(file: File, point: Int)
@@ -73,8 +69,7 @@ case class TypeByNameReq(name: String)
 case class TypeByNameAtPointReq(name: String, file: File, range: OffsetRange)
 case class CallCompletionReq(id: Int)
 case class TypeAtPointReq(file: File, range: OffsetRange)
-case class SymbolDesignationsReq(
-  file: File, start: Int, end: Int, tpes: List[Symbol])
+case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol])
 
 case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
@@ -101,7 +96,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   private var undoCounter = 0
-  private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]
+  private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
 
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     this ! RPCErrorEvent(code, detail, callId)
@@ -121,26 +116,20 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     loop {
       try {
         receive {
-          case IncomingMessageEvent(msg: WireFormat) => {
+          case IncomingMessageEvent(msg: WireFormat) =>
             protocol.handleIncomingMessage(msg)
-          }
-          case AddUndo(sum, changes) => {
+          case AddUndo(sum, changes) =>
             addUndo(sum, changes)
-          }
-          case RPCResultEvent(value, callId) => {
+          case RPCResultEvent(value, callId) =>
             protocol.sendRPCReturn(value, callId)
-          }
-          case AsyncEvent(value) => {
+          case AsyncEvent(value) =>
             protocol.sendEvent(value)
-          }
-          case RPCErrorEvent(code, detail, callId) => {
+          case RPCErrorEvent(code, detail, callId) =>
             protocol.sendRPCError(code, detail, callId)
-          }
         }
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
-        }
       }
     }
   }
@@ -159,29 +148,27 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected def execUndo(undoId: Int): Either[String, UndoResult] = {
     undos.get(undoId) match {
-      case Some(u) => {
+      case Some(u) =>
         undos.remove(u.id)
         FileUtils.writeChanges(u.changes) match {
-          case Right(touched) => {
+          case Right(touched) =>
             for (ea <- analyzer) {
               ea ! ReloadFilesReq(touched.toList.map { SourceFileInfo(_) })
             }
             Right(UndoResult(undoId, touched))
-          }
-          case Left(e) => Left(e.getMessage())
+          case Left(e) => Left(e.getMessage)
         }
-      }
       case _ => Left("No such undo.")
     }
   }
 
   protected def initProject(conf: ProjectConfig) {
     config = conf
-    restartIndexer
-    restartCompiler
-    shutdownBuilder
-    shutdownDebugger
-    undos.clear
+    restartIndexer()
+    restartCompiler()
+    shutdownBuilder()
+    shutdownDebugger()
+    undos.clear()
     undoCounter = 0
   }
 
@@ -191,7 +178,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
     val newIndexer = new Indexer(this, protocol, config)
     println("Initing Indexer...")
-    newIndexer.start
+    newIndexer.start()
     if (!config.disableIndexOnStartup) {
       newIndexer ! RebuildStaticIndexReq()
     }
@@ -203,14 +190,12 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
       ea ! AnalyzerShutdownEvent()
     }
     indexer match {
-      case Some(indexer) => {
+      case Some(indexer) =>
         val newAnalyzer = new Analyzer(this, indexer, protocol, config)
-        newAnalyzer.start
+        newAnalyzer.start()
         analyzer = Some(newAnalyzer)
-      }
-      case None => {
+      case None =>
         throw new RuntimeException("Indexer must be started before analyzer.")
-      }
     }
   }
 
@@ -218,24 +203,21 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     builder match {
       case Some(b) => b
       case None =>
-        {
-          val b = new IncrementalBuilder(this, protocol, config)
-          builder = Some(b)
-          b.start
-          b
-        }
+        val b = new IncrementalBuilder(this, protocol, config)
+        builder = Some(b)
+        b.start()
+        b
     }
   }
 
   protected def getOrStartDebugger(): Actor = {
     ((debugger, indexer) match {
       case (Some(b), _) => Some(b)
-      case (None, Some(indexer)) => {
+      case (None, Some(indexer)) =>
         val b = new DebugManager(this, indexer, protocol, config)
         debugger = Some(b)
-        b.start
+        b.start()
         Some(b)
-      }
       case _ => None
     }).getOrElse(throw new RuntimeException(
       "Indexer must be started before debug manager."
