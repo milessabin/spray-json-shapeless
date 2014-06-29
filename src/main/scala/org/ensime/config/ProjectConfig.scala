@@ -716,28 +716,7 @@ object ProjectConfig {
     }
   }
 
-  def nullConfig = new ProjectConfig(
-    name = None,
-    scalaLibraryJar = None,
-    scalaReflectJar = None,
-    scalaCompilerJar = None,
-    root = new File("."),
-    sourceRoots = List(),
-    referenceSourceRoots = List(),
-    runtimeDeps = List(),
-    compileDeps = List(),
-    target = None,
-    testTarget = None,
-    formattingPrefsMap = Map(),
-    disableIndexOnStartup = false,
-    disableSourceLoadOnStartup = false,
-    disableScalaJarsOnClasspath = false,
-    onlyIncludeInIndex = List(),
-    excludeFromIndex = List(),
-    extraCompilerArgs = List(),
-    extraBuilderArgs = List(),
-    javaCompilerArgs = List(),
-    javaCompilerVersion = None)
+  def nullConfig = new ProjectConfig()
 
   def getJavaHome(): Option[File] = {
     val javaHome: String = System.getProperty("java.home")
@@ -782,28 +761,28 @@ object ProjectConfig {
 
 class ReplConfig(val classpath: String) {}
 
-class ProjectConfig(
-    val name: Option[String],
-    val scalaLibraryJar: Option[CanonFile],
-    val scalaReflectJar: Option[CanonFile],
-    val scalaCompilerJar: Option[CanonFile],
-    val root: CanonFile,
-    val sourceRoots: Iterable[CanonFile],
-    val referenceSourceRoots: Iterable[CanonFile],
-    val runtimeDeps: Iterable[CanonFile],
-    val compileDeps: Iterable[CanonFile],
-    val target: Option[CanonFile],
-    val testTarget: Option[CanonFile],
-    formattingPrefsMap: Map[Symbol, Any],
-    val disableIndexOnStartup: Boolean,
-    val disableSourceLoadOnStartup: Boolean,
-    val disableScalaJarsOnClasspath: Boolean,
-    val onlyIncludeInIndex: Iterable[Regex],
-    val excludeFromIndex: Iterable[Regex],
-    val extraCompilerArgs: Iterable[String],
-    val extraBuilderArgs: Iterable[String],
-    val javaCompilerArgs: Iterable[String],
-    val javaCompilerVersion: Option[String]) {
+case class ProjectConfig(
+    name: Option[String] = None,
+    scalaLibraryJar: Option[CanonFile] = None,
+    scalaReflectJar: Option[CanonFile] = None,
+    scalaCompilerJar: Option[CanonFile] = None,
+    root: CanonFile = new File("."),
+    sourceRoots: Iterable[CanonFile] = List(),
+    referenceSourceRoots: Iterable[CanonFile] = List(),
+    runtimeDeps: Iterable[CanonFile] = List(),
+    compileDeps: Iterable[CanonFile] = List(),
+    target: Option[CanonFile] = None,
+    testTarget: Option[CanonFile] = None,
+    formattingPrefsMap: Map[Symbol, Any] = Map(),
+    disableIndexOnStartup: Boolean = false,
+    disableSourceLoadOnStartup: Boolean = false,
+    disableScalaJarsOnClasspath: Boolean = false,
+    onlyIncludeInIndex: Iterable[Regex] = List(),
+    excludeFromIndex: Iterable[Regex] = List(),
+    extraCompilerArgs: Iterable[String] = List(),
+    extraBuilderArgs: Iterable[String] = List(),
+    javaCompilerArgs: Iterable[String] = List(),
+    javaCompilerVersion: Option[String] = None) {
 
   val formattingPrefs = formattingPrefsMap.
     foldLeft(FormattingPreferences()) { (fp, p) =>
