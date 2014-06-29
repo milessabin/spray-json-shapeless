@@ -82,7 +82,7 @@ trait CompletionControl {
         case Some(syms: List[SymbolSearchResult]) => {
           syms.map { s =>
             CompletionInfo(s.localName, CompletionSignature(List(), s.name),
-	      -1, false, 40, Some(s.name))
+              -1, false, 40, Some(s.name))
           }
         }
         case _ => List()
@@ -320,7 +320,7 @@ trait Completion { self: RichPresentationCompiler =>
         memberSyms.flatMap { s =>
           val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
           if (name.startsWith(prefix)) {
-            Some(CompletionInfo(name, CompletionSignature(List(),""), -1, false, 50, None))
+            Some(CompletionInfo(name, CompletionSignature(List(), ""), -1, false, 50, None))
           } else None
         }.toList
       }

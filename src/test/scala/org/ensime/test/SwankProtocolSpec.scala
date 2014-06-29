@@ -8,8 +8,7 @@ import scala.tools.nsc.util.RangePosition
 import scala.tools.nsc.util.{ BatchSourceFile }
 import scala.tools.nsc.io.{ VirtualFile, PlainFile, AbstractFile, ZipArchive }
 
-
-class SwankProtocolSpec extends FunSpec with ShouldMatchers{
+class SwankProtocolSpec extends FunSpec with ShouldMatchers {
 
   class MockZipEntry(entry: String, archive: ZipArchive) extends VirtualFile(entry, entry) {
     override def underlyingSource: Option[ZipArchive] = Some(archive)

@@ -90,8 +90,8 @@ case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 case class DebugOutputEvent(out: String) extends DebugEvent
 
 class DebugManager(project: Project, indexer: Actor,
-  protocol: ProtocolConversions,
-  config: ProjectConfig) extends Actor {
+    protocol: ProtocolConversions,
+    config: ProjectConfig) extends Actor {
 
   import protocol._
 
@@ -734,7 +734,6 @@ class DebugManager(project: Project, indexer: Actor,
         override def hashCode: Int = loc.lineNumber.hashCode ^ loc.sourceName.hashCode
       }
 
-
       val buf = HashSet[LocationClass]()
       val key = file.getName
       for (types <- fileToUnits.get(key)) {
@@ -1067,7 +1066,8 @@ class DebugManager(project: Project, indexer: Actor,
         val stackFrame = thread.frame(frame)
         val localVar = stackFrame.visibleVariables.get(offset)
         mirrorFromString(localVar.`type`(), newValue) match {
-          case Some(v) => stackFrame.setValue(localVar, v); true
+          case Some(v) =>
+            stackFrame.setValue(localVar, v); true
           case None => false
         }
       } else false

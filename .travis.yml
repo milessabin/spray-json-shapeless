@@ -1,7 +1,22 @@
-language: scala
-scala:
-  - "2.10.4"
 branches:
   only:
-    - master
-    - scala-2.9
+  - master
+  - scala-2.9
+language: scala
+jdk:
+- openjdk6
+scala:
+- 2.10.4
+before_script:
+- ./bintray.sh
+script:
+- sbt scoverage:test
+after_success:
+- sbt publish
+# https://github.com/scoverage/sbt-coveralls/issues/18
+#- sbt coveralls
+env:
+  global:
+    # to generate this (when in the correct branch of the correct repo):
+    # travis encrypt BINTRAY_TOKEN=<YOUR PRIVATE API KEY> --add
+    secure: f7bVE0+xaRCJj+AEo/Eu6cyNu3Ks/O9LMyS18Qx1Zw8p95dufNd8LUOyC6//9Lk050LlhMF166POMevHA/G5LbGLXOlobdv5kZWd0MfPavcgOU0NZz/r6sKvIlrcSChrkL75+EnxkTZwpq0d/JMlaQxX9Oim327zRps+6J/yQrs=

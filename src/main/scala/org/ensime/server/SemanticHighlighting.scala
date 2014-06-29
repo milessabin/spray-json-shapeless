@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.server
 import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
@@ -41,7 +41,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
     override def traverse(t: Tree) {
 
-
       val treeP = t.pos
 
       def addAt(start: Int, end: Int, designation: scala.Symbol) {
@@ -55,7 +54,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
       }
 
       if (!treeP.isTransparent && p.overlaps(treeP)) {
-	try {
+        try {
           t match {
             case Import(expr, selectors) => {
               for (impSel <- selectors) {
@@ -104,7 +103,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
               val start = try {
                 qual.pos.end + 1
               } catch {
-                case _ : Throwable => treeP.start
+                case _: Throwable => treeP.start
               }
               val len = selector.decode.length()
               val end = start + len
@@ -123,9 +122,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 }
               } else if (sym.isConstructor) {
                 val start = try { sym.pos.start }
-                catch { case _ : Throwable => treeP.start }
+                catch { case _: Throwable => treeP.start }
                 val end = try { sym.pos.end }
-                catch { case _ : Throwable => treeP.end }
+                catch { case _: Throwable => treeP.end }
                 addAt(start, end, 'constructor)
               } else if (sym.isMethod) {
                 if (sym.nameString == "apply" ||
@@ -147,7 +146,6 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'functionCall)
               }
             }
-
 
             case ValDef(mods, name, tpt, rhs) => {
               val sym = t.symbol
@@ -204,13 +202,12 @@ trait SemanticHighlighting { self: Global with Helpers =>
             }
             case _ => {}
           }
-	}
-	catch{
-	  case e : Throwable => {
-	    System.err.println("Error in AST traverse:")
-	    e.printStackTrace(System.err);
-	  }
-	}
+        } catch {
+          case e: Throwable => {
+            System.err.println("Error in AST traverse:")
+            e.printStackTrace(System.err);
+          }
+        }
         super.traverse(t)
       }
     }
@@ -224,8 +221,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
     typed.get.left.toOption match {
       case Some(tree) => {
 
-	// TODO: Disable designations for
-	// regions with errors?
+        // TODO: Disable designations for
+        // regions with errors?
 
         //        val cu = unitOf(p.source)
         //        var startOfProblems = p.end

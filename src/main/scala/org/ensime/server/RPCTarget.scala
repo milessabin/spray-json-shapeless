@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.server
 import java.io.File
@@ -36,12 +36,11 @@ import scala.actors.Actor._
 import scala.collection.immutable
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.util.BatchSourceFile
-import scala.tools.refactoring.common.{TextChange,Change}
+import scala.tools.refactoring.common.{ TextChange, Change }
 import scalariform.astselect.AstSelector
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
 import scalariform.utils.Range
-
 
 trait RPCTarget { self: Project =>
 
@@ -97,7 +96,7 @@ trait RPCTarget { self: Project =>
     b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
   }
 
-  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes:List[Symbol], callId: Int) {
+  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: List[Symbol], callId: Int) {
     val file: File = new File(f)
     getAnalyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
   }
@@ -109,8 +108,8 @@ trait RPCTarget { self: Project =>
   def rpcDebugStartVM(commandLine: String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugStartVMReq(commandLine), callId)
   }
- def rpcDebugAttachVM(hostname:String, port:String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugAttachVMReq(hostname,port), callId)
+  def rpcDebugAttachVM(hostname: String, port: String, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugAttachVMReq(hostname, port), callId)
   }
   def rpcDebugStopVM(callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugStopVMReq(), callId)
@@ -142,8 +141,8 @@ trait RPCTarget { self: Project =>
   def rpcDebugStepOut(threadId: Long, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugStepOutReq(threadId), callId)
   }
-  def rpcDebugLocateName(threadId: Long, name:String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugLocateNameReq(threadId,name), callId)
+  def rpcDebugLocateName(threadId: Long, name: String, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugLocateNameReq(threadId, name), callId)
   }
   def rpcDebugValue(loc: DebugLocation, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugValueReq(loc), callId)
@@ -151,11 +150,11 @@ trait RPCTarget { self: Project =>
   def rpcDebugToString(threadId: Long, loc: DebugLocation, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugToStringReq(threadId, loc), callId)
   }
-  def rpcDebugSetValue(loc: DebugLocation, newValue:String, callId: Int) {
+  def rpcDebugSetValue(loc: DebugLocation, newValue: String, callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugSetValueReq(loc, newValue), callId)
   }
-  def rpcDebugBacktrace(threadId: Long, index:Int, count: Int, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugBacktraceReq(threadId,index,count), callId)
+  def rpcDebugBacktrace(threadId: Long, index: Int, count: Int, callId: Int) {
+    getOrStartDebugger ! RPCRequestEvent(DebugBacktraceReq(threadId, index, count), callId)
   }
   def rpcDebugActiveVM(callId: Int) {
     getOrStartDebugger ! RPCRequestEvent(DebugActiveVMReq(), callId)
@@ -240,7 +239,7 @@ trait RPCTarget { self: Project =>
 
   def rpcPrepareRefactor(refactorType: Symbol, procId: Int, params: immutable.Map[Symbol, Any], interactive: Boolean, callId: Int) {
     getAnalyzer ! RPCRequestEvent(RefactorPerformReq(
-	procId, refactorType, params, interactive), callId)
+      procId, refactorType, params, interactive), callId)
   }
 
   def rpcExecRefactor(refactorType: Symbol, procId: Int, callId: Int) {
@@ -267,8 +266,8 @@ trait RPCTarget { self: Project =>
       }
     } catch {
       case e: ScalaParserException =>
-      sendRPCError(ErrFormatFailed,
-        Some("Could not parse broken syntax: " + e), callId)
+        sendRPCError(ErrFormatFailed,
+          Some("Could not parse broken syntax: " + e), callId)
     }
   }
 
@@ -279,7 +278,7 @@ trait RPCTarget { self: Project =>
         FileUtils.readFile(f) match {
           case Right(contents) => {
             val formatted = ScalaFormatter.format(
-	      contents, config.formattingPrefs)
+              contents, config.formattingPrefs)
             TextEdit(f, 0, contents.length, formatted)
           }
           case Left(e) => throw e
@@ -290,13 +289,13 @@ trait RPCTarget { self: Project =>
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>
-        sendRPCError(ErrFormatFailed,
-          Some("Could not write any formatting changes: " + e), callId)
+          sendRPCError(ErrFormatFailed,
+            Some("Could not write any formatting changes: " + e), callId)
       }
     } catch {
       case e: ScalaParserException =>
-      sendRPCError(ErrFormatFailed,
-        Some("Cannot format broken syntax: " + e), callId)
+        sendRPCError(ErrFormatFailed,
+          Some("Cannot format broken syntax: " + e), callId)
     }
   }
 

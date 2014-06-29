@@ -1,29 +1,29 @@
 /**
-*  Copyright (c) 2010, Aemon Cannon
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are met:
-*      * Redistributions of source code must retain the above copyright
-*        notice, this list of conditions and the following disclaimer.
-*      * Redistributions in binary form must reproduce the above copyright
-*        notice, this list of conditions and the following disclaimer in the
-*        documentation and/or other materials provided with the distribution.
-*      * Neither the name of ENSIME nor the
-*        names of its contributors may be used to endorse or promote products
-*        derived from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-*  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-*  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-*  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
-*  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-*  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-*  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *  Copyright (c) 2010, Aemon Cannon
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are met:
+ *      * Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *      * Redistributions in binary form must reproduce the above copyright
+ *        notice, this list of conditions and the following disclaimer in the
+ *        documentation and/or other materials provided with the distribution.
+ *      * Neither the name of ENSIME nor the
+ *        names of its contributors may be used to endorse or promote products
+ *        derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL Aemon Cannon BE LIABLE FOR ANY
+ *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package org.ensime.util
 import scala.collection.immutable.Map
@@ -49,7 +49,7 @@ case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
   def toKeywordMap(): Map[KeywordAtom, SExp] = {
     var m = Map[KeywordAtom, SExp]()
     items.sliding(2, 2).foreach {
-      case (key: KeywordAtom) ::(sexp: SExp) :: rest => {
+      case (key: KeywordAtom) :: (sexp: SExp) :: rest => {
         m += (key -> sexp)
       }
       case _ => {}
@@ -60,7 +60,7 @@ case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
   def toSymbolMap(): Map[scala.Symbol, Any] = {
     var m = Map[scala.Symbol, Any]()
     items.sliding(2, 2).foreach {
-      case SymbolAtom(key) ::(sexp: SExp) :: rest => {
+      case SymbolAtom(key) :: (sexp: SExp) :: rest => {
         m += (Symbol(key) -> sexp.toScala)
       }
       case _ => {}
@@ -68,7 +68,6 @@ case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
     m
   }
 }
-
 
 object BooleanAtom {
 
@@ -152,8 +151,8 @@ object SExp extends RegexParsers {
     }
   }
   lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ { s =>
-    if(s == "nil") NilAtom()
-    else if(s == "t") TruthAtom()
+    if (s == "nil") NilAtom()
+    else if (s == "t") TruthAtom()
     else SymbolAtom(s)
   }
   lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
@@ -177,7 +176,7 @@ object SExp extends RegexParsers {
     }
   }
 
-  def read(s:String):SExp = {
+  def read(s: String): SExp = {
     SExp.read(new input.CharSequenceReader(s))
   }
 
@@ -248,10 +247,10 @@ object SExp extends RegexParsers {
   }
 
   implicit def listToSExpable(o: Iterable[SExpable]): SExpable =
-  new Iterable[SExpable] with SExpable {
-    override def iterator = o.iterator
-    override def toSExp = SExp(o.map { _.toSExp })
-  }
+    new Iterable[SExpable] with SExpable {
+      override def iterator = o.iterator
+      override def toSExp = SExp(o.map { _.toSExp })
+    }
 
 }
 

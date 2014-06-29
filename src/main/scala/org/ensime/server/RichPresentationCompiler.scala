@@ -90,7 +90,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     } catch {
       case fi: FailedInterrupt =>
         fi.getCause() match {
-	  // TODO(aemon): Remove.
+          // TODO(aemon): Remove.
           // xeno.by: InvalidCompanions has been removed in 2.10
           // case e @ InvalidCompanions(c1, c2) =>
           //   richReporter.warning(c1.pos, e.getMessage)
@@ -215,8 +215,8 @@ class RichPresentationCompiler(
   var parent: Actor,
   var indexer: Actor,
   val config: ProjectConfig) extends Global(settings, richReporter)
-  with NamespaceTraversal with ModelBuilders with RichCompilerControl
-  with RefactoringImpl with IndexerInterface with SemanticHighlighting with Completion with Helpers {
+    with NamespaceTraversal with ModelBuilders with RichCompilerControl
+    with RefactoringImpl with IndexerInterface with SemanticHighlighting with Completion with Helpers {
 
   private val symsByFile = new mutable.HashMap[AbstractFile, mutable.LinkedHashSet[Symbol]] {
     override def default(k: AbstractFile) = {

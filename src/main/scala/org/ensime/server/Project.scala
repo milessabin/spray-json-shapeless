@@ -93,13 +93,12 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   def getAnalyzer: Actor = {
     analyzer.getOrElse(throw new RuntimeException(
-	"Analyzer unavailable."))
+      "Analyzer unavailable."))
   }
   def getIndexer: Actor = {
     indexer.getOrElse(throw new RuntimeException(
-	"Indexer unavailable."))
+      "Indexer unavailable."))
   }
-
 
   private var undoCounter = 0
   private val undos: LinkedHashMap[Int, Undo] = new LinkedHashMap[Int, Undo]
@@ -164,11 +163,11 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
         undos.remove(u.id)
         FileUtils.writeChanges(u.changes) match {
           case Right(touched) => {
-	    for(ea <- analyzer) {
-	      ea ! ReloadFilesReq(touched.toList.map{SourceFileInfo(_)})
-	    }
-	    Right(UndoResult(undoId, touched))
-	  }
+            for (ea <- analyzer) {
+              ea ! ReloadFilesReq(touched.toList.map { SourceFileInfo(_) })
+            }
+            Right(UndoResult(undoId, touched))
+          }
           case Left(e) => Left(e.getMessage())
         }
       }
@@ -187,7 +186,7 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def restartIndexer() {
-    for(ea <- indexer) {
+    for (ea <- indexer) {
       ea ! IndexerShutdownReq()
     }
     val newIndexer = new Indexer(this, protocol, config)
@@ -200,17 +199,17 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
   }
 
   protected def restartCompiler() {
-    for(ea <- analyzer) {
+    for (ea <- analyzer) {
       ea ! AnalyzerShutdownEvent()
     }
-    indexer match{
+    indexer match {
       case Some(indexer) => {
-	val newAnalyzer = new Analyzer(this, indexer, protocol, config)
-	newAnalyzer.start
-	analyzer = Some(newAnalyzer)
+        val newAnalyzer = new Analyzer(this, indexer, protocol, config)
+        newAnalyzer.start
+        analyzer = Some(newAnalyzer)
       }
       case None => {
-	throw new RuntimeException("Indexer must be started before analyzer.")
+        throw new RuntimeException("Indexer must be started before analyzer.")
       }
     }
   }

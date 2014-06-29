@@ -29,11 +29,11 @@ package org.ensime.server
 
 import java.io.File
 import org.ensime.util._
-import scala.collection.{immutable, mutable}
+import scala.collection.{ immutable, mutable }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
-import scala.tools.refactoring.common.{Change, CompilerAccess, Selections}
+import scala.tools.refactoring.common.{ Change, CompilerAccess, Selections }
 import scala.tools.refactoring.implementations._
 
 case class RefactorFailure(val procedureId: Int, val message: String)
@@ -51,7 +51,6 @@ trait RefactorEffect extends RefactorProcedure {
 trait RefactorResult extends RefactorProcedure {
   val touched: Iterable[File]
 }
-
 
 abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
 
@@ -103,8 +102,7 @@ trait RefactoringHandler { self: Analyzer =>
         if (req.interactive) {
           effects(procedureId) = effect
           project ! RPCResultEvent(toWF(effect), callId)
-        }
-        else { // Execute the refactoring immediately..
+        } else { // Execute the refactoring immediately..
           project ! AddUndo("Refactoring of type: " + req.refactorType.toString,
             FileUtils.inverseEdits(effect.changes))
           val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
@@ -170,14 +168,14 @@ trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
     effect: RefactorEffect): Either[RefactorFailure, RefactorResult] = {
     askOption(execRefactor(procId, tpe, effect)).getOrElse(
       Left(RefactorFailure(procId, "Refactor exec call failed."))) match {
-      case Right(result) => {
-	// Reload all files touched by refactoring, so subsequent refactorings
-	// will see consistent state.
-	askReloadFiles(result.touched.map(f => createSourceFile(f.getPath)))
-	Right(result)
+        case Right(result) => {
+          // Reload all files touched by refactoring, so subsequent refactorings
+          // will see consistent state.
+          askReloadFiles(result.touched.map(f => createSourceFile(f.getPath)))
+          Right(result)
+        }
+        case Left(failure) => Left(failure)
       }
-      case Left(failure) => Left(failure)
-    }
   }
 
 }
@@ -320,20 +318,20 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
         }
         case S.AddImport => {
           (params.get(S.QualifiedName), params.get(S.File)) match {
-              case (Some(n: String), Some(f: String)) => {
-                val file = CanonFile(f)
-                reloadAndType(file)
-                doAddImport(procId, tpe, n, file)
-              }
-              case _ => badArgs
+            case (Some(n: String), Some(f: String)) => {
+              val file = CanonFile(f)
+              reloadAndType(file)
+              doAddImport(procId, tpe, n, file)
             }
+            case _ => badArgs
+          }
         }
         case _ => Left(RefactorFailure(procId, "Unknown refactoring: " + tpe))
       }
     } catch {
-      case e : Throwable => {
-	e.printStackTrace()
-	Left(RefactorFailure(procId, e.toString))
+      case e: Throwable => {
+        e.printStackTrace()
+        Left(RefactorFailure(procId, e.toString))
       }
     }
   }
