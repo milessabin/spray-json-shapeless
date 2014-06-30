@@ -7,8 +7,6 @@ jdk:
 - openjdk6
 scala:
 - 2.10.4
-before_script:
-- ./bintray.sh
 script:
 - sbt scoverage:test
 after_success:
@@ -17,6 +15,7 @@ after_success:
 #- sbt coveralls
 env:
   global:
-    # to generate this (when in the correct branch of the correct repo):
-    # travis encrypt BINTRAY_TOKEN=<YOUR PRIVATE API KEY> --add
-    secure: f7bVE0+xaRCJj+AEo/Eu6cyNu3Ks/O9LMyS18Qx1Zw8p95dufNd8LUOyC6//9Lk050LlhMF166POMevHA/G5LbGLXOlobdv5kZWd0MfPavcgOU0NZz/r6sKvIlrcSChrkL75+EnxkTZwpq0d/JMlaQxX9Oim327zRps+6J/yQrs=
+    # travis encrypt -r ensime/ensime-server SONATYPE_USERNAME=<USERNAME>
+    # travis encrypt -r ensime/ensime-server SONATYPE_PASSWORD=<PASSWORD>
+    secure: "SbkeCXHNb4q8gupFzJkx3VL/OKIRZeD+hUAcC7yJb21U4K5u3ZqZuMQJLwab9+at4yTgVmMeF9qyCaxT7Nl8sv6BKcLIxoM94WskUeevogTFKANMVDKj3bvza+mvK5NlNoXRZYZW7Y1Bw/jLSc4+HpeHaaWkLWgsRpPO9IKDhpM="
+    secure: "alkJZ1qNKf3kbIIWcP2a5a9hDpD3plCCH8omg62zT0/Il/2EX3Kq+JmGDwy6mAm0vANLeLSY6N9ZGHjlQMWCwDQy12iweL/+Oe2N8qD5PY0kc4jaiwvZowDfLTkhKMWzAm/upSIiqNyXISuZpDxC6ejQqElWkew9CrzI8yp53ws="
