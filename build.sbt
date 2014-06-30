@@ -1,12 +1,8 @@
 import sbt._
-import bintray.Keys._
-import com.typesafe.sbt.SbtGit._
-import java.io.FileNotFoundException
-import java.io.File
+import java.io._
 import sbt.IO
-
-import AssemblyKeys._
-import CoverallsPlugin.CoverallsKeys._
+import net.virtualvoid.sbt.graph.Plugin.graphSettings
+//import CoverallsPlugin.CoverallsKeys._
 
 organization := "org.ensime"
 
@@ -14,12 +10,12 @@ name := "ensime"
 
 scalaVersion := "2.10.4"
 
-git.baseVersion := "1.0"
+version := "0.9.10-SNAPSHOT"
 
-// rolling release has the git hash in the version
-versionWithGit
+resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies <<= scalaVersion { scalaVersion => Seq(
+  "org.ensime"                 %  "critbit"              % "0.0.5-SNAPSHOT",
   "org.apache.lucene"          %  "lucene-core"          % "3.5.0",
   "org.sonatype.tycho"         %  "org.eclipse.jdt.core" % "3.6.2.v_A76_R36x",
   "asm"                        %  "asm-commons"          % "3.3.1",
@@ -33,16 +29,14 @@ libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )}
 
-val JavaTools = {
-  List[File](
-    new File(Option(System.getenv("JAVA_HOME")).getOrElse("/tmp") + "/lib/tools.jar"),
-    new File(new File(System.getProperty("java.home")).getParent + "/lib/tools.jar")
-  ).filter(_.exists).headOption.getOrElse(
-    throw new FileNotFoundException("tools.jar")
-  )
-}
+val JavaTools = List[File](
+  new File(Option(System.getenv("JAVA_HOME")).getOrElse("/tmp") + "/lib/tools.jar"),
+  new File(new File(System.getProperty("java.home")).getParent + "/lib/tools.jar")
+).find(_.exists).getOrElse(
+  throw new FileNotFoundException("tools.jar")
+)
 
-internalDependencyClasspath in Compile += { Attributed.blank(JavaTools)}
+internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) }
 
 // 0.10 is busted
 addCompilerPlugin("org.brianmckenna" %% "wartremover" % "0.9")
@@ -61,26 +55,9 @@ javacOptions in (Compile, compile) ++= Seq (
 
 javacOptions in doc ++= Seq("-source", "1.6")
 
-assemblySettings
+maxErrors := 1
 
-test in assembly := {}
-
-artifact in (Compile, assembly) ~= { art =>
-  art.copy(`classifier` = Some("assembly"))
-}
-
-addArtifact(artifact in (Compile, assembly), assembly)
-
-// not working: https://github.com/sbt/sbt-assembly/issues/117
-mainClass in assembly := Some("org.ensime.server.Server")
-
-bintrayPublishSettings
-
-licenses += ("BSD", url("http://opensource.org/licenses/BSD-3-Clause"))
-
-bintrayOrganization in bintray := Some("ensime")
-
-net.virtualvoid.sbt.graph.Plugin.graphSettings
+graphSettings
 
 scalariformSettings
 
@@ -94,4 +71,20 @@ ScoverageKeys.highlighting := true
 
 ScoverageKeys.failOnMinimumCoverage := true
 
-coverallsSettings
+//coverallsSettings
+
+licenses := Seq("BSD 3 Clause" -> url("http://opensource.org/licenses/BSD-3-Clause"))
+
+homepage := Some(url("http://github.com/ensime/ensime-server"))
+
+publishTo <<= version { v: String =>
+  val nexus = "https://oss.sonatype.org/"
+  if (v.contains("SNAP")) Some("snapshots" at nexus + "content/repositories/snapshots")
+  else                    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+credentials += Credentials(
+  "Sonatype Nexus Repository Manager", "oss.sonatype.org",
+  Option(System.getenv("SONATYPE_USERNAME")).getOrElse(""),
+  Option(System.getenv("SONATYPE_PASSWORD")).getOrElse("")
+)
