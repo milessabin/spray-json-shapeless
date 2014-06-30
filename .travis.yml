@@ -10,7 +10,7 @@ scala:
 script:
 - sbt scoverage:test
 after_success:
-- sbt publish
+- sbt clean publish
 # https://github.com/scoverage/sbt-coveralls/issues/18
 #- sbt coveralls
 env:
