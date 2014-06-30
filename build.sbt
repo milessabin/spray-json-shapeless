@@ -12,10 +12,7 @@ scalaVersion := "2.10.4"
 
 version := "0.9.10-SNAPSHOT"
 
-resolvers += Resolver.sonatypeRepo("snapshots")
-
 libraryDependencies <<= scalaVersion { scalaVersion => Seq(
-  "org.ensime"                 %  "critbit"              % "0.0.5-SNAPSHOT",
   "org.apache.lucene"          %  "lucene-core"          % "3.5.0",
   "org.sonatype.tycho"         %  "org.eclipse.jdt.core" % "3.6.2.v_A76_R36x",
   "asm"                        %  "asm-commons"          % "3.3.1",
@@ -29,10 +26,13 @@ libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )}
 
-val JavaTools = List[File](
-  new File(Option(System.getenv("JAVA_HOME")).getOrElse("/tmp") + "/lib/tools.jar"),
-  new File(new File(System.getProperty("java.home")).getParent + "/lib/tools.jar")
-).find(_.exists).getOrElse(
+val JavaTools = List (
+  sys.env.get("JDK_HOME").getOrElse(""),
+  sys.env.get("JAVA_HOME").getOrElse(""),
+  System.getProperty("java.home")
+).map {
+  n => new File(n + "/lib/tools.jar")
+}.find(_.exists).getOrElse (
   throw new FileNotFoundException("tools.jar")
 )
 
@@ -85,6 +85,6 @@ publishTo <<= version { v: String =>
 
 credentials += Credentials(
   "Sonatype Nexus Repository Manager", "oss.sonatype.org",
-  Option(System.getenv("SONATYPE_USERNAME")).getOrElse(""),
-  Option(System.getenv("SONATYPE_PASSWORD")).getOrElse("")
+  sys.env.get("SONATYPE_USERNAME").getOrElse(""),
+  sys.env.get("SONATYPE_PASSWORD").getOrElse("")
 )
