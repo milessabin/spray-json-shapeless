@@ -11,6 +11,8 @@ import org.scalatest.ShouldMatchers
 import org.ensime.util._
 
 import scala.reflect.internal.util._
+import scala.tools.nsc.io.{ Path, PlainFile }
+import scala.tools.nsc.util.{ RangePosition, OffsetPosition, BatchSourceFile }
 
 class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
 
@@ -42,6 +44,8 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
   val debugStackFrame = DebugStackFrame(7, List(debugStackLocal1, debugStackLocal2), 4, "class1", "method1", sourcePos1, 7)
 
   val debugClassField = DebugClassField(19, "nameStr", "typeNameStr", "summaryStr")
+
+  val batchSourceFile = new BatchSourceFile(new PlainFile(Path("/abc")), "blah\nblah\nblah\n")
 
   describe("SwankProtocolConversionsSpec") {
 
@@ -200,13 +204,10 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
       // toWF(Position)
       assert(toWF(NoPosition).toWireString === """nil""")
       assert(toWF(FakePos("ABC")).toWireString === """nil""")
-      // TODO add a test with fake file creator
-      //      assert(toWF(new OffsetPosition("ABC")).toWireString === """nil""")
 
-      // to test the real file path needto have a temp file as it is read
-      // new BatchSourceFile(new PlainFile(Path("/abc")))
-      // TODO add a fake file creator
-      assert(toWF(new RangePosition(NoSourceFile, 70, 75, 90)).toWireString === """(:file "<no file>" :offset 75 :start 70 :end 90)""")
+      assert(toWF(new OffsetPosition(batchSourceFile, 5)).toWireString === """(:file "/abc" :offset 5)""")
+
+      assert(toWF(new RangePosition(batchSourceFile, 70, 75, 90)).toWireString === """(:file "/abc" :offset 75 :start 70 :end 90)""")
 
       assert(toWF(FileRange("/abc", 7, 9)).toWireString === """(:file "/abc" :start 7 :end 9)""")
 
