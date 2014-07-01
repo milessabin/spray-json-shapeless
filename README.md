@@ -57,17 +57,12 @@ We have branches for older versions of scala, which are merged regularly.
 
 # Quick Start
 
-There are a few ways to install the ENSIME server:
+There are a two ways to install the ENSIME server:
 
 1. Install [ensime-emacs](http://github.com/ensime/ensime-emacs) and it will do it for you automatically.
-2. Download a recent `-assembly.jar` binary from [bintray.com](https://bintray.com/ensime/maven/ensime/view/files/org/ensime).
-3. Build from source: fork this repo, clone locally and `sbt assembly`.
+2. Build from source: fork this repo, clone locally and `sbt publishLocal`.
 
-If you download manually or build from source, you'll need to move or
-link the `-assembly.jar` to where the editor plugin expects to find
-it: e.g. `~/.emacs.d/ensime-servers/SCALA_VERSION/`. When developing
-the ENSIME server itself, it is convenient to create a symbolic link
-from here to the `target/classes/scala-VERSION` output directory.
+The latter is also the recommended approach when developing ENSIME itself.
 
 
 ## Further Information
