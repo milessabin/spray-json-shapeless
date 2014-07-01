@@ -1,12 +1,12 @@
 package org.ensime.test
 import org.scalatest.FunSpec
-import org.scalatest.ShouldMatchers
+import org.scalatest.Matchers
 import org.ensime.protocol.SwankProtocol
 import scala.reflect.internal.util.RangePosition
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.io.{ VirtualFile, PlainFile, ZipArchive }
 
-class SwankProtocolSpec extends FunSpec with ShouldMatchers {
+class SwankProtocolSpec extends FunSpec with Matchers {
 
   class MockZipEntry(entry: String, archive: ZipArchive) extends VirtualFile(entry, entry) {
     override def underlyingSource: Option[ZipArchive] = Some(archive)

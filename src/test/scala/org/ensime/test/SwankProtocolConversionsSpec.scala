@@ -7,14 +7,14 @@ import org.ensime.indexer.{ Op, MethodBytecode }
 import org.ensime.model._
 import org.ensime.server._
 import org.scalatest.FunSpec
-import org.scalatest.ShouldMatchers
+import org.scalatest.Matchers
 import org.ensime.util._
 
 import scala.reflect.internal.util._
 import scala.tools.nsc.io.{ Path, PlainFile }
-import scala.tools.nsc.util.{ RangePosition, OffsetPosition, BatchSourceFile }
+import scala.reflect.internal.util.{ RangePosition, OffsetPosition, BatchSourceFile }
 
-class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
+class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
   // some useful example components
   val packageInfo = new PackageInfo("name", "fullName", List())
@@ -33,8 +33,23 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
   val note1 = new Note("file1", "note1", 2, 23, 33, 19, 8)
   val note2 = new Note("file1", "note2", 1, 23, 33, 19, 8)
 
-  val sourcePos1 = new SourcePosition(CanonFile("/abc/def"), 57)
-  val sourcePos2 = new SourcePosition(CanonFile("/abc/def"), 59)
+  // Canonical paths are OS-dependent so we can't hard-code them
+  def stringToWireString(s: String) = "\"" + s.replace("\\", "\\\\") + "\""
+  def fileToWireString(file: CanonFile) = stringToWireString(file.getAbsolutePath)
+
+  val file1 = CanonFile("/abc/def")
+  val file1_str = fileToWireString(file1)
+  val file2 = CanonFile("/test/test/")
+  val file2_str = fileToWireString(file2)
+  val file3 = CanonFile("/foo/abc")
+  val file3_str = fileToWireString(file3)
+  val file4 = CanonFile("/foo/def")
+  val file4_str = fileToWireString(file4)
+  val file5 = CanonFile("/foo/hij")
+  val file5_str = fileToWireString(file5)
+
+  val sourcePos1 = new SourcePosition(file1, 57)
+  val sourcePos2 = new SourcePosition(file1, 59)
   val breakPoint1 = new Breakpoint(sourcePos1)
   val breakPoint2 = new Breakpoint(sourcePos2)
 
@@ -46,6 +61,7 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
   val debugClassField = DebugClassField(19, "nameStr", "typeNameStr", "summaryStr")
 
   val batchSourceFile = new BatchSourceFile(new PlainFile(Path("/abc")), "blah\nblah\nblah\n")
+  val batchSourceFile_str = stringToWireString(batchSourceFile.path)
 
   describe("SwankProtocolConversionsSpec") {
 
@@ -68,15 +84,15 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
       // toWF(evt: DebugEvent): WireFormat
       assert(toWF(DebugOutputEvent("XXX")).toWireString === """(:debug-event (:type output :body "XXX"))""")
       assert(toWF(DebugStepEvent(207L, "threadNameStr", sourcePos1)).toWireString ===
-        """(:debug-event (:type step :thread-id "207" :thread-name "threadNameStr" :file "/abc/def" :line 57))""")
+        """(:debug-event (:type step :thread-id "207" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
       assert(toWF(DebugBreakEvent(209L, "threadNameStr", sourcePos1)).toWireString ===
-        """(:debug-event (:type breakpoint :thread-id "209" :thread-name "threadNameStr" :file "/abc/def" :line 57))""")
+        """(:debug-event (:type breakpoint :thread-id "209" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
       assert(toWF(DebugVMDeathEvent()).toWireString === """(:debug-event (:type death))""")
       assert(toWF(DebugVMStartEvent()).toWireString === """(:debug-event (:type start))""")
       assert(toWF(DebugVMDisconnectEvent()).toWireString === """(:debug-event (:type disconnect))""")
 
       assert(toWF(DebugExceptionEvent(33L, 209L, "threadNameStr", Some(sourcePos1))).toWireString ===
-        """(:debug-event (:type exception :exception "33" :thread-id "209" :thread-name "threadNameStr" :file "/abc/def" :line 57))""")
+        """(:debug-event (:type exception :exception "33" :thread-id "209" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
 
       assert(toWF(DebugThreadStartEvent(907L)).toWireString === """(:debug-event (:type threadStart :thread-id "907"))""")
       assert(toWF(DebugThreadDeathEvent(907L)).toWireString === """(:debug-event (:type threadDeath :thread-id "907"))""")
@@ -120,23 +136,23 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
       assert(toWF(debugStackLocal1).toWireString === """(:index 3 :name "name1" :summary "summary1" :type-name "type1")""")
 
       // toWF(evt: DebugStackFrame)
-      assert(toWF(debugStackFrame).toWireString === """(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file "/abc/def" :line 57) :this-object-id "7")""")
+      assert(toWF(debugStackFrame).toWireString === """(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file """ + file1_str + """ :line 57) :this-object-id "7")""")
 
       // toWF(evt: DebugBacktrace)
-      assert(toWF(DebugBacktrace(List(debugStackFrame), 17, "thread1")).toWireString === """(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file "/abc/def" :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
+      assert(toWF(DebugBacktrace(List(debugStackFrame), 17, "thread1")).toWireString === """(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file """ + file1_str + """ :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
 
       // toWF(pos: SourcePosition)
-      assert(toWF(sourcePos1).toWireString === """(:file "/abc/def" :line 57)""")
+      assert(toWF(sourcePos1).toWireString === """(:file """ + file1_str + """ :line 57)""")
 
       // toWF(bp: Breakpoint)
-      assert(toWF(breakPoint1).toWireString === """(:file "/abc/def" :line 57)""")
+      assert(toWF(breakPoint1).toWireString === """(:file """ + file1_str + """ :line 57)""")
 
       // toWF(config: BreakpointList)
-      assert(toWF(BreakpointList(List(breakPoint1), List(breakPoint2))).toWireString === """(:active ((:file "/abc/def" :line 57)) :pending ((:file "/abc/def" :line 59)))""")
+      assert(toWF(BreakpointList(List(breakPoint1), List(breakPoint2))).toWireString === """(:active ((:file """ + file1_str + """ :line 57)) :pending ((:file """ + file1_str + """ :line 59)))""")
 
       // toWF(config: ProjectConfig)
       assert(toWF(ProjectConfig()).toWireString === """(:project-name nil :source-roots ())""")
-      assert(toWF(ProjectConfig(name = Some("Project1"), sourceRoots = List(CanonFile("/test/test/")))).toWireString === """(:project-name "Project1" :source-roots ("/test/test"))""")
+      assert(toWF(ProjectConfig(name = Some("Project1"), sourceRoots = List(file2))).toWireString === """(:project-name "Project1" :source-roots (""" + file2_str + """))""")
 
       // toWF(config: ReplConfig)
       assert(toWF(new ReplConfig("classpath;classpath")).toWireString === """(:classpath "classpath;classpath")""")
@@ -205,9 +221,9 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
       assert(toWF(NoPosition).toWireString === """nil""")
       assert(toWF(FakePos("ABC")).toWireString === """nil""")
 
-      assert(toWF(new OffsetPosition(batchSourceFile, 5)).toWireString === """(:file "/abc" :offset 5)""")
+      assert(toWF(new OffsetPosition(batchSourceFile, 5)).toWireString === """(:file """ + batchSourceFile_str + """ :offset 5)""")
 
-      assert(toWF(new RangePosition(batchSourceFile, 70, 75, 90)).toWireString === """(:file "/abc" :offset 75 :start 70 :end 90)""")
+      assert(toWF(new RangePosition(batchSourceFile, 70, 75, 90)).toWireString === """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)""")
 
       assert(toWF(FileRange("/abc", 7, 9)).toWireString === """(:file "/abc" :start 7 :end 9)""")
 
@@ -221,22 +237,22 @@ class SwankProtocolConversionsSpec extends FunSpec with ShouldMatchers {
       assert(toWF(new RefactorEffect {
         val procedureId = 9
         val refactorType = 'add
-        val changes = List(TextEdit(new File("/foo/abc"), 5, 7, "aaa"))
-      }).toWireString === """(:procedure-id 9 :refactor-type add :status success :changes ((:file "/foo/abc" :text "aaa" :from 5 :to 7)))""")
+        val changes = List(TextEdit(file3, 5, 7, "aaa"))
+      }).toWireString === """(:procedure-id 9 :refactor-type add :status success :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7)))""")
 
       assert(toWF(new RefactorResult {
         val refactorType = 'abc
         val procedureId = 7
-        val touched = List(new File("/foo/abc"), new File("/abc/def"))
-      }).toWireString === """(:procedure-id 7 :refactor-type abc :status success :touched-files ("/foo/abc" "/abc/def"))""")
+        val touched = List(file3, file1)
+      }).toWireString === """(:procedure-id 7 :refactor-type abc :status success :touched-files (""" + file3_str + " " + file1_str + """))""")
 
       assert(toWF(Undo(3, "Undoing stuff", List(
-        TextEdit(new File("/foo/abc"), 5, 7, "aaa"),
-        NewFile(new File("/foo/def"), "xxxxx"),
-        DeleteFile(new File("/foo/hij"), "zzzz")
-      ))).toWireString === """(:id 3 :changes ((:file "/foo/abc" :text "aaa" :from 5 :to 7) (:file "/foo/def" :text "xxxxx" :from 0 :to 4) (:file "/foo/hij" :text "zzzz" :from 0 :to 3)) :summary "Undoing stuff")""")
+        TextEdit(file3, 5, 7, "aaa"),
+        NewFile(file4, "xxxxx"),
+        DeleteFile(file5, "zzzz")
+      ))).toWireString === """(:id 3 :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7) (:file """ + file4_str + """ :text "xxxxx" :from 0 :to 4) (:file """ + file5_str + """ :text "zzzz" :from 0 :to 3)) :summary "Undoing stuff")""")
 
-      assert(toWF(UndoResult(7, List(new File("/foo/abc"), new File("/foo/def")))).toWireString === """(:id 7 :touched-files ("/foo/abc" "/foo/def"))""")
+      assert(toWF(UndoResult(7, List(file3, file4))).toWireString === """(:id 7 :touched-files (""" + file3_str + """ """ + file4_str + """))""")
 
       assert(toWF(null).toWireString === """nil""")
       assert(toWF(DebugVmSuccess()).toWireString === """(:status "success")""")

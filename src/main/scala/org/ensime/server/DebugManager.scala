@@ -61,8 +61,8 @@ class DebugManager(project: Project, indexer: Actor,
 
   import protocol._
 
-  def ignoreErr[E <: Exception, T](action: => T, orElse: => T): T = {
-    try { action } catch { case e: E => orElse }
+  def ignoreErr[T](action: => T, orElse: => T): T = {
+    try { action } catch { case e: Exception => orElse }
   }
 
   def locToPos(loc: Location): Option[SourcePosition] = {

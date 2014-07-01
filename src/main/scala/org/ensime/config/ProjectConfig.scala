@@ -70,14 +70,28 @@ object ProjectConfig {
       case _ => matchError("Expecting a nil or t value at key: " + name); false
     }
     def getStrList(m: KeyMap, name: String): List[String] = m.get(keyword(name)) match {
-      case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value }.toList
+      case Some(SExpList(items: Iterable[_])) => items.map { ea =>
+        ea match {
+          case s: StringAtom => s.value
+          case _ =>
+            matchError("Expecting a list of string values at key: " + name)
+            return List()
+        }
+      }.toList
+      case Some(NilAtom()) => List()
       case None => List()
-      case _ => matchError("Expecting a list of string values at key: " + name); List()
     }
     def getRegexList(m: KeyMap, name: String): List[Regex] = m.get(keyword(name)) match {
-      case Some(SExpList(items: Iterable[StringAtom])) => items.map { ea => ea.value.r }.toList
+      case Some(SExpList(items: Iterable[_])) => items.map { ea =>
+        ea match {
+          case s: StringAtom => s.value.r
+          case _ =>
+            matchError("Expecting a list of string-encoded regexps at key: " + name)
+            return List()
+        }
+      }.toList
+      case Some(NilAtom()) => List()
       case None => List()
-      case _ => matchError("Expecting a list of string-encoded regexps at key: " + name); List()
     }
     def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
       case Some(list: SExpList) =>

@@ -1,10 +1,10 @@
 package org.ensime.test
 
 import org.scalatest.FunSpec
-import org.scalatest.ShouldMatchers
+import org.scalatest.Matchers
 import org.ensime.test.util.Helpers
 
-class RichPresentationCompilerSpec extends FunSpec with ShouldMatchers {
+class RichPresentationCompilerSpec extends FunSpec with Matchers {
 
   describe("RichPresentationCompiler") {
 

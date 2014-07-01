@@ -189,8 +189,10 @@ object ClassIterator {
     def getName(): String
   }
 
-  private def isClass(e: FileEntry): Boolean =
+  private def isClass(e: FileEntry): Boolean = {
+    import scala.language.reflectiveCalls
     (!e.isDirectory) && e.getName.toLowerCase.endsWith(".class")
+  }
 
   private def processDirectory(dir: File, callback: Callback) {
     import FileUtils._

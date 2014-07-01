@@ -20,10 +20,13 @@ case class AddSourceFilesReq(files: Iterable[File])
 case class RemoveSourceFilesReq(files: Iterable[File])
 case class UpdateSourceFilesReq(files: Iterable[File])
 
+@deprecated("RefinedBuildManager is deprecated but replacing it will take some work", "")
+class UnDeprecatedRefinedBuildManager(settings: Settings) extends RefinedBuildManager(settings)
+
 class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config: ProjectConfig) extends Actor {
 
   class IncrementalBuildManager(settings: Settings, reporter: Reporter)
-      extends RefinedBuildManager(settings) {
+      extends UnDeprecatedRefinedBuildManager(settings) {
     class IncrementalGlobal(settings: Settings, reporter: Reporter)
         extends scala.tools.nsc.Global(settings, reporter) {
       override def computeInternalPhases() {
@@ -40,7 +43,7 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
   private val settings = new Settings(Console.println)
   settings.processArguments(config.builderArgs, processAll = false)
 
-  private val reportHandler = new ReportHandler {
+  private class BuilderReportHandler extends ReportHandler {
     override def messageUser(str: String) {
       project ! AsyncEvent(toWF(
         SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))))
@@ -55,6 +58,7 @@ class IncrementalBuilder(project: Project, protocol: ProtocolConversions, config
     }
   }
 
+  private val reportHandler = new BuilderReportHandler
   private val reporter = new PresentationReporter(reportHandler)
 
   private val bm: BuildManager = new IncrementalBuildManager(settings, reporter)
