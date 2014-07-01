@@ -8,7 +8,7 @@ jdk:
 scala:
 - 2.10.4
 script:
-- sbt scoverage:test
+- sbt clean scoverage:test
 after_success:
 - sbt clean publish
 # https://github.com/scoverage/sbt-coveralls/issues/18
