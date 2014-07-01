@@ -44,7 +44,7 @@ We are using some great technologies to automate our build and testing process:
 * Kanban project planning from [waffle.io](https://waffle.io/ensime/ensime-server)
 * Continuous Integration from [travis-ci.org](https://travis-ci.org/ensime/ensime-server)
 * ~~Coverage reports from coveralls.io~~ [#391](/ensime/ensime-server/issues/391)
-* Binary distribution from [bintray.com](https://bintray.com/ensime/maven/ensime/view/files/org/ensime)
+* Binary distribution from [sonatype.org](http://www.sonatype.org/)
 * Emacs distributions from [MELPA](http://melpa.milkbox.net/#/ensime)
 
 Along with unit testing, we have automated coverage checks and code
