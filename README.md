@@ -30,7 +30,9 @@ developer, to make it even better.
 
 You can help out by:
 
-* [Triaging our open tickets](http://codetriage.com/ensime/ensime-server)
+<!--* [Triaging our open tickets](http://codetriage.com/ensime/ensime-server)-->
+
+* [Pick up some low hanging fruit](https://github.com/ensime/ensime-server/issues?labels=Low+Hanging+Fruit)
 * [Fixing a bug](http://github.com/ensime/ensime-server/issues?labels=Bug)
 * [Helping with the current Milestone](http://github.com/ensime/ensime-server/issues/milestones)
 * Sending an unsolicited pull request with a new feature
