@@ -1,5 +1,16 @@
 # ENSIME
 
+[![Bountysource](https://www.bountysource.com/badge/tracker?tracker_id=239449)](https://www.bountysource.com/trackers/239449-ensime?utm_source=239449&utm_medium=shield&utm_campaign=TRACKER_BADGE)
+
+[![Build Status](https://travis-ci.org/ensime/ensime-server.svg?branch=master)](https://travis-ci.org/ensime/ensime-server)
+
+<!--
+[![Coverage Status](https://coveralls.io/repos/bountysource/frontend/badge.png)](https://coveralls.io/r/ensime/ensime-server)
+-->
+
+[![Stories in Ready](https://badge.waffle.io/ensime/ensime-server.png?label=Low+Hanging+Fruit)](https://waffle.io/milessabin/shapeless)
+
+
 ENhanced Scala Interaction Mode for text Editors
 --- especially [GNU Emacs](http://www.gnu.org/software/emacs/).
 
