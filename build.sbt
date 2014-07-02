@@ -2,6 +2,7 @@ import sbt._
 import java.io._
 import sbt.IO
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
+import org.scalastyle.sbt.ScalastylePlugin
 //import CoverallsPlugin.CoverallsKeys._
 
 organization := "org.ensime"
@@ -60,6 +61,8 @@ maxErrors := 1
 graphSettings
 
 scalariformSettings
+
+ScalastylePlugin.Settings
 
 instrumentSettings
 

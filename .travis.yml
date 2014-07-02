@@ -8,11 +8,14 @@ jdk:
 scala:
 - 2.10.4
 script:
-- sbt clean scoverage:test
+- sbt ++$TRAVIS_SCALA_VERSION clean test
+- ./.check-diff.sh
+- sbt ++$TRAVIS_SCALA_VERSION clean scoverage:test
 after_success:
-- sbt clean publish
+- sbt ++$TRAVIS_SCALA_VERSION clean publish
+- sbt ++$TRAVIS_SCALA_VERSION scalastyleGenerateConfig scalastyle
 # https://github.com/scoverage/sbt-coveralls/issues/18
-#- sbt coveralls
+#- sbt ++$TRAVIS_SCALA_VERSION coveralls
 env:
   global:
     # travis encrypt -r ensime/ensime-server SONATYPE_USERNAME=<USERNAME>
