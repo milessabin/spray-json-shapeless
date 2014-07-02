@@ -8,8 +8,7 @@
 -->
 
 
-ENhanced Scala Interaction Mode for text Editors
---- especially [GNU Emacs](http://www.gnu.org/software/emacs/).
+ENhanced Scala Interaction Mode for text Editors, especially [GNU Emacs](http://www.gnu.org/software/emacs/).
 
 ENSIME brings IDE-like features to your favourite text editor, such as:
 
@@ -73,6 +72,13 @@ There are a two ways to install the ENSIME server:
 2. Build from source: fork this repo, clone locally and `sbt publishLocal`.
 
 The latter is also the recommended approach when developing ENSIME itself.
+
+
+Before reporting any problems with ENSIME, please:
+
+* check the [tickets flagged as FAQ](https://github.com/ensime/ensime-server/issues?labels=FAQ).
+* check the [most recently updated tickets](http://github.com/ensime/ensime-server/issues?direction=desc&sort=updated) (others are probably talking about it already with workarounds).
+* do a few keyword searches using the github search (top of the page) to see if anybody has reported this already.
 
 
 ## Further Information
