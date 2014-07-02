@@ -747,7 +747,7 @@ object ProjectConfig {
   }
 }
 
-class ReplConfig(val classpath: String) {}
+class ReplConfig(val classpath: String)
 
 case class ProjectConfig(
     name: Option[String] = None,

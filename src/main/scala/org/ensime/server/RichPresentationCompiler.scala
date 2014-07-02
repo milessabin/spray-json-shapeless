@@ -1,9 +1,10 @@
 package org.ensime.server
 
 import java.io.File
+import akka.actor.ActorRef
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
-import scala.actors.Actor
+import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
 import scala.tools.nsc.util._
@@ -145,11 +146,13 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 class RichPresentationCompiler(
   settings: Settings,
   val richReporter: Reporter,
-  var parent: Actor,
-  var indexer: Actor,
+  var parent: ActorRef,
+  var indexer: ActorRef,
   val config: ProjectConfig) extends Global(settings, richReporter)
     with NamespaceTraversal with ModelBuilders with RichCompilerControl
     with RefactoringImpl with IndexerInterface with SemanticHighlighting with Completion with Helpers {
+
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   private val symsByFile = new mutable.HashMap[AbstractFile, mutable.LinkedHashSet[Symbol]] {
     override def default(k: AbstractFile) = {
@@ -223,7 +226,7 @@ class RichPresentationCompiler(
         members(sym) = m
       } catch {
         case e: Throwable =>
-          System.err.println("Error: Omitting member " + sym + ": " + e)
+          logger.error("Error: Omitting member " + sym + ": " + e)
       }
     }
     for (sym <- tpe.decls) {
@@ -245,8 +248,7 @@ class RichPresentationCompiler(
             wrapTypeMembers(p)
           } catch {
             case e: Throwable =>
-              System.err.println("Error retrieving type members:")
-              e.printStackTrace(System.err)
+              logger.error("Error retrieving type members:", e)
               List()
           }
           // Remove duplicates
@@ -260,7 +262,7 @@ class RichPresentationCompiler(
           bySym.values
         }
       case None =>
-        System.err.println("ERROR: Failed to get any type information :(  ")
+        logger.error("ERROR: Failed to get any type information :(  ")
         List()
     }
   }
@@ -375,7 +377,7 @@ class RichPresentationCompiler(
         case _ =>
           // `showRaw` was introduced in 2.10, so I commented it out to be compatible with 2.9
           // println(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
-          println("[warning] symbolAt for " + tree.getClass + ": " + tree)
+          logger.warn("[warning] symbolAt for " + tree.getClass + ": " + tree)
           Nil
       }
     wannabes.find(_.exists)
@@ -451,7 +453,7 @@ class RichPresentationCompiler(
   }
 
   override def finalize() {
-    System.out.println("Finalizing Global instance.")
+    logger.info("Finalizing Global instance.")
   }
 
   /*

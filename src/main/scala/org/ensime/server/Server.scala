@@ -2,14 +2,15 @@ package org.ensime.server
 
 import java.io._
 import java.net.{ ServerSocket, Socket, InetAddress }
+import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
 import org.ensime.protocol._
 import org.ensime.util.WireFormat
 import org.ensime.config.Environment
-import scala.actors._
-import scala.actors.Actor._
+import org.slf4j.LoggerFactory
 import scala.util.Properties._
 
 object Server {
+  val logger = LoggerFactory.getLogger("Server")
 
   def main(args: Array[String]): Unit = {
     def setFallbackProp(name: String, fallback: String): Unit = {
@@ -22,15 +23,12 @@ object Server {
 
     val (cacheDir, host, requestedPort) = if (args.length > 0) {
       // legacy interface
-      System.err.println(
-        "WARNING: org.ensime.server.Server now takes properties instead of arguments"
-      )
+      logger.warn("WARNING: org.ensime.server.Server now takes properties instead of arguments")
       args match {
         case Array(a, b, c) => (
           new File(new File(a).getParentFile, ".ensime_cache"), b, c.toInt)
         case Array(portfile) => (
-          new File(new File(portfile).getParentFile, ".ensime_cache"),
-          "127.0.0.1", 0)
+          new File(new File(portfile).getParentFile, ".ensime_cache"), "127.0.0.1", 0)
         case _ =>
           throw new IllegalArgumentException("org.ensime.server.Server invoked incorrectly")
       }
@@ -40,33 +38,41 @@ object Server {
       propOrElse("ensime.requestport", "0").toInt
     )
 
+    val server = new Server(cacheDir, host, requestedPort)
+    server.startServer
+  }
+}
+
+class Server(cacheDir: File, host: String, requestedPort: Int) {
+
+  import Server.logger
+
+  def startServer: Unit = {
     require(!cacheDir.exists || cacheDir.isDirectory, cacheDir + " is not a valid cache directory")
     cacheDir.mkdirs()
 
+    val actorSystem = ActorSystem.create()
     val listener = new ServerSocket(requestedPort, 0, InetAddress.getByName(host))
     val actualPort = listener.getLocalPort
 
-    println("ENSIME Server on " + host + ":" + actualPort)
-    println("cacheDir=" + cacheDir)
-    println(Environment.info)
-    System.out.flush()
+    logger.info("ENSIME Server on " + host + ":" + actualPort)
+    logger.info("cacheDir=" + cacheDir)
+    logger.info(Environment.info)
 
     writePort(cacheDir, actualPort)
 
-    val protocol = SwankProtocol
-    val project: Project = new Project(protocol)
-    project.start()
+    val protocol = new SwankProtocol
+    val project = new Project(protocol, actorSystem)
 
     try {
       while (true) {
         try {
           val socket = listener.accept()
-          println("Got connection, creating handler...")
-          val handler = new SocketHandler(socket, protocol, project)
-          handler.start()
+          logger.info("Got connection, creating handler...")
+          val handler = actorSystem.actorOf(Props(classOf[SocketHandler], socket, protocol, project))
         } catch {
           case e: IOException =>
-            System.err.println("[ERROR] ENSIME Server: " + e)
+            logger.error("ENSIME Server: ", e)
         }
       }
     } finally {
@@ -78,7 +84,7 @@ object Server {
     val portfile = new File(cacheDir, "port")
     println("")
     if (!portfile.exists()) {
-      println("CREATING " + portfile)
+      logger.info("CREATING " + portfile)
       portfile.createNewFile()
     } else if (portfile.length > 0)
       // LEGACY: older clients create an empty file
@@ -95,30 +101,35 @@ object Server {
   }
 }
 
-class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
-  protocol.setOutputActor(this)
+case object SocketClosed
 
-  class SocketReader(socket: Socket, handler: SocketHandler) extends Actor {
-    val in = new BufferedInputStream(socket.getInputStream)
+class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extends Thread {
+  val in = new BufferedInputStream(socket.getInputStream)
 
-    def act() {
-      var running = true
-      try {
-        while (running) {
-          val msg: WireFormat = protocol.readMessage(in)
-          handler ! IncomingMessageEvent(msg)
-        }
-      } catch {
-        case e: IOException =>
-          System.err.println("Error in socket reader: " + e)
-          if (System.getProperty("ensime.explode.on.disconnect") != null) {
-            println("Tick-tock, tick-tock, tick-tock... boom!")
-            System.exit(-1)
-          } else exit('error)
+  override def run() {
+    try {
+      while (true) {
+        val msg: WireFormat = protocol.readMessage(in)
+        handler ! IncomingMessageEvent(msg)
       }
+    } catch {
+      case e: IOException =>
+        System.err.println("Error in socket reader: " + e)
+        if (System.getProperty("ensime.explode.on.disconnect") != null) {
+          println("Tick-tock, tick-tock, tick-tock... boom!")
+          System.out.flush()
+          System.exit(-1)
+        } else {
+          handler ! SocketClosed
+        }
     }
   }
+}
 
+class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
+  protocol.setOutputActor(self)
+
+  val reader = new SocketReader(socket, protocol, self)
   val out = new BufferedOutputStream(socket.getOutputStream)
 
   def write(value: WireFormat) {
@@ -127,22 +138,21 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
     } catch {
       case e: IOException =>
         System.err.println("Write to client failed: " + e)
-        exit('error)
+        context.stop(self)
     }
   }
 
-  def act() {
-    val reader = new SocketReader(socket, this)
-    this.link(reader)
+  override def preStart() {
     reader.start()
-    loop {
-      receive {
-        case IncomingMessageEvent(value: WireFormat) =>
-          project ! IncomingMessageEvent(value)
-        case OutgoingMessageEvent(value: WireFormat) =>
-          write(value)
-        case Exit(_: SocketReader, reason) => exit(reason)
-      }
-    }
+  }
+
+  override def receive = {
+    case IncomingMessageEvent(value: WireFormat) =>
+      project ! IncomingMessageEvent(value)
+    case OutgoingMessageEvent(value: WireFormat) =>
+      write(value)
+    case SocketClosed =>
+      System.err.println("Socket closed, stopping self")
+      context.stop(self)
   }
 }

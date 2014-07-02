@@ -1,8 +1,7 @@
 package org.ensime.util
 
-import scala.tools.nsc.interactive.CompilerControl
-import scala.tools.nsc.reporters.{ ConsoleReporter, Reporter }
-import scala.reflect.internal.util.{ OffsetPosition, Position }
+import scala.tools.nsc.reporters.Reporter
+import scala.reflect.internal.util.Position
 
 trait ReportHandler {
   def messageUser(str: String) {}
