@@ -4,7 +4,7 @@ import org.ensime.model.CompletionInfoList
 import scala.collection.mutable
 import scala.reflect.internal.util.{ SourceFile, BatchSourceFile }
 import org.ensime.util.Arrays
-import org.ensime.model.{ CompletionInfo, CompletionSignature, SymbolSearchResult }
+import org.ensime.model.{ CompletionInfo, CompletionSignature, SymbolSearchResults }
 
 trait CompletionControl {
   self: RichPresentationCompiler =>
@@ -51,11 +51,11 @@ trait CompletionControl {
     def makeTypeSearchCompletions(prefix: String): List[CompletionInfo] = {
       val req = TypeCompletionsReq(prefix, maxResults)
       indexer !? (1000, req) match {
-        case Some(syms: List[SymbolSearchResult]) =>
-          syms.map { s =>
+        case Some(s: SymbolSearchResults) =>
+          s.syms.map { s =>
             CompletionInfo(s.localName, CompletionSignature(List(), s.name),
               -1, isCallable = false, 40, Some(s.name))
-          }
+          }.toList
         case _ => List()
       }
     }

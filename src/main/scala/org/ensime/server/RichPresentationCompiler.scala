@@ -401,7 +401,7 @@ class RichPresentationCompiler(
   protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
     symbolAt(p) match {
       case Some(s) =>
-        val gi = new GlobalIndexes {
+        class CompilerGlobalIndexes extends GlobalIndexes {
           val global = RichPresentationCompiler.this
           val sym = s.asInstanceOf[global.Symbol]
           val cuIndexes = this.global.unitOfFile.values.map { u =>
@@ -417,6 +417,7 @@ class RichPresentationCompiler(
             }
           }
         }
+        val gi = new CompilerGlobalIndexes
         gi.result
       case None => List()
     }

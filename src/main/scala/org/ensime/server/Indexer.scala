@@ -4,6 +4,7 @@ import java.io.File
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
 import org.ensime.indexer.LuceneIndex
+import scala.reflect.io.AbstractFile
 import org.ensime.model.{
   ImportSuggestions,
   MethodSearchResult,
@@ -24,6 +25,8 @@ case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 case class ReindexClassFilesReq(files: Iterable[File])
 case class CommitReq()
+
+case class AbstractFiles(files: Set[AbstractFile])
 
 /**
  * The main index actor.
@@ -68,11 +71,11 @@ class Indexer(
             syms.foreach { s => index.remove(s) }
           case TypeCompletionsReq(prefix: String, maxResults: Int) =>
             val suggestions = index.keywordSearch(List(prefix), maxResults, restrictToTypes = true)
-            sender ! suggestions
+            sender ! SymbolSearchResults(suggestions)
           case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
-            sender ! classFileIndex.sourceFileCandidates(
+            sender ! AbstractFiles(classFileIndex.sourceFileCandidates(
               enclosingPackage,
-              classNamePrefix)
+              classNamePrefix))
           case RPCRequestEvent(req: Any, callId: Int) =>
             try {
               req match {

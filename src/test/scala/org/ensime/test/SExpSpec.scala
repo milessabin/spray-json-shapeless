@@ -1,9 +1,9 @@
 package org.ensime.test
 import org.scalatest.FunSpec
-import org.scalatest.ShouldMatchers
+import org.scalatest.Matchers
 import org.ensime.util.SExp
 
-class SExpSpec extends FunSpec with ShouldMatchers {
+class SExpSpec extends FunSpec with Matchers {
 
   describe("SExpSpec") {
     def check(s: String, r: String) {

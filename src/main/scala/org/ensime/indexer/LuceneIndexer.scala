@@ -87,8 +87,9 @@ object LuceneIndex extends StringSimilarity {
         val src = Option(userData.get(KeyFileHashes)).getOrElse("{}")
         val indexedFiles: Map[String, String] = try {
           JSONValue.parse(src) match {
-            case obj: java.util.Map[String, Object] =>
-              val m = JavaConversions.mapAsScalaMap[String, Object](obj)
+            case obj: JSONObject =>
+              val jm = obj.asInstanceOf[java.util.Map[String, Object]]
+              val m = JavaConversions.mapAsScalaMap[String, Object](jm)
               m.map { ea => (ea._1, ea._2.toString) }.toMap
             case _ => Map()
           }
@@ -284,7 +285,7 @@ object LuceneIndex extends StringSimilarity {
     val indexWorkQ = new IndexWorkQueue
     indexWorkQ.start
 
-    val handler = new ClassHandler {
+    class IndexingClassHandler extends ClassHandler {
       var classCount = 0
       var methodCount = 0
       var validClass = false
@@ -306,6 +307,7 @@ object LuceneIndex extends StringSimilarity {
         }
       }
     }
+    val handler = new IndexingClassHandler
 
     println("Updated: Indexing classpath...")
     ClassIterator.findPublicSymbols(files, handler)

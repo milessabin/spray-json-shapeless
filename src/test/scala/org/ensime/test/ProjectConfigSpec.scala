@@ -1,13 +1,13 @@
 package org.ensime.test
 
 import org.scalatest.FunSpec
-import org.scalatest.ShouldMatchers
+import org.scalatest.Matchers
 import org.ensime.config.ProjectConfig
 import org.ensime.util.SExp
 import org.ensime.util.FileUtils._
 import org.ensime.util.CanonFile
 
-class ProjectConfigSpec extends FunSpec with ShouldMatchers {
+class ProjectConfigSpec extends FunSpec with Matchers {
 
   def parse(s: String): ProjectConfig = {
     ProjectConfig.fromSExp(SExp.read(s)) match {
@@ -48,8 +48,7 @@ class ProjectConfigSpec extends FunSpec with ShouldMatchers {
         "     )",
         "  )",
         "  :active-subproject \"B\"",
-        ")"
-      ))
+        ")"))
       assert(conf.name.get == "Goodbye")
     }
 
@@ -73,10 +72,8 @@ class ProjectConfigSpec extends FunSpec with ShouldMatchers {
           "     )",
           "  )",
           "  :active-subproject \"B\"",
-          ")"
-        ))
+          ")"))
         assert(conf.name.get == "Proj B")
-        println(conf.sourceRoots)
         assert(conf.sourceRoots.toSet.contains(root1))
         assert(conf.sourceRoots.toSet.contains(root2))
       }
@@ -107,15 +104,43 @@ class ProjectConfigSpec extends FunSpec with ShouldMatchers {
           "     )",
           "  )",
           "  :active-subproject \"B\"",
-          ")"
-        ))
+          ")"))
         assert(conf.name.get == "Proj B")
-        println(conf.sourceRoots)
         assert(conf.sourceRoots.toSet.contains(root0))
         assert(conf.sourceRoots.toSet.contains(root1))
         assert(conf.sourceRoots.toSet.contains(root2))
         assert(conf.target.get == target)
       }
+    }
+
+    it("can parse nil as a string list") {
+      withTemporaryDirectory { dir =>
+        val conf = parse("(:source-roots nil )")
+        assert(conf.sourceRoots.toSet == Set())
+      }
+    }
+
+    it("should reject an incorrect list of strings") {
+      withTemporaryDirectory { dir =>
+        val root0 = CanonFile(createUniqueDirectory(dir))
+        val conf = parse("(:source-roots (\"" + root0 + "\" 1000))")
+        assert(conf.sourceRoots.toSet == Set())
+      }
+    }
+
+    it("can parse a regex list") {
+      val conf = parse("( :only-include-in-index (\"x\") )")
+      assert(conf.onlyIncludeInIndex.map(_.toString()) == List("x"))
+    }
+
+    it("can parse nil as a regex list") {
+      val conf = parse("( :only-include-in-index nil )")
+      assert(conf.onlyIncludeInIndex.toList == List())
+    }
+
+    it("should reject an incorrect regex list") {
+      val conf = parse("( :only-include-in-index (\"x\" 2) )")
+      assert(conf.onlyIncludeInIndex.toList == List())
     }
 
   }
