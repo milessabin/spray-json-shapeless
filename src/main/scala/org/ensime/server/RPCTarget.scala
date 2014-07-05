@@ -43,28 +43,6 @@ trait RPCTarget { self: Project =>
     sendRPCReturn(toWF(config.replConfig), callId)
   }
 
-  def rpcBuilderInit(callId: Int) {
-    getOrStartBuilder ! RPCRequestEvent(RebuildAllReq(), callId)
-  }
-
-  def rpcBuilderAddFiles(filenames: Iterable[String], callId: Int) {
-    val files = filenames.map(s => new File(s.toString))
-    val b = getOrStartBuilder
-    b ! RPCRequestEvent(AddSourceFilesReq(files), callId)
-  }
-
-  def rpcBuilderUpdateFiles(filenames: Iterable[String], callId: Int) {
-    val files = filenames.map(s => new File(s.toString))
-    val b = getOrStartBuilder
-    b ! RPCRequestEvent(UpdateSourceFilesReq(files), callId)
-  }
-
-  def rpcBuilderRemoveFiles(filenames: Iterable[String], callId: Int) {
-    val files = filenames.map(s => new File(s.toString))
-    val b = getOrStartBuilder
-    b ! RPCRequestEvent(RemoveSourceFilesReq(files), callId)
-  }
-
   def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: List[Symbol], callId: Int) {
     val file: File = new File(f)
     getAnalyzer ! RPCRequestEvent(SymbolDesignationsReq(file, start, end, requestedTypes), callId)
