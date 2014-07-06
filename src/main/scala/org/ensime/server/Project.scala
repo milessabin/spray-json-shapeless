@@ -56,7 +56,6 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
 
   protected var analyzer: Option[Actor] = None
   protected var indexer: Option[Actor] = None
-  protected var builder: Option[Actor] = None
   protected var debugger: Option[Actor] = None
 
   def getAnalyzer: Actor = {
@@ -139,7 +138,6 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     config = conf
     restartIndexer()
     restartCompiler()
-    shutdownBuilder()
     shutdownDebugger()
     undos.clear()
     undoCounter = 0
@@ -172,17 +170,6 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
   }
 
-  protected def getOrStartBuilder(): Actor = {
-    builder match {
-      case Some(b) => b
-      case None =>
-        val b = new IncrementalBuilder(this, protocol, config)
-        builder = Some(b)
-        b.start()
-        b
-    }
-  }
-
   protected def getOrStartDebugger(): Actor = {
     ((debugger, indexer) match {
       case (Some(b), _) => Some(b)
@@ -197,12 +184,6 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     ))
   }
 
-  protected def shutdownBuilder() {
-    for (b <- builder) {
-      b ! BuilderShutdownEvent
-    }
-    builder = None
-  }
   protected def shutdownDebugger() {
     for (d <- debugger) {
       d ! DebuggerShutdownEvent
