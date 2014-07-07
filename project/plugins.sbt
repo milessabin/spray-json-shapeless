@@ -1,4 +1,6 @@
-addSbtPlugin("org.ensime" % "ensime-sbt-cmd" % "0.1.4")
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+addSbtPlugin("org.ensime" % "ensime-sbt" % "0.1.5-SNAPSHOT")
 
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.1.6")
 
