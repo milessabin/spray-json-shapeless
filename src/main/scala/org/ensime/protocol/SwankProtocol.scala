@@ -7,6 +7,7 @@ import org.ensime.model._
 import org.ensime.server._
 import org.ensime.util._
 import org.ensime.util.SExp._
+import org.slf4j.LoggerFactory
 import scala.util.parsing.input
 
 class SwankProtocol extends Protocol {
@@ -67,6 +68,7 @@ class SwankProtocol extends Protocol {
 
   import ProtocolConst._
 
+  val log = LoggerFactory.getLogger(this.getClass)
   override val conversions: ProtocolConversions = new SwankProtocolConversions
 
   private var outPeer: ActorRef = null
@@ -84,7 +86,7 @@ class SwankProtocol extends Protocol {
     val dataString: String = value.toWireString
     val data: Array[Byte] = dataString.getBytes("UTF-8")
     val header: Array[Byte] = "%06x".format(data.length).getBytes("UTF-8")
-    println("Writing: " + dataString)
+    log.info("Writing: " + dataString)
     out.write(header)
     out.write(data)
     out.flush()
@@ -123,7 +125,7 @@ class SwankProtocol extends Protocol {
   def handleIncomingMessage(msg: Any) {
     msg match {
       case sexp: SExp => handleMessageForm(sexp)
-      case _ => System.err.println("WTF: Unexpected message: " + msg)
+      case _ => log.error("Unexpected message type: " + msg)
     }
   }
 
@@ -513,7 +515,7 @@ class SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
-    println("\nHandling RPC: " + form.toReadableString(debug = true))
+    log.info("Handling RPC: " + form.toReadableString(debug = true))
 
     def oops() = sendRPCError(ErrMalformedRPC, Some("Malformed " + callType + " call: " + form), callId)
 

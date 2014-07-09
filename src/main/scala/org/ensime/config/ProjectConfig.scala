@@ -4,6 +4,7 @@ import java.io.File
 import org.ensime.util._
 import org.ensime.util.FileUtils._
 import org.ensime.util.SExp._
+import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.util.matching.Regex
 import scalariform.formatter.preferences._
@@ -39,6 +40,7 @@ trait FormatHandler {
 }
 
 object ProjectConfig {
+  val log = LoggerFactory.getLogger("ProjectConfig")
 
   type KeyMap = Map[KeywordAtom, SExp]
 
@@ -51,48 +53,50 @@ object ProjectConfig {
     def key: KeywordAtom = KeywordAtom(keyName)
 
     def matchError(s: String) = {
-      System.err.println("Configuration Format Error: " + s)
+      log.error("Configuration Format Error: " + s)
     }
+
     def getStr(m: KeyMap, name: String): Option[String] = m.get(keyword(name)) match {
       case Some(StringAtom(s)) => Some(s)
       case None => None
       case _ => matchError("Expecting a string value at key: " + name); None
     }
+
     def getInt(m: KeyMap, name: String): Option[Int] = m.get(keyword(name)) match {
       case Some(IntAtom(i)) => Some(i)
       case None => None
       case _ => matchError("Expecting an integer value at key: " + name); None
     }
+
     def getBool(m: KeyMap, name: String): Boolean = m.get(keyword(name)) match {
       case Some(TruthAtom()) => true
       case Some(NilAtom()) => false
       case None => false
       case _ => matchError("Expecting a nil or t value at key: " + name); false
     }
+
     def getStrList(m: KeyMap, name: String): List[String] = m.get(keyword(name)) match {
-      case Some(SExpList(items: Iterable[_])) => items.map { ea =>
-        ea match {
-          case s: StringAtom => s.value
-          case _ =>
-            matchError("Expecting a list of string values at key: " + name)
-            return List()
-        }
+      case Some(SExpList(items: Iterable[_])) => items.map {
+        case s: StringAtom => s.value
+        case _ =>
+          matchError("Expecting a list of string values at key: " + name)
+          return List()
       }.toList
       case Some(NilAtom()) => List()
       case None => List()
     }
+
     def getRegexList(m: KeyMap, name: String): List[Regex] = m.get(keyword(name)) match {
-      case Some(SExpList(items: Iterable[_])) => items.map { ea =>
-        ea match {
-          case s: StringAtom => s.value.r
-          case _ =>
-            matchError("Expecting a list of string-encoded regexps at key: " + name)
-            return List()
-        }
+      case Some(SExpList(items: Iterable[_])) => items.map {
+        case s: StringAtom => s.value.r
+        case _ =>
+          matchError("Expecting a list of string-encoded regexps at key: " + name)
+          return List()
       }.toList
       case Some(NilAtom()) => List()
       case None => List()
     }
+
     def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
       case Some(list: SExpList) =>
         list.toKeywordMap.map {
@@ -617,11 +621,11 @@ object ProjectConfig {
     val rootDir: CanonFile = conf.rootDir match {
       case Some(str) => new File(str)
       case _ =>
-        System.err.println("No project root specified!")
+        log.warn("No project root specified, defaulting to " + serverRoot)
         serverRoot
     }
 
-    println("Using project root: " + rootDir)
+    log.info("Using project root: " + rootDir)
 
     val runtimeDeps = new mutable.HashSet[CanonFile]
     val compileDeps = new mutable.HashSet[CanonFile]
@@ -629,44 +633,44 @@ object ProjectConfig {
     {
       val deps = canonicalizeFiles(conf.compileJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar)
-      println("Including compile jars: " + jars.mkString(","))
+      log.info("Including compile jars: " + jars.mkString(","))
       compileDeps ++= jars
       val moreDeps = canonicalizeFiles(conf.compileDeps, rootDir)
-      println("Including compile deps: " + moreDeps.mkString(","))
+      log.info("Including compile deps: " + moreDeps.mkString(","))
       compileDeps ++= moreDeps
     }
 
     {
       val deps = canonicalizeFiles(conf.runtimeJars, rootDir)
       val jars = expandRecursively(rootDir, deps, isValidJar)
-      println("Including runtime jars: " + jars.mkString(","))
+      log.info("Including runtime jars: " + jars.mkString(","))
       runtimeDeps ++= jars
       val moreDeps = canonicalizeFiles(conf.runtimeDeps, rootDir)
-      println("Including runtime deps: " + moreDeps.mkString(","))
+      log.info("Including runtime deps: " + moreDeps.mkString(","))
       runtimeDeps ++= moreDeps
     }
 
     {
       val moreDeps = canonicalizeFiles(conf.testDeps, rootDir)
-      println("Including test deps: " + moreDeps.mkString(","))
+      log.info("Including test deps: " + moreDeps.mkString(","))
       compileDeps ++= moreDeps
       runtimeDeps ++= moreDeps
     }
 
     val sourceRoots = canonicalizeDirs(conf.sourceRoots, rootDir).toSet
-    println("Using source roots: " + sourceRoots)
+    log.info("Using source roots: " + sourceRoots)
 
-    val referenceSourceRoots = canonicalizeFiles(conf.referenceSourceRoots, rootDir).toSet
-    println("Using reference source roots: " + referenceSourceRoots)
+    val referenceSourceRoots = canonicalizeFiles(conf.referenceSourceRoots(), rootDir).toSet
+    log.info("Using reference source roots: " + referenceSourceRoots)
 
-    var target: Option[CanonFile] = ensureDirectory(conf.target, rootDir)
-    println("Using target directory: " + target.getOrElse("ERROR"))
+    val target: Option[CanonFile] = ensureDirectory(conf.target, rootDir)
+    log.info("Using target directory: " + target.getOrElse("ERROR"))
 
-    var testTarget: Option[CanonFile] = ensureDirectory(conf.testTarget, rootDir)
-    println("Using test target directory: " + testTarget.getOrElse("ERROR"))
+    val testTarget: Option[CanonFile] = ensureDirectory(conf.testTarget, rootDir)
+    log.info("Using test target directory: " + testTarget.getOrElse("ERROR"))
 
     val formatPrefs: Map[Symbol, Any] = conf.formatPrefs
-    println("Using formatting preferences: " + formatPrefs)
+    log.info("Using formatting preferences: " + formatPrefs)
 
     new ProjectConfig(
       conf.name,
@@ -706,7 +710,7 @@ object ProjectConfig {
 
   def nullConfig = new ProjectConfig()
 
-  def getJavaHome(): Option[File] = {
+  def getJavaHome: Option[File] = {
     val javaHome: String = System.getProperty("java.home")
     if (javaHome == null) None
     else Some(new File(javaHome))
@@ -727,7 +731,7 @@ object ProjectConfig {
           cpText.split(File.pathSeparatorChar).map { new File(_) },
           isValidJar)
       case _ =>
-        val javaHomeOpt = getJavaHome()
+        val javaHomeOpt = getJavaHome
         javaHomeOpt match {
           case Some(javaHome) =>
             if (System.getProperty("os.name").startsWith("Mac")) {
@@ -772,6 +776,8 @@ case class ProjectConfig(
     javaCompilerArgs: Iterable[String] = List(),
     javaCompilerVersion: Option[String] = None) {
 
+  import ProjectConfig.log
+
   val formattingPrefs = formattingPrefsMap.
     foldLeft(FormattingPreferences()) { (fp, p) =>
       p match {
@@ -814,7 +820,7 @@ case class ProjectConfig(
         case ('rewriteArrowSymbols, value: Boolean) =>
           fp.setPreference(RewriteArrowSymbols, value)
         case (name, _) =>
-          System.err.println("Oops, unrecognized formatting option: " + name)
+          log.warn("Oops, unrecognized formatting option: " + name)
           fp
       }
     }

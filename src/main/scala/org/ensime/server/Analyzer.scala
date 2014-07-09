@@ -1,7 +1,7 @@
 package org.ensime.server
 
 import java.io.File
-import akka.actor.{ Actor, ActorRef }
+import akka.actor.{ ActorLogging, Actor, ActorRef }
 import org.ensime.config.ProjectConfig
 import org.ensime.model.SourceFileInfo
 import org.ensime.model.SymbolDesignations
@@ -22,15 +22,15 @@ class Analyzer(
   val indexer: ActorRef,
   val protocol: ProtocolConversions,
   val config: ProjectConfig)
-    extends Actor with RefactoringHandler {
+    extends Actor with ActorLogging with RefactoringHandler {
 
   private val settings = new Settings(Console.println)
-  println("ExtraArgs: " + config.compilerArgs)
+  log.info("ExtraArgs: " + config.compilerArgs)
   settings.processArguments(config.compilerArgs, processAll = false)
   settings.usejavacp.value = false
 
-  println("\nPresentation Compiler settings:")
-  println(settings.toString())
+  log.info("Presentation Compiler settings:")
+  log.info(settings.toString())
   import protocol._
 
   private val reportHandler = new ReportHandler {
@@ -90,7 +90,7 @@ class Analyzer(
         process(x)
       } catch {
         case e: Exception =>
-          System.err.println("Error at Compiler message loop: " + e + " :\n" + e.getStackTraceString)
+          log.error("Error during Analyzer message processing")
       }
   }
 
@@ -105,7 +105,7 @@ class Analyzer(
         if (awaitingInitialCompile) {
           awaitingInitialCompile = false
           val elapsed = System.currentTimeMillis() - initTime
-          println("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
+          log.info("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
           reporter.enable()
           project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
           indexer ! CommitReq()
@@ -118,11 +118,9 @@ class Analyzer(
             project.sendRPCError(ErrAnalyzerNotReady,
               Some("Analyzer is not ready! Please wait."), callId)
           } else {
-
             reporter.enable()
 
             req match {
-
               case RemoveFileReq(file: File) =>
                 askRemoveDeleted(file)
                 project ! RPCResultEvent(toWF(value = true), callId)
@@ -280,13 +278,12 @@ class Analyzer(
           }
         } catch {
           case e: Throwable =>
-            System.err.println("Error handling RPC: " + e + " :\n" +
-              e.getStackTraceString)
+            log.error(e, "Error handling RPC: " + e)
             project.sendRPCError(ErrExceptionInAnalyzer,
               Some("Error occurred in Analyzer. Check the server log."), callId)
         }
       case other =>
-        println("Analyzer: WTF, what's " + other)
+        log.error("Unknown message type: " + other)
     }
   }
 
@@ -313,10 +310,5 @@ class Analyzer(
   def createSourceFile(file: SourceFileInfo) = {
     scalaCompiler.createSourceFile(file)
   }
-
-  override def finalize() {
-    System.out.println("Finalizing Analyzer actor.")
-  }
-
 }
 

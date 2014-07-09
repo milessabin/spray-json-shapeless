@@ -452,10 +452,6 @@ class RichPresentationCompiler(
     indexer = null
   }
 
-  override def finalize() {
-    logger.info("Finalizing Global instance.")
-  }
-
   /*
     * The following functions wrap up operations that interact with
     * the presentation compiler. The wrapping just helps with the

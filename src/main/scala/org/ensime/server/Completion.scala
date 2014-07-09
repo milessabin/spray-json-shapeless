@@ -67,7 +67,7 @@ trait CompletionControl {
               -1, isCallable = false, 40, Some(s.name))
           }.toList
         case None =>
-          println("WARNING - request timed out")
+          logger.warn("request timed out")
           List()
         case unknown =>
           throw new IllegalStateException("Unexpected response type from request:" + unknown)
@@ -86,11 +86,12 @@ trait CompletionControl {
           case _ =>
         }
       } while (!x.isComplete)
-      println("Found " + members.size + " members.")
+
+      logger.info("Found " + members.size + " members.")
 
       askOption[Unit] {
         val filtered = filterMembersByPrefix(members, prefix, matchEntire = false, caseSens = caseSens)
-        println("Filtered down to " + filtered.size + ".")
+        logger.info("Filtered down to " + filtered.size + ".")
         for (m <- filtered) {
           m match {
             case m @ ScopeMember(sym, tpe, accessible, viaView) =>
@@ -128,7 +129,7 @@ trait CompletionControl {
         askTypeCompletion(p, x)
         (prefix, makeAll(x, prefix, constructing))
       case _ =>
-        System.err.println("Unrecognized completion context.")
+        logger.error("Unrecognized completion context.")
         ("", List())
     }
     CompletionInfoList(prefix, results.sortWith({ (c1, c2) =>
@@ -150,10 +151,10 @@ trait CompletionControl {
     if (packRE.findFirstMatchIn(preceding).isDefined) {
       val m = packRE.findFirstMatchIn(preceding).get
       if (m.group(2) != null) {
-        println("Matched package context: " + m.group(1) + "," + m.group(2))
+        logger.info("Matched package context: " + m.group(1) + "," + m.group(2))
         Some(PackageContext(m.group(1), m.group(2)))
       } else {
-        println("Matched package context: " + m.group(1) + "," + m.group(3))
+        logger.info("Matched package context: " + m.group(1) + "," + m.group(3))
         Some(PackageContext(m.group(1), m.group(3)))
       }
     } else None
@@ -200,25 +201,25 @@ trait CompletionControl {
     var mo = nameFollowingWhiteSpaceRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
-      println("Matched sym after ws context.")
+      logger.info("Matched sym after ws context.")
       return Some(SymbolContext(p, m.group(1), constructing = false))
     }
     mo = nameFollowingSyntaxRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
-      println("Matched sym following syntax context.")
+      logger.info("Matched sym following syntax context.")
       return Some(SymbolContext(p, m.group(2), constructing = false))
     }
     mo = constructorNameRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
-      println("Matched constructing context.")
+      logger.info("Matched constructing context.")
       return Some(SymbolContext(p, m.group(1), constructing = true))
     }
     mo = nameFollowingReservedRE.findFirstMatchIn(preceding)
     if (mo.isDefined) {
       val m = mo.get
-      println("Matched sym following reserved context.")
+      logger.info("Matched sym following reserved context.")
       return Some(SymbolContext(p, m.group(1), constructing = false))
     }
     mo = nameFollowingControl.findFirstMatchIn(preceding)
@@ -229,7 +230,7 @@ trait CompletionControl {
       // parens.
       if (parenBalanced(m.group(1))) {
 
-        println("Matched sym following control structure context.")
+        logger.info("Matched sym following control structure context.")
         return Some(SymbolContext(p, m.group(2), constructing = false))
       }
     }
@@ -251,7 +252,7 @@ trait CompletionControl {
     memberRE.findFirstMatchIn(preceding) match {
       case Some(m) =>
         val constructing = memberConstructorRE.findFirstMatchIn(preceding).isDefined
-        println("Matched member context. Constructing? " + constructing)
+        logger.info("Matched member context. Constructing? " + constructing)
         val dot = m.group(1)
         val prefix = m.group(2)
 
@@ -276,8 +277,8 @@ trait CompletionControl {
     val bol = src.lineToOffset(lineNum)
     val line = src.lineToString(lineNum)
     val preceding = line.take(p.point - bol)
-    println("Line: " + line)
-    println("Preceding: " + preceding)
+    logger.info("Line: " + line)
+    logger.info("Preceding: " + preceding)
     packageContext(preceding).
       orElse(symContext(p, preceding)).
       orElse(memberContext(p, preceding))

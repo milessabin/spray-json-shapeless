@@ -89,7 +89,7 @@ class Indexer(project: Project,
                 names, maxResults))
               project ! RPCResultEvent(toWF(suggestions), callId)
             case PublicSymbolSearchReq(keywords, maxResults) =>
-              println("Received keywords: " + keywords)
+              log.info("Received keywords: " + keywords)
               val suggestions = SymbolSearchResults(
                 index.keywordSearch(keywords, maxResults))
               project ! RPCResultEvent(toWF(suggestions), callId)
@@ -104,9 +104,7 @@ class Indexer(project: Project,
           }
         } catch {
           case e: Exception =>
-            System.err.println("Error handling RPC: " +
-              e + " :\n" +
-              e.getStackTraceString)
+            log.error(e, "Error handling RPC: " + req)
             project.sendRPCError(ErrExceptionInIndexer,
               Some("Error occurred in indexer. Check the server log."),
               callId)
@@ -114,10 +112,6 @@ class Indexer(project: Project,
       case other =>
         log.warning("Indexer: WTF, what's " + other)
     }
-  }
-
-  override def finalize() {
-    System.out.println("Finalizing Indexer actor.")
   }
 }
 

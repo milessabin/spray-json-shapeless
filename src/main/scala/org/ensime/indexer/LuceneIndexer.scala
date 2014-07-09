@@ -1,12 +1,10 @@
 package org.ensime.indexer
 
-import java.io.IOException
 import akka.actor.{ Props, ActorRef, ActorSystem }
 import akka.util.Timeout
 import org.apache.lucene.analysis.SimpleAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
-import org.apache.lucene.index.CorruptIndexException
 import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
@@ -82,10 +80,10 @@ object LuceneIndex extends StringSimilarity {
   def loadIndexUserData(dir: File): (Int, Map[String, String]) = {
     try {
       if (dir.exists) {
-        println(dir.toString + " exists, loading user data...")
-        var index = FSDirectory.open(dir)
+        log.info(dir.toString + " exists, loading user data...")
+        val index = FSDirectory.open(dir)
         val reader = IndexReader.open(index)
-        println("Num docs: " + reader.numDocs())
+        log.info("Num docs: " + reader.numDocs())
         val userData = reader.getCommitUserData
         val onDiskIndexVersion = Option(
           userData.get(KeyIndexVersion)).getOrElse("0").toInt
@@ -256,15 +254,15 @@ object LuceneIndex extends StringSimilarity {
     }
     val handler = new IndexingClassHandler
 
-    println("Updated: Indexing classpath...")
+    log.info("Updated: Indexing classpath...")
     ClassIterator.findPublicSymbols(files, handler)
 
     import scala.concurrent.duration._
     // wait for the worker to complete
     Await.result(ask(indexWorkQ, StopEvent)(Timeout(3.hours)), Duration.Inf)
     val elapsed = System.currentTimeMillis() - t
-    println("Indexing completed in " + elapsed / 1000.0 + " seconds.")
-    println("Indexed " + handler.classCount + " classes with " +
+    log.info("Indexing completed in " + elapsed / 1000.0 + " seconds.")
+    log.info("Indexed " + handler.classCount + " classes with " +
       handler.methodCount + " methods.")
   }
 
@@ -299,16 +297,16 @@ class LuceneIndex {
       }
     }
     val (version, indexedFiles) = loadIndexUserData(dir)
-    println("ENSIME indexer version: " + IndexVersion)
-    println("On disk version: " + version)
-    println("On disk indexed files: " + indexedFiles.toString)
+    log.info("ENSIME indexer version: " + IndexVersion)
+    log.info("On disk version: " + version)
+    log.info("On disk indexed files: " + indexedFiles.toString)
 
     if (shouldReindex(version, indexedFiles.toSet, hashed)) {
-      println("Requires re-index.")
-      println("Deleting on-disk index.")
+      log.info("Requires re-index.")
+      log.info("Deleting on-disk index.")
       FileUtils.delete(dir)
     } else {
-      println("No need to re-index.")
+      log.info("No need to re-index.")
     }
 
     index = FSDirectory.open(dir)
@@ -316,7 +314,7 @@ class LuceneIndex {
     indexWriter = Some(new IndexWriter(index, config))
     for (writer <- indexWriter) {
       if (shouldReindex(version, indexedFiles.toSet, hashed)) {
-        println("Re-indexing...")
+        log.info("Re-indexing...")
         buildStaticIndex(actorSystem, writer, files, includes, excludes)
         val json = JSONValue.toJSONString(
           JavaConversions.mapAsJavaMap(hashed.toMap))
@@ -448,7 +446,7 @@ class LuceneIndex {
     if (indexReader.isEmpty) {
       indexReader = Some(IndexReader.open(index))
     }
-    println("Handling query: " + q)
+    log.info("Handling query: " + q)
     for (reader <- indexReader) {
       val hitsPerPage = if (maxResults == 0) 100 else maxResults
       val searcher = new IndexSearcher(reader)
@@ -458,7 +456,6 @@ class LuceneIndex {
         val docId = hit.doc
         val doc = searcher.doc(docId)
         receiver(buildSym(doc))
-        //println(hit.score + "   " + doc.get("name"))
       }
     }
   }
@@ -470,6 +467,7 @@ class LuceneIndex {
   }
 }
 
+// TODO This needs to move into a unit test
 object IndexTest extends LuceneIndex {
 
   def projectConfig() {

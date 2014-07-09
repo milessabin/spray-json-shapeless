@@ -256,11 +256,11 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       result match {
         case Some(f: AbstractFiles) =>
           f.files.flatMap { f =>
-            println("Linking:" + (sym, f))
+            logger.info("Linking:" + (sym, f))
             askLinkPos(sym, f)
           }.find(_.isDefined).getOrElse(NoPosition)
         case None =>
-          println("WARNING - locateSymbolPos " + sym + " timed out")
+          logger.warn("WARNING - locateSymbolPos " + sym + " timed out")
           NoPosition
         case unknown =>
           throw new IllegalStateException("Unexpected response type from request:" + unknown)

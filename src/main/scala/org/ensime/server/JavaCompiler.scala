@@ -143,11 +143,6 @@ class JavaCompiler(
     nameProvider, errorPolicy,
     options, requestor,
     problemFactory) {
-
-    override def finalize() {
-      System.out.println("Finalizing Java Compiler.")
-    }
-
   }
 
   def compileAll() = {
