@@ -1,6 +1,5 @@
 import sbt._
 import java.io._
-import sbt.IO
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin
 //import CoverallsPlugin.CoverallsKeys._
@@ -27,14 +26,26 @@ libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )}
 
-val JavaTools = List (
-  sys.env.get("JDK_HOME").getOrElse(""),
-  sys.env.get("JAVA_HOME").getOrElse(""),
-  System.getProperty("java.home")
-).map {
-  n => new File(n + "/lib/tools.jar")
+// epic hack to get the tools.jar JDK dependency
+val JavaTools = List[Option[String]] (
+  // manual
+  sys.env.get("JDK_HOME"),
+  sys.env.get("JAVA_HOME"),
+  // osx
+  try Some("/usr/libexec/java_home".!!.trim)
+  catch {
+    case _: Throwable => None
+  },
+  // fallback
+  sys.props.get("java.home").map(new File(_).getParent),
+  sys.props.get("java.home")
+).flatten.map { n =>
+  new File(n + "/lib/tools.jar")
 }.find(_.exists).getOrElse (
-  throw new FileNotFoundException("tools.jar")
+  throw new FileNotFoundException (
+    """Could not automatically find the JDK/lib/tools.jar.
+      |You must explicitly set JDK_HOME or JAVA_HOME.""".stripMargin
+  )
 )
 
 internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) }
