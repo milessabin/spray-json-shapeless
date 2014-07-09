@@ -69,12 +69,14 @@ We have branches for older versions of scala, which are merged regularly.
 There are a two ways to install the ENSIME server:
 
 1. Install [ensime-emacs](http://github.com/ensime/ensime-emacs) and it will do it for you automatically.
-2. Build from source: fork this repo, clone locally and `sbt publishLocal`.
+2. Build from source: fork this repo, clone locally and `sbt publishLocal`. You might need to clear out your `~/.ivy2/cache/org.ensime` to ensure that your local builds are used by emacs.
 
 The latter is also the recommended approach when developing ENSIME itself.
 
 
-Before reporting any problems with ENSIME, please:
+ENSIME is released on a continuous "rolling release" basis every time a pull request is merged. This dramatically speeds up the development cycle and you are advised to always update your ENSIME before reporting any issues.
+
+If you are still experiencing a problem with the latest version of ENSIME, before reporting an issue please:
 
 * check the [tickets flagged as FAQ](https://github.com/ensime/ensime-server/issues?labels=FAQ).
 * check the [most recently updated tickets](http://github.com/ensime/ensime-server/issues?direction=desc&sort=updated) (others are probably talking about it already with workarounds).
