@@ -98,8 +98,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 catch { case _: Throwable => treeP.end }
                 addAt(start, end, 'constructor)
               } else if (sym.isMethod) {
-                if (sym.nameString == "apply" ||
-                  sym.nameString == "update") {}
+                if (sym.nameString == "apply" || sym.nameString == "update") {}
                 else if (selector.isOperatorName) {
                   addAt(start, end, 'operator)
                 } else {

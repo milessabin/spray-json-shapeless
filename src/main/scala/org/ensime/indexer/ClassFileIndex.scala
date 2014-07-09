@@ -16,6 +16,7 @@ import scala.tools.nsc.io.AbstractFile
 case class Op(
   op: String,
   description: String)
+
 case class MethodBytecode(
   className: String,
   methodName: String,

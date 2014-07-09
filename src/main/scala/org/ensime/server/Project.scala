@@ -1,6 +1,7 @@
 package org.ensime.server
 
 import java.io.File
+import akka.actor.{ Actor, ActorRef, Props, ActorSystem }
 import org.ensime.config.ProjectConfig
 
 import org.ensime.model.PatchOp
@@ -8,7 +9,7 @@ import org.ensime.model.SourceFileInfo
 import org.ensime.model.OffsetRange
 import org.ensime.protocol._
 import org.ensime.util._
-import scala.actors._
+import org.slf4j.LoggerFactory
 import scala.collection.mutable
 
 case class RPCResultEvent(value: WireFormat, callId: Int)
@@ -48,60 +49,72 @@ case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
 case class UndoResult(id: Int, touched: Iterable[File])
 
-class Project(val protocol: Protocol) extends Actor with RPCTarget {
+class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectRPCTarget {
+  val log = LoggerFactory.getLogger(this.getClass)
 
+  private val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
+
+  def !(msg: AnyRef) {
+    actor ! msg
+  }
+  // TODO This is lethal - Project is both an actor and a threaded callback target
   protocol.setRPCTarget(this)
 
   protected var config: ProjectConfig = ProjectConfig.nullConfig
 
-  protected var analyzer: Option[Actor] = None
-  protected var indexer: Option[Actor] = None
-  protected var debugger: Option[Actor] = None
+  protected var analyzer: Option[ActorRef] = None
+  protected var indexer: Option[ActorRef] = None
+  protected var debugger: Option[ActorRef] = None
 
-  def getAnalyzer: Actor = {
-    analyzer.getOrElse(throw new RuntimeException(
-      "Analyzer unavailable."))
+  def getAnalyzer: ActorRef = {
+    analyzer.getOrElse(throw new RuntimeException("Analyzer unavailable."))
   }
-  def getIndexer: Actor = {
-    indexer.getOrElse(throw new RuntimeException(
-      "Indexer unavailable."))
+  def getIndexer: ActorRef = {
+    indexer.getOrElse(throw new RuntimeException("Indexer unavailable."))
   }
 
   private var undoCounter = 0
   private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
 
   def sendRPCError(code: Int, detail: Option[String], callId: Int) {
-    this ! RPCErrorEvent(code, detail, callId)
+    actor ! RPCErrorEvent(code, detail, callId)
   }
   def sendRPCError(detail: String, callId: Int) {
     sendRPCError(ProtocolConst.ErrExceptionInRPC, Some(detail), callId)
   }
 
   def bgMessage(msg: String) {
-    this ! AsyncEvent(protocol.toWF(SendBackgroundMessageEvent(
+    actor ! AsyncEvent(protocol.conversions.toWF(SendBackgroundMessageEvent(
       ProtocolConst.MsgMisc,
       Some(msg))))
   }
 
-  def act() {
-    println("Project waiting for init...")
-    loop {
-      try {
-        receive {
-          case IncomingMessageEvent(msg: WireFormat) =>
-            protocol.handleIncomingMessage(msg)
-          case AddUndo(sum, changes) =>
-            addUndo(sum, changes)
-          case RPCResultEvent(value, callId) =>
-            protocol.sendRPCReturn(value, callId)
-          case AsyncEvent(value) =>
-            protocol.sendEvent(value)
-          case RPCErrorEvent(code, detail, callId) =>
-            protocol.sendRPCError(code, detail, callId)
+  class ProjectActor extends Actor {
+    override def receive = {
+      case x: Any =>
+        try {
+          process(x)
+        } catch {
+          case e: Exception =>
+            println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
         }
-      } catch {
-        case e: Exception =>
-          println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
+
+    }
+
+    log.info("Project waiting for init...")
+
+    def process(msg: Any): Unit = {
+      msg match {
+        case IncomingMessageEvent(msg: WireFormat) =>
+          protocol.handleIncomingMessage(msg)
+        case AddUndo(sum, changes) =>
+          addUndo(sum, changes)
+        case RPCResultEvent(value, callId) =>
+          protocol.sendRPCReturn(value, callId)
+        case AsyncEvent(value) =>
+          protocol.sendEvent(value)
+        case RPCErrorEvent(code, detail, callId) =>
+          protocol.sendRPCError(code, detail, callId)
       }
     }
   }
@@ -147,9 +160,8 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     for (ea <- indexer) {
       ea ! IndexerShutdownReq()
     }
-    val newIndexer = new Indexer(this, protocol, config)
+    val newIndexer = actorSystem.actorOf(Props(new Indexer(this, protocol.conversions, config)), "indexer")
     println("Initing Indexer...")
-    newIndexer.start()
     if (!config.disableIndexOnStartup) {
       newIndexer ! RebuildStaticIndexReq()
     }
@@ -162,26 +174,22 @@ class Project(val protocol: Protocol) extends Actor with RPCTarget {
     }
     indexer match {
       case Some(indexer) =>
-        val newAnalyzer = new Analyzer(this, indexer, protocol, config)
-        newAnalyzer.start()
+        val newAnalyzer = actorSystem.actorOf(Props(new Analyzer(this, indexer, protocol.conversions, config)), "analyzer")
         analyzer = Some(newAnalyzer)
       case None =>
         throw new RuntimeException("Indexer must be started before analyzer.")
     }
   }
 
-  protected def getOrStartDebugger(): Actor = {
+  protected def getOrStartDebugger(): ActorRef = {
     ((debugger, indexer) match {
       case (Some(b), _) => Some(b)
       case (None, Some(indexer)) =>
-        val b = new DebugManager(this, indexer, protocol, config)
+        val b = actorSystem.actorOf(Props(new DebugManager(this, indexer, protocol.conversions, config)))
         debugger = Some(b)
-        b.start()
         Some(b)
       case _ => None
-    }).getOrElse(throw new RuntimeException(
-      "Indexer must be started before debug manager."
-    ))
+    }).getOrElse(throw new RuntimeException("Indexer must be started before debug manager."))
   }
 
   protected def shutdownDebugger() {

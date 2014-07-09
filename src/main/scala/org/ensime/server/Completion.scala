@@ -1,10 +1,14 @@
 package org.ensime.server
 
+import akka.pattern.Patterns
+import akka.util.Timeout
 import org.ensime.model.CompletionInfoList
 import scala.collection.mutable
+import scala.concurrent.Await
 import scala.reflect.internal.util.{ SourceFile, BatchSourceFile }
 import org.ensime.util.Arrays
 import org.ensime.model.{ CompletionInfo, CompletionSignature, SymbolSearchResults }
+import scala.concurrent.duration._
 
 trait CompletionControl {
   self: RichPresentationCompiler =>
@@ -50,13 +54,23 @@ trait CompletionControl {
 
     def makeTypeSearchCompletions(prefix: String): List[CompletionInfo] = {
       val req = TypeCompletionsReq(prefix, maxResults)
-      indexer !? (1000, req) match {
+
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val askRes = Patterns.ask(indexer, req, Timeout(1000.milliseconds))
+      val optFut = askRes map (Some(_)) recover { case _ => None }
+      val result = Await.result(optFut, Duration.Inf)
+
+      result match {
         case Some(s: SymbolSearchResults) =>
           s.syms.map { s =>
             CompletionInfo(s.localName, CompletionSignature(List(), s.name),
               -1, isCallable = false, 40, Some(s.name))
           }.toList
-        case _ => List()
+        case None =>
+          println("WARNING - request timed out")
+          List()
+        case unknown =>
+          throw new IllegalStateException("Unexpected response type from request:" + unknown)
       }
     }
 
@@ -128,7 +142,7 @@ trait CompletionControl {
   private val nonIdent = "[^a-zA-Z0-9_]"
   private val ws = "[ \n\r\t]"
 
-  trait CompletionContext {}
+  trait CompletionContext
 
   private val packRE = ("^.*?(?:package|import)[ ]+((?:[a-z0-9]+\\.)*)(?:(" + ident + "*)|\\{.*?(" + ident + "*))$").r
   case class PackageContext(path: String, prefix: String) extends CompletionContext

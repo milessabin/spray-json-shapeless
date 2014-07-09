@@ -1,5 +1,7 @@
 package org.ensime.server
 
+import akka.actor.ActorRef
+
 import scala.collection.mutable.ArrayBuffer
 import java.io.ByteArrayOutputStream
 import java.util.Locale
@@ -13,14 +15,13 @@ import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
 import org.ensime.util._
-import scala.actors._
 import scala.collection.{ mutable, Iterable }
 import scala.collection.JavaConversions._
 
 class JavaCompiler(
     config: ProjectConfig,
     val reportHandler: ReportHandler,
-    val indexer: Actor) {
+    val indexer: ActorRef) {
 
   private val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
 

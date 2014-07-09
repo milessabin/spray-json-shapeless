@@ -15,7 +15,8 @@ trait FileEdit {
   def from: Int
   def to: Int
 }
-case class TextEdit(file: File, from: Int, to: Int, text: String) extends FileEdit {}
+case class TextEdit(file: File, from: Int, to: Int, text: String) extends FileEdit
+
 case class NewFile(file: File, text: String) extends FileEdit {
   def from: Int = 0
   def to: Int = text.length - 1
@@ -60,7 +61,7 @@ object RichFile {
   implicit def toRichFile(file: File) = new RichFile(file)
 }
 
-class CanonFile private (path: String) extends File(path) {}
+class CanonFile private (path: String) extends File(path)
 
 object CanonFile {
   def apply(file: File) = {
@@ -383,7 +384,6 @@ object FileUtils {
    * disk writes, return Right(Left(exception)). Otherwise, return Right(Right(()))
    */
   def rewriteFiles(changes: Iterable[(File, String)]): Either[Exception, Either[Exception, Unit]] = {
-    val touchedFiles = new mutable.ListBuffer[File]
     try {
 
       // Try to fail fast, before writing anything to disk.

@@ -1,6 +1,8 @@
 package org.ensime.test.util
 
-import scala.actors.Actor._
+import akka.actor.ActorSystem
+import akka.testkit.TestProbe
+
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 import scala.reflect.internal.util.BatchSourceFile
@@ -11,13 +13,20 @@ import org.scalatest.exceptions.TestFailedException
 object Helpers {
 
   def withPresCompiler(action: RichCompilerControl => Any) = {
+    implicit val actorSystem = ActorSystem.create()
     val settings = new Settings(Console.println)
     settings.embeddedDefaults[RichCompilerControl]
     val reporter = new StoreReporter()
+    val indexer = TestProbe()
+    val parent = TestProbe()
     val cc = new RichPresentationCompiler(
-      settings, reporter, actor {}, actor {}, ProjectConfig.nullConfig)
-    action(cc)
-    cc.askShutdown()
+      settings, reporter, parent.ref, indexer.ref, ProjectConfig.nullConfig)
+    try {
+      action(cc)
+    } finally {
+      cc.askShutdown()
+      actorSystem.shutdown()
+    }
   }
 
   def srcFile(name: String, content: String) = new BatchSourceFile(name, content)

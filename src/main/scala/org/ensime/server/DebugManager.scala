@@ -1,4 +1,6 @@
 package org.ensime.server
+
+import akka.actor.{ ActorLogging, Actor, ActorRef }
 import com.sun.jdi.request.EventRequest
 import com.sun.jdi.request.StepRequest
 import java.io.InputStream
@@ -8,7 +10,6 @@ import org.ensime.model._
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
-import scala.actors._
 import scala.collection.mutable.ListBuffer
 import scala.collection.{ mutable, Iterable }
 import com.sun.jdi._
@@ -55,9 +56,9 @@ case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
 case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
 case class DebugOutputEvent(out: String) extends DebugEvent
 
-class DebugManager(project: Project, indexer: Actor,
+class DebugManager(project: Project, indexer: ActorRef,
     protocol: ProtocolConversions,
-    config: ProjectConfig) extends Actor {
+    config: ProjectConfig) extends Actor with ActorLogging {
 
   import protocol._
 
@@ -216,241 +217,243 @@ class DebugManager(project: Project, indexer: Actor,
     }
   }
 
-  def act() {
-    loop {
+  override def receive = {
+    case x: Any =>
       try {
-        receive {
-          case DebuggerShutdownEvent =>
-            withVM { vm =>
-              vm.dispose()
-            }
-            exit('stop)
-          case e: VMDisconnectedException => disconnectDebugVM()
-          case evt: com.sun.jdi.event.Event =>
-            evt match {
-              case e: VMStartEvent =>
-                withVM { vm =>
-                  vm.initLocationMap()
-                }
-                project ! AsyncEvent(toWF(DebugVMStartEvent()))
-              case e: VMDeathEvent => disconnectDebugVM()
-              case e: VMDisconnectEvent => disconnectDebugVM()
-              case e: StepEvent =>
-                (for (pos <- locToPos(e.location())) yield {
-                  project ! AsyncEvent(toWF(DebugStepEvent(
-                    e.thread().uniqueID(), e.thread().name, pos)))
-                }) getOrElse {
-                  System.err.println("Step position not found: " +
-                    e.location().sourceName() + " : " + e.location().lineNumber())
-                }
-              case e: BreakpointEvent =>
-                (for (pos <- locToPos(e.location())) yield {
-                  project ! AsyncEvent(toWF(DebugBreakEvent(
-                    e.thread().uniqueID(), e.thread().name, pos)))
-                }) getOrElse {
-                  System.err.println("Break position not found: " +
-                    e.location().sourceName() + " : " + e.location().lineNumber())
-                }
-              case e: ExceptionEvent =>
-                withVM { vm => vm.remember(e.exception) }
-                project ! AsyncEvent(toWF(DebugExceptionEvent(
-                  e.exception.uniqueID(),
-                  e.thread().uniqueID(),
-                  e.thread().name,
-                  if (e.catchLocation() != null) locToPos(e.catchLocation()) else None)))
-              case e: ThreadDeathEvent =>
-                project ! AsyncEvent(toWF(DebugThreadDeathEvent(
-                  e.thread().uniqueID())))
-              case e: ThreadStartEvent =>
-                project ! AsyncEvent(toWF(DebugThreadStartEvent(
-                  e.thread().uniqueID())))
-              case e: AccessWatchpointEvent =>
-              case e: ClassPrepareEvent =>
-                withVM { vm =>
-                  println("ClassPrepareEvent: " + e.referenceType().name())
-                }
-              case e: ClassUnloadEvent =>
-              case e: MethodEntryEvent =>
-              case e: MethodExitEvent =>
-              case _ =>
-            }
-          case RPCRequestEvent(req: Any, callId: Int) =>
-            try {
-              def handleStartupFailure(e: Exception): Unit = {
-                maybeVM = None
-                e.printStackTrace()
-                val message = e.toString
-                project ! RPCResultEvent(toWF(DebugVmError(1, message.toString)), callId)
-              }
-
-              req match {
-                case DebugStartVMReq(commandLine: String) ⇒
-                  withVM { vm ⇒
-                    vm.dispose()
-                  }
-                  try {
-                    val vm = new VM(VmStart(commandLine))
-                    maybeVM = Some(vm)
-                    vm.start()
-                    project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
-                  } catch {
-                    case e: Exception =>
-                      println("Couldn't start VM")
-                      handleStartupFailure(e)
-                  }
-
-                case DebugAttachVMReq(hostname, port) ⇒
-                  withVM { vm ⇒
-                    vm.dispose()
-                  }
-                  try {
-                    val vm = new VM(VmAttach(hostname, port))
-                    maybeVM = Some(vm)
-                    vm.start()
-                    project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
-                  } catch {
-                    case e: Exception =>
-                      println("Couldn't attach to target VM.")
-                      handleStartupFailure(e)
-                  }
-
-                case DebugActiveVMReq() =>
-                  handleRPCWithVM(callId) { vm =>
-                    project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugStopVMReq() =>
-                  handleRPCWithVM(callId) { vm =>
-                    vm.dispose()
-                    project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugRunReq() =>
-                  handleRPCWithVM(callId) { vm =>
-                    vm.resume()
-                    project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugContinueReq(threadId) =>
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.resume()
-                      project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugBreakReq(filepath: String, line: Int) =>
-                  val file = CanonFile(filepath)
-                  if (!setBreakpoint(file, line)) {
-                    project.bgMessage("Location not loaded. Set pending breakpoint.")
-                  }
-                  project ! RPCResultEvent(toWF(value = true), callId)
-
-                case DebugClearBreakReq(filepath: String, line: Int) =>
-                  val file = CanonFile(filepath)
-                  clearBreakpoint(file, line)
-                  project ! RPCResultEvent(toWF(value = true), callId)
-
-                case DebugClearAllBreaksReq() =>
-                  clearAllBreakpoints()
-                  project ! RPCResultEvent(toWF(value = true), callId)
-
-                case DebugListBreaksReq() =>
-                  val breaks = BreakpointList(
-                    activeBreakpoints.toList,
-                    pendingBreakpoints)
-                  project ! RPCResultEvent(toWF(breaks), callId)
-
-                case DebugNextReq(threadId: Long) =>
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.newStepRequest(thread,
-                        StepRequest.STEP_LINE,
-                        StepRequest.STEP_OVER)
-                      project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugStepReq(threadId: Long) =>
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.newStepRequest(thread,
-                        StepRequest.STEP_LINE,
-                        StepRequest.STEP_INTO)
-                      project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugStepOutReq(threadId: Long) =>
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.newStepRequest(thread,
-                        StepRequest.STEP_LINE,
-                        StepRequest.STEP_OUT)
-                      project ! RPCResultEvent(toWF(value = true), callId)
-                  }
-
-                case DebugLocateNameReq(threadId: Long, name: String) =>
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      vm.locationForName(thread, name) match {
-                        case Some(loc) =>
-                          project ! RPCResultEvent(toWF(loc), callId)
-                        case None =>
-                          project ! RPCResultEvent(toWF(value = false), callId)
-                      }
-                  }
-                case DebugBacktraceReq(threadId: Long, index: Int, count: Int) =>
-                  handleRPCWithVMAndThread(callId, threadId) {
-                    (vm, thread) =>
-                      val bt = vm.backtrace(thread, index, count)
-                      project ! RPCResultEvent(toWF(bt), callId)
-                  }
-                case DebugValueReq(location) =>
-                  handleRPCWithVM(callId) {
-                    (vm) =>
-                      vm.debugValueAtLocation(location).map(toWF) match {
-                        case Some(payload) => project ! RPCResultEvent(payload, callId)
-                        case None => project ! RPCResultEvent(toWF(value = false), callId)
-                      }
-                  }
-                case DebugToStringReq(threadId, location) =>
-                  handleRPCWithVM(callId) {
-                    (vm) =>
-                      vm.debugValueAtLocationToString(threadId, location).map(toWF) match {
-                        case Some(payload) => project ! RPCResultEvent(payload, callId)
-                        case None => project ! RPCResultEvent(toWF(value = false), callId)
-                      }
-                  }
-                case DebugSetValueReq(location, newValue) =>
-                  handleRPCWithVM(callId) { vm =>
-                    location match {
-                      case DebugStackSlot(threadId, frame, offset) => vm.threadById(threadId) match {
-                        case Some(thread) =>
-                          val status = vm.setStackVar(thread, frame, offset, newValue)
-                          project ! RPCResultEvent(toWF(status), callId)
-                        case _ =>
-                      }
-                      case _ =>
-                        System.err.println("Unsupported location type for debug-set-value.")
-                        project ! RPCResultEvent(toWF(value = false), callId)
-                    }
-                  }
-              }
-            } catch {
-              case e: Throwable =>
-                System.err.println("Error handling RPC:")
-                e.printStackTrace()
-                project.sendRPCError(ErrExceptionInDebugger,
-                  Some("Error occurred in Debug Manager. Check the server log."),
-                  callId)
-            }
-          case other =>
-            println("Debug Manager: WTF, what's " + other)
-        }
-
+        processMsg(x)
       } catch {
         case e: Throwable =>
           System.err.println("Error at Debug Manager message loop:")
           e.printStackTrace()
       }
+  }
+
+  def processMsg(x: Any) {
+    x match {
+      case DebuggerShutdownEvent =>
+        withVM { vm =>
+          vm.dispose()
+        }
+        context.stop(self)
+      case e: VMDisconnectedException => disconnectDebugVM()
+      case evt: com.sun.jdi.event.Event =>
+        evt match {
+          case e: VMStartEvent =>
+            withVM { vm =>
+              vm.initLocationMap()
+            }
+            project ! AsyncEvent(toWF(DebugVMStartEvent()))
+          case e: VMDeathEvent => disconnectDebugVM()
+          case e: VMDisconnectEvent => disconnectDebugVM()
+          case e: StepEvent =>
+            (for (pos <- locToPos(e.location())) yield {
+              project ! AsyncEvent(toWF(DebugStepEvent(
+                e.thread().uniqueID(), e.thread().name, pos)))
+            }) getOrElse {
+              System.err.println("Step position not found: " +
+                e.location().sourceName() + " : " + e.location().lineNumber())
+            }
+          case e: BreakpointEvent =>
+            (for (pos <- locToPos(e.location())) yield {
+              project ! AsyncEvent(toWF(DebugBreakEvent(
+                e.thread().uniqueID(), e.thread().name, pos)))
+            }) getOrElse {
+              System.err.println("Break position not found: " +
+                e.location().sourceName() + " : " + e.location().lineNumber())
+            }
+          case e: ExceptionEvent =>
+            withVM { vm => vm.remember(e.exception) }
+            project ! AsyncEvent(toWF(DebugExceptionEvent(
+              e.exception.uniqueID(),
+              e.thread().uniqueID(),
+              e.thread().name,
+              if (e.catchLocation() != null) locToPos(e.catchLocation()) else None)))
+          case e: ThreadDeathEvent =>
+            project ! AsyncEvent(toWF(DebugThreadDeathEvent(
+              e.thread().uniqueID())))
+          case e: ThreadStartEvent =>
+            project ! AsyncEvent(toWF(DebugThreadStartEvent(
+              e.thread().uniqueID())))
+          case e: AccessWatchpointEvent =>
+          case e: ClassPrepareEvent =>
+            withVM { vm =>
+              println("ClassPrepareEvent: " + e.referenceType().name())
+            }
+          case e: ClassUnloadEvent =>
+          case e: MethodEntryEvent =>
+          case e: MethodExitEvent =>
+          case _ =>
+        }
+      case RPCRequestEvent(req: Any, callId: Int) =>
+        try {
+          def handleStartupFailure(e: Exception): Unit = {
+            maybeVM = None
+            e.printStackTrace()
+            val message = e.toString
+            project ! RPCResultEvent(toWF(DebugVmError(1, message.toString)), callId)
+          }
+
+          req match {
+            case DebugStartVMReq(commandLine: String) ⇒
+              withVM { vm ⇒
+                vm.dispose()
+              }
+              try {
+                val vm = new VM(VmStart(commandLine))
+                maybeVM = Some(vm)
+                vm.start()
+                project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
+              } catch {
+                case e: Exception =>
+                  println("Couldn't start VM")
+                  handleStartupFailure(e)
+              }
+
+            case DebugAttachVMReq(hostname, port) ⇒
+              withVM { vm ⇒
+                vm.dispose()
+              }
+              try {
+                val vm = new VM(VmAttach(hostname, port))
+                maybeVM = Some(vm)
+                vm.start()
+                project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
+              } catch {
+                case e: Exception =>
+                  println("Couldn't attach to target VM.")
+                  handleStartupFailure(e)
+              }
+
+            case DebugActiveVMReq() =>
+              handleRPCWithVM(callId) { vm =>
+                project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugStopVMReq() =>
+              handleRPCWithVM(callId) { vm =>
+                vm.dispose()
+                project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugRunReq() =>
+              handleRPCWithVM(callId) { vm =>
+                vm.resume()
+                project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugContinueReq(threadId) =>
+              handleRPCWithVMAndThread(callId, threadId) {
+                (vm, thread) =>
+                  vm.resume()
+                  project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugBreakReq(filepath: String, line: Int) =>
+              val file = CanonFile(filepath)
+              if (!setBreakpoint(file, line)) {
+                project.bgMessage("Location not loaded. Set pending breakpoint.")
+              }
+              project ! RPCResultEvent(toWF(value = true), callId)
+
+            case DebugClearBreakReq(filepath: String, line: Int) =>
+              val file = CanonFile(filepath)
+              clearBreakpoint(file, line)
+              project ! RPCResultEvent(toWF(value = true), callId)
+
+            case DebugClearAllBreaksReq() =>
+              clearAllBreakpoints()
+              project ! RPCResultEvent(toWF(value = true), callId)
+
+            case DebugListBreaksReq() =>
+              val breaks = BreakpointList(
+                activeBreakpoints.toList,
+                pendingBreakpoints)
+              project ! RPCResultEvent(toWF(breaks), callId)
+
+            case DebugNextReq(threadId: Long) =>
+              handleRPCWithVMAndThread(callId, threadId) {
+                (vm, thread) =>
+                  vm.newStepRequest(thread,
+                    StepRequest.STEP_LINE,
+                    StepRequest.STEP_OVER)
+                  project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugStepReq(threadId: Long) =>
+              handleRPCWithVMAndThread(callId, threadId) {
+                (vm, thread) =>
+                  vm.newStepRequest(thread,
+                    StepRequest.STEP_LINE,
+                    StepRequest.STEP_INTO)
+                  project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugStepOutReq(threadId: Long) =>
+              handleRPCWithVMAndThread(callId, threadId) {
+                (vm, thread) =>
+                  vm.newStepRequest(thread,
+                    StepRequest.STEP_LINE,
+                    StepRequest.STEP_OUT)
+                  project ! RPCResultEvent(toWF(value = true), callId)
+              }
+
+            case DebugLocateNameReq(threadId: Long, name: String) =>
+              handleRPCWithVMAndThread(callId, threadId) {
+                (vm, thread) =>
+                  vm.locationForName(thread, name) match {
+                    case Some(loc) =>
+                      project ! RPCResultEvent(toWF(loc), callId)
+                    case None =>
+                      project ! RPCResultEvent(toWF(value = false), callId)
+                  }
+              }
+            case DebugBacktraceReq(threadId: Long, index: Int, count: Int) =>
+              handleRPCWithVMAndThread(callId, threadId) {
+                (vm, thread) =>
+                  val bt = vm.backtrace(thread, index, count)
+                  project ! RPCResultEvent(toWF(bt), callId)
+              }
+            case DebugValueReq(location) =>
+              handleRPCWithVM(callId) {
+                (vm) =>
+                  vm.debugValueAtLocation(location).map(toWF) match {
+                    case Some(payload) => project ! RPCResultEvent(payload, callId)
+                    case None => project ! RPCResultEvent(toWF(value = false), callId)
+                  }
+              }
+            case DebugToStringReq(threadId, location) =>
+              handleRPCWithVM(callId) {
+                (vm) =>
+                  vm.debugValueAtLocationToString(threadId, location).map(toWF) match {
+                    case Some(payload) => project ! RPCResultEvent(payload, callId)
+                    case None => project ! RPCResultEvent(toWF(value = false), callId)
+                  }
+              }
+            case DebugSetValueReq(location, newValue) =>
+              handleRPCWithVM(callId) { vm =>
+                location match {
+                  case DebugStackSlot(threadId, frame, offset) => vm.threadById(threadId) match {
+                    case Some(thread) =>
+                      val status = vm.setStackVar(thread, frame, offset, newValue)
+                      project ! RPCResultEvent(toWF(status), callId)
+                    case _ =>
+                  }
+                  case _ =>
+                    System.err.println("Unsupported location type for debug-set-value.")
+                    project ! RPCResultEvent(toWF(value = false), callId)
+                }
+              }
+          }
+        } catch {
+          case e: Throwable =>
+            System.err.println("Error handling RPC:")
+            e.printStackTrace()
+            project.sendRPCError(ErrExceptionInDebugger,
+              Some("Error occurred in Debug Manager. Check the server log."),
+              callId)
+        }
+      case other =>
+        println("Debug Manager: WTF, what's " + other)
     }
   }
 
@@ -939,7 +942,7 @@ class DebugManager(project: Project, indexer: Actor,
       var i = index
       while (i < thread.frameCount && (count == -1 || i < count)) {
         val stackFrame = thread.frame(i)
-        frames += makeStackFrame(i, thread.frame(i))
+        frames += makeStackFrame(i, stackFrame)
         i += 1
       }
       DebugBacktrace(frames.toList, thread.uniqueID(), thread.name())
@@ -1001,11 +1004,11 @@ class DebugManager(project: Project, indexer: Actor,
                 eventSet.resume()
               case _ =>
             }
-            DebugManager.this ! evt
+            self ! evt
           }
         } catch {
           case t: VMDisconnectedException =>
-            DebugManager.this ! t
+            self ! t
             finished = true
           case t: Throwable =>
             t.printStackTrace()

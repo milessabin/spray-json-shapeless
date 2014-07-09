@@ -1,6 +1,7 @@
 package org.ensime.server
 
 import java.io.File
+import akka.actor.{ ActorLogging, Actor }
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
 import org.ensime.indexer.LuceneIndex
@@ -14,7 +15,6 @@ import org.ensime.model.{
 }
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.protocol.ProtocolConversions
-import scala.actors._
 import scala.collection.mutable.ArrayBuffer
 
 case class IndexerShutdownReq()
@@ -31,90 +31,88 @@ case class AbstractFiles(files: Set[AbstractFile])
 /**
  * The main index actor.
  */
-class Indexer(
-    project: Project,
+class Indexer(project: Project,
     protocol: ProtocolConversions,
-    config: ProjectConfig) extends Actor {
+    config: ProjectConfig) extends Actor with ActorLogging {
 
   import protocol._
 
-  val index = new LuceneIndex {}
+  val index = new LuceneIndex
   val classFileIndex = new ClassFileIndex(config)
 
-  def act() {
-    loop {
-      try {
-        receive {
-          case IndexerShutdownReq() =>
-            index.close()
-            exit('stop)
-          case RebuildStaticIndexReq() =>
-            index.initialize(
-              config.root,
-              config.allFilesOnClasspath,
-              config.onlyIncludeInIndex,
-              config.excludeFromIndex)
-            classFileIndex.indexFiles(
-              config.allFilesOnClasspath
-                ++ List(config.target, config.testTarget).flatten
-            )
-            project ! AsyncEvent(toWF(IndexerReadyEvent()))
-          case ReindexClassFilesReq(files) =>
-            classFileIndex.indexFiles(files)
-          case CommitReq() =>
-            index.commit()
-          case AddSymbolsReq(syms) =>
-            syms.foreach { info =>
-              index.insert(info)
-            }
-          case RemoveSymbolsReq(syms) =>
-            syms.foreach { s => index.remove(s) }
-          case TypeCompletionsReq(prefix: String, maxResults: Int) =>
-            val suggestions = index.keywordSearch(List(prefix), maxResults, restrictToTypes = true)
-            sender ! SymbolSearchResults(suggestions)
-          case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
-            sender ! AbstractFiles(classFileIndex.sourceFileCandidates(
-              enclosingPackage,
-              classNamePrefix))
-          case RPCRequestEvent(req: Any, callId: Int) =>
-            try {
-              req match {
-                case ImportSuggestionsReq(file, point, names, maxResults) =>
-                  val suggestions = ImportSuggestions(index.getImportSuggestions(
-                    names, maxResults))
-                  project ! RPCResultEvent(toWF(suggestions), callId)
-                case PublicSymbolSearchReq(keywords, maxResults) =>
-                  println("Received keywords: " + keywords)
-                  val suggestions = SymbolSearchResults(
-                    index.keywordSearch(keywords, maxResults))
-                  project ! RPCResultEvent(toWF(suggestions), callId)
-                case MethodBytecodeReq(sourceName: String, line: Int) =>
-                  classFileIndex.locateBytecode(sourceName, line) match {
-                    case method :: rest =>
-                      project ! RPCResultEvent(
-                        toWF(method), callId)
-                    case _ => project.sendRPCError(ErrExceptionInIndexer,
-                      Some("Failed to find method bytecode"), callId)
-                  }
-              }
-            } catch {
-              case e: Exception =>
-                System.err.println("Error handling RPC: " +
-                  e + " :\n" +
-                  e.getStackTraceString)
-                project.sendRPCError(ErrExceptionInIndexer,
-                  Some("Error occurred in indexer. Check the server log."),
-                  callId)
-            }
-          case other =>
-            println("Indexer: WTF, what's " + other)
-        }
+  override def receive = {
+    case msg: Any => try {
+      process(msg)
+    } catch {
+      case e: Exception =>
+        log.error("Error at Indexer message loop: " + e + " :" + e.getStackTraceString)
+    }
+  }
 
-      } catch {
-        case e: Exception =>
-          System.err.println("Error at Indexer message loop: " +
-            e + " :\n" + e.getStackTraceString)
-      }
+  def process(msg: Any) {
+    msg match {
+      case IndexerShutdownReq() =>
+        index.close()
+        context.stop(self)
+      case RebuildStaticIndexReq() =>
+        index.initialize(
+          context.system,
+          config.root,
+          config.allFilesOnClasspath,
+          config.onlyIncludeInIndex,
+          config.excludeFromIndex)
+        classFileIndex.indexFiles(
+          config.allFilesOnClasspath
+            ++ List(config.target, config.testTarget).flatten
+        )
+        project ! AsyncEvent(toWF(IndexerReadyEvent()))
+      case ReindexClassFilesReq(files) =>
+        classFileIndex.indexFiles(files)
+      case CommitReq() =>
+        index.commit()
+      case AddSymbolsReq(syms) =>
+        syms.foreach { info =>
+          index.insert(info)
+        }
+      case RemoveSymbolsReq(syms) =>
+        syms.foreach { s => index.remove(s) }
+      case TypeCompletionsReq(prefix: String, maxResults: Int) =>
+        val suggestions = index.keywordSearch(List(prefix), maxResults, restrictToTypes = true)
+        sender ! SymbolSearchResults(suggestions)
+      case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
+        sender ! AbstractFiles(classFileIndex.sourceFileCandidates(enclosingPackage, classNamePrefix))
+      case RPCRequestEvent(req: Any, callId: Int) =>
+        try {
+          req match {
+            case ImportSuggestionsReq(file, point, names, maxResults) =>
+              val suggestions = ImportSuggestions(index.getImportSuggestions(
+                names, maxResults))
+              project ! RPCResultEvent(toWF(suggestions), callId)
+            case PublicSymbolSearchReq(keywords, maxResults) =>
+              println("Received keywords: " + keywords)
+              val suggestions = SymbolSearchResults(
+                index.keywordSearch(keywords, maxResults))
+              project ! RPCResultEvent(toWF(suggestions), callId)
+            case MethodBytecodeReq(sourceName: String, line: Int) =>
+              classFileIndex.locateBytecode(sourceName, line) match {
+                case method :: rest =>
+                  project ! RPCResultEvent(
+                    toWF(method), callId)
+                case _ => project.sendRPCError(ErrExceptionInIndexer,
+                  Some("Failed to find method bytecode"), callId)
+              }
+          }
+        } catch {
+          case e: Exception =>
+            System.err.println("Error handling RPC: " +
+              e + " :\n" +
+              e.getStackTraceString)
+            project.sendRPCError(ErrExceptionInIndexer,
+              Some("Error occurred in indexer. Check the server log."),
+              callId)
+        }
+      case other =>
+        log.warning("Indexer: WTF, what's " + other)
     }
   }
 
