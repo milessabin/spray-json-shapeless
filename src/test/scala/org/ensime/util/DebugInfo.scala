@@ -2,7 +2,6 @@ package org.ensime.util
 
 import java.io._
 import org.objectweb.asm._
-import org.objectweb.asm.commons.EmptyVisitor
 import scala.math._
 
 /*
@@ -15,7 +14,7 @@ object DebugInfo {
     val fs = new FileInputStream(f)
     try {
       val reader = new ClassReader(fs)
-      reader.accept(new EmptyVisitor() {
+      reader.accept(new ClassVisitor(Opcodes.ASM5) {
         var qualName: String = null
         var packageName: String = null
         var sourceName: String = null
@@ -41,7 +40,7 @@ object DebugInfo {
         override def visitAnnotation(desc: String,
           visibleAtRuntime: Boolean): AnnotationVisitor = {
           println("Annotation: " + desc)
-          new EmptyVisitor() {
+          new AnnotationVisitor(Opcodes.ASM5) {
             override def visit(name: String, value: Object) {
               println(name)
             }
@@ -62,7 +61,7 @@ object DebugInfo {
           desc: String, signature: String,
           exceptions: Array[String]): MethodVisitor = {
           println("Method: " + signature + " " + name)
-          new EmptyVisitor() {
+          new MethodVisitor(Opcodes.ASM5) {
             override def visitLineNumber(line: Int, start: Label) {
               println("  line: " + line + ", label=" + start)
               startLine = min(startLine, line)

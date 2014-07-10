@@ -15,8 +15,8 @@ version := "0.9.10-SNAPSHOT"
 libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "org.apache.lucene"          %  "lucene-core"          % "3.5.0",
   "org.sonatype.tycho"         %  "org.eclipse.jdt.core" % "3.6.2.v_A76_R36x",
-  "asm"                        %  "asm-commons"          % "3.3.1",
-  "asm"                        %  "asm-util"             % "3.3.1",
+  "org.ow2.asm"                %  "asm-commons"          % "5.0.3",
+  "org.ow2.asm"                %  "asm-util"             % "5.0.3",
   "com.googlecode.json-simple" %  "json-simple"          % "1.1.1" intransitive(),
   "org.scalatest"              %% "scalatest"            % "2.2.0" % "test",
   "org.scalariform"            %% "scalariform"          % "0.1.4",
