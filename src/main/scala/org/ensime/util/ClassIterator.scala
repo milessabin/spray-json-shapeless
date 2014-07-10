@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.ClassReader
 import java.io._
 import java.util.jar.{ JarFile, Manifest => JarManifest }
