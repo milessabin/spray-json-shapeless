@@ -1,12 +1,11 @@
 package org.ensime.util
 
-import scala.collection.mutable.{ Set => MutableSet }
-import scala.collection.mutable.{ HashMap, HashSet }
+import org.slf4j.LoggerFactory
+
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.EmptyVisitor
 import org.objectweb.asm.ClassReader
-import org.objectweb.asm.Opcodes
 import java.io._
 import java.util.jar.{ JarFile, Manifest => JarManifest }
 import java.util.zip._
@@ -68,6 +67,8 @@ case class ClassLocation(file: String, entry: String)
 
 object ClassIterator {
 
+  val log = LoggerFactory.getLogger("ClassIterator")
+
   type Callback = (ClassLocation, ClassReader) => Unit
 
   /**
@@ -82,8 +83,7 @@ object ClassIterator {
         findClassesIn(f, callback)
       } catch {
         case e: IOException =>
-          System.err.println("Failed to open: " + f)
-          e.printStackTrace(System.err)
+          log.error("Failed to open: " + f, e)
       }
     }
   }
@@ -127,7 +127,7 @@ object ClassIterator {
   private def processJar(file: File, callback: Callback) {
     val jar = new JarFile(file)
     processOpenZip(file, jar, callback)
-    var manifest = jar.getManifest
+    val manifest = jar.getManifest
     if (manifest != null) {
       val path = loadManifestPath(jar, file, manifest)
       find(path, callback)
@@ -136,24 +136,22 @@ object ClassIterator {
 
   private def loadManifestPath(jar: JarFile,
     jarFile: File,
-    manifest: JarManifest): List[File] =
-    {
-      import scala.collection.JavaConversions._
-      val attrs = manifest.getMainAttributes
-      val value = attrs.get("Class-Path").asInstanceOf[String]
+    manifest: JarManifest): List[File] = {
+    val attrs = manifest.getMainAttributes
+    val value = attrs.get("Class-Path").asInstanceOf[String]
 
-      if (value == null)
-        Nil
+    if (value == null)
+      Nil
 
-      else {
-        val parent = jarFile.getParent
-        val tokens = value.split("""\s+""").toList
-        if (parent == null)
-          tokens.map(new File(_))
-        else
-          tokens.map(s => new File(parent + File.separator + s))
-      }
+    else {
+      val parent = jarFile.getParent
+      val tokens = value.split("""\s+""").toList
+      if (parent == null)
+        tokens.map(new File(_))
+      else
+        tokens.map(s => new File(parent + File.separator + s))
     }
+  }
 
   private def processZip(file: File, callback: Callback) {
     var zf: ZipFile = null
@@ -167,13 +165,10 @@ object ClassIterator {
 
   private def processOpenZip(file: File, zipFile: ZipFile, callback: Callback) {
     import scala.collection.JavaConversions._
-    val zipFileName = file.getPath
     for (e <- zipFile.entries) {
       if (isClass(e)) {
-        var is: BufferedInputStream = null
+        val is = new BufferedInputStream(zipFile.getInputStream(e))
         try {
-          val is = new BufferedInputStream(
-            zipFile.getInputStream(e))
           processClassData(is, ClassLocation(file.getCanonicalPath.replace("\\", "/"), e.getName),
             callback)
         } finally {
@@ -204,10 +199,8 @@ object ClassIterator {
   }
 
   private def processClassfile(f: File, callback: Callback) {
-    import FileUtils._
-    var is: BufferedInputStream = null
+    val is = new BufferedInputStream(new FileInputStream(f))
     try {
-      is = new BufferedInputStream(new FileInputStream(f))
       processClassData(is, ClassLocation(f.getCanonicalPath.replace("\\", "/"), ""), callback)
     } finally {
       if (is != null) is.close()

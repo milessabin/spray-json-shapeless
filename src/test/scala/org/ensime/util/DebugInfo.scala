@@ -1,4 +1,5 @@
-package org.ensime.debug
+package org.ensime.util
+
 import java.io._
 import org.objectweb.asm._
 import org.objectweb.asm.commons.EmptyVisitor

@@ -9,6 +9,7 @@ import org.ensime.util.ClassLocation
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.EmptyVisitor
+import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.tools.nsc.io.AbstractFile
@@ -26,7 +27,7 @@ case class MethodBytecode(
   endLine: Int)
 
 class ClassFileIndex(config: ProjectConfig) {
-
+  val log = LoggerFactory.getLogger(this.getClass)
   // TODO(aemoncannon): This set can change over time if new
   // source files are created. Need to arrange for indexer to
   // receive a re-up message when new sources are created.
@@ -43,7 +44,7 @@ class ClassFileIndex(config: ProjectConfig) {
   val ASMAcceptAll = 0
 
   def indexFiles(files: Iterable[File]) {
-    println("Indexing source names for files: " + files)
+    log.info("Indexing source names for files: " + files)
     val t = System.currentTimeMillis()
     ClassIterator.find(files,
       (location, classReader) =>
@@ -59,9 +60,7 @@ class ClassFileIndex(config: ProjectConfig) {
           }
         }, ASMAcceptAll))
     val elapsed = System.currentTimeMillis() - t
-    println("Finished indexing " +
-      files.size + " classpath files in " +
-      elapsed / 1000.0 + " seconds.")
+    log.info("Finished indexing " + files.size + " classpath files in " + elapsed / 1000.0 + " seconds.")
   }
 
   class MethodByteCodeFinder(targetSource: String, targetLine: Int)
@@ -138,7 +137,7 @@ class ClassFileIndex(config: ProjectConfig) {
   def sourceFileCandidates(
     enclosingPackage: String,
     classNamePrefix: String): Set[AbstractFile] = {
-    println("Looking for " + (enclosingPackage, classNamePrefix))
+    log.info("Looking for " + (enclosingPackage, classNamePrefix))
     val subPath = enclosingPackage.replace(".", "/") + "/" + classNamePrefix.replaceAll("[$]$", "")
     val sourceNames: Set[String] = sourceNamesForClassFile.collect {
       case (loc, sourceNames) if loc.file.contains(subPath) ||
