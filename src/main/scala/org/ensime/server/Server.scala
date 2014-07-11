@@ -1,6 +1,5 @@
 package org.ensime.server
 
-import java.io.PrintStream
 import java.io._
 import java.net.{ ServerSocket, Socket, InetAddress }
 import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
@@ -8,7 +7,6 @@ import org.ensime.protocol._
 import org.ensime.util.WireFormat
 import org.ensime.config.Environment
 import org.slf4j._
-import scala.Console
 import scala.util.Properties._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
@@ -30,7 +28,7 @@ object ConsoleOutputWorkaround {
     override def write(b: Int): Unit = try {
       val c = b.toChar
       if (c == '\n') {
-        val message = buffer.toString
+        val message = buffer.toString()
         buffer.clear()
 
         // reasonably expensive, but not as bad as printing to the
@@ -94,7 +92,7 @@ object Server {
     )
 
     val server = new Server(cacheDir, host, requestedPort)
-    server.startServer
+    server.startSocketListener()
   }
 }
 
@@ -102,23 +100,24 @@ class Server(cacheDir: File, host: String, requestedPort: Int) {
 
   import Server.log
 
-  def startServer: Unit = {
-    require(!cacheDir.exists || cacheDir.isDirectory, cacheDir + " is not a valid cache directory")
-    cacheDir.mkdirs()
+  require(!cacheDir.exists || cacheDir.isDirectory, cacheDir + " is not a valid cache directory")
+  cacheDir.mkdirs()
 
-    val actorSystem = ActorSystem.create()
-    val listener = new ServerSocket(requestedPort, 0, InetAddress.getByName(host))
-    val actualPort = listener.getLocalPort
+  val actorSystem = ActorSystem.create()
+  // TODO move this to only be started when we want to receive
+  val listener = new ServerSocket(requestedPort, 0, InetAddress.getByName(host))
+  val actualPort = listener.getLocalPort
 
-    log.info("ENSIME Server on " + host + ":" + actualPort)
-    log.info("cacheDir=" + cacheDir)
-    log.info(Environment.info)
+  log.info("ENSIME Server on " + host + ":" + actualPort)
+  log.info("cacheDir=" + cacheDir)
+  log.info(Environment.info)
 
-    writePort(cacheDir, actualPort)
+  writePort(cacheDir, actualPort)
 
-    val protocol = new SwankProtocol
-    val project = new Project(protocol, actorSystem)
+  val protocol = new SwankProtocol
+  val project = new Project(protocol, actorSystem)
 
+  def startSocketListener(): Unit = {
     try {
       while (true) {
         try {
@@ -135,7 +134,12 @@ class Server(cacheDir: File, host: String, requestedPort: Int) {
     }
   }
 
-  private def writePort(cacheDir: File, port: Int) {
+  def shutdown() {
+    log.info("Shutting down server")
+    listener.close()
+    actorSystem.shutdown()
+  }
+  private def writePort(cacheDir: File, port: Int): Unit = {
     val portfile = new File(cacheDir, "port")
     println("")
     if (!portfile.exists()) {

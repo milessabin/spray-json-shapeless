@@ -240,8 +240,7 @@ trait CompletionControl {
   private def spliceSource(s: SourceFile, start: Int, end: Int,
     replacement: String): SourceFile = {
     new BatchSourceFile(s.file,
-      Arrays.splice(s.content, start, end,
-        replacement.toArray))
+      Arrays.splice(s.content, start, end, replacement.toArray))
   }
 
   private val memberRE = "([\\. ]+)([^\\. ]*)$".r

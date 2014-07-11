@@ -161,7 +161,7 @@ class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectR
       ea ! IndexerShutdownReq()
     }
     val newIndexer = actorSystem.actorOf(Props(new Indexer(this, protocol.conversions, config)), "indexer")
-    println("Initing Indexer...")
+    log.info("Initing Indexer...")
     if (!config.disableIndexOnStartup) {
       newIndexer ! RebuildStaticIndexReq()
     }

@@ -130,6 +130,7 @@ class SwankProtocol extends Protocol {
   }
 
   private def handleMessageForm(sexp: SExp) {
+    log.info("Received msg: " + sexp.toReadableString(debug = true))
     sexp match {
       case SExpList(KeywordAtom(":swank-rpc") :: form :: IntAtom(callId) :: rest) =>
         handleEmacsRex(form, callId)
@@ -514,8 +515,6 @@ class SwankProtocol extends Protocol {
    */
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
-
-    log.info("Handling RPC: " + form.toReadableString(debug = true))
 
     def oops() = sendRPCError(ErrMalformedRPC, Some("Malformed " + callType + " call: " + form), callId)
 

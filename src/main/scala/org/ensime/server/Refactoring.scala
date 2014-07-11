@@ -291,7 +291,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     procId: Int,
     refctrType: scala.Symbol,
     effect: RefactorEffect): Either[RefactorFailure, RefactorResult] = {
-    println("Applying changes: " + effect.changes)
+    logger.info("Applying changes: " + effect.changes)
     writeChanges(effect.changes) match {
       case Right(touchedFiles) =>
         Right(new RefactorResult {

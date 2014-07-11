@@ -461,11 +461,11 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":is-full"),
       toWF(isFull),
       key(":notes"),
-      SExpList(notes.map(toWF)))
+      SExpList(notes.map(toWF).toList))
   }
 
   override def toWF(values: Iterable[WireFormat]): SExp = {
-    SExpList(values.map(ea => ea.asInstanceOf[SExp]))
+    SExpList(values.map(ea => ea.asInstanceOf[SExp]).toList)
   }
 
   def toWF(value: CompletionSignature): SExp = {
@@ -574,7 +574,7 @@ class SwankProtocolConversions extends ProtocolConversions {
     SExp.propList((":name", value.name),
       (":info-type", 'package),
       (":full-name", value.fullname),
-      (":members", SExpList(value.members.map(toWF))))
+      (":members", SExpList(value.members.map(toWF).toList)))
   }
 
   def toWF(value: CallCompletionInfo): SExp = {
@@ -620,7 +620,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":procedure-id", value.procedureId),
       (":refactor-type", value.refactorType),
       (":status", 'success),
-      (":changes", SExpList(value.changes.map(changeToWF))))
+      (":changes", SExpList(value.changes.map(changeToWF).toList)))
   }
 
   def toWF(value: RefactorResult): SExp = {
@@ -628,15 +628,15 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":procedure-id", value.procedureId),
       (":refactor-type", value.refactorType),
       (":status", 'success),
-      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
+      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)).toList)))
   }
 
   def toWF(value: SymbolSearchResults): SExp = {
-    SExpList(value.syms.map(toWF))
+    SExpList(value.syms.map(toWF).toList)
   }
 
   def toWF(value: ImportSuggestions): SExp = {
-    SExpList(value.symLists.map { l => SExpList(l.map(toWF)) })
+    SExpList(value.symLists.map { l => SExpList(l.map(toWF).toList) }.toList)
   }
 
   private def toWF(pos: Option[(String, Int)]): SExp = {
@@ -674,7 +674,7 @@ class SwankProtocolConversions extends ProtocolConversions {
   def toWF(value: UndoResult): SExp = {
     SExp.propList(
       (":id", value.id),
-      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)))))
+      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)).toList)))
   }
 
   def toWF(value: SymbolDesignations): SExp = {
