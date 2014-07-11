@@ -8,8 +8,6 @@ import scala.collection.mutable
 
 trait MethodDescriber extends MethodVisitor {
 
-  import org.objectweb.asm.util.AbstractVisitor._
-
   val INTERNAL_NAME = 0
   val FIELD_DESCRIPTOR = 1
   val FIELD_SIGNATURE = 2
@@ -20,6 +18,8 @@ trait MethodDescriber extends MethodVisitor {
   val CLASS_DECLARATION = 7
   val PARAMETERS_DECLARATION = 8
   val HANDLE_DESCRIPTOR = 9
+
+  import org.objectweb.asm.util.Printer._
 
   def appendOp(name: String, args: String): Unit
   def appendOp(name: String): Unit = appendOp(name, "")
@@ -70,7 +70,7 @@ trait MethodDescriber extends MethodVisitor {
   }
 
   override def visitMethodInsn(opcode: Int, owner: String,
-    name: String, desc: String) {
+    name: String, desc: String, itf: Boolean) {
     appendOp(OPCODES(opcode),
       descriptor(INTERNAL_NAME, owner) +
         "." + name + descriptor(METHOD_DESCRIPTOR, desc))
@@ -134,7 +134,7 @@ trait MethodDescriber extends MethodVisitor {
     appendOp("IINC ", variable.toString + ' ' + increment.toString)
   }
 
-  override def visitTableSwitchInsn(min: Int, max: Int, dflt: Label, labels: Array[Label]) {
+  override def visitTableSwitchInsn(min: Int, max: Int, dflt: Label, labels: Label*) {
     appendOp("TABLESWITCH",
       labels.zipWithIndex.map { pair => (min + pair._2) + ": " + label(pair._1) }.mkString(",") +
         "default: " + label(dflt))

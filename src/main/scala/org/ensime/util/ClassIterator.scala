@@ -2,9 +2,10 @@ package org.ensime.util
 
 import org.slf4j.LoggerFactory
 
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.commons.EmptyVisitor
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.ClassReader
 import java.io._
 import java.util.jar.{ JarFile, Manifest => JarManifest }
@@ -17,7 +18,7 @@ trait ClassHandler {
   def onField(className: String, name: String, location: String, flags: Int) {}
 }
 
-private class PublicSymbolVisitor(location: File, handler: ClassHandler) extends EmptyVisitor {
+private class PublicSymbolVisitor(location: File, handler: ClassHandler) extends ClassVisitor(Opcodes.ASM5) {
   var currentClassName: Option[String] = None
   val path: String = location.getPath
 
@@ -82,8 +83,7 @@ object ClassIterator {
       try {
         findClassesIn(f, callback)
       } catch {
-        case e: IOException =>
-          log.error("Failed to open: " + f, e)
+        case e: Exception => log.error("Failed to read: " + f, e)
       }
     }
   }
@@ -165,11 +165,11 @@ object ClassIterator {
 
   private def processOpenZip(file: File, zipFile: ZipFile, callback: Callback) {
     import scala.collection.JavaConversions._
-    for (e <- zipFile.entries) {
-      if (isClass(e)) {
-        val is = new BufferedInputStream(zipFile.getInputStream(e))
+    for (entry <- zipFile.entries) {
+      if (isClass(entry)) {
+        val is = new BufferedInputStream(zipFile.getInputStream(entry))
         try {
-          processClassData(is, ClassLocation(file.getCanonicalPath.replace("\\", "/"), e.getName),
+          processClassData(is, ClassLocation(file.getCanonicalPath.replace("\\", "/"), entry.getName),
             callback)
         } finally {
           if (is != null) is.close()

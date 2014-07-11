@@ -7,8 +7,9 @@ import org.ensime.util.FileUtils
 import org.ensime.util.RichClassVisitor
 import org.ensime.util.ClassLocation
 import org.objectweb.asm.Label
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.commons.EmptyVisitor
+import org.objectweb.asm.Opcodes
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -48,7 +49,7 @@ class ClassFileIndex(config: ProjectConfig) {
     val t = System.currentTimeMillis()
     ClassIterator.find(files,
       (location, classReader) =>
-        classReader.accept(new EmptyVisitor() {
+        classReader.accept(new ClassVisitor(Opcodes.ASM5) {
           override def visitSource(source: String, debug: String) {
             val set = classFilesForSourceName(source)
             set += location
@@ -64,7 +65,7 @@ class ClassFileIndex(config: ProjectConfig) {
   }
 
   class MethodByteCodeFinder(targetSource: String, targetLine: Int)
-      extends EmptyVisitor with RichClassVisitor {
+      extends ClassVisitor(Opcodes.ASM5) with RichClassVisitor {
     type Result = List[MethodBytecode]
     private var quit: Boolean = false
     private var className: String = ""
@@ -89,7 +90,7 @@ class ClassFileIndex(config: ProjectConfig) {
       signature: String,
       exceptions: Array[String]): MethodVisitor = {
       if (!quit) {
-        new EmptyVisitor() with MethodDescriber {
+        new MethodVisitor(Opcodes.ASM5) with MethodDescriber {
           var maxLine = Int.MinValue
           var minLine = Int.MaxValue
           var ops = ListBuffer[Op]()
