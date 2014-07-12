@@ -9,6 +9,7 @@ import org.ensime.model.OffsetRange
 import org.ensime.protocol.ProtocolConversions
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
+import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.Settings
@@ -24,13 +25,19 @@ class Analyzer(
   val config: ProjectConfig)
     extends Actor with ActorLogging with RefactoringHandler {
 
-  private val settings = new Settings(Console.println)
-  log.info("ExtraArgs: " + config.compilerArgs)
-  settings.processArguments(config.compilerArgs, processAll = false)
+  // this still doesn't silence the PresentationCompiler
+  private val presCompLog = LoggerFactory.getLogger(classOf[RichPresentationCompiler])
+  private val settings = new Settings(presCompLog.error)
+  settings.YpresentationDebug.value = presCompLog.isTraceEnabled
+  settings.YpresentationVerbose.value = presCompLog.isDebugEnabled
+  settings.verbose.value = presCompLog.isDebugEnabled
+
+  settings.processArguments(
+    List("-classpath", config.compilerClasspath) ++ config.extraCompilerArgs,
+    processAll = false)
   settings.usejavacp.value = false
 
-  log.info("Presentation Compiler settings:")
-  log.info(settings.toString())
+  log.info("Presentation Compiler settings:\n" + settings)
   import protocol._
 
   private val reportHandler = new ReportHandler {
@@ -105,7 +112,7 @@ class Analyzer(
         if (awaitingInitialCompile) {
           awaitingInitialCompile = false
           val elapsed = System.currentTimeMillis() - initTime
-          log.info("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
+          log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
           reporter.enable()
           project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
           indexer ! CommitReq()

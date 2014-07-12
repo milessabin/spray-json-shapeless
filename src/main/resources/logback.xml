@@ -8,7 +8,14 @@
     </encoder>
   </appender>
 
-  <root level="debug">
+  <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+    <resetJUL>true</resetJUL>
+  </contextListener>
+  
+  <!-- <logger name="org.ensime.indexer" level="DEBUG"/> -->
+  <logger name="scala.tools" level="WARN"/>
+  
+  <root level="INFO">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>
