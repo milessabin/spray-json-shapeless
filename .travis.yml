@@ -2,6 +2,7 @@ branches:
   only:
   - master
   - scala-2.9
+  - scala-2.10
 language: scala
 jdk:
 - openjdk6
