@@ -5,7 +5,8 @@ import java.nio.charset.Charset
 import java.security.MessageDigest
 import scala.collection.Seq
 import scala.collection.mutable
-import scala.tools.nsc.io.{ AbstractFile, ZipArchive }
+import scala.tools.nsc.io.AbstractFile
+import scala.reflect.io.ZipArchive
 
 // This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
@@ -114,10 +115,18 @@ object FileUtils {
     }).toSet
   }
 
+  // NOTE: Taken from ZipArchive internals to replace deepIterator that will be removed 2.11
+  private def walkIterator(its: Iterator[AbstractFile]): Iterator[AbstractFile] = {
+    its flatMap { f =>
+      if (f.isDirectory) walkIterator(f.iterator)
+      else Iterator(f)
+    }
+  }
+
   def expandSourceJars(fileList: Iterable[CanonFile]): Iterable[AbstractFile] = {
     fileList.flatMap { f =>
       if (isValidArchive(f)) {
-        ZipArchive.fromFile(f).deepIterator.filter(f => isValidSourceName(f.name))
+        walkIterator(ZipArchive.fromFile(f).iterator).filter(f => isValidSourceName(f.name))
       } else {
         Seq(AbstractFile.getFile(f))
       }

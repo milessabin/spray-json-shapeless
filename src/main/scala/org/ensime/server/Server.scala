@@ -19,8 +19,8 @@ import org.slf4j.bridge.SLF4JBridgeHandler
 object ConsoleOutputWorkaround {
   def redirectScalaConsole(): Unit = {
     // workaround SI-8717
-    Console.setOut(OutLog)
-    Console.setErr(ErrLog)
+    ConsoleRedirect.setOut(OutLog)
+    ConsoleRedirect.setErr(ErrLog)
   }
 
   private val blacklist = Set("sun.", "java.", "scala.Console", "scala.Predef")

@@ -1,6 +1,7 @@
 package org.ensime.server
 
 import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
+import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.tools.nsc.interactive.Global
 import scala.reflect.internal.util.RangePosition
@@ -10,6 +11,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
 
   class SymDesigsTraverser(p: RangePosition, tpeSet: Set[scala.Symbol]) extends Traverser {
 
+    val log = LoggerFactory.getLogger(getClass)
     val syms = ListBuffer[SymbolDesignation]()
 
     override def traverse(t: Tree) {
@@ -171,8 +173,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           }
         } catch {
           case e: Throwable =>
-            System.err.println("Error in AST traverse:")
-            e.printStackTrace(System.err);
+            log.error("Error in AST traverse:", e)
         }
         super.traverse(t)
       }

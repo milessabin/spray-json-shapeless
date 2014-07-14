@@ -83,6 +83,7 @@ object ProjectConfig {
           return List()
       }.toList
       case Some(NilAtom()) => List()
+      case Some(_) => List()
       case None => List()
     }
 
@@ -94,6 +95,7 @@ object ProjectConfig {
           return List()
       }.toList
       case Some(NilAtom()) => List()
+      case Some(_) => List()
       case None => List()
     }
 
