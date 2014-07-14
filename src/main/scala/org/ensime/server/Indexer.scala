@@ -45,7 +45,7 @@ class Indexer(project: Project,
       process(msg)
     } catch {
       case e: Exception =>
-        log.error("Error at Indexer message loop: " + e + " :" + e.getStackTraceString)
+        log.error(e, "Error at Indexer message loop: " + e)
     }
   }
 

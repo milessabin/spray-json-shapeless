@@ -369,7 +369,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       try {
         if (sym == RootPackage) {
           Some(root)
-        } else if (sym.isPackage) {
+        } else if (sym.hasPackageFlag) {
           Some(fromSymbol(sym))
         } else if (!sym.nameString.contains("$") && (sym != NoSymbol) && (sym.tpe != NoType)) {
           if (sym.isClass || sym.isTrait || sym.isModule ||

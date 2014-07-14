@@ -11,7 +11,7 @@ trait NamespaceTraversal { self: RichPresentationCompiler =>
 
   def traverse(v: NamespaceVisitor, sym: Symbol) {
     try {
-      if (sym.isPackage) {
+      if (sym.hasPackageFlag) {
         v.visitPackage(sym)
         traverseMembers(v, sym)
       } else if (!sym.nameString.contains("$") && (sym != NoSymbol) && (sym.tpe != NoType)) {

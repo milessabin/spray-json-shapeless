@@ -96,7 +96,7 @@ class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectR
           process(x)
         } catch {
           case e: Exception =>
-            println("Error at Project message loop: " + e + " :\n" + e.getStackTraceString)
+            log.error("Error at Project message loop: ", e)
         }
 
     }
