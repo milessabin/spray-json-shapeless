@@ -561,7 +561,7 @@ object ProjectConfig {
      * 	  {\bf :indentSpaces} & 1-10  \\ \hline
      * 	  {\bf :indentWithTabs} & t or nil  \\ \hline
      * 	  {\bf :multilineScaladocCommentsStartOnFirstLine} & t or nil  \\ \hline
-     * 	  {\bf :preserveDanglingCloseParenthesis} & t or nil \\ \hline
+     * 	  {\bf :preserveDanglingCloseParenthesis} (Note: Not supported in 2.11 and later) & t or nil \\ \hline
      * 	  {\bf :preserveSpaceBeforeArguments} & t or nil  \\ \hline
      * 	  {\bf :rewriteArrowSymbols} & t or nil  \\ \hline
      * 	  {\bf :spaceBeforeColon} & t or nil  \\ \hline
@@ -807,8 +807,6 @@ case class ProjectConfig(
           fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
         case ('placeScaladocAsterisksBeneathSecondAsterisk, value: Boolean) =>
           fp.setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, value)
-        case ('preserveDanglingCloseParenthesis, value: Boolean) =>
-          fp.setPreference(PreserveDanglingCloseParenthesis, value)
         case ('preserveSpaceBeforeArguments, value: Boolean) =>
           fp.setPreference(PreserveSpaceBeforeArguments, value)
         case ('spaceInsideBrackets, value: Boolean) =>

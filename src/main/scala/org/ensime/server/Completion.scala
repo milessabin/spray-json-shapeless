@@ -24,9 +24,9 @@ trait CompletionControl {
     var score = 0
     if (sym.nameString.startsWith(prefix)) score += 10
     if (!inherited) score += 10
-    if (!sym.isPackage) score += 10
+    if (!sym.hasPackageFlag) score += 10
     if (!sym.isType) score += 10
-    if (sym.isLocal) score += 10
+    if (sym.isLocalToBlock) score += 10
     if (sym.isPublic) score += 10
     if (viaView == NoSymbol) score += 10
     if (sym.owner != definitions.AnyClass &&
@@ -264,7 +264,7 @@ trait CompletionControl {
           " ()")
 
         // Move point back to target of method selection.
-        val newP = p.withSource(src, 0).withPoint(p.point - prefix.length - dot.length)
+        val newP = p.withSource(src).withPoint(p.point - prefix.length - dot.length)
 
         Some(MemberContext(newP, prefix, constructing))
       case None => None
@@ -295,7 +295,7 @@ trait Completion { self: RichPresentationCompiler =>
           s == NoSymbol || s.nameString.contains("$")
         }
         memberSyms.flatMap { s =>
-          val name = if (s.isPackage) { s.nameString } else { typeShortName(s) }
+          val name = if (s.hasPackageFlag) { s.nameString } else { typeShortName(s) }
           if (name.startsWith(prefix)) {
             Some(CompletionInfo(name, CompletionSignature(List(), ""), -1, isCallable = false, 50, None))
           } else None
