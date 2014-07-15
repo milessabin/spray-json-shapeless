@@ -73,10 +73,10 @@ trait SemanticHighlighting { self: Global with Helpers =>
               }
             case Select(qual, selector: Name) =>
               val sym = t.symbol
-              val start = try {
+              val start = if (qual.pos.isRange) {
                 qual.pos.end + 1
-              } catch {
-                case _: Throwable => treeP.start
+              } else {
+                treeP.start
               }
               val len = selector.decode.length()
               val end = start + len
