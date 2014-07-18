@@ -73,13 +73,9 @@ trait SemanticHighlighting { self: Global with Helpers =>
               }
             case Select(qual, selector: Name) =>
               val sym = t.symbol
-              val start = if (qual.pos.isRange) {
-                qual.pos.end + 1
-              } else {
-                treeP.start
-              }
               val len = selector.decode.length()
-              val end = start + len
+              val end = treeP.end
+              val start = end - len
 
               if (sym.isCaseApplyOrUnapply) {
                 val owner = sym.owner
@@ -94,10 +90,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
                   addAt(start, end, 'valField)
                 }
               } else if (sym.isConstructor) {
-                val start = try { sym.pos.start }
-                catch { case _: Throwable => treeP.start }
-                val end = try { sym.pos.end }
-                catch { case _: Throwable => treeP.end }
+                val start = treeP.start
+                val end = treeP.end
                 addAt(start, end, 'constructor)
               } else if (sym.isMethod) {
                 if (sym.nameString == "apply" || sym.nameString == "update") {}
@@ -180,7 +174,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
     }
   }
 
-  protected def symbolDesignationsInRegion(p: RangePosition,
+  protected def symbolDesignationsInRegion(
+    p: RangePosition,
     tpes: List[scala.Symbol]): SymbolDesignations = {
     val tpeSet = Set[scala.Symbol]() ++ tpes
     val typed: Response[Tree] = new Response[Tree]
@@ -204,7 +199,8 @@ trait SemanticHighlighting { self: Global with Helpers =>
         traverser.traverse(tree)
         SymbolDesignations(
           p.source.file.path,
-          traverser.syms.toList)
+          traverser.syms.toList
+        )
       case None => SymbolDesignations("", List())
     }
   }
