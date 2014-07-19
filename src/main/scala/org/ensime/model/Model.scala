@@ -389,7 +389,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
   object TypeInfo {
 
-    def apply(t: Type, members: Iterable[EntityInfo] = List()): TypeInfo = {
+    def apply(t: Type, members: Iterable[EntityInfo] = List(), locateSymPos: Boolean = false): TypeInfo = {
       val tpe = t match {
         // TODO: Instead of throwing away this information, would be better to
         // alert the user that the type is existentially quantified.
@@ -404,6 +404,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
           val typeSym = tpe.typeSymbol
           val sym = if (typeSym.isModuleClass)
             typeSym.sourceModule else typeSym
+          val symPos = if (locateSymPos) locateSymbolPos(sym) else ask(() => sym.pos)
           val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
           new TypeInfo(
             typeShortName(tpe),
@@ -412,7 +413,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
             typeFullName(tpe),
             args,
             members,
-            locateSymbolPos(sym),
+            symPos,
             outerTypeId)
         case _ => nullInfo
       }
