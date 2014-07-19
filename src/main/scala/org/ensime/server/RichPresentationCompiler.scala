@@ -41,13 +41,13 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
 
   def askTypeInfoAt(p: Position): Option[TypeInfo] =
-    askOption(typeAt(p).map(TypeInfo(_))).getOrElse(None)
+    askOption(typeAt(p).map(TypeInfo(_, locateSymPos = true))).getOrElse(None)
 
   def askTypeInfoById(id: Int): Option[TypeInfo] =
-    askOption(typeById(id).map(TypeInfo(_))).getOrElse(None)
+    askOption(typeById(id).map(TypeInfo(_, locateSymPos = true))).getOrElse(None)
 
   def askTypeInfoByName(name: String): Option[TypeInfo] =
-    askOption(typeByName(name).map(TypeInfo(_))).getOrElse(None)
+    askOption(typeByName(name).map(TypeInfo(_, locateSymPos = true))).getOrElse(None)
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = {
     val nameSegs = name.split("\\.")
@@ -60,7 +60,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
         val roots = filterMembersByPrefix(members, firstName, matchEntire = true, caseSens = true).map { _.sym }
         val restOfPath = nameSegs.drop(1).mkString(".")
         val syms = roots.flatMap { symsAtQualifiedPath(restOfPath, _) }
-        syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe) }
+        syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe, locateSymPos = true) }
       }
     ) yield infos).getOrElse(None)
   }
@@ -261,7 +261,7 @@ class RichPresentationCompiler(
 
   protected def inspectType(tpe: Type): TypeInspectInfo = {
     new TypeInspectInfo(
-      TypeInfo(tpe),
+      TypeInfo(tpe, locateSymPos = true),
       companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
   }
@@ -271,7 +271,7 @@ class RichPresentationCompiler(
     val preparedMembers = prepareSortedInterfaceInfo(members)
     typeAt(p).map { t =>
       new TypeInspectInfo(
-        TypeInfo(t),
+        TypeInfo(t, locateSymPos = true),
         companionTypeOf(t).map(cacheType),
         preparedMembers)
     }
