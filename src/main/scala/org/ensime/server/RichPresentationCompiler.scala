@@ -24,24 +24,16 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     } catch {
       case fi: FailedInterrupt =>
         fi.getCause match {
-          // TODO(aemon): Remove.
-          // xeno.by: InvalidCompanions has been removed in 2.10
-          // case e @ InvalidCompanions(c1, c2) =>
-          //   richReporter.warning(c1.pos, e.getMessage)
-          //   None
           case e: InterruptedException =>
             Thread.currentThread().interrupt()
-            e.printStackTrace()
-            System.err.println("interrupted exception in askOption")
+            logger.error("interrupted exception in askOption", e)
             None
           case e =>
-            e.printStackTrace()
-            System.err.println("Error during askOption", e)
+            logger.error("Error during askOption", e)
             None
         }
       case e: Throwable =>
-        e.printStackTrace()
-        System.err.println("Error during askOption", e)
+        logger.error("Error during askOption", e)
         None
     }
 
@@ -377,7 +369,7 @@ class RichPresentationCompiler(
         case _ =>
           // `showRaw` was introduced in 2.10, so I commented it out to be compatible with 2.9
           // println(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
-          logger.warn("[warning] symbolAt for " + tree.getClass + ": " + tree)
+          logger.warn("symbolAt for " + tree.getClass + ": " + tree)
           Nil
       }
     wannabes.find(_.exists)

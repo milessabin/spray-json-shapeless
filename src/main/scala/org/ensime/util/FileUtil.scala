@@ -243,12 +243,11 @@ object FileUtils {
    * Creates a temporary directory and provides its location to the given function.  The directory
    * is deleted after the function returns.
    */
-  def withTemporaryDirectory[T](action: File => T): T =
-    {
-      val dir = createTemporaryDirectory
-      try { action(dir) }
-      finally { delete(dir) }
-    }
+  def withTemporaryDirectory[T](action: File => T): T = {
+    val dir = createTemporaryDirectory.getCanonicalFile
+    try { action(dir) }
+    finally { delete(dir) }
+  }
 
   def createTemporaryDirectory: File = createUniqueDirectory(temporaryDirectory)
   def createUniqueDirectory(baseDirectory: File): File =
@@ -331,7 +330,7 @@ object FileUtils {
   def inverseEdits(edits: Iterable[FileEdit]): List[FileEdit] = {
     val result = new mutable.ListBuffer[FileEdit]
     val editsByFile = edits.groupBy(_.file)
-    val rewriteList = editsByFile.map {
+    editsByFile.foreach {
       case (file, edits) =>
         readFile(file) match {
           case Right(contents) =>
@@ -419,6 +418,4 @@ object FileUtils {
       case e: Exception => Left(e)
     }
   }
-
 }
-

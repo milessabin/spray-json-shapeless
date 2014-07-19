@@ -27,6 +27,7 @@ libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "com.typesafe.akka"          %% "akka-testkit"         % "2.3.4" % "test",
   "ch.qos.logback"             %  "logback-classic"      % "1.0.13",
   "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.7",
+  "commons-io"                 % "commons-io"            % "2.4" % "test",
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )}
 
@@ -83,7 +84,7 @@ ScalastylePlugin.Settings
 instrumentSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 28
+ScoverageKeys.minimumCoverage := 41
 
 // might be buggy
 ScoverageKeys.highlighting := true

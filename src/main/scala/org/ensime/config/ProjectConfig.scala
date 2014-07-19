@@ -108,32 +108,38 @@ object ProjectConfig {
     }
   }
 
-  class OptionalStringProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
+  // a simple string
+  case class OptionalStringProp(keyName: String, synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Option[String] = getStr(m, keyName).orElse(synonymKey.flatMap(getStr(m, _)))
-    def defaultTypeHint: String = "a string"
   }
 
+  // boolean property - [t or nil]
   class BooleanProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.exists(getBool(m, _))
-    def defaultTypeHint: String = "[t or nil]"
   }
 
+  // a list of string (string*)
   class StringListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): List[String] = getStrList(m, keyName) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
-    def defaultTypeHint: String = "(string*)"
   }
 
+  // a list of regex exprs (regex*)
   class RegexListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): List[Regex] = getRegexList(m, keyName) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
-    def defaultTypeHint: String = "(regex*)"
   }
 
+  // key value map ([keyword value]*)
   class SymbolMapProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
     def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, keyName) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
-    def defaultTypeHint: String = "([keyword value]*)"
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
+
+    private val m: KeyMap = {
+      val mainproj = config.toKeywordMap
+      val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
+      simpleMerge(mainproj, subproj)
+    }
 
     private def subprojects(m: KeyMap): List[KeyMap] = {
       m.get(key(":subprojects")) match {
@@ -197,8 +203,6 @@ object ProjectConfig {
       }
     }
 
-    lazy val props = scala.collection.mutable.ListBuffer[Prop]()
-
     /**
      * Doc Property:
      *   :root-dir
@@ -208,7 +212,6 @@ object ProjectConfig {
      *   String: a filename
      */
     lazy val rootDir_ = new OptionalStringProp(":root-dir", None)
-    props += rootDir_
     def rootDir = rootDir_(m)
 
     /**
@@ -222,7 +225,6 @@ object ProjectConfig {
      *   String: name
      */
     lazy val name_ = new OptionalStringProp(":name", Some(":project-name"))
-    props += name_
     def name = name_(m)
 
     /**
@@ -235,7 +237,6 @@ object ProjectConfig {
      *   String: package name
      */
     lazy val pack_ = new OptionalStringProp(":package", Some(":project-package"))
-    props += pack_
     def pack = pack_(m)
 
     /**
@@ -247,7 +248,6 @@ object ProjectConfig {
      *   String: name
      */
     lazy val moduleName_ = new OptionalStringProp(":module-name", None)
-    props += moduleName_
     def moduleName = moduleName_(m)
 
     /**
@@ -259,7 +259,6 @@ object ProjectConfig {
      *   String: module name
      */
     lazy val activeSubproject_ = new OptionalStringProp(":active-subproject", None)
-    props += activeSubproject_
     def activeSubproject = activeSubproject_(m)
 
     /**
@@ -271,7 +270,6 @@ object ProjectConfig {
      *   List of Strings: module names
      */
     lazy val dependsOnModules_ = new StringListProp(":depends-on-modules", None)
-    props += dependsOnModules_
     def dependsOnModules = dependsOnModules_(m)
 
     /**
@@ -283,7 +281,6 @@ object ProjectConfig {
      *   String: version number
      */
     lazy val version_ = new OptionalStringProp(":version", None)
-    props += version_
     def version = version_(m)
 
     /**
@@ -296,7 +293,6 @@ object ProjectConfig {
      *   List of Strings: file and directory names
      */
     lazy val compileDeps_ = new StringListProp(":compile-deps", None)
-    props += compileDeps_
     def compileDeps = compileDeps_(m)
 
     /**
@@ -309,7 +305,6 @@ object ProjectConfig {
      *   List of Strings: file and directory names
      */
     lazy val compileJars_ = new StringListProp(":compile-jars", None)
-    props += compileJars_
     def compileJars = compileJars_(m)
 
     /**
@@ -322,7 +317,6 @@ object ProjectConfig {
      *   List of Strings: file and directory names
      */
     lazy val runtimeDeps_ = new StringListProp(":runtime-deps", None)
-    props += runtimeDeps_
     def runtimeDeps = runtimeDeps_(m)
 
     /**
@@ -335,7 +329,6 @@ object ProjectConfig {
      *   List of Strings: file and directory names
      */
     lazy val runtimeJars_ = new StringListProp(":runtime-jars", None)
-    props += runtimeJars_
     def runtimeJars = runtimeJars_(m)
 
     /**
@@ -348,7 +341,6 @@ object ProjectConfig {
      *   List of Strings: file and directory names
      */
     lazy val testDeps_ = new StringListProp(":test-deps", None)
-    props += testDeps_
     def testDeps = testDeps_(m)
 
     /**
@@ -360,7 +352,6 @@ object ProjectConfig {
      *   List of Strings: directory names
      */
     lazy val sourceRoots_ = new StringListProp(":source-roots", Some(":sources"))
-    props += sourceRoots_
     def sourceRoots = sourceRoots_(m)
 
     /**
@@ -375,7 +366,6 @@ object ProjectConfig {
      *     file names
      */
     lazy val referenceSourceRoots_ = new StringListProp(":reference-source-roots", None)
-    props += referenceSourceRoots_
     def referenceSourceRoots = referenceSourceRoots_(m)
 
     /**
@@ -387,7 +377,6 @@ object ProjectConfig {
      *   String: directory
      */
     lazy val target_ = new OptionalStringProp(":target", None)
-    props += target_
     def target = target_(m)
 
     /**
@@ -399,7 +388,6 @@ object ProjectConfig {
      *   String: directory
      */
     lazy val testTarget_ = new OptionalStringProp(":test-target", None)
-    props += testTarget_
     def testTarget = testTarget_(m)
 
     /**
@@ -413,7 +401,6 @@ object ProjectConfig {
      *   Boolean: t or nil
      */
     lazy val disableIndexOnStartup_ = new BooleanProp(":disable-index-on-startup", None)
-    props += disableIndexOnStartup_
     def disableIndexOnStartup = disableIndexOnStartup_(m)
 
     /**
@@ -426,7 +413,6 @@ object ProjectConfig {
      *   Boolean: t or nil
      */
     lazy val disableSourceLoadOnStartup_ = new BooleanProp(":disable-source-load-on-startup", None)
-    props += disableSourceLoadOnStartup_
     def disableSourceLoadOnStartup = disableSourceLoadOnStartup_(m)
 
     /**
@@ -441,7 +427,6 @@ object ProjectConfig {
      *   Boolean: t or nil
      */
     lazy val disableScalaJarsOnClasspath_ = new BooleanProp(":disable-scala-jars-on-classpath", None)
-    props += disableScalaJarsOnClasspath_
     def disableScalaJarsOnClasspath = disableScalaJarsOnClasspath_(m)
 
     /**
@@ -462,7 +447,6 @@ object ProjectConfig {
      *   List of Strings: regular expresions
      */
     lazy val onlyIncludeInIndex_ = new RegexListProp(":only-include-in-index", None)
-    props += onlyIncludeInIndex_
     def onlyIncludeInIndex = onlyIncludeInIndex_(m)
 
     /**
@@ -483,7 +467,6 @@ object ProjectConfig {
      *   List of Strings: regular expresions
      */
     lazy val excludeFromIndex_ = new RegexListProp(":exclude-from-index", None)
-    props += excludeFromIndex_
     def excludeFromIndex = excludeFromIndex_(m)
 
     /**
@@ -497,7 +480,6 @@ object ProjectConfig {
      *   List of Strings: arguments
      */
     lazy val extraCompilerArgs_ = new StringListProp(":compiler-args", None)
-    props += extraCompilerArgs_
     def extraCompilerArgs = extraCompilerArgs_(m)
 
     /**
@@ -510,7 +492,6 @@ object ProjectConfig {
      *   List of Strings: arguments
      */
     lazy val extraBuilderArgs_ = new StringListProp(":builder-args", None)
-    props += extraBuilderArgs_
     def extraBuilderArgs = extraBuilderArgs_(m)
 
     /**
@@ -525,7 +506,6 @@ object ProjectConfig {
      *   List of Strings: arguments
      */
     lazy val javaCompilerArgs_ = new StringListProp(":java-compiler-args", None)
-    props += javaCompilerArgs_
     def javaCompilerArgs = javaCompilerArgs_(m)
 
     /**
@@ -537,9 +517,7 @@ object ProjectConfig {
      * Arguments:
      *   String: version
      */
-    lazy val javaCompilerVersion_ = new OptionalStringProp(
-      ":java-compiler-version", None)
-    props += javaCompilerVersion_
+    lazy val javaCompilerVersion_ = new OptionalStringProp(":java-compiler-version", None)
     def javaCompilerVersion = javaCompilerVersion_(m)
 
     /**
@@ -573,7 +551,6 @@ object ProjectConfig {
      *   List of keyword, string pairs: preferences
      */
     lazy val formatPrefs_ = new SymbolMapProp(":formatting-prefs", None)
-    props += formatPrefs_
     def formatPrefs = formatPrefs_(m)
 
     private def simpleMerge(m1: KeyMap, m2: KeyMap): KeyMap = {
@@ -590,13 +567,6 @@ object ProjectConfig {
       }.toMap
       merged
     }
-
-    private lazy val m: KeyMap = {
-      val mainproj = config.toKeywordMap
-      val subproj = activeSubprojectKeyMap(mainproj).getOrElse(Map())
-      simpleMerge(mainproj, subproj)
-    }
-
   }
 
   /**

@@ -4,13 +4,13 @@ import scala.collection.immutable.Map
 import scala.util.parsing.combinator._
 import scala.util.parsing.input
 
-abstract class SExp extends WireFormat {
-  def toReadableString(debug: Boolean): String = toString
+sealed trait SExp extends WireFormat {
+  def toReadableString(debug: Boolean = false): String = toString
   override def toWireString: String = toReadableString(debug = false)
   def toScala: Any = toString
 }
 
-case class SExpList(items: Iterable[SExp]) extends SExp with Iterable[SExp] {
+case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
 
   override def iterator = items.iterator
 
@@ -70,12 +70,12 @@ case class StringAtom(value: String) extends SExp {
   override def toString = value
   override def toReadableString(debug: Boolean) = {
     if (debug && value.length() > 500) {
-      escape_string(value.substring(0, 500) + "...")
+      escapeString(value.substring(0, 500) + "...")
     } else {
-      escape_string(value)
+      escapeString(value)
     }
   }
-  def escape_string(s: String) = {
+  def escapeString(s: String) = {
     val printable = s.replace("\\", "\\\\").replace("\"", "\\\"")
     "\"" + printable + "\""
   }
@@ -148,11 +148,11 @@ object SExp extends RegexParsers {
   }
 
   def apply(items: SExp*): SExpList = {
-    SExpList(items)
+    SExpList(items.toList)
   }
 
   def apply(items: Iterable[SExp]): SExpList = {
-    SExpList(items)
+    SExpList(items.toList)
   }
 
   // Helpers for common case of key,val prop-list.
@@ -166,7 +166,7 @@ object SExp extends RegexParsers {
       case (s, SExpList(items)) if items.isEmpty => false
       case _ => true
     }
-    SExpList(nonNil.flatMap(ea => List(key(ea._1), ea._2)))
+    SExpList(nonNil.flatMap(ea => List(key(ea._1), ea._2)).toList)
   }
 
   implicit def strToSExp(str: String): SExp = {
@@ -210,13 +210,13 @@ object SExp extends RegexParsers {
   }
 
   implicit def toSExpable(o: SExp): SExpable = new SExpable {
-    override def toSExp = o
+    override def toSExp() = o
   }
 
   implicit def listToSExpable(o: Iterable[SExpable]): SExpable =
     new Iterable[SExpable] with SExpable {
       override def iterator = o.iterator
-      override def toSExp = SExp(o.map { _.toSExp })
+      override def toSExp() = SExp(o.map { _.toSExp() })
     }
 
 }

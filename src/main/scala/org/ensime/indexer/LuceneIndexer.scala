@@ -287,6 +287,7 @@ class LuceneIndex {
     includes: Iterable[Regex],
     excludes: Iterable[Regex]): Unit = {
 
+    // TODO this should come from the config!!!
     val dir: File = new File(propOrNull("ensime.cachedir"), "lucene")
 
     val hashed = files.map { f =>
@@ -464,34 +465,5 @@ class LuceneIndex {
     for (w <- indexWriter) {
       w.close()
     }
-  }
-}
-
-// TODO This needs to move into a unit test
-object IndexTest extends LuceneIndex {
-
-  def projectConfig() {
-    println("done")
-  }
-
-  def main(args: Array[String]) {
-    val classpath = "/Users/aemon/projects/ensime/target/scala-2.9.2/classes:/Users/aemon/projects/ensime/lib/org.scala-refactoring_2.9.2-SNAPSHOT-0.5.0-SNAPSHOT.jar"
-    val files = classpath.split(":").map { new File(_) }.toSet
-    val actorSystem = ActorSystem.create()
-    initialize(actorSystem, new File("."), files, List(), List())
-
-    import java.util.Scanner
-    val in = new Scanner(System.in)
-    var line = in.nextLine()
-    while (!line.isEmpty) {
-      val keys = line.split(" ")
-      for (l <- getImportSuggestions(keys, 20)) {
-        for (s <- l) {
-          println(s.name)
-        }
-      }
-      line = in.nextLine()
-    }
-    actorSystem.shutdown()
   }
 }
