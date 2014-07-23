@@ -123,7 +123,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askNotifyWhenReady() = ask(setNotifyWhenReady)
 
   def createSourceFile(path: String) = getSourceFile(path)
-  def createSourceFile(file: AbstractFile) = new BatchSourceFile(file)
+  def createSourceFile(file: AbstractFile) = getSourceFile(file)
   def createSourceFile(file: SourceFileInfo) = file match {
     case SourceFileInfo(f: File, None) => getSourceFile(f.getCanonicalPath)
     case SourceFileInfo(f: File, Some(contents)) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
