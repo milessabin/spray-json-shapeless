@@ -1,6 +1,7 @@
 package org.ensime.server
 
 import akka.actor.ActorRef
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
 import java.io.ByteArrayOutputStream
@@ -22,6 +23,8 @@ class JavaCompiler(
     config: ProjectConfig,
     val reportHandler: ReportHandler,
     val indexer: ActorRef) {
+
+  val log = LoggerFactory.getLogger(this.getClass)
 
   private val javaUnitForFile = new mutable.HashMap[String, ICompilationUnit]()
 
@@ -152,8 +155,7 @@ class JavaCompiler(
         compiler.compile(units.toArray)
       } catch {
         case e: Exception =>
-          System.err.println("Java compilation failed.")
-          e.printStackTrace(System.err)
+          log.error("Java compilation failed.", e)
       }
     }
   }
@@ -177,8 +179,7 @@ class JavaCompiler(
       compiler.compile(units.toArray)
     } catch {
       case e: Exception =>
-        System.err.println("Java compilation failed.")
-        e.printStackTrace(System.err)
+        log.error("Java compilation failed.", e)
     }
   }
 

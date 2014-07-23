@@ -49,7 +49,7 @@ case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
 case class UndoResult(id: Int, touched: Iterable[File])
 
-class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectRPCTarget {
+class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) extends ProjectRPCTarget {
   val log = LoggerFactory.getLogger(this.getClass)
 
   private val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
@@ -57,7 +57,7 @@ class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectR
   def !(msg: AnyRef) {
     actor ! msg
   }
-  // TODO This is lethal - Project is both an actor and a threaded callback target
+
   protocol.setRPCTarget(this)
 
   protected var config: ProjectConfig = ProjectConfig.nullConfig
@@ -157,10 +157,9 @@ class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectR
   }
 
   protected def restartIndexer() {
-    for (ea <- indexer) {
-      ea ! IndexerShutdownReq()
-    }
-    val newIndexer = actorSystem.actorOf(Props(new Indexer(this, protocol.conversions, config)), "indexer")
+    indexer.foreach(_ ! IndexerShutdownReq())
+
+    val newIndexer = actorSystem.actorOf(Props(new Indexer(this, this.cacheDir, protocol.conversions, config)), "indexer")
     log.info("Initing Indexer...")
     if (!config.disableIndexOnStartup) {
       newIndexer ! RebuildStaticIndexReq()
@@ -204,6 +203,5 @@ class Project(val protocol: Protocol, actorSystem: ActorSystem) extends ProjectR
     System.out.flush()
     System.exit(0)
   }
-
 }
 

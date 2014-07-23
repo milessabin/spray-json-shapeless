@@ -23,7 +23,7 @@ trait FormatHandler {
   def compileJars: List[String]
   def runtimeJars: List[String]
   def sourceRoots: List[String]
-  def referenceSourceRoots(): List[String]
+  def referenceSourceRoots: List[String]
   def target: Option[String]
   def testTarget: Option[String]
 
@@ -42,95 +42,73 @@ trait FormatHandler {
 object ProjectConfig {
   val log = LoggerFactory.getLogger("ProjectConfig")
 
+  val moduleNameKey = KeywordAtom(":module-name")
+  val activeSubprojectKey = KeywordAtom(":active-subproject")
+  val compilerDepsKey = key(":compile-deps")
+  val dependsOnModulesKey = key(":depends-on-modules")
+  val runtimeDepsKey = key(":runtime-deps")
+  val testDepsKey = key(":test-deps")
+  val referenceSourceRootsKey = key(":reference-source-roots")
+  val sourceRootsKey = key(":source-roots")
+
   type KeyMap = Map[KeywordAtom, SExp]
 
   import SExp.{ key => keyword }
 
-  trait Prop {
-    def keyName: String
-    def synonymKey: Option[String]
-    def apply(m: KeyMap): Any
-    def key: KeywordAtom = KeywordAtom(keyName)
-
-    def matchError(s: String) = {
-      log.error("Configuration Format Error: " + s)
-    }
-
-    def getStr(m: KeyMap, name: String): Option[String] = m.get(keyword(name)) match {
-      case Some(StringAtom(s)) => Some(s)
-      case None => None
-      case _ => matchError("Expecting a string value at key: " + name); None
-    }
-
-    def getInt(m: KeyMap, name: String): Option[Int] = m.get(keyword(name)) match {
-      case Some(IntAtom(i)) => Some(i)
-      case None => None
-      case _ => matchError("Expecting an integer value at key: " + name); None
-    }
-
-    def getBool(m: KeyMap, name: String): Boolean = m.get(keyword(name)) match {
-      case Some(TruthAtom()) => true
-      case Some(NilAtom()) => false
-      case None => false
-      case _ => matchError("Expecting a nil or t value at key: " + name); false
-    }
-
-    def getStrList(m: KeyMap, name: String): List[String] = m.get(keyword(name)) match {
-      case Some(SExpList(items: Iterable[_])) => items.map {
-        case s: StringAtom => s.value
-        case _ =>
-          matchError("Expecting a list of string values at key: " + name)
-          return List()
-      }.toList
-      case Some(NilAtom()) => List()
-      case Some(_) => List()
-      case None => List()
-    }
-
-    def getRegexList(m: KeyMap, name: String): List[Regex] = m.get(keyword(name)) match {
-      case Some(SExpList(items: Iterable[_])) => items.map {
-        case s: StringAtom => s.value.r
-        case _ =>
-          matchError("Expecting a list of string-encoded regexps at key: " + name)
-          return List()
-      }.toList
-      case Some(NilAtom()) => List()
-      case Some(_) => List()
-      case None => List()
-    }
-
-    def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
-      case Some(list: SExpList) =>
-        list.toKeywordMap.map {
-          case (KeywordAtom(key), sexp: SExp) => (Symbol(key.substring(1)), sexp.toScala)
-        }
-      case _ => Map[Symbol, Any]()
-    }
+  def matchError(s: String) = {
+    log.error("Configuration Format Error: " + s)
   }
 
-  // a simple string
-  case class OptionalStringProp(keyName: String, synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Option[String] = getStr(m, keyName).orElse(synonymKey.flatMap(getStr(m, _)))
+  def getBool(m: KeyMap, name: String): Boolean = m.get(keyword(name)) match {
+    case Some(TruthAtom()) => true
+    case Some(NilAtom()) => false
+    case None => false
+    case _ => matchError("Expecting a nil or t value at key: " + name); false
   }
 
-  // boolean property - [t or nil]
-  class BooleanProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Boolean = getBool(m, keyName) || synonymKey.exists(getBool(m, _))
+  def getStr(m: KeyMap, name: String, synName: String): Option[String] =
+    getStr(m, name).orElse(getStr(m, synName))
+
+  def getStr(m: KeyMap, name: String): Option[String] = getStr(m, keyword(name))
+
+  def getStr(m: KeyMap, name: KeywordAtom): Option[String] = m.get(name) match {
+    case Some(StringAtom(s)) => Some(s)
+    case None => None
+    case _ => matchError("Expecting a string value at key: " + name); None
   }
 
-  // a list of string (string*)
-  class StringListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): List[String] = getStrList(m, keyName) ++ synonymKey.map(getStrList(m, _)).getOrElse(List[String]())
+  def getStrList(m: KeyMap, name: String): List[String] = getStrList(m, keyword(name))
+
+  def getStrList(m: KeyMap, name: KeywordAtom): List[String] = m.get(name) match {
+    case Some(SExpList(items: Iterable[_])) => items.map {
+      case s: StringAtom => s.value
+      case _ =>
+        matchError("Expecting a list of string values at key: " + name)
+        return List()
+    }.toList
+    case Some(NilAtom()) => List()
+    case Some(_) => List()
+    case None => List()
   }
 
-  // a list of regex exprs (regex*)
-  class RegexListProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): List[Regex] = getRegexList(m, keyName) ++ synonymKey.map(getRegexList(m, _)).getOrElse(List[Regex]())
+  def getRegexList(m: KeyMap, name: String): List[Regex] = m.get(keyword(name)) match {
+    case Some(SExpList(items: Iterable[_])) => items.map {
+      case s: StringAtom => s.value.r
+      case _ =>
+        matchError("Expecting a list of string-encoded regexps at key: " + name)
+        return List()
+    }.toList
+    case Some(NilAtom()) => List()
+    case Some(_) => List()
+    case None => List()
   }
 
-  // key value map ([keyword value]*)
-  class SymbolMapProp(val keyName: String, val synonymKey: Option[String]) extends Prop {
-    def apply(m: KeyMap): Map[Symbol, Any] = getMap(m, keyName) ++ synonymKey.map(getMap(m, _)).getOrElse(Map[Symbol, Any]())
+  def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
+    case Some(list: SExpList) =>
+      list.toKeywordMap.map {
+        case (KeywordAtom(key), sexp: SExp) => (Symbol(key.substring(1)), sexp.toScala)
+      }
+    case _ => Map[Symbol, Any]()
   }
 
   class SExpFormatHandler(config: SExpList) extends FormatHandler {
@@ -173,22 +151,22 @@ object ProjectConfig {
       }
 
       List(
-        sourceRoots_.key,
-        runtimeDeps_.key,
-        compileDeps_.key,
-        referenceSourceRoots_.key,
-        testDeps_.key).foldLeft(main)(withMerged)
+        sourceRootsKey,
+        runtimeDepsKey,
+        compilerDepsKey,
+        referenceSourceRootsKey,
+        testDepsKey).foldLeft(main)(withMerged)
     }
 
     private def subproject(m: KeyMap, moduleName: String): Option[KeyMap] = {
       val main = subprojects(m).find { ea =>
-        ea.get(moduleName_.key) match {
+        ea.get(moduleNameKey) match {
           case Some(StringAtom(str)) => str == moduleName
           case _ => false
         }
       }
       main.map { p: KeyMap =>
-        val deps = (p.get(dependsOnModules_.key) match {
+        val deps = (p.get(dependsOnModulesKey) match {
           case Some(names: SExpList) => names.map(_.toString)
           case _ => List()
         }).flatMap { subproject(m, _) }
@@ -197,7 +175,7 @@ object ProjectConfig {
     }
 
     private def activeSubprojectKeyMap(main: KeyMap): Option[KeyMap] = {
-      main.get(activeSubproject_.key) match {
+      main.get(activeSubprojectKey) match {
         case Some(StringAtom(nm)) => subproject(main, nm)
         case _ => None
       }
@@ -211,8 +189,7 @@ object ProjectConfig {
      * Arguments:
      *   String: a filename
      */
-    lazy val rootDir_ = new OptionalStringProp(":root-dir", None)
-    def rootDir = rootDir_(m)
+    val rootDir = getStr(m, ":root-dir")
 
     /**
      * Doc Property:
@@ -224,8 +201,7 @@ object ProjectConfig {
      * Arguments:
      *   String: name
      */
-    lazy val name_ = new OptionalStringProp(":name", Some(":project-name"))
-    def name = name_(m)
+    val name = getStr(m, ":name", ":project-name")
 
     /**
      * Doc Property:
@@ -236,8 +212,7 @@ object ProjectConfig {
      * Arguments:
      *   String: package name
      */
-    lazy val pack_ = new OptionalStringProp(":package", Some(":project-package"))
-    def pack = pack_(m)
+    val pack = getStr(m, ":package", ":project-package")
 
     /**
      * Doc Property:
@@ -247,8 +222,7 @@ object ProjectConfig {
      * Arguments:
      *   String: name
      */
-    lazy val moduleName_ = new OptionalStringProp(":module-name", None)
-    def moduleName = moduleName_(m)
+    val moduleName = getStr(m, ":module-name")
 
     /**
      * Doc Property:
@@ -258,8 +232,7 @@ object ProjectConfig {
      * Arguments:
      *   String: module name
      */
-    lazy val activeSubproject_ = new OptionalStringProp(":active-subproject", None)
-    def activeSubproject = activeSubproject_(m)
+    val activeSubproject = getStr(m, activeSubprojectKey)
 
     /**
      * Doc Property:
@@ -269,8 +242,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: module names
      */
-    lazy val dependsOnModules_ = new StringListProp(":depends-on-modules", None)
-    def dependsOnModules = dependsOnModules_(m)
+    val dependsOnModules = getStrList(m, dependsOnModulesKey)
 
     /**
      * Doc Property:
@@ -280,8 +252,7 @@ object ProjectConfig {
      * Arguments:
      *   String: version number
      */
-    lazy val version_ = new OptionalStringProp(":version", None)
-    def version = version_(m)
+    val version = getStr(m, ":version")
 
     /**
      * Doc Property:
@@ -292,8 +263,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: file and directory names
      */
-    lazy val compileDeps_ = new StringListProp(":compile-deps", None)
-    def compileDeps = compileDeps_(m)
+    val compileDeps = getStrList(m, compilerDepsKey)
 
     /**
      * Doc Property:
@@ -304,8 +274,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: file and directory names
      */
-    lazy val compileJars_ = new StringListProp(":compile-jars", None)
-    def compileJars = compileJars_(m)
+    val compileJars = getStrList(m, ":compile-jars")
 
     /**
      * Doc Property:
@@ -316,8 +285,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: file and directory names
      */
-    lazy val runtimeDeps_ = new StringListProp(":runtime-deps", None)
-    def runtimeDeps = runtimeDeps_(m)
+    val runtimeDeps = getStrList(m, runtimeDepsKey)
 
     /**
      * Doc Property:
@@ -328,8 +296,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: file and directory names
      */
-    lazy val runtimeJars_ = new StringListProp(":runtime-jars", None)
-    def runtimeJars = runtimeJars_(m)
+    val runtimeJars = getStrList(m, ":runtime-jars")
 
     /**
      * Doc Property:
@@ -340,8 +307,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: file and directory names
      */
-    lazy val testDeps_ = new StringListProp(":test-deps", None)
-    def testDeps = testDeps_(m)
+    val testDeps = getStrList(m, testDepsKey)
 
     /**
      * Doc Property:
@@ -351,8 +317,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: directory names
      */
-    lazy val sourceRoots_ = new StringListProp(":source-roots", Some(":sources"))
-    def sourceRoots = sourceRoots_(m)
+    val sourceRoots = getStrList(m, ":source-roots") ++ getStrList(m, ":sources")
 
     /**
      * Doc Property:
@@ -365,8 +330,7 @@ object ProjectConfig {
      *   List of Strings: a combination of directory names or .jar or .zip
      *     file names
      */
-    lazy val referenceSourceRoots_ = new StringListProp(":reference-source-roots", None)
-    def referenceSourceRoots = referenceSourceRoots_(m)
+    val referenceSourceRoots = getStrList(m, referenceSourceRootsKey)
 
     /**
      * Doc Property:
@@ -376,8 +340,7 @@ object ProjectConfig {
      * Arguments:
      *   String: directory
      */
-    lazy val target_ = new OptionalStringProp(":target", None)
-    def target = target_(m)
+    val target = getStr(m, ":target")
 
     /**
      * Doc Property:
@@ -387,8 +350,7 @@ object ProjectConfig {
      * Arguments:
      *   String: directory
      */
-    lazy val testTarget_ = new OptionalStringProp(":test-target", None)
-    def testTarget = testTarget_(m)
+    val testTarget = getStr(m, ":test-target")
 
     /**
      * Doc Property:
@@ -400,8 +362,7 @@ object ProjectConfig {
      * Arguments:
      *   Boolean: t or nil
      */
-    lazy val disableIndexOnStartup_ = new BooleanProp(":disable-index-on-startup", None)
-    def disableIndexOnStartup = disableIndexOnStartup_(m)
+    val disableIndexOnStartup = getBool(m, ":disable-index-on-startup")
 
     /**
      * Doc Property:
@@ -412,8 +373,7 @@ object ProjectConfig {
      * Arguments:
      *   Boolean: t or nil
      */
-    lazy val disableSourceLoadOnStartup_ = new BooleanProp(":disable-source-load-on-startup", None)
-    def disableSourceLoadOnStartup = disableSourceLoadOnStartup_(m)
+    val disableSourceLoadOnStartup = getBool(m, ":disable-source-load-on-startup")
 
     /**
      * Doc Property:
@@ -426,8 +386,7 @@ object ProjectConfig {
      * Arguments:
      *   Boolean: t or nil
      */
-    lazy val disableScalaJarsOnClasspath_ = new BooleanProp(":disable-scala-jars-on-classpath", None)
-    def disableScalaJarsOnClasspath = disableScalaJarsOnClasspath_(m)
+    val disableScalaJarsOnClasspath = getBool(m, ":disable-scala-jars-on-classpath")
 
     /**
      * Doc Property:
@@ -446,8 +405,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: regular expresions
      */
-    lazy val onlyIncludeInIndex_ = new RegexListProp(":only-include-in-index", None)
-    def onlyIncludeInIndex = onlyIncludeInIndex_(m)
+    val onlyIncludeInIndex = getRegexList(m, ":only-include-in-index")
 
     /**
      * Doc Property:
@@ -466,8 +424,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: regular expresions
      */
-    lazy val excludeFromIndex_ = new RegexListProp(":exclude-from-index", None)
-    def excludeFromIndex = excludeFromIndex_(m)
+    val excludeFromIndex = getRegexList(m, ":exclude-from-index")
 
     /**
      * Doc Property:
@@ -479,8 +436,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: arguments
      */
-    lazy val extraCompilerArgs_ = new StringListProp(":compiler-args", None)
-    def extraCompilerArgs = extraCompilerArgs_(m)
+    val extraCompilerArgs = getStrList(m, ":compiler-args")
 
     /**
      * Doc Property:
@@ -491,8 +447,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: arguments
      */
-    lazy val extraBuilderArgs_ = new StringListProp(":builder-args", None)
-    def extraBuilderArgs = extraBuilderArgs_(m)
+    val extraBuilderArgs = getStrList(m, ":builder-args")
 
     /**
      * Doc Property:
@@ -505,8 +460,7 @@ object ProjectConfig {
      * Arguments:
      *   List of Strings: arguments
      */
-    lazy val javaCompilerArgs_ = new StringListProp(":java-compiler-args", None)
-    def javaCompilerArgs = javaCompilerArgs_(m)
+    val javaCompilerArgs = getStrList(m, ":java-compiler-args")
 
     /**
      * Doc Property:
@@ -517,8 +471,7 @@ object ProjectConfig {
      * Arguments:
      *   String: version
      */
-    lazy val javaCompilerVersion_ = new OptionalStringProp(":java-compiler-version", None)
-    def javaCompilerVersion = javaCompilerVersion_(m)
+    val javaCompilerVersion = getStr(m, ":java-compiler-version")
 
     /**
      * Doc Property:
@@ -550,8 +503,7 @@ object ProjectConfig {
      * Arguments:
      *   List of keyword, string pairs: preferences
      */
-    lazy val formatPrefs_ = new SymbolMapProp(":formatting-prefs", None)
-    def formatPrefs = formatPrefs_(m)
+    def formatPrefs = getMap(m, ":formatting-prefs")
 
     private def simpleMerge(m1: KeyMap, m2: KeyMap): KeyMap = {
       val keys = Set() ++ m1.keys ++ m2.keys
@@ -632,7 +584,7 @@ object ProjectConfig {
     val sourceRoots = canonicalizeDirs(conf.sourceRoots, rootDir).toSet
     log.info("Using source roots: " + sourceRoots)
 
-    val referenceSourceRoots = canonicalizeFiles(conf.referenceSourceRoots(), rootDir).toSet
+    val referenceSourceRoots = canonicalizeFiles(conf.referenceSourceRoots, rootDir).toSet
     log.info("Using reference source roots: " + referenceSourceRoots)
 
     val target: Option[CanonFile] = ensureDirectory(conf.target, rootDir)
@@ -646,6 +598,7 @@ object ProjectConfig {
 
     new ProjectConfig(
       conf.name,
+      // TODO This looks broken
       canonicalizeFile("lib/scala-library.jar", serverRoot),
       canonicalizeFile("lib/scala-reflect.jar", serverRoot),
       canonicalizeFile("lib/scala-compiler.jar", serverRoot),
@@ -744,6 +697,7 @@ case class ProjectConfig(
     onlyIncludeInIndex: Iterable[Regex] = List(),
     excludeFromIndex: Iterable[Regex] = List(),
     extraCompilerArgs: Iterable[String] = List(),
+    // TODO This appears to be unused
     extraBuilderArgs: Iterable[String] = List(),
     javaCompilerArgs: Iterable[String] = List(),
     javaCompilerVersion: Option[String] = None) {
@@ -821,16 +775,6 @@ case class ProjectConfig(
     sources.map(_.getPath).toSet
   }
 
-  def compilerArgs = List(
-    "-classpath", compilerClasspath,
-    "-verbose") ++ extraCompilerArgs
-
-  def builderArgs = List(
-    "-classpath", compilerClasspath,
-    "-verbose",
-    "-d", target.getOrElse(new File(root, "classes")).getPath,
-    sourceFilenames.mkString(" ")) ++ extraBuilderArgs
-
   def compilerClasspath: String = {
     val files = compilerClasspathFilenames
     if (files.isEmpty) {
@@ -848,9 +792,7 @@ case class ProjectConfig(
     paths.mkString(File.pathSeparator)
   }
 
-  def sourcepath = {
-    sourceRoots.map(_.getPath).toSet.mkString(File.pathSeparator)
-  }
+  def sourcepath = sourceRoots.map(_.getPath).toSet.mkString(File.pathSeparator)
 
   def replClasspath = runtimeClasspath
 

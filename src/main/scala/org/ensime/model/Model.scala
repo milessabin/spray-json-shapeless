@@ -476,11 +476,6 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         isArrowType(tpe),
         ownerTpe.map(cacheType))
     }
-
-    def nullInfo() = {
-      new SymbolInfo("NA", "NA", NoPosition, TypeInfo.nullInfo, false, None)
-    }
-
   }
 
   object CompletionInfo {

@@ -268,13 +268,12 @@ object LuceneIndex extends StringSimilarity {
 
 }
 
-class LuceneIndex {
+class LuceneIndex(cacheDir: File) {
 
   import LuceneIndex._
 
   private val analyzer = new SimpleAnalyzer(Version.LUCENE_35)
-  private val config: IndexWriterConfig = new IndexWriterConfig(
-    Version.LUCENE_35, analyzer)
+  private val config: IndexWriterConfig = new IndexWriterConfig(Version.LUCENE_35, analyzer)
   config.setSimilarity(Similarity)
   private var index: FSDirectory = null
   private var indexWriter: Option[IndexWriter] = None
@@ -287,8 +286,7 @@ class LuceneIndex {
     includes: Iterable[Regex],
     excludes: Iterable[Regex]): Unit = {
 
-    // TODO this should come from the config!!!
-    val dir: File = new File(propOrNull("ensime.cachedir"), "lucene")
+    val dir: File = new File(cacheDir, "lucene")
 
     val hashed = files.map { f =>
       if (f.exists) {
