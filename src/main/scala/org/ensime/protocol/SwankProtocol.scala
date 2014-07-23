@@ -566,8 +566,8 @@ class SwankProtocol extends Protocol {
        *   )
        * Example call:
        *   (:swank-rpc (swank:init-project (:use-sbt t :compiler-args
-       *   (-Ywarn-dead-code -Ywarn-catches -Xstrict-warnings)
-       *   :root-dir /Users/aemon/projects/ensime/)) 42)
+       *   ("-Ywarn-dead-code" "-Ywarn-catches" "-Xstrict-warnings")
+       *   :root-dir "/Users/aemon/projects/ensime/")) 42)
        * Example return:
        *   (:return (:ok (:project-name "ensime" :source-roots
        *   ("/Users/aemon/projects/ensime/src/main/scala"

@@ -79,9 +79,9 @@ class Analyzer(
 
     Future {
       if (!config.disableSourceLoadOnStartup) {
-        println("Building Java sources...")
+        log.info("Building Java sources...")
         javaCompiler.compileAll()
-        println("Building Scala sources...")
+        log.info("Building Scala sources...")
         reporter.disable()
         scalaCompiler.askReloadAllFiles()
         scalaCompiler.askNotifyWhenReady()

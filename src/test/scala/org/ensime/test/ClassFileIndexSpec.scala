@@ -5,10 +5,10 @@ import org.scalatest.Matchers
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
 import org.ensime.util.SExp
-import org.ensime.util.FileUtils._
 import scala.tools.nsc.{ Global, Settings }
 import scala.tools.nsc.io.{ Jar, File, Directory, Path, PlainFile }
 import scala.tools.nsc.reporters.ConsoleReporter
+import TestUtil._
 
 class ClassFileIndexSpec extends FunSpec with Matchers {
 

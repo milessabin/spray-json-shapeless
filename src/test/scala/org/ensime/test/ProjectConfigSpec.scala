@@ -4,8 +4,9 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.config.ProjectConfig
 import org.ensime.util.SExp
-import org.ensime.util.FileUtils._
 import org.ensime.util.CanonFile
+
+import TestUtil._
 
 class ProjectConfigSpec extends FunSpec with Matchers {
 
@@ -16,14 +17,10 @@ class ProjectConfigSpec extends FunSpec with Matchers {
     }
   }
 
-  def parse(ss: List[String]): ProjectConfig = {
-    parse(ss.mkString("\n"))
-  }
-
   describe("ProjectConfigSpec") {
 
     it("should parse a simple name correctly") {
-      assert(parse("(:name \"dude\")").name.get == "dude")
+      assert(parse("""(:name "dude")""").name.get == "dude")
     }
 
     it("should parse a name with backslashes and quotes") {
@@ -31,24 +28,24 @@ class ProjectConfigSpec extends FunSpec with Matchers {
     }
 
     it("should parse name's synonym") {
-      assert(parse("(:project-name \"dude\")").name.get == "dude")
+      assert(parse("""(:project-name "dude")""").name.get == "dude")
     }
 
     it("should respect active-subproject") {
-      val conf = parse(List(
-        "(",
-        "  :subprojects (",
-        "     (",
-        "     :name \"Hello\"",
-        "     :module-name \"A\"",
-        "     )",
-        "     (",
-        "     :name \"Goodbye\"",
-        "     :module-name \"B\"",
-        "     )",
-        "  )",
-        "  :active-subproject \"B\"",
-        ")"))
+      val conf = parse("""
+        |(
+        |  :subprojects (
+        |     (
+        |     :name "Hello"
+        |     :module-name "A"
+        |     )
+        |     (
+        |     :name "Goodbye"
+        |     :module-name "B"
+        |     )
+        |  )
+        |  :active-subproject "B"
+        |)""".stripMargin)
       assert(conf.name.get == "Goodbye")
     }
 
@@ -56,23 +53,23 @@ class ProjectConfigSpec extends FunSpec with Matchers {
       withTemporaryDirectory { dir =>
         val root1 = CanonFile(createUniqueDirectory(dir))
         val root2 = CanonFile(createUniqueDirectory(dir))
-        val conf = parse(List(
-          "(",
-          "  :subprojects (",
-          "     (",
-          "     :name \"Proj A\"",
-          "     :module-name \"A\"",
-          "     :source-roots (\"" + root1 + "\")",
-          "     )",
-          "     (",
-          "     :name \"Proj B\"",
-          "     :module-name \"B\"",
-          "     :source-roots (\"" + root2 + "\")",
-          "     :depends-on-modules (\"A\")",
-          "     )",
-          "  )",
-          "  :active-subproject \"B\"",
-          ")"))
+        val conf = parse(s"""
+          |(
+          |  :subprojects (
+          |     (
+          |     :name "Proj A"
+          |     :module-name "A"
+          |     :source-roots ("$root1")
+          |     )
+          |     (
+          |     :name "Proj B"
+          |     :module-name "B"
+          |     :source-roots ("$root2")
+          |     :depends-on-modules ("A")
+          |     )
+          |  )
+          |  :active-subproject "B"
+          |)""".stripMargin)
         assert(conf.name.get == "Proj B")
         assert(conf.sourceRoots.toSet.contains(root1))
         assert(conf.sourceRoots.toSet.contains(root2))
@@ -85,26 +82,26 @@ class ProjectConfigSpec extends FunSpec with Matchers {
         val root1 = CanonFile(createUniqueDirectory(dir))
         val root2 = CanonFile(createUniqueDirectory(dir))
         val target = CanonFile(createUniqueDirectory(dir))
-        val conf = parse(List(
-          "(",
-          "     :name \"Outer\"",
-          "     :target \"" + target + "\"",
-          "     :source-roots (\"" + root0 + "\")",
-          "  :subprojects (",
-          "     (",
-          "     :name \"Proj A\"",
-          "     :module-name \"A\"",
-          "     :source-roots (\"" + root1 + "\")",
-          "     )",
-          "     (",
-          "     :name \"Proj B\"",
-          "     :module-name \"B\"",
-          "     :source-roots (\"" + root2 + "\")",
-          "     :depends-on-modules (\"A\")",
-          "     )",
-          "  )",
-          "  :active-subproject \"B\"",
-          ")"))
+        val conf = parse(s"""
+          |(
+          |     :name "Outer"
+          |     :target "$target"
+          |     :source-roots ("$root0")
+          |  :subprojects (
+          |     (
+          |     :name "Proj A"
+          |     :module-name "A"
+          |     :source-roots ("$root1")
+          |     )
+          |     (
+          |     :name "Proj B"
+          |     :module-name "B"
+          |     :source-roots ("$root2")
+          |     :depends-on-modules ("A")
+          |     )
+          |  )
+          |  :active-subproject "B"
+          |)""".stripMargin)
         assert(conf.name.get == "Proj B")
         assert(conf.sourceRoots.toSet.contains(root0))
         assert(conf.sourceRoots.toSet.contains(root1))
@@ -123,13 +120,13 @@ class ProjectConfigSpec extends FunSpec with Matchers {
     it("should reject an incorrect list of strings") {
       withTemporaryDirectory { dir =>
         val root0 = CanonFile(createUniqueDirectory(dir))
-        val conf = parse("(:source-roots (\"" + root0 + "\" 1000))")
+        val conf = parse(s"""(:source-roots ("$root0" 1000))""")
         assert(conf.sourceRoots.toSet == Set())
       }
     }
 
     it("can parse a regex list") {
-      val conf = parse("( :only-include-in-index (\"x\") )")
+      val conf = parse("""( :only-include-in-index ("x") )""")
       assert(conf.onlyIncludeInIndex.map(_.toString()) == List("x"))
     }
 
@@ -139,7 +136,7 @@ class ProjectConfigSpec extends FunSpec with Matchers {
     }
 
     it("should reject an incorrect regex list") {
-      val conf = parse("( :only-include-in-index (\"x\" 2) )")
+      val conf = parse("""( :only-include-in-index ("x" 2) )""")
       assert(conf.onlyIncludeInIndex.toList == List())
     }
 

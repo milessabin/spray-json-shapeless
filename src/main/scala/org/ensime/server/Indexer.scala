@@ -32,12 +32,13 @@ case class AbstractFiles(files: Set[AbstractFile])
  * The main index actor.
  */
 class Indexer(project: Project,
+    cacheDir: File,
     protocol: ProtocolConversions,
     config: ProjectConfig) extends Actor with ActorLogging {
 
   import protocol._
 
-  val index = new LuceneIndex
+  val index = new LuceneIndex(cacheDir)
   val classFileIndex = new ClassFileIndex(config)
 
   override def receive = {

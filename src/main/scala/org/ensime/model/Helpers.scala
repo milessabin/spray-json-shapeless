@@ -216,36 +216,4 @@ trait Helpers { self: Global =>
       S.Field
     else S.Nil
   }
-
-  def symbolSummary(sym: Symbol): Map[String, Any] = {
-    import scala.tools.nsc.symtab.Flags._
-    Map(
-      "name" -> sym.toString(),
-      "  isMethod" -> sym.isMethod,
-      "  isAbstractClass" -> sym.isAbstractClass,
-      "  isPackage" -> sym.hasPackageFlag,
-      "  isValue" -> sym.isValue,
-      "  isVariable" -> sym.isVariable,
-      "  isClass" -> sym.isClass,
-      "  isType" -> sym.isType,
-      "  isTrait" -> sym.isTrait,
-      "  isInterface" -> sym.isInterface,
-      "  isModule" -> sym.isModule,
-      "  isModuleClass" -> sym.isModuleClass,
-      "  isConstructor" -> sym.isConstructor,
-      "  hasAccessorFlag" -> sym.hasFlag(ACCESSOR),
-      "  hasLocalFlag" -> sym.hasFlag(LOCAL),
-      "  isCase" -> sym.isCase,
-      "  isCaseAccessor" -> sym.isCaseAccessor,
-      "  isValueParameter" -> sym.isValueParameter,
-      "  isTypeParameter" -> sym.isTypeParameter,
-      "  isSynthetic" -> sym.isSynthetic,
-      "  isMutable" -> sym.isMutable,
-      "  isFinal" -> sym.isFinal,
-      "  isGetter" -> sym.isGetter,
-      "  isSetter" -> sym.isSetter,
-      "  hasTraitFlag" -> sym.hasFlag(TRAIT)
-    )
-  }
-
 }

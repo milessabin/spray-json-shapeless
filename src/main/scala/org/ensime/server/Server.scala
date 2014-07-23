@@ -4,9 +4,10 @@ import java.io._
 import java.net.{ ServerSocket, Socket, InetAddress }
 import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
 import org.ensime.protocol._
-import org.ensime.util.WireFormat
-import org.ensime.config.Environment
+import org.ensime.util.{ SExp, WireFormat }
+import org.ensime.config.{ ProjectConfig, Environment }
 import org.slf4j._
+import scala.io.Source
 import scala.util.Properties._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
@@ -66,33 +67,36 @@ object Server {
   val log = LoggerFactory.getLogger(classOf[Server])
 
   def main(args: Array[String]): Unit = {
-    def setFallbackProp(name: String, fallback: String): Unit = {
-      // this is nasty, use typesafe Config instead
-      setProp(name, propOrElse(name, fallback))
-    }
-    setFallbackProp("ensime.cachedir", propOrNull("user.dir") + "/" + ".ensime_cache")
-    setFallbackProp("actors.corePoolSize", "10")
-    setFallbackProp("actors.maxPoolSize", "100")
+    val ensimeFileStr = propOrNone("ensime.config").getOrElse(
+      throw new RuntimeException("ensime.config (the location of the .ensime file) must be set"))
 
-    val (cacheDir, host, requestedPort) = if (args.length > 0) {
-      // legacy interface
-      log.warn("WARNING: org.ensime.server.Server now takes properties instead of arguments")
-      args match {
-        case Array(a, b, c) => (
-          new File(new File(a).getParentFile, ".ensime_cache"), b, c.toInt)
-        case Array(portfile) => (
-          new File(new File(portfile).getParentFile, ".ensime_cache"), "127.0.0.1", 0)
-        case _ =>
-          throw new IllegalArgumentException("org.ensime.server.Server invoked incorrectly")
-      }
-    } else (
-      new File(propOrNull("ensime.cachedir")),
-      propOrElse("ensime.hostname", "127.0.0.1"),
-      propOrElse("ensime.requestport", "0").toInt
-    )
+    val ensimeFile = new File(ensimeFileStr)
+    if (!ensimeFile.exists() || !ensimeFile.isFile)
+      throw new RuntimeException(s".ensime file ($ensimeFile) not found")
 
-    val server = new Server(cacheDir, host, requestedPort)
+    val config = readEnsimeConfig(ensimeFile)
+
+    val cacheDirStr = propOrNone("ensime.cachedir").getOrElse(throw new RuntimeException("ensime.cachedir must be set"))
+    val cacheDir = new File(cacheDirStr)
+
+    val server = new Server(cacheDir, "127.0.0.1", 0)
     server.startSocketListener()
+  }
+
+  def readEnsimeConfig(ensimeFile: File): ProjectConfig = {
+
+    val configSrc = Source.fromFile(ensimeFile)
+    try {
+      val content = configSrc.getLines().filterNot(_.startsWith(";;")).mkString("\n")
+      ProjectConfig.fromSExp(SExp.read(content)) match {
+        case Right(config) =>
+          config
+        case Left(ex) =>
+          throw ex
+      }
+    } finally {
+      configSrc.close()
+    }
   }
 }
 
@@ -115,7 +119,7 @@ class Server(cacheDir: File, host: String, requestedPort: Int) {
   writePort(cacheDir, actualPort)
 
   val protocol = new SwankProtocol
-  val project = new Project(protocol, actorSystem)
+  val project = new Project(cacheDir, protocol, actorSystem)
 
   def startSocketListener(): Unit = {
     try {

@@ -8,6 +8,7 @@ import akka.pattern.Patterns
 import org.apache.commons.io.{ FileUtils => IOFileUtils }
 import org.ensime.protocol.{ IncomingMessageEvent, OutgoingMessageEvent }
 import org.ensime.server.Server
+import org.ensime.test.TestUtil
 import org.ensime.util._
 import org.scalatest.Assertions
 import org.slf4j.LoggerFactory
@@ -147,10 +148,11 @@ object IntgUtil extends Assertions {
   def withTestProject(projectSource: String, projectName: String)(f: (JFile, InteractorHelper) => Unit): Unit = {
     val log = LoggerFactory.getLogger("IntgTest_" + projectName)
 
-    FileUtils.withTemporaryDirectory { projectBase =>
+    TestUtil.withTemporaryDirectory { projectBase =>
       log.info("Target dir = " + projectBase)
       log.info("Copying files")
       IOFileUtils.copyDirectory(new java.io.File("src/test/resources/intg/simple"), projectBase)
+
       log.info("Building ensime configuration")
       val buildProcess = scala.sys.process.Process(List("sbt", "compile", "ensime"), Some(projectBase))
       buildProcess.!
@@ -158,6 +160,9 @@ object IntgUtil extends Assertions {
       val dotEnsimeFile = SFile(new JFile(projectBase, ".ensime")).lines().drop(3).mkString("\n") // slurp()
 
       val cacheDir = new JFile(projectBase, ".ensime_cache")
+
+      if (cacheDir.exists())
+        FileUtils.delete(cacheDir)
 
       val server = new Server(cacheDir, "localhost", 0)
 
@@ -170,8 +175,6 @@ object IntgUtil extends Assertions {
       // drop the last brace in the ensime file and add some extra confg
       val configStr = dotEnsimeFile.trim.dropRight(1) +
         s"""
-         | :rootDir "$projectBase"
-         | :source-jars-dir "$projectBase/.ensime_cache/dep-src/source-jars/"
          | :active-subproject "simple"
          |)
          """.stripMargin
