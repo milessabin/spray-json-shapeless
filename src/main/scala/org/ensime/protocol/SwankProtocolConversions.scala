@@ -144,6 +144,15 @@ class SwankProtocolConversions extends ProtocolConversions {
 
   def toWF(evt: SwankEvent): SExp = {
     evt match {
+      case g: GeneralSwankEvent =>
+        toWF(g)
+      case d: DebugEvent =>
+        toWF(d)
+    }
+  }
+
+  def toWF(evt: GeneralSwankEvent): SExp = {
+    evt match {
       /**
        * Doc Event:
        *   :compiler-ready
@@ -237,7 +246,7 @@ class SwankProtocolConversions extends ProtocolConversions {
     }
   }
 
-  override def toWF(evt: DebugEvent): SExp = {
+  def toWF(evt: DebugEvent): SExp = {
     evt match {
       /**
        * Doc Event:

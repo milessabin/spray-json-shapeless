@@ -16,14 +16,7 @@ case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: String, callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
 
-case class AsyncEvent(evt: WireFormat)
-
-object AsyncEvent {
-  val ev = new SwankProtocolConversions
-  import ev._
-  def apply(ev: SwankEvent) = new AsyncEvent(toWF(ev))
-  def apply(ev: DebugEvent) = new AsyncEvent(toWF(ev))
-}
+case class AsyncEvent(evt: SwankEvent)
 
 case object AnalyzerShutdownEvent
 
@@ -52,10 +45,15 @@ case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
 case class UndoResult(id: Int, touched: Iterable[File])
 
-class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) extends ProjectRPCTarget {
+case object ClientConnectedEvent
+
+class Project(projectConfig: ProjectConfig,
+    cacheDir: File,
+    val protocol: Protocol,
+    actorSystem: ActorSystem) extends ProjectRPCTarget {
   val log = LoggerFactory.getLogger(this.getClass)
 
-  private val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
+  protected val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
 
   def !(msg: AnyRef) {
     actor ! msg
@@ -63,7 +61,7 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
 
   protocol.setRPCTarget(this)
 
-  protected var config: ProjectConfig = ProjectConfig.nullConfig
+  protected var config: ProjectConfig = projectConfig
 
   protected var analyzer: Option[ActorRef] = None
   protected var indexer: Option[ActorRef] = None
@@ -88,6 +86,8 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   class ProjectActor extends Actor {
+    var indexerReady = false
+
     override def receive = {
       case x: Any =>
         try {
@@ -104,6 +104,14 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
       msg match {
         case IncomingMessageEvent(msg: WireFormat) =>
           protocol.handleIncomingMessage(msg)
+        case IndexerReadyEvent =>
+          log.info("Project notified that indexer is ready")
+          self ! AsyncEvent(IndexerReadyEvent)
+        case ClientConnectedEvent =>
+          log.info("ClientConnectedEvent" + indexerReady)
+          // if the indexer had finished initialing generate a fake IndexerReadyEvent to notify emacs we are ready.
+          if (indexerReady)
+            protocol.sendEvent(IndexerReadyEvent)
         case AddUndo(sum, changes) =>
           addUndo(sum, changes)
         case RPCResultEvent(value, callId) =>
@@ -142,29 +150,27 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
     }
   }
 
-  protected def initProject(conf: ProjectConfig) {
-    config = conf
-    restartIndexer()
-    restartCompiler()
+  def initProject() {
+    startIndexer()
+    startCompiler()
     shutdownDebugger()
     undos.clear()
     undoCounter = 0
   }
 
-  protected def restartIndexer() {
+  protected def startIndexer() {
     indexer.foreach(_ ! IndexerShutdownReq)
     indexer = None
     val newIndexer = actorSystem.actorOf(Props(new Indexer(this, this.cacheDir, protocol.conversions, config)), "indexer")
     log.info("Initialising Indexer...")
+
     if (!config.disableIndexOnStartup) {
       newIndexer ! RebuildStaticIndexReq
     }
     indexer = Some(newIndexer)
   }
 
-  protected def restartCompiler() {
-    analyzer.foreach(_ ! AnalyzerShutdownEvent)
-    analyzer = None
+  protected def startCompiler() {
     indexer match {
       case Some(indexerVal) =>
         val newAnalyzer = actorSystem.actorOf(Props(new Analyzer(this, indexerVal, protocol.conversions, config)), "analyzer")
@@ -192,7 +198,13 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   protected def shutdownServer() {
-    log.info("Server is exiting...")
+    System.out.println("Server is exiting...")
+    System.out.flush()
+
+    indexer.foreach(_ ! IndexerShutdownReq)
+    analyzer.foreach(_ ! AnalyzerShutdownEvent)
+
+    Thread.sleep(5000)
     System.exit(0)
   }
 }

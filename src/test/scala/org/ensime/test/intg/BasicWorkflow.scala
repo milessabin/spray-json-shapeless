@@ -61,9 +61,31 @@ class BasicWorkflow extends FunSpec with Matchers {
             fail("Failed to understand inspect symbol response: " + inspectResp)
         }
 
+        // something is triggering another typecheck so need to wait for this
+        // to ensure uses-of-symbols-at-point
+        interactor.expectAsync(10 seconds, "(:full-typecheck-finished)")
+
         // uses of symbol
         interactor.expectRPC(30 seconds, s"""(swank:uses-of-symbol-at-point $fooFile 121)""",
           s"""(:ok ((:file $fooFile :offset 114 :start 110 :end 172) (:file $fooFile :offset 273 :start 269 :end 283)))"""
+        )
+
+        // I don't like this much, but its the best I can do right now
+        val ivyCacheDir = CanonFile(System.getProperty("user.home") + "/.ivy2/cache/").toString
+
+        // M-. internal symbol
+        interactor.expectRPC(30 seconds, s"""(swank:symbol-at-point $fooFile 276)""",
+          s"""(:ok (:name "testMethod" :local-name "testMethod" :type (:name "(i: Int, s: String)Int" :type-id 130 :arrow-type t :result-type (:name "Int" :type-id 1 :full-name "scala.Int" :decl-as class :pos (:file "scala/Int.scala" :archive "$ivyCacheDir/org.scala-lang/scala-library/srcs/scala-library-2.11.2-sources.jar" :offset 1093)) :param-sections ((:params (("i" (:name "Int" :type-id 1 :full-name "scala.Int" :decl-as class :pos (:file "scala/Int.scala" :archive "$ivyCacheDir/org.scala-lang/scala-library/srcs/scala-library-2.11.2-sources.jar" :offset 1093))) ("s" (:name "String" :type-id 37 :full-name "java.lang.String" :decl-as class)))))) :decl-pos (:file $fooFile :offset 114) :is-callable t :owner-type-id 131))"""
+        )
+
+        // M-.  external symbol
+        interactor.expectRPC(30 seconds, s"""(swank:symbol-at-point $fooFile 190)""",
+          s"""(:ok (:name "apply" :local-name "apply" :type (:name "[A, B](elems: (A, B)*)CC[A,B]" :type-id 136 :arrow-type t :result-type (:name "CC" :type-id 137 :full-name "scala.collection.generic.CC" :type-args ((:name "A" :type-id 132 :full-name "scala.collection.generic.A") (:name "B" :type-id 133 :full-name "scala.collection.generic.B"))) :param-sections ((:params (("elems" (:name "<repeated>" :type-id 135 :full-name "scala.<repeated>" :decl-as class :type-args ((:name "Tuple2" :type-id 134 :full-name "scala.Tuple2" :decl-as class :type-args ((:name "A" :type-id 132 :full-name "scala.collection.generic.A") (:name "B" :type-id 133 :full-name "scala.collection.generic.B")))))))))) :decl-pos (:file "scala/collection/generic/GenMapFactory.scala" :archive "$ivyCacheDir/org.scala-lang/scala-library/srcs/scala-library-2.11.2-sources.jar" :offset 1846) :is-callable t :owner-type-id 138))"""
+        )
+
+        // C-c C-v p Inspect source of current package
+        interactor.expectRPC(30 seconds, s"""(swank:inspect-package-by-path "org.example")""",
+          s"""(:ok (:name "example" :info-type package :full-name "org.example" :members ((:name "Foo$$" :type-id 139 :full-name "org.example.Foo$$" :decl-as object :pos (:file $fooFile :offset 28)))))"""
         )
       }
     }

@@ -1564,11 +1564,8 @@ class SwankProtocol extends Protocol {
     }
   }
 
-  def sendEvent(value: WireFormat): Unit = {
-    value match {
-      case sexp: SExp => sendMessage(sexp)
-      case _ => throw new IllegalStateException("Not a SExp: " + value)
-    }
+  override def sendEvent(event: SwankEvent): Unit = {
+    sendMessage(conversions.toWF(event))
   }
 
   def sendRPCError(code: Int, detail: String, callId: Int): Unit = {

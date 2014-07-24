@@ -157,7 +157,7 @@ object IntgUtil extends Assertions {
       val destFile = Path(projectBase) / relativeSrc
       destFile.parent.createDirectory()
       val writer = destFile.bufferedWriter()
-      val source = Source.fromFile(srcFile.path)
+      val source = Source.fromFile(srcFile.path, "UTF-8")
       try {
         source.getLines().foreach(line => {
           writer.write(line)
@@ -190,19 +190,20 @@ object IntgUtil extends Assertions {
       val cmdLine =
         (if (sys.props("os.name").toLowerCase.contains("windows"))
           List("cmd", "/c")
-        else Nil) ::: List("sbt", "--warn", "gen-ensime")
+        else Nil) ::: List("sbt", "--warn", "compile", "gen-ensime")
 
       val buildProcess = scala.sys.process.Process(cmdLine, Some(projectBase))
       buildProcess.!
       log.info("Build done")
-      val dotEnsimeFile = SFile(new JFile(projectBase, ".ensime")).lines().mkString("\n") // slurp()
+      val ensimeFile = new JFile(projectBase, ".ensime")
+      val ensimeFileContents = SFile(ensimeFile).lines().mkString("\n") // slurp()
 
       val cacheDir = new JFile(projectBase, ".ensime_cache")
 
       if (cacheDir.exists())
         FileUtils.delete(cacheDir)
 
-      val server = new Server(cacheDir, "localhost", 0)
+      val server = Server.initialiseServer(ensimeFile, "simple", projectBase, cacheDir)
 
       implicit val actorSystem = server.actorSystem
 
@@ -210,33 +211,33 @@ object IntgUtil extends Assertions {
       interactor.expectRPC(1 seconds, "(swank:connection-info)",
         """(:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9"))""")
 
-      // drop the last brace in the ensime file and add some extra confg
-      val configStr = dotEnsimeFile.trim.dropRight(1) +
+      // drop the last brace in the ensime file and add some extra config
+      val configStr = ensimeFileContents.trim.dropRight(1) +
         s"""
          | :active-subproject "simple"
          |)
          """.stripMargin
 
       val initMsg = s"""(swank:init-project
-                        | $configStr
+                        | ($configStr)
                         | )""".stripMargin
 
-      val sourceRoots = TestUtil.fileToWireString(CanonFile(projectBase + "/src/main/scala"))
-      val initResult = interactor.sendRPCString(10 seconds, initMsg)
-      log.info("Got init response " + initResult)
-      assert(initResult.contains(sourceRoots))
-      //      interactor.expectRPC(3 seconds, initMsg,
-      //        s"""(:ok (:project-name "$projectName" :source-roots ($sourceRoots)))""")
+      val sourceRoots = CanonFile(projectBase + "/src/main/scala").toString
+      // we have to break it out because sourceroots also contains src.zip
+      val initResp = interactor.sendRPCString(3 seconds, initMsg)
+      // return is of the form (:ok ( :project-name ...)) so extract the data
+      val initExp = SExpExplorer(SExpParser.read(initResp)).asList.get(1).asMap
+      assert(initExp.getString(":project-name") == projectName)
 
-      interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
-      interactor.expectAsync(30 seconds, """(:compiler-ready)""")
-      interactor.expectAsync(30 seconds, """(:full-typecheck-finished)""")
+      assert(initExp.getStringList(":source-roots").toSet.contains(sourceRoots))
+      //      interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
+      //      interactor.expectAsync(30 seconds, """(:compiler-ready)""")
+      //      interactor.expectAsync(30 seconds, """(:full-typecheck-finished)""")
       interactor.expectAsync(60 seconds, """(:indexer-ready)""")
 
       f(projectBase, interactor)
 
       server.shutdown()
-
     }
   }
 }

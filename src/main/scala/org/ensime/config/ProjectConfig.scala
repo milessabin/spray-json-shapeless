@@ -14,7 +14,6 @@ trait FormatHandler {
   def rootDir: Option[String]
 
   def name: Option[String]
-  def pack: Option[String]
   def version: Option[String]
 
   def compileDeps: List[String]
@@ -34,7 +33,6 @@ trait FormatHandler {
   def onlyIncludeInIndex: List[Regex]
   def excludeFromIndex: List[Regex]
   def extraCompilerArgs: List[String]
-  def extraBuilderArgs: List[String]
   def javaCompilerArgs: List[String]
   def javaCompilerVersion: Option[String]
 }
@@ -205,17 +203,6 @@ object ProjectConfig {
      *   String: name
      */
     val name = getStr(m, ":name", ":project-name")
-
-    /**
-     * Doc Property:
-     *   :package
-     * Summary:
-     *   An optional 'primary' package for your project. Used by ENSIME to populate
-     *     the project outline view.
-     * Arguments:
-     *   String: package name
-     */
-    val pack = getStr(m, ":package", ":project-package")
 
     /**
      * Doc Property:
@@ -443,17 +430,6 @@ object ProjectConfig {
 
     /**
      * Doc Property:
-     *   :builder-args
-     * Summary:
-     *   Specify arguments that should be passed to ENSIME's internal
-     *     incremental compiler.
-     * Arguments:
-     *   List of Strings: arguments
-     */
-    val extraBuilderArgs = getStrList(m, ":builder-args")
-
-    /**
-     * Doc Property:
      *   :java-compiler-args
      * Summary:
      *   Specify arguments that should be passed to ENSIME's internal
@@ -618,7 +594,6 @@ object ProjectConfig {
       conf.onlyIncludeInIndex,
       conf.excludeFromIndex,
       conf.extraCompilerArgs,
-      conf.extraBuilderArgs,
       conf.javaCompilerArgs,
       conf.javaCompilerVersion)
   }
@@ -695,12 +670,10 @@ case class ProjectConfig(
     disableIndexOnStartup: Boolean = false,
     disableSourceLoadOnStartup: Boolean = false,
     disableScalaJarsOnClasspath: Boolean = false,
-    onlyIncludeInIndex: Iterable[Regex] = List.empty,
-    excludeFromIndex: Iterable[Regex] = List.empty,
-    extraCompilerArgs: Iterable[String] = List.empty,
-    // TODO This appears to be unused
-    extraBuilderArgs: Iterable[String] = List.empty,
-    javaCompilerArgs: Iterable[String] = List.empty,
+    onlyIncludeInIndex: Iterable[Regex] = List(),
+    excludeFromIndex: Iterable[Regex] = List(),
+    extraCompilerArgs: Iterable[String] = List(),
+    javaCompilerArgs: Iterable[String] = List(),
     javaCompilerVersion: Option[String] = None) {
 
   import ProjectConfig.log
@@ -764,6 +737,7 @@ case class ProjectConfig(
     ProjectConfig.javaBootJars ++ compilerClasspathFilenames.map(new File(_))
   }
 
+  // TODO @fommil I don't think root should be in
   def sources: Set[CanonFile] = {
     expandRecursively(root, sourceRoots, isValidSourceFile).toSet
   }
@@ -792,8 +766,6 @@ case class ProjectConfig(
     val paths = deps.map(_.getPath).toSet
     paths.mkString(File.pathSeparator)
   }
-
-  def sourcepath = sourceRoots.map(_.getPath).toSet.mkString(File.pathSeparator)
 
   def replClasspath = runtimeClasspath
 

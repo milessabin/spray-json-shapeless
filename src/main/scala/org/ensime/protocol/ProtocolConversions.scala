@@ -11,7 +11,6 @@ import scala.reflect.internal.util.{ RangePosition, Position }
 trait ProtocolConversions {
   def toWF(evt: ConnectionInfo): WireFormat
   def toWF(evt: SwankEvent): WireFormat
-  def toWF(evt: DebugEvent): WireFormat
 
   def toWF(obj: DebugLocation): WireFormat
   def toWF(obj: DebugValue): WireFormat

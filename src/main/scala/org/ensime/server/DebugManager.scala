@@ -6,7 +6,7 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
-import org.ensime.protocol.ProtocolConversions
+import org.ensime.protocol._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.collection.mutable.ListBuffer
@@ -39,21 +39,6 @@ abstract class DebugVmStatus
 
 case object DebugVmSuccess extends DebugVmStatus
 case class DebugVmError(code: Int, details: String) extends DebugVmStatus
-
-abstract class DebugEvent
-case class DebugStepEvent(threadId: Long,
-  threadName: String, pos: SourcePosition) extends DebugEvent
-case class DebugBreakEvent(threadId: Long,
-  threadName: String, pos: SourcePosition) extends DebugEvent
-case class DebugVMDeathEvent() extends DebugEvent
-case class DebugVMStartEvent() extends DebugEvent
-case class DebugVMDisconnectEvent() extends DebugEvent
-case class DebugExceptionEvent(excId: Long,
-  threadId: Long, threadName: String,
-  pos: Option[SourcePosition]) extends DebugEvent
-case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
-case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
-case class DebugOutputEvent(out: String) extends DebugEvent
 
 class DebugManager(project: Project, indexer: ActorRef,
     protocol: ProtocolConversions,
@@ -909,7 +894,7 @@ class DebugManager(project: Project, indexer: ActorRef,
           CanonFile(
             frame.location.sourcePath()),
           frame.location.lineNumber))
-      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
+      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1L)
       DebugStackFrame(index, locals, numArgs, className, methodName, pcLocation, thisObjId)
     }
 

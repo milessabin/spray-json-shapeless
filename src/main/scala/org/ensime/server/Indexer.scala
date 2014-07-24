@@ -66,7 +66,7 @@ class Indexer(project: Project,
           config.allFilesOnClasspath
             ++ List(config.target, config.testTarget).flatten
         )
-        project ! AsyncEvent(IndexerReadyEvent)
+        project ! IndexerReadyEvent
       case ReindexClassFilesReq(files) =>
         classFileIndex.indexFiles(files)
       case CommitReq =>
