@@ -5,6 +5,7 @@ import java.util.concurrent.TimeoutException
 
 import akka.actor._
 import akka.pattern.Patterns
+import org.apache.commons.io.filefilter.TrueFileFilter
 import org.apache.commons.io.{ FileUtils => IOFileUtils }
 import org.ensime.protocol.{ IncomingMessageEvent, OutgoingMessageEvent }
 import org.ensime.server.Server
@@ -15,7 +16,8 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.reflect.io.{ File => SFile }
+import scala.io.Source
+import scala.reflect.io.{ File => SFile, Path }
 
 /**
  * Utility class to support integration level tests.
@@ -139,6 +141,33 @@ object IntgUtil extends Assertions {
     def send(msg: String): Unit
     def receive(dur: FiniteDuration, msg: String): Unit
   }
+
+  private def listFiles(srcDir: String): List[SFile] = {
+    import scala.collection.JavaConversions._
+    val jFiles = IOFileUtils.listFiles(
+      new JFile(srcDir), TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE
+    )
+    jFiles.toList.map(SFile(_))
+  }
+
+  private def copyFilesEnsuringUnixLines(projectSource: String, projectBase: java.io.File): Unit = {
+    val srcFiles = listFiles(projectSource)
+    for (srcFile <- srcFiles) {
+      val relativeSrc = Path(projectSource).relativize(srcFile).toFile
+      val destFile = Path(projectBase) / relativeSrc
+      destFile.parent.createDirectory()
+      val writer = destFile.bufferedWriter()
+      try {
+        Source.fromFile(srcFile.path).getLines.foreach(line => {
+          writer.write(line)
+          writer.write("\n")
+        })
+      } finally {
+        writer.close()
+      }
+    }
+  }
+
   /**
    * Run an integration test based on the given project
    * @param projectSource The directory containing the test project (will not be modified)
@@ -149,12 +178,19 @@ object IntgUtil extends Assertions {
     val log = LoggerFactory.getLogger("IntgTest_" + projectName)
 
     TestUtil.withTemporaryDirectory { projectBase =>
+
       log.info("Target dir = " + projectBase)
-      log.info("Copying files")
-      IOFileUtils.copyDirectory(new java.io.File("src/test/resources/intg/simple"), projectBase)
+      log.info("Copying files from " + projectSource)
+      copyFilesEnsuringUnixLines(projectSource, projectBase)
 
       log.info("Building ensime configuration")
-      val buildProcess = scala.sys.process.Process(List("sbt", "compile", "ensime"), Some(projectBase))
+
+      val cmdLine =
+        (if (sys.props("os.name").toLowerCase.contains("windows"))
+          List("cmd", "/c")
+        else Nil) ::: List("sbt", "compile", "ensime")
+
+      val buildProcess = scala.sys.process.Process(cmdLine, Some(projectBase))
       buildProcess.!
       log.info("Build done")
       val dotEnsimeFile = SFile(new JFile(projectBase, ".ensime")).lines().drop(3).mkString("\n") // slurp()
@@ -183,8 +219,9 @@ object IntgUtil extends Assertions {
                         | $configStr
                         | )""".stripMargin
 
+      val sourceRoots = TestUtil.fileToWireString(CanonFile(projectBase + "/src/main/scala"))
       interactor.expectRPC(3 seconds, initMsg,
-        s"""(:ok (:project-name "$projectName" :source-roots ("$projectBase/src/main/scala")))""")
+        s"""(:ok (:project-name "$projectName" :source-roots ($sourceRoots)))""")
 
       interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
       interactor.expectAsync(30 seconds, """(:compiler-ready)""")
@@ -196,7 +233,5 @@ object IntgUtil extends Assertions {
       server.shutdown()
 
     }
-
   }
-
 }
