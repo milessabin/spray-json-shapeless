@@ -34,20 +34,16 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
   val note1 = new Note("file1", "note1", 2, 23, 33, 19, 8)
   val note2 = new Note("file1", "note2", 1, 23, 33, 19, 8)
 
-  // Canonical paths are OS-dependent so we can't hard-code them
-  def stringToWireString(s: String) = "\"" + s.replace("\\", "\\\\") + "\""
-  def fileToWireString(file: CanonFile) = stringToWireString(file.getAbsolutePath)
-
   val file1 = CanonFile("/abc/def")
-  val file1_str = fileToWireString(file1)
+  val file1_str = TestUtil.fileToWireString(file1)
   val file2 = CanonFile("/test/test/")
-  val file2_str = fileToWireString(file2)
+  val file2_str = TestUtil.fileToWireString(file2)
   val file3 = CanonFile("/foo/abc")
-  val file3_str = fileToWireString(file3)
+  val file3_str = TestUtil.fileToWireString(file3)
   val file4 = CanonFile("/foo/def")
-  val file4_str = fileToWireString(file4)
+  val file4_str = TestUtil.fileToWireString(file4)
   val file5 = CanonFile("/foo/hij")
-  val file5_str = fileToWireString(file5)
+  val file5_str = TestUtil.fileToWireString(file5)
 
   val sourcePos1 = new SourcePosition(file1, 57)
   val sourcePos2 = new SourcePosition(file1, 59)
@@ -62,7 +58,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
   val debugClassField = DebugClassField(19, "nameStr", "typeNameStr", "summaryStr")
 
   val batchSourceFile = new BatchSourceFile(new PlainFile(Path("/abc")), "blah\nblah\nblah\n")
-  val batchSourceFile_str = stringToWireString(batchSourceFile.path)
+  val batchSourceFile_str = TestUtil.stringToWireString(batchSourceFile.path)
 
   describe("SwankProtocolConversionsSpec") {
 

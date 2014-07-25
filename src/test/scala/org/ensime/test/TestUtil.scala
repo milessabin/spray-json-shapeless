@@ -1,6 +1,7 @@
 package org.ensime.test
 
 import java.io.File
+import org.ensime.util.CanonFile
 
 object TestUtil {
 
@@ -11,6 +12,11 @@ object TestUtil {
   /** The producer of randomness for unique name generation.*/
   private val random = new java.util.Random
   val temporaryDirectory = new File(System.getProperty("java.io.tmpdir"))
+
+  def stringToWireString(s: String) =
+    "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+  def fileToWireString(file: CanonFile) = stringToWireString(file.getAbsolutePath)
 
   /**
    * Creates a temporary directory and provides its location to the given function.  The directory
