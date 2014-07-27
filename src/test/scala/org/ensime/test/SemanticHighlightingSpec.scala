@@ -373,6 +373,29 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
       }
     }
 
+    it("should highlight setter operators") {
+      Helpers.withPresCompiler { cc =>
+        val sds = getSymbolDesignations(
+          cc, """
+            package com.example
+            object Fubar {
+               private var v: Int = 0
+               def value = v
+               def value_=(a: Int) v = a
+            }
+            class Test {
+              Fubar.value = false
+            }
+          """,
+          List('operator)
+        )
+        // TODO There should be no "=" or ":"
+        assert(sds === List(
+          ('operator, "value")
+        ))
+      }
+    }
+
     it("selects should not be confused by whitespace") {
       Helpers.withPresCompiler { cc =>
         val sds = getSymbolDesignations(
