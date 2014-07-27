@@ -96,7 +96,13 @@ trait SemanticHighlighting { self: Global with Helpers =>
               } else if (sym.isMethod) {
                 if (sym.nameString == "apply" || sym.nameString == "update") {}
                 else if (selector.isOperatorName) {
-                  addAt(start, end, 'operator)
+                  if (nme.isSetterName(selector)) {
+                    val end = treeP.end
+                    val start = end - selector.dropSetter.length
+                    addAt(start, end, 'operator)
+                  } else {
+                    addAt(start, end, 'operator)
+                  }
                 } else {
                   addAt(start, end, 'functionCall)
                 }
