@@ -26,30 +26,27 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
     }
   }
 
-  override def info(pos: Position, msg: String, force: Boolean) {
-    if (msg.contains("MissingRequirementError: object scala not found") ||
-      msg.contains("MissingRequirementError: class scala.runtime.BooleanRef not found")) {
-      handler.messageUser("Fatal Error: Scala language library not found on classpath. You may need to run 'sbt update', or 'mvn update'.")
-    }
-    println("INFO: " + msg)
-  }
-
   override def info0(pos: Position, msg: String, severity: Severity, force: Boolean) {
     severity.count += 1
     try {
-      if (enabled) {
-        if (pos.isDefined) {
-          val source = pos.source
-          val f = source.file.absolute.path
-          val note = new Note(
-            f,
-            formatMessage(msg),
-            severity.id,
-            pos.start,
-            pos.end,
-            pos.line,
-            pos.column)
-          handler.reportScalaNotes(List(note))
+      if (severity.id == 0) {
+        println("INFO: " + msg)
+      } else {
+        if (enabled) {
+          if (pos.isDefined) {
+            val source = pos.source
+            val f = source.file.absolute.path
+            val note = new Note(
+              f,
+              formatMessage(msg),
+              severity.id,
+              pos.start,
+              pos.end,
+              pos.line,
+              pos.column
+            )
+            handler.reportScalaNotes(List(note))
+          }
         }
       }
     } catch {
