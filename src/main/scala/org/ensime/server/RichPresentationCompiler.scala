@@ -93,7 +93,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 
   def askReloadAllFiles() = {
     val all = (config.sourceFilenames.map(getSourceFile) ++
-      allSources).toSet.toList
+      activeUnits.map(_.source)).toSet.toList
     askReloadFiles(all)
   }
 
@@ -156,7 +156,6 @@ class RichPresentationCompiler(
 
   override val debugIDE: Boolean = true
   override val verboseIDE: Boolean = true
-  private val newTopLevelSyms = new mutable.LinkedHashSet[Symbol]
 
   def activeUnits(): List[CompilationUnit] = {
     val invalidSet = toBeRemoved.synchronized { toBeRemoved.toSet }
@@ -167,7 +166,6 @@ class RichPresentationCompiler(
   override def registerTopLevelSym(sym: Symbol) {
     super.registerTopLevelSym(sym)
     symsByFile(sym.sourceFile) += sym
-    newTopLevelSyms += sym
   }
 
   /**
@@ -193,16 +191,6 @@ class RichPresentationCompiler(
     }
     symsByFile.remove(f)
     unitOfFile.remove(f)
-  }
-
-  override def syncTopLevelSyms(unit: RichCompilationUnit) {
-    super.syncTopLevelSyms(unit)
-    unindexTopLevelSyms(deletedTopLevelSyms)
-    indexTopLevelSyms(newTopLevelSyms)
-    //    WARNING: Clearing the set here makes
-    //    recentlyDeleted useless.
-    deletedTopLevelSyms.clear()
-    newTopLevelSyms.clear()
   }
 
   private def typePublicMembers(tpe: Type): Iterable[TypeMember] = {
