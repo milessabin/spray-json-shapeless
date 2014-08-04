@@ -6,14 +6,19 @@ branches:
 language: scala
 jdk:
 - openjdk6
+#- openjdk7
+#- oraclejdk7
+#- oraclejdk8
 scala:
-- 2.11.1
+- 2.11.2
+install:
+- ./.travis-cache.sh
 script:
 - sbt ++$TRAVIS_SCALA_VERSION clean test
 - ./.check-diff.sh
 - sbt ++$TRAVIS_SCALA_VERSION clean scoverage:test
 after_success:
-- sbt ++$TRAVIS_SCALA_VERSION clean publish
+- sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" && "$JAVA_HOME" == "$(jdk_switcher home openjdk6)" ]]; then echo "publish"; fi)
 - sbt ++$TRAVIS_SCALA_VERSION scalastyleGenerateConfig scalastyle
 # https://github.com/scoverage/sbt-coveralls/issues/18
 #- sbt ++$TRAVIS_SCALA_VERSION coveralls
