@@ -8,7 +8,7 @@ organization := "org.ensime"
 
 name := "ensime"
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.11.2"
 
 version := "0.9.10-SNAPSHOT"
 
