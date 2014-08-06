@@ -100,14 +100,14 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   override def rpcPeekUndo(callId: Int) {
     peekUndo() match {
       case Right(result) => sendRPCReturn(toWF(result), callId)
-      case Left(msg) => sendRPCError(ErrPeekUndoFailed, Some(msg), callId)
+      case Left(msg) => sendRPCError(ErrPeekUndoFailed, msg, callId)
     }
   }
 
   override def rpcExecUndo(undoId: Int, callId: Int) {
     execUndo(undoId) match {
       case Right(result) => sendRPCReturn(toWF(result), callId)
-      case Left(msg) => sendRPCError(ErrExecUndoFailed, Some(msg), callId)
+      case Left(msg) => sendRPCError(ErrExecUndoFailed, msg, callId)
     }
   }
 
@@ -301,8 +301,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
       }
     } catch {
       case e: ScalaParserException =>
-        sendRPCError(ErrFormatFailed,
-          Some("Could not parse broken syntax: " + e), callId)
+        sendRPCError(ErrFormatFailed, "Could not parse broken syntax: " + e, callId)
     }
   }
 
@@ -323,13 +322,11 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>
-          sendRPCError(ErrFormatFailed,
-            Some("Could not write any formatting changes: " + e), callId)
+          sendRPCError(ErrFormatFailed, "Could not write any formatting changes: " + e, callId)
       }
     } catch {
       case e: ScalaParserException =>
-        sendRPCError(ErrFormatFailed,
-          Some("Cannot format broken syntax: " + e), callId)
+        sendRPCError(ErrFormatFailed, "Cannot format broken syntax: " + e, callId)
     }
   }
 

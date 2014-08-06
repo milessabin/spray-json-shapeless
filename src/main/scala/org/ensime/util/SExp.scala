@@ -1,12 +1,9 @@
 package org.ensime.util
 
 import scala.collection.immutable.Map
-import scala.util.parsing.combinator._
-import scala.util.parsing.input
 
 sealed trait SExp extends WireFormat {
-  def toReadableString(debug: Boolean = false): String = toString
-  override def toWireString: String = toReadableString(debug = false)
+  override def toWireString: String = toString
   def toScala: Any = toString
 }
 
@@ -14,11 +11,8 @@ case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
 
   override def iterator = items.iterator
 
+  override def toScala: Any = items.map(_.toScala)
   override def toString() = "(" + items.mkString(" ") + ")"
-
-  override def toReadableString(debug: Boolean) = {
-    "(" + items.map { _.toReadableString(debug) }.mkString(" ") + ")"
-  }
 
   def toKeywordMap: Map[KeywordAtom, SExp] = {
     var m = Map[KeywordAtom, SExp]()
@@ -67,16 +61,18 @@ case class TruthAtom() extends BooleanAtom {
   override def toScala: Boolean = true
 }
 case class StringAtom(value: String) extends SExp {
-  override def toString = value
-  override def toReadableString(debug: Boolean) = {
-    if (debug && value.length() > 500) {
-      escapeString(value.substring(0, 500) + "...")
-    } else {
-      escapeString(value)
-    }
-  }
+  override def toString = escapeString(value)
+  override def toScala = value
+
   def escapeString(s: String) = {
-    val printable = s.replace("\\", "\\\\").replace("\"", "\\\"")
+    val printable = s.flatMap {
+      case '\\' => List('\\', '\\')
+      case '"' => List('\\', '"')
+      case '\n' => List('\\', 'n')
+      case '\r' => List('\\', 'r')
+      case '\t' => List('\\', 't')
+      case x => List(x)
+    }
     "\"" + printable + "\""
   }
 }
@@ -91,62 +87,7 @@ case class KeywordAtom(value: String) extends SExp {
   override def toString = value
 }
 
-object StringParser extends RegexParsers {
-  override def skipWhitespace = false
-
-  def string = "\"" ~ rep(string_char) ~ "\"" ^^ {
-    case "\"" ~ l ~ "\"" => l.mkString
-  }
-  lazy val string_char = string_escaped_char | string_lone_backslash | string_normal_chars
-  lazy val string_escaped_char = """\\["\\]""".r ^^ { _.charAt(1) }
-  lazy val string_lone_backslash = "\\"
-  lazy val string_normal_chars = """[^"\\]+""".r ^^ { _.mkString }
-}
-
-object SExp extends RegexParsers {
-
-  // Parse strings using an auxiliary parser. This is because
-  // spaces inside strings shouldn't be skipped.
-  lazy val string = new Parser[StringAtom] {
-    def apply(in: Input) = {
-      val source = in.source
-      val offset = in.offset
-      val start = handleWhiteSpace(source, offset)
-      StringParser.string(in.drop(start - offset)) match {
-        case StringParser.Success(value, next) => Success(StringAtom(value), next)
-        case StringParser.Failure(errMsg, next) => Failure(errMsg, next)
-        case StringParser.Error(errMsg, next) => Error(errMsg, next)
-      }
-    }
-  }
-  lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ { s =>
-    if (s == "nil") NilAtom()
-    else if (s == "t") TruthAtom()
-    else SymbolAtom(s)
-  }
-  lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
-  lazy val number = regex("-?[0-9]+".r) ^^ { s => IntAtom(s.toInt) }
-  lazy val list = literal("(") ~> rep(expr) <~ literal(")") ^^ SExpList.apply
-  lazy val expr: Parser[SExp] = list | keyword | string | number | sym
-
-  def read(r: input.Reader[Char]): SExp = {
-    val result: ParseResult[SExp] = expr(r)
-
-    result match {
-      case Success(value, next) => value
-      case Failure(errMsg, next) =>
-        println(errMsg)
-        NilAtom()
-      case Error(errMsg, next) =>
-        println(errMsg)
-        NilAtom()
-    }
-  }
-
-  def read(s: String): SExp = {
-    SExp.read(new input.CharSequenceReader(s))
-  }
-
+object SExp {
   def apply(items: SExp*): SExpList = {
     SExpList(items.toList)
   }
@@ -181,10 +122,6 @@ object SExp extends RegexParsers {
     IntAtom(value)
   }
 
-  implicit def longToSExp(value: Long): SExp = {
-    IntAtom(value.toInt)
-  }
-
   implicit def boolToSExp(value: Boolean): SExp = {
     if (value) {
       TruthAtom()
@@ -200,27 +137,4 @@ object SExp extends RegexParsers {
       SymbolAtom(value.toString().drop(1))
     }
   }
-
-  implicit def nilToSExpList(nil: NilAtom): SExp = {
-    SExpList(List())
-  }
-
-  implicit def toSExp(o: SExpable): SExp = {
-    o.toSExp()
-  }
-
-  implicit def toSExpable(o: SExp): SExpable = new SExpable {
-    override def toSExp() = o
-  }
-
-  implicit def listToSExpable(o: Iterable[SExpable]): SExpable =
-    new Iterable[SExpable] with SExpable {
-      override def iterator = o.iterator
-      override def toSExp() = SExp(o.map { _.toSExp() })
-    }
-
-}
-
-trait SExpable {
-  implicit def toSExp(): SExp
 }

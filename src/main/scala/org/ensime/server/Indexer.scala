@@ -99,16 +99,13 @@ class Indexer(project: Project,
                 case method :: rest =>
                   project ! RPCResultEvent(
                     toWF(method), callId)
-                case _ => project.sendRPCError(ErrExceptionInIndexer,
-                  Some("Failed to find method bytecode"), callId)
+                case _ => project.sendRPCError(ErrExceptionInIndexer, "Failed to find method bytecode", callId)
               }
           }
         } catch {
           case e: Exception =>
             log.error(e, "Error handling RPC: " + req)
-            project.sendRPCError(ErrExceptionInIndexer,
-              Some("Error occurred in indexer. Check the server log."),
-              callId)
+            project.sendRPCError(ErrExceptionInIndexer, "Error occurred in indexer. Check the server log.", callId)
         }
       case other =>
         log.warning("Indexer: WTF, what's " + other)

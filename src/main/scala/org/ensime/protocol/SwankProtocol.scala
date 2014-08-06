@@ -116,7 +116,7 @@ class SwankProtocol extends Protocol {
       //TODO allocating a new array each time is inefficient!
       val buf: Array[Char] = new Array[Char](msglen)
       fillArray(reader, buf)
-      SExp.read(new input.CharArrayReader(buf))
+      SExpParser.read(new input.CharArrayReader(buf))
     } else {
       throw new IllegalStateException("Empty message read from socket!")
     }
@@ -130,12 +130,18 @@ class SwankProtocol extends Protocol {
   }
 
   private def handleMessageForm(sexp: SExp) {
-    log.info("Received msg: " + sexp.toReadableString(debug = true))
+    val msgStr = sexp.toString
+    val displayStr = if (msgStr.length > 500)
+      msgStr.take(500) + "..."
+    else
+      msgStr
+
+    log.info("Received msg: " + displayStr)
     sexp match {
-      case SExpList(KeywordAtom(":swank-rpc") :: form :: IntAtom(callId) :: rest) =>
+      case SExpList(KeywordAtom(":swank-rpc") :: form :: IntAtom(callId) :: Nil) =>
         handleEmacsRex(form, callId)
       case _ =>
-        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString(debug = false)))
+        sendProtocolError(ErrUnrecognizedForm, sexp.toString)
     }
   }
 
@@ -147,13 +153,10 @@ class SwankProtocol extends Protocol {
         } catch {
           case e: Throwable =>
             e.printStackTrace(System.err)
-            sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
+            sendRPCError(ErrExceptionInRPC, e.getMessage, callId)
         }
       case _ =>
-        sendRPCError(
-          ErrMalformedRPC,
-          Some("Expecting leading symbol in: " + form),
-          callId)
+        sendRPCError(ErrMalformedRPC, "Expecting leading symbol in: " + form, callId)
     }
   }
 
@@ -516,7 +519,7 @@ class SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
-    def oops() = sendRPCError(ErrMalformedRPC, Some("Malformed " + callType + " call: " + form), callId)
+    def oops() = sendRPCError(ErrMalformedRPC, "Malformed " + callType + " call: " + form, callId)
 
     callType match {
 
@@ -579,7 +582,7 @@ class SwankProtocol extends Protocol {
           case SExpList(head :: (conf: SExpList) :: body) =>
             ProjectConfig.fromSExp(conf) match {
               case Right(config) => rpcTarget.rpcInitProject(config, callId)
-              case Left(t) => sendRPCError(ErrExceptionInRPC, Some(t.toString), callId)
+              case Left(t) => sendRPCError(ErrExceptionInRPC, t.toString, callId)
             }
           case _ => oops()
         }
@@ -1755,10 +1758,7 @@ class SwankProtocol extends Protocol {
         rpcTarget.rpcShutdownServer(callId)
 
       case other =>
-        sendRPCError(
-          ErrUnrecognizedRPC,
-          Some("Unknown :swank-rpc call: " + other),
-          callId)
+        sendRPCError(ErrUnrecognizedRPC, "Unknown :swank-rpc call: " + other, callId)
     }
   }
 
@@ -1776,10 +1776,7 @@ class SwankProtocol extends Protocol {
   def sendRPCReturn(value: WireFormat, callId: Int) {
     value match {
       case sexp: SExp =>
-        sendMessage(SExp(
-          key(":return"),
-          SExp(key(":ok"), sexp),
-          callId))
+        sendMessage(SExp(key(":return"), SExp(key(":ok"), sexp), callId))
       case _ => throw new IllegalStateException("Not a SExp: " + value)
     }
   }
@@ -1791,21 +1788,12 @@ class SwankProtocol extends Protocol {
     }
   }
 
-  def sendRPCError(code: Int, detail: Option[String], callId: Int) {
-    sendMessage(SExp(
-      key(":return"),
-      SExp(key(":abort"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())),
-      callId))
+  def sendRPCError(code: Int, detail: String, callId: Int) {
+    sendMessage(SExp(key(":return"), SExp(key(":abort"), code, detail), callId))
   }
 
-  def sendProtocolError(code: Int, detail: Option[String]) {
-    sendMessage(
-      SExp(
-        key(":reader-error"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())))
+  def sendProtocolError(code: Int, detail: String) {
+    sendMessage(SExp(key(":reader-error"), code, detail))
   }
 
   object OffsetRangeExtractor {
@@ -1850,5 +1838,4 @@ class SwankProtocol extends Protocol {
       }
     }
   }
-
 }
