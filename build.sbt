@@ -12,7 +12,7 @@ scalaVersion := "2.11.2"
 
 version := "0.9.10-SNAPSHOT"
 
-libraryDependencies <<= scalaVersion { scalaVersion => Seq(
+libraryDependencies ++= Seq(
   "org.apache.lucene"          %  "lucene-core"          % "3.5.0",
   "org.sonatype.tycho"         %  "org.eclipse.jdt.core" % "3.6.2.v_A76_R36x",
   "org.ow2.asm"                %  "asm-commons"          % "5.0.3",
@@ -20,8 +20,8 @@ libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "com.googlecode.json-simple" %  "json-simple"          % "1.1.1" intransitive(),
   "org.scalatest"              %% "scalatest"            % "2.2.0" % "test",
   "com.danieltrinh"            %% "scalariform"          % "0.1.5",
-  "org.scala-lang"             %  "scala-compiler"       % scalaVersion,
-  "org.scala-lang"             %  "scala-reflect"        % scalaVersion,
+  "org.scala-lang"             %  "scala-compiler"       % scalaVersion.value,
+  "org.scala-lang"             %  "scala-reflect"        % scalaVersion.value,
   "com.typesafe.akka"          %% "akka-actor" 	         % "2.3.4",
   "com.typesafe.akka"          %% "akka-slf4j"           % "2.3.4",
   "com.typesafe.akka"          %% "akka-testkit"         % "2.3.4" % "test",
@@ -29,7 +29,7 @@ libraryDependencies <<= scalaVersion { scalaVersion => Seq(
   "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.7",
   "commons-io"                 % "commons-io"            % "2.4" % "test",
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
-)}
+)
 
 // epic hack to get the tools.jar JDK dependency
 val JavaTools = List[Option[String]] (
