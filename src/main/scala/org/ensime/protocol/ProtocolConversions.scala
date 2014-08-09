@@ -10,12 +10,7 @@ import scala.reflect.internal.util.{ RangePosition, Position }
 
 trait ProtocolConversions {
   def toWF(evt: ConnectionInfo): WireFormat
-  def toWF(evt: SendBackgroundMessageEvent): WireFormat
-  def toWF(evt: AnalyzerReadyEvent): WireFormat
-  def toWF(evt: FullTypeCheckCompleteEvent): WireFormat
-  def toWF(evt: IndexerReadyEvent): WireFormat
-  def toWF(evt: NewNotesEvent): WireFormat
-  def toWF(evt: ClearAllNotesEvent): WireFormat
+  def toWF(evt: SwankEvent): WireFormat
   def toWF(evt: DebugEvent): WireFormat
 
   def toWF(obj: DebugLocation): WireFormat
@@ -66,7 +61,8 @@ trait ProtocolConversions {
   def toWF(value: RefactorResult): WireFormat
   def toWF(value: Undo): WireFormat
   def toWF(value: UndoResult): WireFormat
-  def toWF(value: Null): WireFormat
+  // a wire format message representing null
+  def wfNull: WireFormat
   def toWF(vmStatus: DebugVmStatus): WireFormat
   def toWF(method: MethodBytecode): WireFormat
 }

@@ -48,8 +48,8 @@ case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
 object BooleanAtom {
 
   def unapply(z: SExp): Option[Boolean] = z match {
-    case TruthAtom() => Some(true)
-    case NilAtom() => Some(false)
+    case TruthAtom => Some(true)
+    case NilAtom => Some(false)
     case _ => None
   }
 
@@ -60,12 +60,12 @@ abstract class BooleanAtom extends SExp {
   override def toScala = toBool
 }
 
-case class NilAtom() extends BooleanAtom {
+case object NilAtom extends BooleanAtom {
   override def toString = "nil"
   override def toBool: Boolean = false
 
 }
-case class TruthAtom() extends BooleanAtom {
+case object TruthAtom extends BooleanAtom {
   override def toString = "t"
   override def toBool: Boolean = true
   override def toScala: Boolean = true
@@ -113,7 +113,7 @@ object SExp {
   }
   def propList(items: Iterable[(String, SExp)]): SExpList = {
     val nonNil = items.filter {
-      case (s, NilAtom()) => false
+      case (s, NilAtom) => false
       case (s, SExpList(items)) if items.isEmpty => false
       case _ => true
     }
@@ -134,15 +134,15 @@ object SExp {
 
   implicit def boolToSExp(value: Boolean): SExp = {
     if (value) {
-      TruthAtom()
+      TruthAtom
     } else {
-      NilAtom()
+      NilAtom
     }
   }
 
   implicit def symbolToSExp(value: Symbol): SExp = {
     if (value == 'nil) {
-      NilAtom()
+      NilAtom
     } else {
       SymbolAtom(value.toString().drop(1))
     }

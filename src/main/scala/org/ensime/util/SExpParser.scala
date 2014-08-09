@@ -42,8 +42,8 @@ object SExpParser extends RegexParsers {
     }
   }
   lazy val sym = regex("[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ { s =>
-    if (s == "nil") NilAtom()
-    else if (s == "t") TruthAtom()
+    if (s == "nil") NilAtom
+    else if (s == "t") TruthAtom
     else SymbolAtom(s)
   }
   lazy val keyword = regex(":[a-zA-Z][a-zA-Z0-9-:]*".r) ^^ KeywordAtom
@@ -58,10 +58,10 @@ object SExpParser extends RegexParsers {
       case Success(value, next) => value
       case Failure(errMsg, next) =>
         println(errMsg)
-        NilAtom()
+        NilAtom
       case Error(errMsg, next) =>
         println(errMsg)
-        NilAtom()
+        NilAtom
     }
   }
 

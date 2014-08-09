@@ -1,8 +1,7 @@
 package org.ensime.server
 
 import akka.actor.{ ActorLogging, Actor, ActorRef }
-import com.sun.jdi.request.EventRequest
-import com.sun.jdi.request.StepRequest
+import com.sun.jdi.request.{ EventRequestManager, EventRequest, StepRequest }
 import java.io.InputStream
 import java.io.InputStreamReader
 import org.ensime.config.ProjectConfig
@@ -15,12 +14,12 @@ import scala.collection.{ mutable, Iterable }
 import com.sun.jdi._
 import com.sun.jdi.event._
 
-case class DebuggerShutdownEvent()
+case object DebuggerShutdownEvent
 
 case class DebugStartVMReq(commandLine: String)
 case class DebugAttachVMReq(hostname: String, port: String)
-case class DebugStopVMReq()
-case class DebugRunReq()
+case object DebugStopVMReq
+case object DebugRunReq
 case class DebugContinueReq(threadId: Long)
 case class DebugNextReq(threadId: Long)
 case class DebugStepReq(threadId: Long)
@@ -30,15 +29,15 @@ case class DebugValueReq(loc: DebugLocation)
 case class DebugToStringReq(threadId: Long, loc: DebugLocation)
 case class DebugSetValueReq(loc: DebugLocation, newValue: String)
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int)
-case class DebugActiveVMReq()
+case object DebugActiveVMReq
 case class DebugBreakReq(file: String, line: Int)
 case class DebugClearBreakReq(file: String, line: Int)
-case class DebugClearAllBreaksReq()
-case class DebugListBreaksReq()
+case object DebugClearAllBreaksReq
+case object DebugListBreaksReq
 
 abstract class DebugVmStatus
 
-case class DebugVmSuccess() extends DebugVmStatus
+case object DebugVmSuccess extends DebugVmStatus
 case class DebugVmError(code: Int, details: String) extends DebugVmStatus
 
 abstract class DebugEvent
@@ -161,7 +160,7 @@ class DebugManager(project: Project, indexer: ActorRef,
     }
     moveActiveBreaksToPending()
     maybeVM = None
-    project ! AsyncEvent(toWF(DebugVMDisconnectEvent()))
+    project ! AsyncEvent(DebugVMDisconnectEvent())
   }
 
   def vmOptions(): List[String] = {
@@ -236,36 +235,32 @@ class DebugManager(project: Project, indexer: ActorRef,
             withVM { vm =>
               vm.initLocationMap()
             }
-            project ! AsyncEvent(toWF(DebugVMStartEvent()))
+            project ! AsyncEvent(DebugVMStartEvent())
           case e: VMDeathEvent => disconnectDebugVM()
           case e: VMDisconnectEvent => disconnectDebugVM()
           case e: StepEvent =>
             (for (pos <- locToPos(e.location())) yield {
-              project ! AsyncEvent(toWF(DebugStepEvent(
-                e.thread().uniqueID(), e.thread().name, pos)))
+              project ! AsyncEvent(DebugStepEvent(e.thread().uniqueID(), e.thread().name, pos))
             }) getOrElse {
               log.warning("Step position not found: " + e.location().sourceName() + " : " + e.location().lineNumber())
             }
           case e: BreakpointEvent =>
             (for (pos <- locToPos(e.location())) yield {
-              project ! AsyncEvent(toWF(DebugBreakEvent(
-                e.thread().uniqueID(), e.thread().name, pos)))
+              project ! AsyncEvent(DebugBreakEvent(e.thread().uniqueID(), e.thread().name, pos))
             }) getOrElse {
               log.warning("Break position not found: " + e.location().sourceName() + " : " + e.location().lineNumber())
             }
           case e: ExceptionEvent =>
             withVM { vm => vm.remember(e.exception) }
-            project ! AsyncEvent(toWF(DebugExceptionEvent(
+            project ! AsyncEvent(DebugExceptionEvent(
               e.exception.uniqueID(),
               e.thread().uniqueID(),
               e.thread().name,
-              if (e.catchLocation() != null) locToPos(e.catchLocation()) else None)))
+              if (e.catchLocation() != null) locToPos(e.catchLocation()) else None))
           case e: ThreadDeathEvent =>
-            project ! AsyncEvent(toWF(DebugThreadDeathEvent(
-              e.thread().uniqueID())))
+            project ! AsyncEvent(DebugThreadDeathEvent(e.thread().uniqueID()))
           case e: ThreadStartEvent =>
-            project ! AsyncEvent(toWF(DebugThreadStartEvent(
-              e.thread().uniqueID())))
+            project ! AsyncEvent(DebugThreadStartEvent(e.thread().uniqueID()))
           case e: AccessWatchpointEvent =>
           case e: ClassPrepareEvent =>
             withVM { vm =>
@@ -282,7 +277,7 @@ class DebugManager(project: Project, indexer: ActorRef,
             maybeVM = None
             log.error(e, "Failure during VM startup")
             val message = e.toString
-            project ! RPCResultEvent(toWF(DebugVmError(1, message.toString)), callId)
+            project ! RPCResultEvent(toWF(DebugVmError(1, message)), callId)
           }
 
           req match {
@@ -294,7 +289,7 @@ class DebugManager(project: Project, indexer: ActorRef,
                 val vm = new VM(VmStart(commandLine))
                 maybeVM = Some(vm)
                 vm.start()
-                project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
+                project ! RPCResultEvent(toWF(DebugVmSuccess), callId)
               } catch {
                 case e: Exception =>
                   log.error(e, "Couldn't start VM")
@@ -309,24 +304,24 @@ class DebugManager(project: Project, indexer: ActorRef,
                 val vm = new VM(VmAttach(hostname, port))
                 maybeVM = Some(vm)
                 vm.start()
-                project ! RPCResultEvent(toWF(DebugVmSuccess()), callId)
+                project ! RPCResultEvent(toWF(DebugVmSuccess), callId)
               } catch {
                 case e: Exception =>
                   handleStartupFailure(e)
               }
 
-            case DebugActiveVMReq() =>
+            case DebugActiveVMReq =>
               handleRPCWithVM(callId) { vm =>
                 project ! RPCResultEvent(toWF(value = true), callId)
               }
 
-            case DebugStopVMReq() =>
+            case DebugStopVMReq =>
               handleRPCWithVM(callId) { vm =>
                 vm.dispose()
                 project ! RPCResultEvent(toWF(value = true), callId)
               }
 
-            case DebugRunReq() =>
+            case DebugRunReq =>
               handleRPCWithVM(callId) { vm =>
                 vm.resume()
                 project ! RPCResultEvent(toWF(value = true), callId)
@@ -351,11 +346,11 @@ class DebugManager(project: Project, indexer: ActorRef,
               clearBreakpoint(file, line)
               project ! RPCResultEvent(toWF(value = true), callId)
 
-            case DebugClearAllBreaksReq() =>
+            case DebugClearAllBreaksReq =>
               clearAllBreakpoints()
               project ! RPCResultEvent(toWF(value = true), callId)
 
-            case DebugListBreaksReq() =>
+            case DebugListBreaksReq =>
               val breaks = BreakpointList(
                 activeBreakpoints.toList,
                 pendingBreakpoints)
@@ -493,7 +488,7 @@ class DebugManager(project: Project, indexer: ActorRef,
 
     vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
     val evtQ = new VMEventManager(vm.eventQueue())
-    val erm = vm.eventRequestManager();
+    val erm: EventRequestManager = vm.eventRequestManager();
     {
       val req = erm.createClassPrepareRequest()
       req.setSuspendPolicy(EventRequest.SUSPEND_ALL)
@@ -710,7 +705,7 @@ class DebugManager(project: Project, indexer: ActorRef,
             tpe = tpe.superclass
           }
           fields
-        case _ => List()
+        case _ => List.empty
       }
     }
 
@@ -906,7 +901,7 @@ class DebugManager(project: Project, indexer: ActorRef,
             DebugStackLocal(i, v.name, v.typeName(),
               valueSummary(frame.getValue(v)))
         }.toList
-      }, List())
+      }, List.empty)
 
       val numArgs = ignoreErr(frame.getArgumentValues.length, 0)
       val methodName = ignoreErr(frame.location.method().name(), "Method")
@@ -1010,7 +1005,7 @@ class DebugManager(project: Project, indexer: ActorRef,
         val buf = new Array[Char](512)
         i = in.read(buf, 0, buf.length)
         while (!finished && i >= 0) {
-          project ! AsyncEvent(toWF(DebugOutputEvent(new String(buf, 0, i))))
+          project ! AsyncEvent(DebugOutputEvent(new String(buf, 0, i)))
           i = in.read(buf, 0, buf.length)
         }
       } catch {

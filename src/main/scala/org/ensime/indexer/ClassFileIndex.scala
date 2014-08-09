@@ -128,7 +128,7 @@ class ClassFileIndex(config: ProjectConfig) {
       classFilesForSourceName(sourceName).filter { loc => loc.file.endsWith(".class") }.flatMap { f =>
         ClassIterator.findInClasses(
           List(new File(f.file)),
-          new MethodByteCodeFinder(sourceName, line)).getOrElse(List())
+          new MethodByteCodeFinder(sourceName, line)).getOrElse(List.empty)
       }.toList.sortBy(_.startLine * -1)
     }
     val fromClasses = forFileType(".class")

@@ -142,96 +142,99 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":version"), info.protocolVersion)
   }
 
-  override def toWF(evt: SendBackgroundMessageEvent): SExp = {
-    SExp(key(":background-message"), evt.code,
-      evt.detail.map(strToSExp).getOrElse(NilAtom()))
-  }
-
-  /**
-   * Doc Event:
-   *   :compiler-ready
-   * Summary:
-   *   Signal that the compiler has finished its initial compilation and the server
-   *   is ready to accept RPC calls.
-   * Structure:
-   *   (:compiler-ready)
-   */
-  def toWF(evt: AnalyzerReadyEvent): SExp = {
-    SExp(key(":compiler-ready"))
-  }
-
-  /**
-   * Doc Event:
-   *   :full-typecheck-finished
-   * Summary:
-   *   Signal that the compiler has finished compilation of the entire project.
-   * Structure:
-   *   (:full-typecheck-finished)
-   */
-  def toWF(evt: FullTypeCheckCompleteEvent): SExp = {
-    SExp(key(":full-typecheck-finished"))
-  }
-
-  /**
-   * Doc Event:
-   *   :indexer-ready
-   * Summary:
-   *   Signal that the indexer has finished indexing the classpath.
-   * Structure:
-   *   (:indexer-ready)
-   */
-  def toWF(evt: IndexerReadyEvent): SExp = {
-    SExp(key(":indexer-ready"))
-  }
-
-  /**
-   * Doc Event:
-   *   :scala-notes
-   * Summary:
-   *   Notify client when Scala compiler generates errors,warnings or other notes.
-   * Structure:
-   *   (:scala-notes
-   *   notes //List of Note
-   *   )
-   */
-  //-----------------------
-  /**
-   * Doc Event:
-   *   :java-notes
-   * Summary:
-   *   Notify client when Java compiler generates errors,warnings or other notes.
-   * Structure:
-   *   (:java-notes
-   *   notes //List of Note
-   *   )
-   */
-  override def toWF(evt: NewNotesEvent): SExp = {
-    if (evt.lang == 'scala) SExp(key(":scala-notes"), toWF(evt.notelist))
-    else SExp(key(":java-notes"), toWF(evt.notelist))
-  }
-
-  /**
-   * Doc Event:
-   *   :clear-all-scala-notes
-   * Summary:
-   *   Notify client when Scala notes have become invalidated. Editor should consider
-   *   all Scala related notes to be stale at this point.
-   * Structure:
-   *   (:clear-all-scala-notes)
-   */
-  //-----------------------
-  /**
-   * Doc Event:
-   *   :clear-all-java-notes
-   * Summary:
-   *   Notify client when Java notes have become invalidated. Editor should consider
-   *   all Java related notes to be stale at this point.
-   * Structure:
-   *   (:clear-all-java-notes)
-   */
-  override def toWF(evt: ClearAllNotesEvent): SExp = {
-    if (evt.lang == 'scala) SExp(key(":clear-all-scala-notes"))
-    else SExp(key(":clear-all-java-notes"))
+  def toWF(evt: SwankEvent): SExp = {
+    evt match {
+      /**
+       * Doc Event:
+       *   :compiler-ready
+       * Summary:
+       *   Signal that the compiler has finished its initial compilation and the server
+       *   is ready to accept RPC calls.
+       * Structure:
+       *   (:compiler-ready)
+       */
+      case AnalyzerReadyEvent =>
+        SExp(key(":compiler-ready"))
+      /**
+       * Doc Event:
+       *   :full-typecheck-finished
+       * Summary:
+       *   Signal that the compiler has finished compilation of the entire project.
+       * Structure:
+       *   (:full-typecheck-finished)
+       */
+      case FullTypeCheckCompleteEvent =>
+        SExp(key(":full-typecheck-finished"))
+      /**
+       * * Doc Event:
+       *   :indexer-ready
+       * Summary:
+       *   Signal that the indexer has finished indexing the classpath.
+       * Structure:
+       *   (:indexer-ready)
+       */
+      case IndexerReadyEvent =>
+        SExp(key(":indexer-ready"))
+      /**
+       * Doc Event:
+       *   :scala-notes
+       * Summary:
+       *   Notify client when Scala compiler generates errors,warnings or other notes.
+       * Structure:
+       *   (:scala-notes
+       *   notes //List of Note
+       *   )
+       */
+      case NewScalaNotesEvent(noteList) =>
+        SExp(key(":scala-notes"), toWF(noteList))
+      /**
+       * Doc Event:
+       *   :java-notes
+       * Summary:
+       *   Notify client when Java compiler generates errors,warnings or other notes.
+       * Structure:
+       *   (:java-notes
+       *   notes //List of Note
+       *   )
+       */
+      case NewJavaNotesEvent(noteList) =>
+        SExp(key(":java-notes"), toWF(noteList))
+      /**
+       *  Doc Event:
+       *   :clear-all-scala-notes
+       * Summary:
+       *   Notify client when Scala notes have become invalidated. Editor should consider
+       *   all Scala related notes to be stale at this point.
+       * Structure:
+       *   (:clear-all-scala-notes)
+       */
+      case ClearAllScalaNotesEvent =>
+        SExp(key(":clear-all-scala-notes"))
+      /**
+       * Doc Event:
+       *   :clear-all-java-notes
+       * Summary:
+       *   Notify client when Java notes have become invalidated. Editor should consider
+       *   all Java related notes to be stale at this point.
+       * Structure:
+       *   (:clear-all-java-notes)
+       */
+      case ClearAllJavaNotesEvent =>
+        SExp(key(":clear-all-java-notes"))
+      /**
+       * Doc Event:
+       *   :background-message
+       * Summary:
+       *   A background notification from the server for the client.
+       * Structure:
+       *   (:background-message
+       *      code // Int
+       *      message // String message or nil
+       *   )
+       */
+      case SendBackgroundMessageEvent(code, detail) =>
+        SExp(key(":background-message"), code, detail.map(strToSExp).getOrElse(NilAtom))
+    }
   }
 
   override def toWF(evt: DebugEvent): SExp = {
@@ -432,13 +435,11 @@ class SwankProtocolConversions extends ProtocolConversions {
   }
 
   override def toWF(value: Boolean): SExp = {
-    if (value) TruthAtom()
-    else NilAtom()
+    if (value) TruthAtom
+    else NilAtom
   }
 
-  override def toWF(value: Null): SExp = {
-    NilAtom()
-  }
+  override val wfNull: SExp = NilAtom
 
   override def toWF(value: String): SExp = {
     StringAtom(value)
@@ -688,7 +689,7 @@ class SwankProtocolConversions extends ProtocolConversions {
 
   def toWF(vmStatus: DebugVmStatus): SExp = {
     vmStatus match {
-      case DebugVmSuccess() => SExp(
+      case DebugVmSuccess => SExp(
         key(":status"), "success")
       case DebugVmError(code, details) => SExp(
         key(":status"), "error",

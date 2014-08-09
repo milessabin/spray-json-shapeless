@@ -8,6 +8,7 @@ import org.ensime.util.{ SExpParser, SExp, WireFormat }
 import org.ensime.config.{ ProjectConfig, Environment }
 import org.slf4j._
 import scala.io.Source
+import scala.util.Properties
 import scala.util.Properties._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
@@ -51,11 +52,11 @@ object ConsoleOutputWorkaround {
   }
 
   private object ErrLog extends StreamToLog {
-    def doLog(log: Logger, m: String) = log.warn(m)
+    def doLog(log: Logger, m: String): Unit = log.warn(m)
   }
 
   private object OutLog extends StreamToLog {
-    def doLog(log: Logger, m: String) = log.info(m)
+    def doLog(log: Logger, m: String): Unit = log.info(m)
   }
 }
 
@@ -178,12 +179,13 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
     } catch {
       case e: IOException =>
         System.err.println("Error in socket reader: " + e)
-        if (System.getProperty("ensime.explode.on.disconnect") != null) {
-          println("Tick-tock, tick-tock, tick-tock... boom!")
-          System.out.flush()
-          System.exit(-1)
-        } else {
-          handler ! SocketClosed
+        Properties.envOrNone("ensime.explode.on.disconnect") match {
+          case Some(_) =>
+            println("Tick-tock, tick-tock, tick-tock... boom!")
+            System.out.flush()
+            System.exit(-1)
+          case None =>
+            handler ! SocketClosed
         }
     }
   }

@@ -63,12 +63,12 @@ trait CompletionControl {
       result match {
         case Some(s: SymbolSearchResults) =>
           s.syms.map { s =>
-            CompletionInfo(s.localName, CompletionSignature(List(), s.name),
+            CompletionInfo(s.localName, CompletionSignature(List.empty, s.name),
               -1, isCallable = false, 40, Some(s.name))
           }.toList
         case None =>
           logger.warn("request timed out")
-          List()
+          List.empty
         case unknown =>
           throw new IllegalStateException("Unexpected response type from request:" + unknown)
       }
@@ -114,7 +114,7 @@ trait CompletionControl {
         askReloadFile(p.source)
         val typeSearchSyms = if (path.isEmpty) {
           makeTypeSearchCompletions(prefix)
-        } else List()
+        } else List.empty
         (prefix,
           askCompletePackageMember(path, prefix) ++
           typeSearchSyms)
@@ -130,7 +130,7 @@ trait CompletionControl {
         (prefix, makeAll(x, prefix, constructing))
       case _ =>
         logger.error("Unrecognized completion context.")
-        ("", List())
+        ("", List.empty)
     }
     CompletionInfoList(prefix, results.sortWith({ (c1, c2) =>
       c1.relevance > c2.relevance ||
@@ -296,10 +296,10 @@ trait Completion { self: RichPresentationCompiler =>
         memberSyms.flatMap { s =>
           val name = if (s.hasPackageFlag) { s.nameString } else { typeShortName(s) }
           if (name.startsWith(prefix)) {
-            Some(CompletionInfo(name, CompletionSignature(List(), ""), -1, isCallable = false, 50, None))
+            Some(CompletionInfo(name, CompletionSignature(List.empty, ""), -1, isCallable = false, 50, None))
           } else None
         }.toList
-      case _ => List()
+      case _ => List.empty
     }
   }
 

@@ -60,8 +60,8 @@ object ProjectConfig {
   }
 
   def getBool(m: KeyMap, name: String): Boolean = m.get(keyword(name)) match {
-    case Some(TruthAtom()) => true
-    case Some(NilAtom()) => false
+    case Some(TruthAtom) => true
+    case Some(NilAtom) => false
     case None => false
     case _ => matchError("Expecting a nil or t value at key: " + name); false
   }
@@ -84,11 +84,11 @@ object ProjectConfig {
       case s: StringAtom => s.value
       case _ =>
         matchError("Expecting a list of string values at key: " + name)
-        return List()
+        return List.empty
     }.toList
-    case Some(NilAtom()) => List()
-    case Some(_) => List()
-    case None => List()
+    case Some(NilAtom) => List.empty
+    case Some(_) => List.empty
+    case None => List.empty
   }
 
   def getRegexList(m: KeyMap, name: String): List[Regex] = m.get(keyword(name)) match {
@@ -96,11 +96,11 @@ object ProjectConfig {
       case s: StringAtom => s.value.r
       case _ =>
         matchError("Expecting a list of string-encoded regexps at key: " + name)
-        return List()
+        return List.empty
     }.toList
-    case Some(NilAtom()) => List()
-    case Some(_) => List()
-    case None => List()
+    case Some(NilAtom) => List.empty
+    case Some(_) => List.empty
+    case None => List.empty
   }
 
   def getMap(m: KeyMap, name: String): Map[Symbol, Any] = m.get(keyword(name)) match {
@@ -126,7 +126,7 @@ object ProjectConfig {
             case lst: SExpList => Some(lst.toKeywordMap)
             case _ => None
           }.toList
-        case _ => List()
+        case _ => List.empty
       }
     }
 
@@ -171,7 +171,7 @@ object ProjectConfig {
             case StringAtom(v) => v
             case x => x.toString
           }
-          case _ => List()
+          case _ => List.empty
         }).flatMap { subproject(m, _) }
         deps.foldLeft(p)(mergeWithDependency)
       }
@@ -509,15 +509,14 @@ object ProjectConfig {
     def formatPrefs = getMap(m, ":formatting-prefs")
 
     private def simpleMerge(m1: KeyMap, m2: KeyMap): KeyMap = {
-      val keys = Set() ++ m1.keys ++ m2.keys
+      val keys = Set.empty ++ m1.keys ++ m2.keys
       val merged: Map[KeywordAtom, SExp] = keys.map { key =>
         (m1.get(key), m2.get(key)) match {
           case (Some(s1), None) => (key, s1)
           case (None, Some(s2)) => (key, s2)
-          case (Some(SExpList(items1)),
-            Some(SExpList(items2))) => (key, SExpList(items1 ++ items2))
+          case (Some(SExpList(items1)), Some(SExpList(items2))) => (key, SExpList(items1 ++ items2))
           case (Some(s1: SExp), Some(s2: SExp)) => (key, s2)
-          case _ => (key, NilAtom())
+          case _ => (key, NilAtom)
         }
       }.toMap
       merged
@@ -639,9 +638,8 @@ object ProjectConfig {
   def nullConfig = new ProjectConfig()
 
   def getJavaHome: Option[File] = {
-    val javaHome: String = System.getProperty("java.home")
-    if (javaHome == null) None
-    else Some(new File(javaHome))
+    val javaHome = Option(System.getProperty("java.home"))
+    javaHome.map(new File(_))
   }
 
   def detectBootClassPath(): Option[String] = {
@@ -673,7 +671,7 @@ object ProjectConfig {
                 List(new File(javaHome, "lib")),
                 isValidJar)
             }
-          case None => Set()
+          case None => Set.empty
         }
     }
   }
@@ -687,22 +685,22 @@ case class ProjectConfig(
     scalaReflectJar: Option[CanonFile] = None,
     scalaCompilerJar: Option[CanonFile] = None,
     root: CanonFile = new File("."),
-    sourceRoots: Iterable[CanonFile] = List(),
-    referenceSourceRoots: Iterable[CanonFile] = List(),
-    runtimeDeps: Iterable[CanonFile] = List(),
-    compileDeps: Iterable[CanonFile] = List(),
+    sourceRoots: Iterable[CanonFile] = List.empty,
+    referenceSourceRoots: Iterable[CanonFile] = List.empty,
+    runtimeDeps: Iterable[CanonFile] = List.empty,
+    compileDeps: Iterable[CanonFile] = List.empty,
     target: Option[CanonFile] = None,
     testTarget: Option[CanonFile] = None,
     formattingPrefsMap: Map[Symbol, Any] = Map(),
     disableIndexOnStartup: Boolean = false,
     disableSourceLoadOnStartup: Boolean = false,
     disableScalaJarsOnClasspath: Boolean = false,
-    onlyIncludeInIndex: Iterable[Regex] = List(),
-    excludeFromIndex: Iterable[Regex] = List(),
-    extraCompilerArgs: Iterable[String] = List(),
+    onlyIncludeInIndex: Iterable[Regex] = List.empty,
+    excludeFromIndex: Iterable[Regex] = List.empty,
+    extraCompilerArgs: Iterable[String] = List.empty,
     // TODO This appears to be unused
-    extraBuilderArgs: Iterable[String] = List(),
-    javaCompilerArgs: Iterable[String] = List(),
+    extraBuilderArgs: Iterable[String] = List.empty,
+    javaCompilerArgs: Iterable[String] = List.empty,
     javaCompilerVersion: Option[String] = None) {
 
   import ProjectConfig.log
