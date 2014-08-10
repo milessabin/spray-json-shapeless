@@ -63,7 +63,7 @@ object IntgUtil extends Assertions {
           val rpcId = nextRPCid
           nextRPCid += 1
           val msg = s"""(:swank-rpc ${req.toWireString} $rpcId)"""
-          project ! IncomingMessageEvent(SExp.read(msg))
+          project ! IncomingMessageEvent(SExpParser.read(msg))
           rpcExpectations += (rpcId -> sender())
         // this is the message from the server
         case OutgoingMessageEvent(obj) =>
@@ -106,8 +106,8 @@ object IntgUtil extends Assertions {
     }
 
     def sendRPCString(dur: FiniteDuration, msg: String): String = {
-      val sexpReq = SExp.read(msg)
-      sendRPCExp(dur, sexpReq).toReadableString()
+      val sexpReq = SExpParser.read(msg)
+      sendRPCExp(dur, sexpReq).toString
     }
 
     def expectRPC(dur: FiniteDuration, toSend: String, expected: String) {
@@ -121,7 +121,7 @@ object IntgUtil extends Assertions {
 
     def expectAsync(dur: FiniteDuration, expected: String) {
 
-      val expectedSExp = SExp.read(expected)
+      val expectedSExp = SExpParser.read(expected)
 
       val askRes = Patterns.ask(actor, AsyncRequest(expectedSExp), dur)
       try {
@@ -157,12 +157,14 @@ object IntgUtil extends Assertions {
       val destFile = Path(projectBase) / relativeSrc
       destFile.parent.createDirectory()
       val writer = destFile.bufferedWriter()
+      val source = Source.fromFile(srcFile.path)
       try {
-        Source.fromFile(srcFile.path).getLines.foreach(line => {
+        source.getLines().foreach(line => {
           writer.write(line)
           writer.write("\n")
         })
       } finally {
+        source.close()
         writer.close()
       }
     }

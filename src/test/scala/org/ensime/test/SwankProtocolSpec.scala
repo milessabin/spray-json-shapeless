@@ -1,22 +1,23 @@
 package org.ensime.test
 
-import java.io.{ File, ByteArrayInputStream, ByteArrayOutputStream }
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, File }
+import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.TypedActor.MethodCall
-import akka.actor.{ TypedProps, TypedActor, ActorSystem }
+import akka.actor.{ ActorSystem, TypedActor, TypedProps }
 import akka.testkit.TestProbe
+import org.ensime.model.SourceFileInfo
+import org.ensime.protocol.{ SExpConversion, SwankProtocol }
 import org.ensime.server.RPCTarget
-import org.ensime.util.SExp
+import org.ensime.util.{ SExp, SExpParser, WireFormat }
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
-import org.ensime.protocol.{ OutgoingMessageEvent, SExpConversion }
-import org.ensime.protocol.SwankProtocol
-import scala.reflect.io.ZipArchive
-import scala.reflect.internal.util.RangePosition
-import scala.reflect.internal.util.BatchSourceFile
-import scala.tools.nsc.io.{ VirtualFile, PlainFile }
-import scala.concurrent.duration._
 
-class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll {
+import scala.reflect.internal.util.{ RangePosition, BatchSourceFile }
+import scala.reflect.io.ZipArchive
+import scala.tools.nsc.io.{ PlainFile, VirtualFile }
+
+class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
 
   class MockZipEntry(entry: String, archive: ZipArchive) extends VirtualFile(entry, entry) {
     override def underlyingSource: Option[ZipArchive] = Some(archive)
@@ -45,7 +46,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
   def testRPCMethod(msg: String, methodName: String, args: Any*) {
     withTestConfig { (protocol, rpcProbe, outputProbe) =>
-      val encodedMsg = SExp.read(msg)
+      val encodedMsg = SExpParser.read(msg)
       protocol.handleIncomingMessage(encodedMsg)
 
       val rpcCall = rpcProbe.expectMsgType[MethodCall]
@@ -59,16 +60,6 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
   }
 
   describe("SwankProtocol") {
-    it("replies to connection info request") {
-      withTestConfig { (protocol, rpcProbe, outputProbe) =>
-        protocol.handleIncomingMessage(SExp.read("""(:swank-rpc (swank:connection-info) 42)"""))
-
-        val expected = SExp.read("""(:return (:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9")) 42))""")
-        outputProbe.expectMsg(1.seconds, OutgoingMessageEvent(expected))
-        rpcProbe.expectNoMsg()
-      }
-    }
-
     it("processes remove-file request") {
       testRPCMethod("""(:swank-rpc (swank:remove-file "Analyzer.scala") 42)""",
         "rpcRemoveFile",
@@ -76,7 +67,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     }
 
     it("can encode and decode sexp to wire") {
-      val msg = SExp.read("""(:XXXX "abc") """)
+      val msg = SExpParser.read("""(:XXXX "abc") """)
       val protocol = new SwankProtocol()
 
       val os = new ByteArrayOutputStream()
@@ -93,7 +84,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = f.position(2)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :offset 2)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
 
@@ -103,7 +94,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = f.position(2)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :archive "stuff.zip" :offset 2)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
 
@@ -112,7 +103,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = new RangePosition(f, 1, 2, 3)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :offset 2 :start 1 :end 3)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
 
@@ -122,8 +113,60 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = new RangePosition(f, 1, 2, 3)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :archive "stuff.zip" :offset 2 :start 1 :end 3)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
+    }
+
+    it("should handle conversions correctly") {
+
+      trait MsgHandler {
+        def send(o: WireFormat)
+      }
+      val t = mock[RPCTarget]
+      val out = mock[MsgHandler]
+
+      val prot = new SwankProtocol() {
+        override def sendMessage(o: WireFormat) {
+          out.send(o)
+        }
+      }
+      prot.setRPCTarget(t)
+
+      val nextId = new AtomicInteger(1)
+      def test(msg: String)(expectation: (RPCTarget, MsgHandler, Int) => Unit): Unit = {
+
+        val rpcId = nextId.getAndIncrement
+        expectation(t, out, rpcId)
+
+        prot.handleIncomingMessage(SExpParser.read(s"(:swank-rpc $msg $rpcId)"))
+      }
+
+      test("(swank:connection-info)") { (t, m, id) =>
+        (t.rpcConnectionInfo _).expects(id)
+      }
+
+      test("(swank:shutdown-server)") { (t, m, id) =>
+        (t.rpcShutdownServer _).expects(id)
+      }
+
+      test("(swank:repl-config)") { (t, m, id) =>
+        (t.rpcReplConfig _).expects(id)
+      }
+
+      test("""(swank:remove-file "Analyzer.scala")""") { (t, m, id) =>
+        (t.rpcRemoveFile _).expects("Analyzer.scala", id)
+      }
+
+      val analyzerFile = new File("Analyzer.scala")
+      test("""(swank:typecheck-file "Analyzer.scala")""") { (t, m, id) =>
+        (t.rpcTypecheckFiles _).expects(List(SourceFileInfo(analyzerFile)), id)
+      }
+
+      test("""(swank:typecheck-file "Analyzer.scala" "contents\\n\\ncontents")""") { (t, m, id) =>
+
+        (t.rpcTypecheckFiles _).expects(List(SourceFileInfo(analyzerFile, Some("contents\\n\\ncontents"))), id)
+      }
+
     }
   }
 }
