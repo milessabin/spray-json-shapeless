@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable
 
 case class RPCResultEvent(value: WireFormat, callId: Int)
-case class RPCErrorEvent(code: Int, detail: String, callId: Int)
+case class RPCErrorEvent(code: Int, detail: Option[String], callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
 case class AsyncEvent(evt: WireFormat)
 
@@ -76,8 +76,11 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   private var undoCounter = 0
   private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
 
-  def sendRPCError(code: Int, detail: String, callId: Int) {
+  def sendRPCError(code: Int, detail: Option[String], callId: Int) {
     actor ! RPCErrorEvent(code, detail, callId)
+  }
+  def sendRPCError(detail: String, callId: Int) {
+    sendRPCError(ProtocolConst.ErrExceptionInRPC, Some(detail), callId)
   }
 
   def bgMessage(msg: String) {

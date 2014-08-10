@@ -3,14 +3,15 @@ package org.ensime.test
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.config.ProjectConfig
-import org.ensime.util.{ SExpParser, SExp, CanonFile }
+import org.ensime.util.SExp
+import org.ensime.util.CanonFile
 
 import TestUtil._
 
 class ProjectConfigSpec extends FunSpec with Matchers {
 
   def parse(s: String): ProjectConfig = {
-    ProjectConfig.fromSExp(SExpParser.read(s)) match {
+    ProjectConfig.fromSExp(SExp.read(s)) match {
       case Right(c) => c
       case Left(t) => throw t
     }
@@ -70,7 +71,6 @@ class ProjectConfigSpec extends FunSpec with Matchers {
           |  :active-subproject "B"
           |)""".stripMargin)
         assert(conf.name.get == "Proj B")
-
         assert(conf.sourceRoots.toSet.contains(root1))
         assert(conf.sourceRoots.toSet.contains(root2))
       }
@@ -84,9 +84,9 @@ class ProjectConfigSpec extends FunSpec with Matchers {
         val target = CanonFile(createUniqueDirectory(dir))
         val conf = parse(s"""
           |(
-          |  :name "Outer"
-          |  :target "$target"
-          |  :source-roots ("$root0")
+          |     :name "Outer"
+          |     :target "$target"
+          |     :source-roots ("$root0")
           |  :subprojects (
           |     (
           |     :name "Proj A"
