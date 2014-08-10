@@ -4,7 +4,7 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
-import org.ensime.util.SExpParser
+import org.ensime.util.SExp
 import scala.tools.nsc.{ Global, Settings }
 import scala.tools.nsc.io.{ Jar, File, Directory, Path, PlainFile }
 import scala.tools.nsc.reporters.ConsoleReporter
@@ -13,7 +13,7 @@ import TestUtil._
 class ClassFileIndexSpec extends FunSpec with Matchers {
 
   def config(s: String): ProjectConfig = {
-    ProjectConfig.fromSExp(SExpParser.read(s)) match {
+    ProjectConfig.fromSExp(SExp.read(s)) match {
       case Right(c) => c
       case Left(t) => throw t
     }

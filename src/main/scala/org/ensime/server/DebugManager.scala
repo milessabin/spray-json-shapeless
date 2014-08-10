@@ -438,7 +438,9 @@ class DebugManager(project: Project, indexer: ActorRef,
         } catch {
           case e: Throwable =>
             log.error(e, "Error handling RPC:")
-            project.sendRPCError(ErrExceptionInDebugger, "Error occurred in Debug Manager. Check the server log.", callId)
+            project.sendRPCError(ErrExceptionInDebugger,
+              Some("Error occurred in Debug Manager. Check the server log."),
+              callId)
         }
       case other =>
         log.error("Unknown event type: " + other)

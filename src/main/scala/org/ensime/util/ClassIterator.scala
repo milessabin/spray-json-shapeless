@@ -10,7 +10,7 @@ import org.objectweb.asm.ClassReader
 import java.io._
 import java.util.jar.{ JarFile, Manifest => JarManifest }
 import java.util.zip._
-import java.io.{ File, InputStream }
+import java.io.{ File, InputStream, IOException }
 
 trait ClassHandler {
   def onClass(name: String, location: String, flags: Int) {}
@@ -186,7 +186,7 @@ object ClassIterator {
 
   private def isClass(e: FileEntry): Boolean = {
     import scala.language.reflectiveCalls
-    (!e.isDirectory) && e.getName().toLowerCase.endsWith(".class")
+    (!e.isDirectory) && e.getName.toLowerCase.endsWith(".class")
   }
 
   private def processDirectory(dir: File, callback: Callback) {

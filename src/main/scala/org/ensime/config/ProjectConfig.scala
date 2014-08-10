@@ -167,10 +167,7 @@ object ProjectConfig {
       }
       main.map { p: KeyMap =>
         val deps = (p.get(dependsOnModulesKey) match {
-          case Some(names: SExpList) => names.map {
-            case StringAtom(v) => v
-            case x => x.toString
-          }
+          case Some(names: SExpList) => names.map(_.toString)
           case _ => List()
         }).flatMap { subproject(m, _) }
         deps.foldLeft(p)(mergeWithDependency)

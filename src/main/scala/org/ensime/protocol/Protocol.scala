@@ -141,7 +141,7 @@ trait Protocol {
    * @param  callId The id of the failed RPC call.
    * @return        Void
    */
-  def sendRPCError(code: Int, detail: String, callId: Int)
+  def sendRPCError(code: Int, detail: Option[String], callId: Int)
 
   /**
    * Notify the client that a message was received
@@ -151,5 +151,6 @@ trait Protocol {
    * @param  detail  A message describing the problem.
    * @return        Void
    */
-  def sendProtocolError(code: Int, detail: String)
+  def sendProtocolError(code: Int, detail: Option[String])
+
 }

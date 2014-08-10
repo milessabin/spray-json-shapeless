@@ -31,6 +31,7 @@ import scala.util.matching.Regex
 import scala.collection.mutable.ListBuffer
 import org.objectweb.asm.Opcodes
 import org.json.simple._
+import scala.util.Properties._
 import akka.pattern.ask
 
 object LuceneIndex extends StringSimilarity {
