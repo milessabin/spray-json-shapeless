@@ -6,7 +6,7 @@ import akka.actor.TypedActor.MethodCall
 import akka.actor.{ TypedProps, TypedActor, ActorSystem }
 import akka.testkit.TestProbe
 import org.ensime.server.RPCTarget
-import org.ensime.util.SExp
+import org.ensime.util.{ SExpParser, SExp }
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
 import org.ensime.protocol.{ OutgoingMessageEvent, SExpConversion }
 import org.ensime.protocol.SwankProtocol
@@ -45,7 +45,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
   def testRPCMethod(msg: String, methodName: String, args: Any*) {
     withTestConfig { (protocol, rpcProbe, outputProbe) =>
-      val encodedMsg = SExp.read(msg)
+      val encodedMsg = SExpParser.read(msg)
       protocol.handleIncomingMessage(encodedMsg)
 
       val rpcCall = rpcProbe.expectMsgType[MethodCall]
@@ -61,9 +61,9 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
   describe("SwankProtocol") {
     it("replies to connection info request") {
       withTestConfig { (protocol, rpcProbe, outputProbe) =>
-        protocol.handleIncomingMessage(SExp.read("""(:swank-rpc (swank:connection-info) 42)"""))
+        protocol.handleIncomingMessage(SExpParser.read("""(:swank-rpc (swank:connection-info) 42)"""))
 
-        val expected = SExp.read("""(:return (:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9")) 42))""")
+        val expected = SExpParser.read("""(:return (:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9")) 42))""")
         outputProbe.expectMsg(1.seconds, OutgoingMessageEvent(expected))
         rpcProbe.expectNoMsg()
       }
@@ -76,7 +76,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     }
 
     it("can encode and decode sexp to wire") {
-      val msg = SExp.read("""(:XXXX "abc") """)
+      val msg = SExpParser.read("""(:XXXX "abc") """)
       val protocol = new SwankProtocol()
 
       val os = new ByteArrayOutputStream()
@@ -93,7 +93,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = f.position(2)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :offset 2)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
 
@@ -103,7 +103,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = f.position(2)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :archive "stuff.zip" :offset 2)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
 
@@ -112,7 +112,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = new RangePosition(f, 1, 2, 3)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :offset 2 :start 1 :end 3)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
 
@@ -122,7 +122,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val p = new RangePosition(f, 1, 2, 3)
       val s = SExpConversion.posToSExp(p)
       val expected = """(:file "stuff" :archive "stuff.zip" :offset 2 :start 1 :end 3)"""
-      val got = s.toReadableString(debug = false)
+      val got = s.toString
       assert(got == expected, got + " != " + expected)
     }
   }

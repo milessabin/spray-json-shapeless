@@ -122,8 +122,7 @@ class Analyzer(
       case rpcReq @ RPCRequestEvent(req: Any, callId: Int) =>
         try {
           if (awaitingInitialCompile) {
-            project.sendRPCError(ErrAnalyzerNotReady,
-              Some("Analyzer is not ready! Please wait."), callId)
+            project.sendRPCError(ErrAnalyzerNotReady, "Analyzer is not ready! Please wait.", callId)
           } else {
             reporter.enable()
 
@@ -154,8 +153,7 @@ class Analyzer(
 
               case PatchSourceReq(file, edits) =>
                 if (!file.exists()) {
-                  project.sendRPCError(ErrFileDoesNotExist,
-                    Some(file.getPath), callId)
+                  project.sendRPCError(ErrFileDoesNotExist, file.getPath, callId)
                 } else {
                   val f = createSourceFile(file)
                   val revised = PatchSource.applyOperations(f, edits)
@@ -286,8 +284,7 @@ class Analyzer(
         } catch {
           case e: Throwable =>
             log.error(e, "Error handling RPC: " + e)
-            project.sendRPCError(ErrExceptionInAnalyzer,
-              Some("Error occurred in Analyzer. Check the server log."), callId)
+            project.sendRPCError(ErrExceptionInAnalyzer, "Error occurred in Analyzer. Check the server log.", callId)
         }
       case other =>
         log.error("Unknown message type: " + other)
