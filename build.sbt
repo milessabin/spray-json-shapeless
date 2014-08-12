@@ -55,9 +55,6 @@ val JavaTools = List[Option[String]] (
 
 internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) }
 
-// 0.10 is busted
-addCompilerPlugin("org.brianmckenna" % "wartremover_2.11.0-RC4" % "0.9")
-
 scalacOptions in Compile ++= Seq(
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", "-deprecation",
   "-Xfatal-warnings",
