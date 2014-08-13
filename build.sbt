@@ -25,6 +25,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"          %% "akka-actor" 	         % "2.3.4",
   "com.typesafe.akka"          %% "akka-slf4j"           % "2.3.4",
   "com.typesafe.akka"          %% "akka-testkit"         % "2.3.4" % "test",
+  "org.scalamock"              %% "scalamock-scalatest-support" % "3.1.2" % "test",
   "ch.qos.logback"             %  "logback-classic"      % "1.0.13",
   "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.7",
   "commons-io"                 % "commons-io"            % "2.4" % "test",
@@ -81,7 +82,7 @@ ScalastylePlugin.Settings
 instrumentSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 40
+ScoverageKeys.minimumCoverage := 41
 
 // might be buggy
 ScoverageKeys.highlighting := true

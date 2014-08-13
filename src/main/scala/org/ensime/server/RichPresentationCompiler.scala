@@ -93,7 +93,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 
   def askReloadAllFiles() = {
     val all = (config.sourceFilenames.map(getSourceFile) ++
-      activeUnits.map(_.source)).toSet.toList
+      activeUnits().map(_.source)).toSet.toList
     askReloadFiles(all)
   }
 
@@ -407,7 +407,7 @@ class RichPresentationCompiler(
 
   private var notifyWhenReady = false
 
-  override def isOutOfDate(): Boolean = {
+  override def isOutOfDate: Boolean = {
     if (notifyWhenReady && !super.isOutOfDate) {
       parent ! FullTypeCheckCompleteEvent()
       notifyWhenReady = false

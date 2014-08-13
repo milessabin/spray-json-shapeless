@@ -116,7 +116,7 @@ class SwankProtocol extends Protocol {
       //TODO allocating a new array each time is inefficient!
       val buf: Array[Char] = new Array[Char](msglen)
       fillArray(reader, buf)
-      SExp.read(new input.CharArrayReader(buf))
+      SExpParser.read(new input.CharArrayReader(buf))
     } else {
       throw new IllegalStateException("Empty message read from socket!")
     }
@@ -130,12 +130,18 @@ class SwankProtocol extends Protocol {
   }
 
   private def handleMessageForm(sexp: SExp) {
-    log.info("Received msg: " + sexp.toReadableString(debug = true))
+    val msgStr = sexp.toString
+    val displayStr = if (msgStr.length > 500)
+      msgStr.take(500) + "..."
+    else
+      msgStr
+
+    log.info("Received msg: " + displayStr)
     sexp match {
-      case SExpList(KeywordAtom(":swank-rpc") :: form :: IntAtom(callId) :: rest) =>
+      case SExpList(KeywordAtom(":swank-rpc") :: form :: IntAtom(callId) :: Nil) =>
         handleEmacsRex(form, callId)
       case _ =>
-        sendProtocolError(ErrUnrecognizedForm, Some(sexp.toReadableString(debug = false)))
+        sendProtocolError(ErrUnrecognizedForm, sexp.toString)
     }
   }
 
@@ -147,13 +153,10 @@ class SwankProtocol extends Protocol {
         } catch {
           case e: Throwable =>
             e.printStackTrace(System.err)
-            sendRPCError(ErrExceptionInRPC, Some(e.getMessage), callId)
+            sendRPCError(ErrExceptionInRPC, e.getMessage, callId)
         }
       case _ =>
-        sendRPCError(
-          ErrMalformedRPC,
-          Some("Expecting leading symbol in: " + form),
-          callId)
+        sendRPCError(ErrMalformedRPC, "Expecting leading symbol in: " + form, callId)
     }
   }
 
@@ -516,7 +519,7 @@ class SwankProtocol extends Protocol {
 
   private def handleRPCRequest(callType: String, form: SExp, callId: Int) {
 
-    def oops() = sendRPCError(ErrMalformedRPC, Some("Malformed " + callType + " call: " + form), callId)
+    def oops() = sendRPCError(ErrMalformedRPC, "Malformed " + callType + " call: " + form, callId)
 
     callType match {
 
@@ -547,7 +550,7 @@ class SwankProtocol extends Protocol {
        *   :version "0.7")) 42)
        */
       case "swank:connection-info" =>
-        sendRPCReturn(conversions.toWF(new ConnectionInfo()), callId)
+        rpcTarget.rpcConnectionInfo(callId)
 
       /**
        * Doc RPC:
@@ -579,7 +582,7 @@ class SwankProtocol extends Protocol {
           case SExpList(head :: (conf: SExpList) :: body) =>
             ProjectConfig.fromSExp(conf) match {
               case Right(config) => rpcTarget.rpcInitProject(config, callId)
-              case Left(t) => sendRPCError(ErrExceptionInRPC, Some(t.toString), callId)
+              case Left(t) => sendRPCError(ErrExceptionInRPC, t.toString, callId)
             }
           case _ => oops()
         }
@@ -724,7 +727,7 @@ class SwankProtocol extends Protocol {
        * Doc RPC:
        *   swank:patch-source
        * Summary:
-       *   Request immediate load and check the given source file.
+       *   Patch the source with the given changes.
        * Arguments:
        *   String:A filename
        *   A FilePatch
@@ -789,9 +792,12 @@ class SwankProtocol extends Protocol {
        */
       case "swank:format-source" =>
         form match {
-          case SExpList(head :: SExpList(filenames) :: body) =>
-            val files = filenames.map(_.toString)
-            rpcTarget.rpcFormatFiles(files, callId)
+          case SExpList(head :: (fnl: SExpList) :: body) =>
+            fnl.toStringList match {
+              case Some(filenames) =>
+                rpcTarget.rpcFormatFiles(filenames, callId)
+              case _ => oops()
+            }
           case _ => oops()
         }
 
@@ -814,9 +820,12 @@ class SwankProtocol extends Protocol {
        */
       case "swank:public-symbol-search" =>
         form match {
-          case SExpList(head :: SExpList(keywords) :: IntAtom(maxResults) :: body) =>
-            rpcTarget.rpcPublicSymbolSearch(
-              keywords.map(_.toString).toList, maxResults, callId)
+          case SExpList(head :: (kl: SExpList) :: IntAtom(maxResults) :: body) =>
+            kl.toStringList match {
+              case Some(keywords) =>
+                rpcTarget.rpcPublicSymbolSearch(keywords, maxResults, callId)
+              case None => oops()
+            }
           case _ => oops()
         }
 
@@ -847,9 +856,11 @@ class SwankProtocol extends Protocol {
       case "swank:import-suggestions" =>
         form match {
           case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
-            SExpList(names) :: IntAtom(maxResults) :: body) =>
-            rpcTarget.rpcImportSuggestions(file, point,
-              names.map(_.toString).toList, maxResults, callId)
+            (nl: SExpList) :: IntAtom(maxResults) :: body) =>
+            nl.toStringList match {
+              case Some(names) => rpcTarget.rpcImportSuggestions(file, point, names, maxResults, callId)
+              case None => oops()
+            }
           case _ => oops()
         }
 
@@ -880,11 +891,9 @@ class SwankProtocol extends Protocol {
        */
       case "swank:completions" =>
         form match {
-          case SExpList(head :: StringAtom(file) :: IntAtom(point) ::
-            IntAtom(maxResults) :: BooleanAtom(caseSens) ::
-            BooleanAtom(reload) :: body) =>
-            rpcTarget.rpcCompletionsAtPoint(
-              file, point, maxResults, caseSens, reload, callId)
+          case SExpList(head :: StringAtom(file) :: IntAtom(point) :: IntAtom(maxResults) ::
+            BooleanAtom(caseSens) :: BooleanAtom(reload) :: body) =>
+            rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, caseSens, reload, callId)
           case _ => oops()
         }
 
@@ -1030,8 +1039,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:type-by-name-at-point" =>
         form match {
-          case SExpList(head :: StringAtom(name) :: StringAtom(file) ::
-            OffsetRangeExtractor(range) :: body) =>
+          case SExpList(head :: StringAtom(name) :: StringAtom(file) :: OffsetRangeExtractor(range) :: body) =>
             rpcTarget.rpcTypeByNameAtPoint(name, file, range, callId)
           case _ => oops()
         }
@@ -1055,8 +1063,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:type-at-point" =>
         form match {
-          case SExpList(head :: StringAtom(file) ::
-            OffsetRangeExtractor(range) :: body) =>
+          case SExpList(head :: StringAtom(file) :: OffsetRangeExtractor(range) :: body) =>
             rpcTarget.rpcTypeAtPoint(file, range, callId)
           case _ => oops()
         }
@@ -1081,8 +1088,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:inspect-type-at-point" =>
         form match {
-          case SExpList(head :: StringAtom(file) ::
-            OffsetRangeExtractor(range) :: body) =>
+          case SExpList(head :: StringAtom(file) :: OffsetRangeExtractor(range) :: body) =>
             rpcTarget.rpcInspectTypeAtPoint(file, range, callId)
           case _ => oops()
         }
@@ -1191,10 +1197,8 @@ class SwankProtocol extends Protocol {
        */
       case "swank:prepare-refactor" =>
         form match {
-          case SExpList(head :: IntAtom(procId) :: SymbolAtom(tpe) ::
-            (params: SExp) :: BooleanAtom(interactive) :: body) =>
-            rpcTarget.rpcPrepareRefactor(Symbol(tpe), procId,
-              listOrEmpty(params).toSymbolMap, interactive, callId)
+          case SExpList(head :: IntAtom(procId) :: SymbolAtom(tpe) :: (params: SExp) :: BooleanAtom(interactive) :: body) =>
+            rpcTarget.rpcPrepareRefactor(Symbol(tpe), procId, listOrEmpty(params).toSymbolMap, interactive, callId)
           case _ => oops()
         }
 
@@ -1270,12 +1274,9 @@ class SwankProtocol extends Protocol {
        */
       case "swank:symbol-designations" =>
         form match {
-          case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
-            IntAtom(end) :: (reqTypes: SExp) :: body) =>
-            val requestedTypes: List[Symbol] = listOrEmpty(reqTypes).map(
-              tpe => Symbol(tpe.toString)).toList
-            rpcTarget.rpcSymbolDesignations(filename, start,
-              end, requestedTypes, callId)
+          case SExpList(head :: StringAtom(filename) :: IntAtom(start) :: IntAtom(end) :: (reqTypes: SExp) :: body) =>
+            val requestedTypes: List[Symbol] = listOrEmpty(reqTypes).map(tpe => Symbol(tpe.toString)).toList
+            rpcTarget.rpcSymbolDesignations(filename, start, end, requestedTypes, callId)
           case _ => oops()
         }
 
@@ -1299,8 +1300,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:expand-selection" =>
         form match {
-          case SExpList(head :: StringAtom(filename) :: IntAtom(start) ::
-            IntAtom(end) :: body) =>
+          case SExpList(head :: StringAtom(filename) :: IntAtom(start) :: IntAtom(end) :: body) =>
             rpcTarget.rpcExpandSelection(filename, start, end, callId)
           case _ => oops()
         }
@@ -1329,8 +1329,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:method-bytecode" =>
         form match {
-          case SExpList(head :: StringAtom(filename) ::
-            IntAtom(line) :: body) =>
+          case SExpList(head :: StringAtom(filename) :: IntAtom(line) :: body) =>
             rpcTarget.rpcMethodBytecode(filename, line, callId)
           case _ => oops()
         }
@@ -1438,8 +1437,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:debug-set-break" =>
         form match {
-          case SExpList(head :: StringAtom(filename) ::
-            IntAtom(line) :: body) =>
+          case SExpList(head :: StringAtom(filename) :: IntAtom(line) :: body) =>
             rpcTarget.rpcDebugBreak(filename, line, callId)
           case _ => oops()
         }
@@ -1461,8 +1459,7 @@ class SwankProtocol extends Protocol {
        */
       case "swank:debug-clear-break" =>
         form match {
-          case SExpList(head :: StringAtom(filename) ::
-            IntAtom(line) :: body) =>
+          case SExpList(head :: StringAtom(filename) :: IntAtom(line) :: body) =>
             rpcTarget.rpcDebugClearBreak(filename, line, callId)
           case _ => oops()
         }
@@ -1755,10 +1752,7 @@ class SwankProtocol extends Protocol {
         rpcTarget.rpcShutdownServer(callId)
 
       case other =>
-        sendRPCError(
-          ErrUnrecognizedRPC,
-          Some("Unknown :swank-rpc call: " + other),
-          callId)
+        sendRPCError(ErrUnrecognizedRPC, "Unknown :swank-rpc call: " + other, callId)
     }
   }
 
@@ -1776,10 +1770,7 @@ class SwankProtocol extends Protocol {
   def sendRPCReturn(value: WireFormat, callId: Int) {
     value match {
       case sexp: SExp =>
-        sendMessage(SExp(
-          key(":return"),
-          SExp(key(":ok"), sexp),
-          callId))
+        sendMessage(SExp(key(":return"), SExp(key(":ok"), sexp), callId))
       case _ => throw new IllegalStateException("Not a SExp: " + value)
     }
   }
@@ -1791,21 +1782,12 @@ class SwankProtocol extends Protocol {
     }
   }
 
-  def sendRPCError(code: Int, detail: Option[String], callId: Int) {
-    sendMessage(SExp(
-      key(":return"),
-      SExp(key(":abort"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())),
-      callId))
+  def sendRPCError(code: Int, detail: String, callId: Int) {
+    sendMessage(SExp(key(":return"), SExp(key(":abort"), code, detail), callId))
   }
 
-  def sendProtocolError(code: Int, detail: Option[String]) {
-    sendMessage(
-      SExp(
-        key(":reader-error"),
-        code,
-        detail.map(strToSExp).getOrElse(NilAtom())))
+  def sendProtocolError(code: Int, detail: String) {
+    sendMessage(SExp(key(":reader-error"), code, detail))
   }
 
   object OffsetRangeExtractor {
@@ -1850,5 +1832,4 @@ class SwankProtocol extends Protocol {
       }
     }
   }
-
 }

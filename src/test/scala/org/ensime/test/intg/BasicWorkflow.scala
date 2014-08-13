@@ -29,7 +29,7 @@ class BasicWorkflow extends FunSpec with Matchers {
         // expected form(:ok (:name "scala.Int" :local-name "Int" :type (:name "Int" :type-id 1 :full-name "scala.Int" :decl-as class) :owner-type-id 2))
         // n.b. this code is ugly - but will become neater after protocol refactor
         // id changes between platforms/invocations so we need to extract it and use it
-        val inspectResp = interactor.sendRPCExp(20 seconds, SExp.read(s"""(swank:symbol-at-point $fooFile 128)"""))
+        val inspectResp = interactor.sendRPCExp(20 seconds, SExpParser.read(s"""(swank:symbol-at-point $fooFile 128)"""))
         val intTypeId = inspectResp match {
           case SExpList(KeywordAtom(":ok") :: (res: SExpList) :: Nil) =>
             res.toKeywordMap(KeywordAtom(":type")).asInstanceOf[SExpList].toKeywordMap(KeywordAtom(":type-id")).asInstanceOf[IntAtom].value
@@ -40,7 +40,7 @@ class BasicWorkflow extends FunSpec with Matchers {
         //use the type ID to get the type information
         // compared with a baseline with the type ids removed (
         //        // type info for secondary buffer
-        val typeInfoResp = interactor.sendRPCExp(30 seconds, SExp.read(s"""(swank:inspect-type-by-id 1)"""))
+        val typeInfoResp = interactor.sendRPCExp(30 seconds, SExpParser.read(s"""(swank:inspect-type-by-id 1)"""))
 
         typeInfoResp match {
           case SExpList(KeywordAtom(":ok") :: (typeInfo: SExpList) :: Nil) =>

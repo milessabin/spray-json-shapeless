@@ -4,7 +4,7 @@ import java.io._
 import java.net.{ ServerSocket, Socket, InetAddress }
 import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
 import org.ensime.protocol._
-import org.ensime.util.{ SExp, WireFormat }
+import org.ensime.util.{ SExpParser, SExp, WireFormat }
 import org.ensime.config.{ ProjectConfig, Environment }
 import org.slf4j._
 import scala.io.Source
@@ -88,7 +88,7 @@ object Server {
     val configSrc = Source.fromFile(ensimeFile)
     try {
       val content = configSrc.getLines().filterNot(_.startsWith(";;")).mkString("\n")
-      ProjectConfig.fromSExp(SExp.read(content)) match {
+      ProjectConfig.fromSExp(SExpParser.read(content)) match {
         case Right(config) =>
           config
         case Left(ex) =>
@@ -127,7 +127,7 @@ class Server(cacheDir: File, host: String, requestedPort: Int) {
         try {
           val socket = listener.accept()
           log.info("Got connection, creating handler...")
-          val handler = actorSystem.actorOf(Props(classOf[SocketHandler], socket, protocol, project))
+          actorSystem.actorOf(Props(classOf[SocketHandler], socket, protocol, project))
         } catch {
           case e: IOException =>
             log.error("ENSIME Server: ", e)
