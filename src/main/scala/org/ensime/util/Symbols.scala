@@ -5,7 +5,6 @@ package org.ensime.util
 */
 
 object Symbols {
-  import scala.tools.nsc.symtab.Flags._
   val Method = 'method
   val Trait = 'trait
   val Interface = 'interface
@@ -28,6 +27,5 @@ object Symbols {
   val Start = 'start
   val End = 'end
   val MethodName = 'methodName
-
 }
 

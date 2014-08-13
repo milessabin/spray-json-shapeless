@@ -17,7 +17,7 @@ trait RPCTarget {
   def rpcConnectionInfo(callId: Int)
   def rpcShutdownServer(callId: Int)
 
-  def rpcInitProject(conf: ProjectConfig, callId: Int)
+  def rcpInitProject(confSExp: SExp, callId: Int)
   def rpcPeekUndo(callId: Int)
   def rpcExecUndo(undoId: Int, callId: Int)
   def rpcReplConfig(callId: Int)
@@ -72,16 +72,16 @@ trait RPCTarget {
 
   def rpcInspectPackageByPath(path: String, callId: Int)
 
-  def rpcPrepareRefactor(refactorType: Symbol, procId: Int,
+  def rpcPrepareRefactor(procId: Int, refactorType: Symbol,
     params: immutable.Map[Symbol, Any], interactive: Boolean, callId: Int)
 
-  def rpcExecRefactor(refactorType: Symbol, procId: Int, callId: Int)
+  def rpcExecRefactor(procId: Int, refactorType: Symbol, callId: Int)
 
   def rpcCancelRefactor(procId: Int, callId: Int)
 
   def rpcExpandSelection(filename: String, start: Int, stop: Int, callId: Int)
 
-  def rpcFormatFiles(filenames: Iterable[String], callId: Int)
+  def rpcFormatFiles(filenames: List[String], callId: Int)
 }
 
 trait ProjectRPCTarget extends RPCTarget { self: Project =>
@@ -98,9 +98,14 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     shutdownServer()
   }
 
-  override def rpcInitProject(conf: ProjectConfig, callId: Int) {
-    initProject(conf)
-    sendRPCReturn(toWF(conf), callId)
+  def rcpInitProject(confSExp: SExp, callId: Int): Unit = {
+    ProjectConfig.fromSExp(confSExp) match {
+      case Right(config) =>
+        initProject(config)
+        sendRPCReturn(toWF(config), callId)
+      case Left(t) =>
+        sendRPCError(ErrExceptionInRPC, t.toString, callId)
+    }
   }
 
   override def rpcPeekUndo(callId: Int) {
@@ -279,12 +284,13 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
   }
 
-  override def rpcPrepareRefactor(refactorType: Symbol, procId: Int, params: immutable.Map[Symbol, Any], interactive: Boolean, callId: Int) {
+  override def rpcPrepareRefactor(procId: Int, refactorType: Symbol, params: immutable.Map[Symbol, Any],
+    interactive: Boolean, callId: Int) {
     getAnalyzer ! RPCRequestEvent(RefactorPerformReq(
       procId, refactorType, params, interactive), callId)
   }
 
-  override def rpcExecRefactor(refactorType: Symbol, procId: Int, callId: Int) {
+  override def rpcExecRefactor(procId: Int, refactorType: Symbol, callId: Int) {
     getAnalyzer ! RPCRequestEvent(RefactorExecReq(procId, refactorType), callId)
   }
 
@@ -311,7 +317,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     }
   }
 
-  override def rpcFormatFiles(filenames: Iterable[String], callId: Int) {
+  override def rpcFormatFiles(filenames: List[String], callId: Int) {
     val files = filenames.map { new File(_) }
     try {
       val changeList = files.map { f =>
