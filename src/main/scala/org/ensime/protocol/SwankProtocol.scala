@@ -1759,7 +1759,7 @@ class SwankProtocol extends Protocol {
   def listOrEmpty(list: SExp): SExpList = {
     list match {
       case l: SExpList => l
-      case _ => SExpList(List())
+      case _ => SExpList(List.empty)
     }
   }
 
@@ -1832,4 +1832,5 @@ class SwankProtocol extends Protocol {
       }
     }
   }
+
 }

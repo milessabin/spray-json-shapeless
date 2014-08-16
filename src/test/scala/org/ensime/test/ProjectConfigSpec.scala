@@ -132,12 +132,12 @@ class ProjectConfigSpec extends FunSpec with Matchers {
 
     it("can parse nil as a regex list") {
       val conf = parse("( :only-include-in-index nil )")
-      assert(conf.onlyIncludeInIndex.toList == List())
+      assert(conf.onlyIncludeInIndex.toList.isEmpty)
     }
 
     it("should reject an incorrect regex list") {
       val conf = parse("""( :only-include-in-index ("x" 2) )""")
-      assert(conf.onlyIncludeInIndex.toList == List())
+      assert(conf.onlyIncludeInIndex.toList.isEmpty)
     }
 
   }

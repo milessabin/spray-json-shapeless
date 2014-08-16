@@ -1,11 +1,9 @@
 package org.ensime.test
 
-import java.io.File
-
 import org.ensime.config.{ ProjectConfig, ReplConfig }
 import org.ensime.indexer.{ Op, MethodBytecode }
 import org.ensime.model._
-import org.ensime.protocol.SwankProtocol
+import org.ensime.protocol._
 import org.ensime.server._
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
@@ -67,17 +65,17 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
     it("should encode all message types correctly") {
       assert(toWF(SendBackgroundMessageEvent(1, Some("ABCDEF"))).toWireString === """(:background-message 1 "ABCDEF")""")
       assert(toWF(SendBackgroundMessageEvent(1, None)).toWireString === "(:background-message 1 nil)")
-      assert(toWF(AnalyzerReadyEvent()).toWireString === "(:compiler-ready)")
-      assert(toWF(FullTypeCheckCompleteEvent()).toWireString === "(:full-typecheck-finished)")
-      assert(toWF(IndexerReadyEvent()).toWireString === "(:indexer-ready)")
+      assert(toWF(AnalyzerReadyEvent).toWireString === "(:compiler-ready)")
+      assert(toWF(FullTypeCheckCompleteEvent).toWireString === "(:full-typecheck-finished)")
+      assert(toWF(IndexerReadyEvent).toWireString === "(:indexer-ready)")
 
-      assert(toWF(NewNotesEvent('abc, NoteList(full = false,
+      assert(toWF(NewJavaNotesEvent(NoteList(full = false,
         List(new Note("foo.scala", "testMsg", 1, 50, 55, 77, 5))))).toWireString === """(:java-notes (:is-full nil :notes ((:severity warn :msg "testMsg" :beg 50 :end 55 :line 77 :col 5 :file "foo.scala"))))""")
-      assert(toWF(NewNotesEvent('scala, NoteList(full = false,
+      assert(toWF(NewScalaNotesEvent(NoteList(full = false,
         List(new Note("foo.scala", "testMsg", 1, 50, 55, 77, 5))))).toWireString === """(:scala-notes (:is-full nil :notes ((:severity warn :msg "testMsg" :beg 50 :end 55 :line 77 :col 5 :file "foo.scala"))))""")
 
-      assert(toWF(ClearAllNotesEvent('scala)).toWireString === "(:clear-all-scala-notes)")
-      assert(toWF(ClearAllNotesEvent('java)).toWireString === "(:clear-all-java-notes)")
+      assert(toWF(ClearAllScalaNotesEvent).toWireString === "(:clear-all-scala-notes)")
+      assert(toWF(ClearAllJavaNotesEvent).toWireString === "(:clear-all-java-notes)")
 
       // toWF(evt: DebugEvent): WireFormat
       assert(toWF(DebugOutputEvent("XXX")).toWireString === """(:debug-event (:type output :body "XXX"))""")
@@ -252,8 +250,8 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
       assert(toWF(UndoResult(7, List(file3, file4))).toWireString === """(:id 7 :touched-files (""" + file3_str + """ """ + file4_str + """))""")
 
-      assert(toWF(null).toWireString === """nil""")
-      assert(toWF(DebugVmSuccess()).toWireString === """(:status "success")""")
+      assert(wfNull.toWireString === """nil""")
+      assert(toWF(DebugVmSuccess).toWireString === """(:status "success")""")
       assert(toWF(DebugVmError(303, "xxxx")).toWireString === """(:status "error" :error-code 303 :details "xxxx")""")
 
       // toWF(method: MethodBytecode)

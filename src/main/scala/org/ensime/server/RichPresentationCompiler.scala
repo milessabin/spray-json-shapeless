@@ -4,6 +4,7 @@ import java.io.File
 import akka.actor.ActorRef
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
+import org.ensime.protocol.FullTypeCheckCompleteEvent
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
@@ -104,7 +105,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(inspectTypeAt(p)).getOrElse(None)
 
   def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] =
-    askOption(completePackageMember(path, prefix)).getOrElse(List())
+    askOption(completePackageMember(path, prefix)).getOrElse(List.empty)
 
   def askCompletionsAt(p: Position, maxResults: Int, caseSens: Boolean): CompletionInfoList =
     completionsAt(p, maxResults, caseSens)
@@ -113,10 +114,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(reloadAndTypeFiles(files))
 
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] =
-    askOption(usesOfSymbolAtPoint(p).toList).getOrElse(List())
+    askOption(usesOfSymbolAtPoint(p).toList).getOrElse(List.empty)
 
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations =
-    askOption(symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List()))
+    askOption(symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty))
 
   def askClearTypeCache() = clearTypeCache()
 
@@ -229,7 +230,7 @@ class RichPresentationCompiler(
           } catch {
             case e: Throwable =>
               logger.error("Error retrieving type members:", e)
-              List()
+              List.empty
           }
           // Remove duplicates
           // Filter out synthetic things
@@ -243,7 +244,7 @@ class RichPresentationCompiler(
         }
       case None =>
         logger.error("ERROR: Failed to get any type information :(  ")
-        List()
+        List.empty
     }
   }
 
@@ -278,11 +279,8 @@ class RichPresentationCompiler(
         t.rhs
       case t => t
     }
-    if (tree.tpe != null) {
-      Some(tree.tpe)
-    } else {
-      None
-    }
+
+    Option(tree.tpe)
   }
 
   protected def typeAt(p: Position): Option[Type] = {
@@ -372,10 +370,10 @@ class RichPresentationCompiler(
   // has been patched. Once this bug is fixed, we can get rid of
   // this workaround.
   private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
-    case List() => List()
+    case Nil => Nil
     case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
     case ImportSelector(from, _, to, _) :: _ if from.toString == sym.name.toString =>
-      if (to == nme.WILDCARD) List()
+      if (to == nme.WILDCARD) List.empty
       else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
     case _ :: rest => transformImport(rest, sym)
   }
@@ -401,7 +399,7 @@ class RichPresentationCompiler(
         }
         val gi = new CompilerGlobalIndexes
         gi.result
-      case None => List()
+      case None => List.empty
     }
   }
 
@@ -409,7 +407,7 @@ class RichPresentationCompiler(
 
   override def isOutOfDate: Boolean = {
     if (notifyWhenReady && !super.isOutOfDate) {
-      parent ! FullTypeCheckCompleteEvent()
+      parent ! FullTypeCheckCompleteEvent
       notifyWhenReady = false
     }
     super.isOutOfDate
@@ -463,7 +461,7 @@ class RichPresentationCompiler(
   }
 
   def wrapTypeMembers(p: Position): List[Member] =
-    wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List())
+    wrap[List[Member]](r => new AskTypeCompletionItem(p, r).apply(), _ => List.empty)
 
   def wrapTypedTree(source: SourceFile, forceReload: Boolean): Tree =
     wrap[Tree](r => new AskTypeItem(source, forceReload, r).apply(), t => throw t)

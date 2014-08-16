@@ -228,7 +228,7 @@ object IntgUtil extends Assertions {
       interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
       interactor.expectAsync(30 seconds, """(:compiler-ready)""")
       interactor.expectAsync(30 seconds, """(:full-typecheck-finished)""")
-      interactor.expectAsync(30 seconds, """(:indexer-ready)""")
+      interactor.expectAsync(60 seconds, """(:indexer-ready)""")
 
       f(projectBase, interactor)
 

@@ -183,7 +183,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
   protected def symbolDesignationsInRegion(
     p: RangePosition,
     tpes: List[scala.Symbol]): SymbolDesignations = {
-    val tpeSet = Set[scala.Symbol]() ++ tpes
+    val tpeSet = Set.empty[scala.Symbol] ++ tpes
     val typed: Response[Tree] = new Response[Tree]
     askLoadedTyped(p.source, keepLoaded = true, typed)
     typed.get.left.toOption match {
@@ -207,7 +207,7 @@ trait SemanticHighlighting { self: Global with Helpers =>
           p.source.file.path,
           traverser.syms.toList
         )
-      case None => SymbolDesignations("", List())
+      case None => SymbolDesignations("", List.empty)
     }
   }
 

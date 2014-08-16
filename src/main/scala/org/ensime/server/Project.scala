@@ -15,17 +15,20 @@ import scala.collection.mutable
 case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: String, callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
+
 case class AsyncEvent(evt: WireFormat)
 
-case class ClearAllNotesEvent(lang: scala.Symbol)
-case class NewNotesEvent(lang: scala.Symbol, notelist: NoteList)
-case class SendBackgroundMessageEvent(code: Int, detail: Option[String])
-case class AnalyzerReadyEvent()
-case class AnalyzerShutdownEvent()
-case class IndexerReadyEvent()
+object AsyncEvent {
+  val ev = new SwankProtocolConversions
+  import ev._
+  def apply(ev: SwankEvent) = new AsyncEvent(toWF(ev))
+  def apply(ev: DebugEvent) = new AsyncEvent(toWF(ev))
+}
+
+case object AnalyzerShutdownEvent
 
 case class ReloadFilesReq(files: List[SourceFileInfo])
-case class ReloadAllReq()
+case object ReloadAllReq
 case class PatchSourceReq(file: File, edits: List[PatchOp])
 case class RemoveFileReq(file: File)
 case class CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean)
@@ -81,9 +84,7 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   def bgMessage(msg: String) {
-    actor ! AsyncEvent(protocol.conversions.toWF(SendBackgroundMessageEvent(
-      ProtocolConst.MsgMisc,
-      Some(msg))))
+    actor ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
   }
 
   class ProjectActor extends Actor {
@@ -95,7 +96,6 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
           case e: Exception =>
             log.error("Error at Project message loop: ", e)
         }
-
     }
 
     log.info("Project waiting for init...")
@@ -166,7 +166,7 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
 
   protected def restartCompiler() {
     for (ea <- analyzer) {
-      ea ! AnalyzerShutdownEvent()
+      ea ! AnalyzerShutdownEvent
     }
     indexer match {
       case Some(indexer) =>
@@ -184,7 +184,8 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
         val b = actorSystem.actorOf(Props(new DebugManager(this, indexer, protocol.conversions, config)))
         debugger = Some(b)
         Some(b)
-      case _ => None
+      case _ =>
+        None
     }).getOrElse(throw new RuntimeException("Indexer must be started before debug manager."))
   }
 

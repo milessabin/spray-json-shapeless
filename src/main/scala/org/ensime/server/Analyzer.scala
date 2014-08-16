@@ -6,7 +6,7 @@ import org.ensime.config.ProjectConfig
 import org.ensime.model.SourceFileInfo
 import org.ensime.model.SymbolDesignations
 import org.ensime.model.OffsetRange
-import org.ensime.protocol.ProtocolConversions
+import org.ensime.protocol._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
@@ -15,7 +15,6 @@ import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.Settings
 import scala.reflect.internal.util.OffsetPosition
 
-case class FullTypeCheckCompleteEvent()
 case class CompilerFatalError(e: Throwable)
 
 class Analyzer(
@@ -47,16 +46,16 @@ class Analyzer(
           MsgCompilerUnexpectedError, Some(str))))
     }
     override def clearAllScalaNotes() {
-      project ! AsyncEvent(toWF(ClearAllNotesEvent('scala)))
+      project ! AsyncEvent(ClearAllScalaNotesEvent)
     }
     override def clearAllJavaNotes() {
-      project ! AsyncEvent(toWF(ClearAllNotesEvent('java)))
+      project ! AsyncEvent(ClearAllJavaNotesEvent)
     }
     override def reportScalaNotes(notes: List[Note]) {
-      project ! AsyncEvent(toWF(NewNotesEvent('scala, NoteList(full = false, notes))))
+      project ! AsyncEvent(NewScalaNotesEvent(NoteList(full = false, notes)))
     }
     override def reportJavaNotes(notes: List[Note]) {
-      project ! AsyncEvent(toWF(NewNotesEvent('java, NoteList(full = false, notes))))
+      project ! AsyncEvent(NewJavaNotesEvent(NoteList(full = false, notes)))
     }
   }
 
@@ -86,7 +85,7 @@ class Analyzer(
         scalaCompiler.askReloadAllFiles()
         scalaCompiler.askNotifyWhenReady()
       } else {
-        self ! FullTypeCheckCompleteEvent()
+        self ! FullTypeCheckCompleteEvent
       }
     }
   }
@@ -103,21 +102,21 @@ class Analyzer(
 
   def process(msg: Any): Unit = {
     msg match {
-      case AnalyzerShutdownEvent() =>
+      case AnalyzerShutdownEvent =>
         javaCompiler.shutdown()
         scalaCompiler.askClearTypeCache()
         scalaCompiler.askShutdown()
         context.stop(self)
-      case FullTypeCheckCompleteEvent() =>
+      case FullTypeCheckCompleteEvent =>
         if (awaitingInitialCompile) {
           awaitingInitialCompile = false
           val elapsed = System.currentTimeMillis() - initTime
           log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
           reporter.enable()
-          project ! AsyncEvent(toWF(AnalyzerReadyEvent()))
+          project ! AsyncEvent(AnalyzerReadyEvent)
           indexer ! CommitReq()
         }
-        project ! AsyncEvent(toWF(FullTypeCheckCompleteEvent()))
+        project ! AsyncEvent(FullTypeCheckCompleteEvent)
 
       case rpcReq @ RPCRequestEvent(req: Any, callId: Int) =>
         try {
@@ -131,7 +130,7 @@ class Analyzer(
                 askRemoveDeleted(file)
                 project ! RPCResultEvent(toWF(value = true), callId)
 
-              case ReloadAllReq() =>
+              case ReloadAllReq =>
                 javaCompiler.reset()
                 javaCompiler.compileAll()
                 scalaCompiler.askRemoveAllDeleted()
@@ -198,14 +197,14 @@ class Analyzer(
                 val p = pos(file, range)
                 val result = scalaCompiler.askInspectTypeAt(p) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
               case InspectTypeByIdReq(id: Int) =>
                 val result = scalaCompiler.askInspectTypeById(id) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
@@ -213,14 +212,14 @@ class Analyzer(
                 val p = pos(file, point)
                 val result = scalaCompiler.askSymbolInfoAt(p) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
               case InspectPackageByPathReq(path: String) =>
                 val result = scalaCompiler.askPackageByPath(path) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
@@ -228,21 +227,21 @@ class Analyzer(
                 val p = pos(file, range)
                 val result = scalaCompiler.askTypeInfoAt(p) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
               case TypeByIdReq(id: Int) =>
                 val result = scalaCompiler.askTypeInfoById(id) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
               case TypeByNameReq(name: String) =>
                 val result = scalaCompiler.askTypeInfoByName(name) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
@@ -250,7 +249,7 @@ class Analyzer(
                 val p = pos(file, range)
                 val result = scalaCompiler.askTypeInfoByNameAt(name, p) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
 
                 project ! RPCResultEvent(result, callId)
@@ -258,14 +257,14 @@ class Analyzer(
               case CallCompletionReq(id: Int) =>
                 val result = scalaCompiler.askCallCompletionInfoById(id) match {
                   case Some(info) => toWF(info)
-                  case None => toWF(null)
+                  case None => wfNull
                 }
                 project ! RPCResultEvent(result, callId)
 
               case SymbolDesignationsReq(file, start, end, tpes) =>
                 if (!FileUtils.isScalaSourceFile(file)) {
                   project ! RPCResultEvent(
-                    toWF(SymbolDesignations(file.getPath, List())), callId)
+                    toWF(SymbolDesignations(file.getPath, List.empty)), callId)
                 } else {
                   val f = createSourceFile(file)
                   val clampedEnd = math.max(end, start)
@@ -276,7 +275,7 @@ class Analyzer(
                     project ! RPCResultEvent(toWF(syms), callId)
                   } else {
                     project ! RPCResultEvent(
-                      toWF(SymbolDesignations(f.path, List())), callId)
+                      toWF(SymbolDesignations(f.path, List.empty)), callId)
                   }
                 }
             }

@@ -178,12 +178,12 @@ case class DebugBacktrace(
 class NamedTypeMemberInfo(override val name: String,
   val tpe: TypeInfo,
   val pos: Position,
-  val declaredAs: scala.Symbol) extends EntityInfo(name, List())
+  val declaredAs: scala.Symbol) extends EntityInfo(name, List.empty)
 
 class NamedTypeMemberInfoLight(override val name: String,
   val tpeSig: String,
   val tpeId: Int,
-  val isCallable: Boolean) extends EntityInfo(name, List())
+  val isCallable: Boolean) extends EntityInfo(name, List.empty)
 
 class PackageMemberInfoLight(val name: String)
 
@@ -201,7 +201,7 @@ class ArrowTypeInfo(
   override val name: String,
   override val id: Int,
   val resultType: TypeInfo,
-  val paramSections: Iterable[ParamSectionInfo]) extends TypeInfo(name, id, 'nil, name, List(), List(), NoPosition, None)
+  val paramSections: Iterable[ParamSectionInfo]) extends TypeInfo(name, id, 'nil, name, List.empty, List.empty, NoPosition, None)
 
 class CallCompletionInfo(
   val resultType: TypeInfo,
@@ -274,7 +274,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     // ...filtering out non-visible and non-type members
     val visMembers: Iterable[TypeMember] = members.flatMap {
       case m @ TypeMember(sym, tpe, true, _, _) => List(m)
-      case _ => List()
+      case _ => List.empty
     }
 
     // Create a list of pairs [(typeSym, membersOfSym)]
@@ -348,7 +348,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo = {
-      new PackageInfo("NA", "NA", List())
+      new PackageInfo("NA", "NA", List.empty)
     }
 
     def fromSymbol(sym: Symbol): PackageInfo = {
@@ -389,7 +389,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
   object TypeInfo {
 
-    def apply(t: Type, members: Iterable[EntityInfo] = List(), locateSymPos: Boolean = false): TypeInfo = {
+    def apply(t: Type, members: Iterable[EntityInfo] = List.empty, locateSymPos: Boolean = false): TypeInfo = {
       val tpe = t match {
         // TODO: Instead of throwing away this information, would be better to
         // alert the user that the type is existentially quantified.
@@ -420,7 +420,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo = {
-      new TypeInfo("NA", -1, 'nil, "NA", List(), List(), NoPosition, None)
+      new TypeInfo("NA", -1, 'nil, "NA", List.empty, List.empty, NoPosition, None)
     }
   }
 
@@ -448,7 +448,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo() = {
-      new CallCompletionInfo(TypeInfo.nullInfo, List())
+      new CallCompletionInfo(TypeInfo.nullInfo, List.empty)
     }
   }
 
@@ -504,7 +504,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo() = {
-      new CompletionInfo("NA", CompletionSignature(List(), ""), -1, false, 0, None)
+      new CompletionInfo("NA", CompletionSignature(List.empty, ""), -1, false, 0, None)
     }
   }
 
@@ -543,13 +543,13 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo() = {
-      new ArrowTypeInfo("NA", -1, TypeInfo.nullInfo, List())
+      new ArrowTypeInfo("NA", -1, TypeInfo.nullInfo, List.empty)
     }
   }
 
   object TypeInspectInfo {
     def nullInfo() = {
-      new TypeInspectInfo(TypeInfo.nullInfo, None, List())
+      new TypeInspectInfo(TypeInfo.nullInfo, None, List.empty)
     }
   }
 

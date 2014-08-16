@@ -35,8 +35,7 @@ class JavaCompiler(
     }
   }
 
-  class NameProvider(classpath: Array[String]) extends FileSystem(
-    classpath.toArray, Array(), "UTF-8") {
+  class NameProvider(classpath: Array[String]) extends FileSystem(classpath.toArray, Array(), "UTF-8") {
 
     private val compiledClasses = new mutable.HashMap[String, ClassFileReader]()
     private val knownPackages = new mutable.HashSet[String]()
@@ -103,7 +102,7 @@ class JavaCompiler(
   }
 
   private def classpath = config.compilerClasspathFilenames ++ ProjectConfig.javaBootJars.map(_.getPath) ++
-    config.target.map(t => Set[String](t.getAbsolutePath)).getOrElse(Set[String]())
+    config.target.map(t => Set[String](t.getAbsolutePath)).getOrElse(Set.empty)
 
   private val nameProvider = new NameProvider(classpath.toArray)
 
@@ -127,9 +126,9 @@ class JavaCompiler(
 
   class Requester(nameProvider: NameProvider) extends ICompilerRequestor {
     def allNotes(): List[Note] = problems
-    private var problems: List[Note] = List()
+    private var problems: List[Note] = List.empty
     override def acceptResult(result: CompilationResult) = {
-      problems = List()
+      problems = List.empty
       if (result.hasProblems) {
         problems = result.getProblems.map(Note.apply).toList
         reportHandler.reportJavaNotes(problems)

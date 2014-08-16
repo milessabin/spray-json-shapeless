@@ -139,11 +139,11 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcDebugStopVM(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugStopVMReq(), callId)
+    getOrStartDebugger ! RPCRequestEvent(DebugStopVMReq, callId)
   }
 
   override def rpcDebugRun(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugRunReq(), callId)
+    getOrStartDebugger ! RPCRequestEvent(DebugRunReq, callId)
   }
 
   override def rpcDebugContinue(threadId: Long, callId: Int) {
@@ -159,11 +159,11 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcDebugClearAllBreaks(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugClearAllBreaksReq(), callId)
+    getOrStartDebugger ! RPCRequestEvent(DebugClearAllBreaksReq, callId)
   }
 
   override def rpcDebugListBreaks(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugListBreaksReq(), callId)
+    getOrStartDebugger ! RPCRequestEvent(DebugListBreaksReq, callId)
   }
 
   override def rpcDebugNext(threadId: Long, callId: Int) {
@@ -199,7 +199,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcDebugActiveVM(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugActiveVMReq(), callId)
+    getOrStartDebugger ! RPCRequestEvent(DebugActiveVMReq, callId)
   }
 
   override def rpcPatchSource(f: String, edits: List[PatchOp], callId: Int) {
@@ -218,7 +218,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcTypecheckAll(callId: Int) {
-    getAnalyzer ! RPCRequestEvent(ReloadAllReq(), callId)
+    getAnalyzer ! RPCRequestEvent(ReloadAllReq, callId)
   }
 
   override def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int,

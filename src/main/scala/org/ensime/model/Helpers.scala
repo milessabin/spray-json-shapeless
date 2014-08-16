@@ -11,7 +11,7 @@ trait Helpers { self: Global =>
       sym.tpe.members
     } else if (sym.isClass || sym.isPackageClass || sym.isPackageObjectClass) {
       sym.companionModule.tpe.members
-    } else { List() }
+    } else { List.empty }
     members.toList.filter { _.name.toString == "apply" }
   }
 
@@ -20,11 +20,11 @@ trait Helpers { self: Global =>
       sym.tpe.members
     } else if (sym.isModule || sym.isModuleClass || sym.isPackageObject) {
       sym.companionClass.tpe.members
-    } else { List() }
+    } else { List.empty }
     members.toList.filter { _.isConstructor }
   }
 
-  def isArrowType(tpe: Type) = {
+  def isArrowType(tpe: Type): Boolean = {
     tpe match {
       case _: MethodType => true
       case _: PolyType => true
@@ -32,7 +32,7 @@ trait Helpers { self: Global =>
     }
   }
 
-  def isNoParamArrowType(tpe: Type) = {
+  def isNoParamArrowType(tpe: Type): Boolean = {
     tpe match {
       case t: MethodType => t.paramss.flatten.isEmpty
       case t: PolyType => t.paramss.flatten.isEmpty
@@ -40,7 +40,7 @@ trait Helpers { self: Global =>
     }
   }
 
-  def typeOrArrowTypeResult(tpe: Type) = {
+  def typeOrArrowTypeResult(tpe: Type): Type = {
     tpe match {
       case t: MethodType => t.finalResultType
       case t: PolyType => t.finalResultType
@@ -54,7 +54,7 @@ trait Helpers { self: Global =>
         sect.map { p => (p.name.toString, typeShortNameWithArgs(p.tpe)) }
       },
         typeShortNameWithArgs(tpe.finalResultType))
-    } else CompletionSignature(List(), resultTypeName(tpe))
+    } else CompletionSignature(List.empty, resultTypeName(tpe))
   }
 
   /**

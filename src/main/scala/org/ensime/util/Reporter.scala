@@ -56,8 +56,7 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
 
   def formatMessage(msg: String): String = {
     augmentString(msg).map {
-      case '\n' => ' '
-      case '\r' => ' '
+      case '\n' | '\r' => ' '
       case c => c
     }
   }

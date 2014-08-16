@@ -9,7 +9,7 @@ trait NamespaceTraversal { self: RichPresentationCompiler =>
 
   import rootMirror.EmptyPackage
 
-  def traverse(v: NamespaceVisitor, sym: Symbol) {
+  def traverse(v: NamespaceVisitor, sym: Symbol): Unit = {
     try {
       if (sym.hasPackageFlag) {
         v.visitPackage(sym)
@@ -21,11 +21,11 @@ trait NamespaceTraversal { self: RichPresentationCompiler =>
         }
       }
     } catch {
-      case e: Throwable => None
+      case e: Throwable =>
     }
   }
 
-  def traverseMembers(v: NamespaceVisitor, sym: Symbol) {
+  def traverseMembers(v: NamespaceVisitor, sym: Symbol): Unit = {
     def isRoot(s: Symbol) = s.isRoot || s.isRootPackage
     def iter(s: Symbol) {
       if (s != EmptyPackage && !isRoot(s) &&

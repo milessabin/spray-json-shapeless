@@ -73,6 +73,8 @@ javacOptions in doc ++= Seq("-source", "1.6")
 
 maxErrors := 1
 
+scapegoatConsoleOutput := false
+
 graphSettings
 
 scalariformSettings
@@ -82,7 +84,7 @@ ScalastylePlugin.Settings
 instrumentSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 41
+ScoverageKeys.minimumCoverage := 44
 
 // might be buggy
 ScoverageKeys.highlighting := true

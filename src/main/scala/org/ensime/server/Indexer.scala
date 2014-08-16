@@ -14,7 +14,7 @@ import org.ensime.model.{
   TypeSearchResult
 }
 import org.ensime.protocol.ProtocolConst._
-import org.ensime.protocol.ProtocolConversions
+import org.ensime.protocol.{ IndexerReadyEvent, ProtocolConversions }
 import scala.collection.mutable.ArrayBuffer
 
 case class IndexerShutdownReq()
@@ -66,7 +66,7 @@ class Indexer(project: Project,
           config.allFilesOnClasspath
             ++ List(config.target, config.testTarget).flatten
         )
-        project ! AsyncEvent(toWF(IndexerReadyEvent()))
+        project ! AsyncEvent(IndexerReadyEvent)
       case ReindexClassFilesReq(files) =>
         classFileIndex.indexFiles(files)
       case CommitReq() =>
@@ -151,7 +151,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
     val keys = new ArrayBuffer[String]
     for (sym <- syms) {
       keys += lookupKey(sym)
-      for (mem <- try { sym.tpe.members } catch { case e: Throwable => List() }) {
+      for (mem <- try { sym.tpe.members } catch { case e: Throwable => List.empty }) {
         keys += lookupKey(mem)
       }
     }
@@ -185,7 +185,7 @@ trait IndexerInterface { self: RichPresentationCompiler =>
       if (Indexer.isValidType(typeSymName(sym))) {
         val key = lookupKey(sym)
         infos += sym
-        for (mem <- try { sym.tpe.members } catch { case e: Throwable => List() }) {
+        for (mem <- try { sym.tpe.members } catch { case e: Throwable => List.empty }) {
           if (Indexer.isValidMethod(mem.nameString)) {
             val key = lookupKey(mem)
             infos += mem
