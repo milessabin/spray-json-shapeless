@@ -17,14 +17,14 @@ import org.ensime.protocol.ProtocolConst._
 import org.ensime.protocol.{ IndexerReadyEvent, ProtocolConversions }
 import scala.collection.mutable.ArrayBuffer
 
-case class IndexerShutdownReq()
-case class RebuildStaticIndexReq()
+case object IndexerShutdownReq
+case object RebuildStaticIndexReq
 case class TypeCompletionsReq(prefix: String, maxResults: Int)
 case class SourceFileCandidatesReq(enclosingPackage: String, classNamePrefix: String)
 case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
 case class RemoveSymbolsReq(syms: Iterable[String])
 case class ReindexClassFilesReq(files: Iterable[File])
-case class CommitReq()
+case object CommitReq
 
 case class AbstractFiles(files: Set[AbstractFile])
 
@@ -52,10 +52,10 @@ class Indexer(project: Project,
 
   def process(msg: Any) {
     msg match {
-      case IndexerShutdownReq() =>
+      case IndexerShutdownReq =>
         index.close()
         context.stop(self)
-      case RebuildStaticIndexReq() =>
+      case RebuildStaticIndexReq =>
         index.initialize(
           context.system,
           config.root,
@@ -69,7 +69,7 @@ class Indexer(project: Project,
         project ! AsyncEvent(IndexerReadyEvent)
       case ReindexClassFilesReq(files) =>
         classFileIndex.indexFiles(files)
-      case CommitReq() =>
+      case CommitReq =>
         index.commit()
       case AddSymbolsReq(syms) =>
         syms.foreach { info =>

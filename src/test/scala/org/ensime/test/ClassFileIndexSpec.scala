@@ -1,8 +1,8 @@
 package org.ensime.test
 
+import org.ensime.config.ProjectConfig
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
-import org.ensime.config.ProjectConfig
 import org.ensime.indexer.ClassFileIndex
 import org.ensime.util.SExpParser
 import scala.tools.nsc.{ Global, Settings }

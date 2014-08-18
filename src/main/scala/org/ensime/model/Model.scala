@@ -389,8 +389,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
   object TypeInfo {
 
-    def apply(t: Type, members: Iterable[EntityInfo] = List.empty, locateSymPos: Boolean = false): TypeInfo = {
-      val tpe = t match {
+    def apply(typ: Type, members: Iterable[EntityInfo] = List.empty, locateSymPos: Boolean = false): TypeInfo = {
+      val tpe = typ match {
         // TODO: Instead of throwing away this information, would be better to
         // alert the user that the type is existentially quantified.
         case et: ExistentialType => et.underlying
@@ -457,7 +457,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     def apply(sym: Symbol): SymbolInfo = {
       val tpe = askOption(sym.tpe) match {
         case None => NoType
-        case Some(tpe) => tpe
+        case Some(t) => t
       }
       val name = if (sym.isClass || sym.isTrait || sym.isModule ||
         sym.isModuleClass || sym.isPackageClass) {

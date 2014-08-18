@@ -113,7 +113,7 @@ class Analyzer(
           log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
           reporter.enable()
           project ! AsyncEvent(AnalyzerReadyEvent)
-          indexer ! CommitReq()
+          indexer ! CommitReq
         }
         project ! AsyncEvent(FullTypeCheckCompleteEvent)
 
@@ -160,8 +160,8 @@ class Analyzer(
                   project ! RPCResultEvent(toWF(value = true), callId)
                 }
 
-              case req: RefactorPerformReq =>
-                handleRefactorRequest(req, callId)
+              case req: RefactorPrepareReq =>
+                handleRefactorPrepareRequest(req, callId)
 
               case req: RefactorExecReq =>
                 handleRefactorExec(req, callId)

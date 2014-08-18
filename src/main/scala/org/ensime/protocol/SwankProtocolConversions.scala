@@ -404,9 +404,7 @@ class SwankProtocolConversions extends ProtocolConversions {
         SExp(key(":debug-event"),
           SExp(key(":type"), 'threadDeath,
             key(":thread-id"), threadId.toString))
-      case _ => SExp(key(":debug-event"))
     }
-
   }
 
   def toWF(bp: Breakpoint): SExp = {

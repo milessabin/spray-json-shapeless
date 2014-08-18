@@ -84,7 +84,7 @@ ScalastylePlugin.Settings
 instrumentSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 47
+ScoverageKeys.minimumCoverage := 48
 
 // might be buggy
 ScoverageKeys.highlighting := true

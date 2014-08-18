@@ -8,9 +8,7 @@ import scala.collection.mutable
 import scala.tools.nsc.io.AbstractFile
 import scala.reflect.io.ZipArchive
 
-// This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
-
-trait FileEdit {
+sealed trait FileEdit {
   def file: File
   def text: String
   def from: Int
@@ -85,6 +83,8 @@ object FileUtils {
   implicit def toRichFile(file: File): RichFile = new RichFile(file)
 
   implicit def toCanonFile(file: File): CanonFile = CanonFile(file)
+
+  // This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
 
   def expandRecursively(rootDir: File, fileList: Iterable[File], isValid: (File => Boolean)): Set[CanonFile] = {
     (for (
@@ -235,7 +235,7 @@ object FileUtils {
 
   def replaceFileContents(file: File, newContents: String): Either[Exception, Unit] = {
     try {
-      val writer = new FileWriter(file, false)
+      val writer = new FileWriter(file)
       try {
         writer.write(newContents)
         Right(())
@@ -254,11 +254,11 @@ object FileUtils {
     val result = new mutable.ListBuffer[FileEdit]
     val editsByFile = edits.groupBy(_.file)
     editsByFile.foreach {
-      case (file, edits) =>
+      case (file, fileEdits) =>
         readFile(file) match {
           case Right(contents) =>
             var dy = 0
-            for (ch <- edits) {
+            for (ch <- fileEdits) {
               ch match {
                 case ch: TextEdit =>
                   val original = contents.substring(ch.from, ch.to)
@@ -284,10 +284,10 @@ object FileUtils {
     try {
       val rewriteList = newFiles.map { ed => (ed.file, ed.text) } ++
         editsByFile.map {
-          case (file, changes) =>
+          case (file, fileChanges) =>
             readFile(file) match {
               case Right(contents) =>
-                val newContents = FileEdit.applyEdits(changes.toList, contents)
+                val newContents = FileEdit.applyEdits(fileChanges.toList, contents)
                 (file, newContents)
               case Left(e) => throw e
             }

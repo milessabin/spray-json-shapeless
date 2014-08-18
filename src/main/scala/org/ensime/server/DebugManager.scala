@@ -351,10 +351,8 @@ class DebugManager(project: Project, indexer: ActorRef,
               project ! RPCResultEvent(toWF(value = true), callId)
 
             case DebugListBreaksReq =>
-              val breaks = BreakpointList(
-                activeBreakpoints.toList,
-                pendingBreakpoints)
-              project ! RPCResultEvent(toWF(breaks), callId)
+              val breaks = BreakpointList(activeBreakpoints.toList, pendingBreakpoints)
+              sender ! breaks
 
             case DebugNextReq(threadId: Long) =>
               handleRPCWithVMAndThread(callId, threadId) {
@@ -1010,7 +1008,7 @@ class DebugManager(project: Project, indexer: ActorRef,
         }
       } catch {
         case t: Throwable =>
-          t.printStackTrace();
+          t.printStackTrace()
       }
     }
   }

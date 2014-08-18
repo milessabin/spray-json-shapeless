@@ -134,9 +134,7 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
         undos.remove(u.id)
         FileUtils.writeChanges(u.changes) match {
           case Right(touched) =>
-            for (ea <- analyzer) {
-              ea ! ReloadFilesReq(touched.toList.map { SourceFileInfo(_) })
-            }
+            analyzer.foreach(ea => ea ! ReloadFilesReq(touched.toList.map { SourceFileInfo(_) }))
             Right(UndoResult(undoId, touched))
           case Left(e) => Left(e.getMessage)
         }
@@ -154,34 +152,33 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   protected def restartIndexer() {
-    indexer.foreach(_ ! IndexerShutdownReq())
-
+    indexer.foreach(_ ! IndexerShutdownReq)
+    indexer = None
     val newIndexer = actorSystem.actorOf(Props(new Indexer(this, this.cacheDir, protocol.conversions, config)), "indexer")
-    log.info("Initing Indexer...")
+    log.info("Initialising Indexer...")
     if (!config.disableIndexOnStartup) {
-      newIndexer ! RebuildStaticIndexReq()
+      newIndexer ! RebuildStaticIndexReq
     }
     indexer = Some(newIndexer)
   }
 
   protected def restartCompiler() {
-    for (ea <- analyzer) {
-      ea ! AnalyzerShutdownEvent
-    }
+    analyzer.foreach(_ ! AnalyzerShutdownEvent)
+    analyzer = None
     indexer match {
-      case Some(indexer) =>
-        val newAnalyzer = actorSystem.actorOf(Props(new Analyzer(this, indexer, protocol.conversions, config)), "analyzer")
+      case Some(indexerVal) =>
+        val newAnalyzer = actorSystem.actorOf(Props(new Analyzer(this, indexerVal, protocol.conversions, config)), "analyzer")
         analyzer = Some(newAnalyzer)
       case None =>
         throw new RuntimeException("Indexer must be started before analyzer.")
     }
   }
 
-  protected def getOrStartDebugger(): ActorRef = {
+  protected def acquireDebugger(): ActorRef = {
     ((debugger, indexer) match {
       case (Some(b), _) => Some(b)
-      case (None, Some(indexer)) =>
-        val b = actorSystem.actorOf(Props(new DebugManager(this, indexer, protocol.conversions, config)))
+      case (None, Some(indexerVal)) =>
+        val b = actorSystem.actorOf(Props(new DebugManager(this, indexerVal, protocol.conversions, config)))
         debugger = Some(b)
         Some(b)
       case _ =>
@@ -190,9 +187,7 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   protected def shutdownDebugger() {
-    for (d <- debugger) {
-      d ! DebuggerShutdownEvent
-    }
+    debugger.foreach(_ ! DebuggerShutdownEvent)
     debugger = None
   }
 
