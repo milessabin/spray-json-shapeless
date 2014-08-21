@@ -84,7 +84,7 @@ case class CompletionInfoList(
   prefix: String,
   completions: List[CompletionInfo])
 
-trait PatchOp {
+sealed trait PatchOp {
   val start: Int
 }
 
@@ -106,19 +106,19 @@ case class BreakpointList(active: List[Breakpoint], pending: List[Breakpoint])
 
 case class OffsetRange(from: Int, to: Int)
 
+object OffsetRange {
+  def apply(fromTo: Int): OffsetRange = new OffsetRange(fromTo, fromTo)
+}
+
 sealed trait DebugLocation
 
-case class DebugObjectReference(
-  objectId: Long) extends DebugLocation
+case class DebugObjectReference(objectId: Long) extends DebugLocation
 
-case class DebugStackSlot(
-  threadId: Long, frame: Int, offset: Int) extends DebugLocation
+case class DebugStackSlot(threadId: Long, frame: Int, offset: Int) extends DebugLocation
 
-case class DebugArrayElement(
-  objectId: Long, index: Int) extends DebugLocation
+case class DebugArrayElement(objectId: Long, index: Int) extends DebugLocation
 
-case class DebugObjectField(
-  objectId: Long, name: String) extends DebugLocation
+case class DebugObjectField(objectId: Long, name: String) extends DebugLocation
 
 sealed trait DebugValue {
   def typeName: String

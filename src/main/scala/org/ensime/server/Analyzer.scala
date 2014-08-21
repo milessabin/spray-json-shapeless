@@ -42,8 +42,7 @@ class Analyzer(
   private val reportHandler = new ReportHandler {
     override def messageUser(str: String) {
       project ! AsyncEvent(
-        toWF(SendBackgroundMessageEvent(
-          MsgCompilerUnexpectedError, Some(str))))
+        toWF(SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str))))
     }
     override def clearAllScalaNotes() {
       project ! AsyncEvent(ClearAllScalaNotesEvent)

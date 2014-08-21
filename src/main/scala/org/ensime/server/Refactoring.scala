@@ -217,6 +217,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
   protected def performRefactor(
     procId: Int,
     tpe: scala.Symbol,
+    // TODO - the avilable refactors are defined in the protocol - they should be a set of case classes with an extractor not a map
     params: immutable.Map[scala.Symbol, Any]): Either[RefactorFailure, RefactorEffect] = {
 
     def badArgs = Left(RefactorFailure(procId, "Incorrect arguments passed to " +
