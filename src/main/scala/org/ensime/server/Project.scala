@@ -197,8 +197,7 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   protected def shutdownServer() {
-    System.out.println("Server is exiting...")
-    System.out.flush()
+    log.info("Server is exiting...")
     System.exit(0)
   }
 }

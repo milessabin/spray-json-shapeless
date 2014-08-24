@@ -1,9 +1,13 @@
 package org.ensime.util
 
+import org.slf4j.LoggerFactory
+
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.parsing.input
 
 object SExpParser extends RegexParsers {
+
+  val log = LoggerFactory.getLogger(SExpParser.getClass)
 
   object StringParser extends RegexParsers {
     override def skipWhitespace = false
@@ -57,10 +61,10 @@ object SExpParser extends RegexParsers {
     result match {
       case Success(value, next) => value
       case Failure(errMsg, next) =>
-        println(errMsg)
+        log.error("Failure whilst reading SExp: " + errMsg)
         NilAtom
       case Error(errMsg, next) =>
-        println(errMsg)
+        log.error("Error whilst reading SExp: " + errMsg)
         NilAtom
     }
   }

@@ -1,16 +1,18 @@
 package org.ensime.server
 
 import java.io._
-import java.net.{ ServerSocket, Socket, InetAddress }
-import akka.actor.{ ActorRef, Actor, Props, ActorSystem }
+import java.net.{ InetAddress, ServerSocket, Socket }
+
+import akka.actor._
+import org.ensime.config.{ Environment, ProjectConfig }
 import org.ensime.protocol._
-import org.ensime.util.{ SExpParser, SExp, WireFormat }
-import org.ensime.config.{ ProjectConfig, Environment }
+import org.ensime.util.{ SExpParser, WireFormat }
 import org.slf4j._
+import org.slf4j.bridge.SLF4JBridgeHandler
+
 import scala.io.Source
 import scala.util.Properties
 import scala.util.Properties._
-import org.slf4j.bridge.SLF4JBridgeHandler
 
 /**
  * For when your upstream dependencies can't be trusted with
@@ -103,7 +105,7 @@ object Server {
 
 class Server(cacheDir: File, host: String, requestedPort: Int) {
 
-  import Server.log
+  import org.ensime.server.Server.log
 
   require(!cacheDir.exists || cacheDir.isDirectory, cacheDir + " is not a valid cache directory")
   cacheDir.mkdirs()
@@ -146,9 +148,8 @@ class Server(cacheDir: File, host: String, requestedPort: Int) {
   }
   private def writePort(cacheDir: File, port: Int): Unit = {
     val portfile = new File(cacheDir, "port")
-    println("")
     if (!portfile.exists()) {
-      log.info("CREATING " + portfile)
+      log.info("creating portfile " + portfile)
       portfile.createNewFile()
     } else if (portfile.length > 0)
       // LEGACY: older clients create an empty file
@@ -168,6 +169,7 @@ class Server(cacheDir: File, host: String, requestedPort: Int) {
 case object SocketClosed
 
 class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extends Thread {
+  val log = LoggerFactory.getLogger(this.getClass)
   val in = new BufferedInputStream(socket.getInputStream)
 
   override def run() {
@@ -178,11 +180,10 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
       }
     } catch {
       case e: IOException =>
-        System.err.println("Error in socket reader: " + e)
+        log.error("Error in socket reader: ", e)
         Properties.envOrNone("ensime.explode.on.disconnect") match {
           case Some(_) =>
-            println("Tick-tock, tick-tock, tick-tock... boom!")
-            System.out.flush()
+            log.warn("tick, tick, tick, tick... boom!")
             System.exit(-1)
           case None =>
             handler ! SocketClosed
@@ -191,7 +192,7 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
   }
 }
 
-class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor {
+class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor with ActorLogging {
   protocol.setOutputActor(self)
 
   val reader = new SocketReader(socket, protocol, self)
@@ -202,7 +203,7 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
       protocol.writeMessage(value, out)
     } catch {
       case e: IOException =>
-        System.err.println("Write to client failed: " + e)
+        log.error(e, "Write to client failed")
         context.stop(self)
     }
   }
@@ -217,7 +218,7 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
     case OutgoingMessageEvent(value: WireFormat) =>
       write(value)
     case SocketClosed =>
-      System.err.println("Socket closed, stopping self")
+      log.error("Socket closed, stopping self")
       context.stop(self)
   }
 }

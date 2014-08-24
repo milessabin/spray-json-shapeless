@@ -354,7 +354,7 @@ class RichPresentationCompiler(
           List(tree.symbol)
         case _ =>
           // `showRaw` was introduced in 2.10, so I commented it out to be compatible with 2.9
-          // println(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
+          // logger.warn(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
           logger.warn("symbolAt for " + tree.getClass + ": " + tree)
           Nil
       }
