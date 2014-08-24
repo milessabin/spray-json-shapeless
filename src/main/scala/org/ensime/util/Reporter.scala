@@ -1,5 +1,7 @@
 package org.ensime.util
 
+import org.slf4j.LoggerFactory
+
 import scala.tools.nsc.reporters.Reporter
 import scala.reflect.internal.util.Position
 
@@ -15,6 +17,7 @@ trait ReportHandler {
 
 class PresentationReporter(handler: ReportHandler) extends Reporter {
 
+  val log = LoggerFactory.getLogger(classOf[PresentationReporter])
   private var enabled = true
   def enable() { enabled = true }
   def disable() { enabled = false }
@@ -30,7 +33,7 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
     severity.count += 1
     try {
       if (severity.id == 0) {
-        println("INFO: " + msg)
+        log.info(msg)
       } else {
         if (enabled) {
           if (pos.isDefined) {
@@ -51,6 +54,7 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
       }
     } catch {
       case ex: UnsupportedOperationException =>
+        log.warn("Unsupported operation during reporting", ex)
     }
   }
 
