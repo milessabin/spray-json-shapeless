@@ -7,6 +7,8 @@ sealed trait SExp extends WireFormat {
   def toScala: Any = toString
 }
 
+trait Atom extends SExp
+
 case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
 
   override def iterator = items.iterator
@@ -34,14 +36,13 @@ case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
     m
   }
 
-  def toSymbolMap: Map[scala.Symbol, Any] = {
-    var m = Map[scala.Symbol, Any]()
-    items.sliding(2, 2).foreach {
-      case SymbolAtom(key) :: (sexp: SExp) :: rest =>
-        m += (Symbol(key) -> sexp.toScala)
+  def toSymbolMap: Option[Map[scala.Symbol, Any]] = {
+    Some(items.sliding(2, 2).map {
+      case SymbolAtom(key) :: (sexp: Atom) :: Nil =>
+        Symbol(key) -> sexp.toScala
       case _ =>
-    }
-    m
+        return None
+    }.toMap)
   }
 }
 
@@ -55,7 +56,7 @@ object BooleanAtom {
 
 }
 
-abstract class BooleanAtom extends SExp {
+abstract class BooleanAtom extends Atom {
   def toBool: Boolean
   override def toScala = toBool
 }
@@ -70,7 +71,7 @@ case object TruthAtom extends BooleanAtom {
   override def toBool: Boolean = true
   override def toScala: Boolean = true
 }
-case class StringAtom(value: String) extends SExp {
+case class StringAtom(value: String) extends Atom {
   override def toString = escapeString(value)
   override def toScala = value
 
@@ -86,14 +87,14 @@ case class StringAtom(value: String) extends SExp {
     "\"" + printable + "\""
   }
 }
-case class IntAtom(value: Int) extends SExp {
+case class IntAtom(value: Int) extends Atom {
   override def toString = String.valueOf(value)
   override def toScala = value
 }
-case class SymbolAtom(value: String) extends SExp {
+case class SymbolAtom(value: String) extends Atom {
   override def toString = value
 }
-case class KeywordAtom(value: String) extends SExp {
+case class KeywordAtom(value: String) extends Atom {
   override def toString = value
 }
 

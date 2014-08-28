@@ -9,7 +9,7 @@ libraryDependencies ++= Seq(
   plugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.5.0"),
   plugin("org.scoverage" %% "sbt-scoverage" % "0.99.7.1"),
   plugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0"),
-  plugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "0.90.16")
+  plugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "0.94.4")
   // https://github.com/typelevel/wartremover/issues/108
   //plugin("org.brianmckenna" %% "wartremover" % "0.9")
   // https://github.com/scoverage/sbt-coveralls/issues/18

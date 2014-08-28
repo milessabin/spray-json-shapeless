@@ -1,15 +1,18 @@
 package org.ensime.protocol
 
 import java.io._
+
 import akka.actor.ActorRef
 import org.ensime.model._
 import org.ensime.server._
-import org.ensime.util._
 import org.ensime.util.SExp._
+import org.ensime.util._
 import org.slf4j.LoggerFactory
+
 import scala.util.parsing.input
 
 class SwankProtocol extends Protocol {
+  import SwankProtocol._
 
   /**
    * Protocol Version: 0.8.9
@@ -65,7 +68,7 @@ class SwankProtocol extends Protocol {
    *     Include status flag in return of swank:exec-refactor.
    */
 
-  import ProtocolConst._
+  import org.ensime.protocol.ProtocolConst._
 
   val log = LoggerFactory.getLogger(this.getClass)
   override val conversions: ProtocolConversions = new SwankProtocolConversions
@@ -151,7 +154,7 @@ class SwankProtocol extends Protocol {
           handleRPCRequest(name, l.items.drop(1), l, callId)
         } catch {
           case e: Throwable =>
-            e.printStackTrace(System.err)
+            log.error("Exception whilst handling rpc " + e.getMessage, e)
             sendRPCError(ErrExceptionInRPC, e.getMessage, callId)
         }
       case _ =>
@@ -1083,9 +1086,13 @@ class SwankProtocol extends Protocol {
        *   :changes ((:file "SwankProtocol.scala" :text "dude" :from 39504 :to 39508))
        *   )) 42)
        */
-      // TODO Create matcher for refactor types - this will give us much better protocol validation
-      case ("swank:prepare-refactor", IntAtom(procId) :: SymbolAtom(tpe) :: (params: SExp) :: BooleanAtom(interactive) :: Nil) =>
-        rpcTarget.rpcPrepareRefactor(procId, Symbol(tpe), listOrEmpty(params).toSymbolMap, interactive, callId)
+      case ("swank:prepare-refactor", IntAtom(procId) :: SymbolAtom(tpe) :: SymbolMapExtractor(params) :: BooleanAtom(interactive) :: Nil) =>
+        parseRefactor(tpe, params) match {
+          case Right(refactor) =>
+            rpcTarget.rpcPrepareRefactor(procId, refactor, interactive, callId)
+          case Left(msg) =>
+            sendRPCError(ErrMalformedRPC, "Malformed prepare-refactor - " + msg + ": " + fullForm, callId)
+        }
 
       /**
        * Doc RPC:
@@ -1546,13 +1553,6 @@ class SwankProtocol extends Protocol {
     }
   }
 
-  def listOrEmpty(list: SExp): SExpList = {
-    list match {
-      case l: SExpList => l
-      case _ => SExpList(List.empty)
-    }
-  }
-
   def sendRPCAckOK(callId: Int): Unit = {
     sendRPCReturn(true, callId)
   }
@@ -1580,6 +1580,16 @@ class SwankProtocol extends Protocol {
     sendMessage(SExp(key(":reader-error"), code, detail))
   }
 
+  object SymbolMapExtractor {
+    def unapply(l: SExpList): Option[Map[Symbol, Any]] = l.toSymbolMap
+  }
+
+  object StringListExtractor {
+    def unapply(l: SExpList): Option[List[String]] = l.toStringList
+  }
+}
+
+object SwankProtocol {
   object OffsetRangeExtractor {
     def unapply(sexp: SExp): Option[OffsetRange] = sexp match {
       case IntAtom(a) => Some(OffsetRange(a, a))
@@ -1604,14 +1614,11 @@ class SwankProtocol extends Protocol {
     }
   }
 
-  object StringListExtractor {
-    def unapply(l: SExpList): Option[List[String]] = l.toStringList
-  }
-
   object SymbolListExtractor {
     def unapply(l: SExpList): Option[List[Symbol]] = {
       Some(l.items.map {
         case SymbolAtom(value) => Symbol(value)
+        // this is a bit evil
         case _ => return None
       })
     }
@@ -1652,4 +1659,26 @@ class SwankProtocol extends Protocol {
     }
   }
 
+  import org.ensime.util.{ Symbols => S }
+
+  def parseRefactor(tpe: String, params: Map[Symbol, Any]): Either[String, RefactorDesc] = {
+    // a bit ugly, but we cant match the map - so match a sorted list, so expected tokens have to be in lexographic order
+    val orderedParams = params.toList.sortBy(_._1.name)
+    (tpe, orderedParams) match {
+      case ("rename", (S.End, end: Int) :: (S.File, file: String) :: (S.NewName, newName: String) :: (S.Start, start: Int) :: Nil) =>
+        Right(RenameRefactorDesc(newName, file, start, end))
+      case ("extractMethod", (S.End, end: Int) :: (S.File, file: String) :: (S.MethodName, methodName: String) :: (S.Start, start: Int) :: Nil) =>
+        Right(ExtractMethodRefactorDesc(methodName, file, start, end))
+      case ("extractLocal", (S.End, end: Int) :: (S.File, file: String) :: (S.Name, name: String) :: (S.Start, start: Int) :: Nil) =>
+        Right(ExtractLocalRefactorDesc(name, file, start, end))
+      case ("inlineLocal", (S.End, end: Int) :: (S.File, file: String) :: (S.Start, start: Int) :: Nil) =>
+        Right(InlineLocalRefactorDesc(file, start, end))
+      case ("organiseImports", (S.File, file: String) :: Nil) =>
+        Right(OrganiseImportsRefactorDesc(file))
+      case ("addImport", (S.End, end: Int) :: (S.File, file: String) :: (S.QualifiedName, qualifiedName: String) :: (S.Start, start: Int) :: Nil) =>
+        Right(AddImportRefactorDesc(qualifiedName, file, start, end))
+      case _ =>
+        Left("Incorrect arguments or unknown refactor type: " + tpe)
+    }
+  }
 }

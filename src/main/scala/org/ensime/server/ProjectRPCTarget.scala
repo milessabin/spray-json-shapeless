@@ -1,88 +1,17 @@
 package org.ensime.server
 
 import java.io.File
+
 import org.ensime.config.ProjectConfig
 import org.ensime.model._
-import org.ensime.protocol.ConnectionInfo
 import org.ensime.protocol.ProtocolConst._
+import org.ensime.protocol.{ ConnectionInfo, RPCTarget }
 import org.ensime.util._
-import scala.collection.immutable
+
 import scalariform.astselect.AstSelector
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
 import scalariform.utils.Range
-
-trait RPCTarget {
-
-  def rpcConnectionInfo(callId: Int)
-  def rpcShutdownServer(callId: Int)
-
-  def rcpInitProject(confSExp: SExp, callId: Int)
-  def rpcPeekUndo(callId: Int)
-  def rpcExecUndo(undoId: Int, callId: Int)
-  def rpcReplConfig(callId: Int)
-
-  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: List[Symbol], callId: Int)
-  def rpcMethodBytecode(f: String, line: Int, callId: Int)
-  def rpcDebugStartVM(commandLine: String, callId: Int)
-  def rpcDebugAttachVM(hostname: String, port: String, callId: Int)
-  def rpcDebugStopVM(callId: Int)
-  def rpcDebugRun(callId: Int)
-  def rpcDebugContinue(threadId: Long, callId: Int)
-  def rpcDebugBreak(file: String, line: Int, callId: Int)
-  def rpcDebugClearBreak(file: String, line: Int, callId: Int)
-  def rpcDebugClearAllBreaks(callId: Int)
-  def rpcDebugListBreaks(callId: Int)
-  def rpcDebugNext(threadId: Long, callId: Int)
-  def rpcDebugStep(threadId: Long, callId: Int)
-  def rpcDebugStepOut(threadId: Long, callId: Int)
-  def rpcDebugLocateName(threadId: Long, name: String, callId: Int)
-  def rpcDebugValue(loc: DebugLocation, callId: Int)
-  def rpcDebugToString(threadId: Long, loc: DebugLocation, callId: Int)
-  def rpcDebugSetValue(loc: DebugLocation, newValue: String, callId: Int)
-  def rpcDebugBacktrace(threadId: Long, index: Int, count: Int, callId: Int)
-  def rpcDebugActiveVM(callId: Int)
-  def rpcPatchSource(f: String, edits: List[PatchOp], callId: Int)
-  def rpcTypecheckFiles(fs: List[SourceFileInfo], callId: Int)
-  def rpcRemoveFile(f: String, callId: Int)
-  def rpcTypecheckAll(callId: Int)
-  def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int,
-    caseSens: Boolean, reload: Boolean, callId: Int)
-  def rpcPackageMemberCompletion(path: String, prefix: String, callId: Int)
-  def rpcInspectTypeAtPoint(f: String, range: OffsetRange, callId: Int)
-
-  def rpcInspectTypeById(id: Int, callId: Int)
-
-  def rpcSymbolAtPoint(f: String, point: Int, callId: Int)
-
-  def rpcTypeById(id: Int, callId: Int)
-
-  def rpcTypeByName(name: String, callId: Int)
-
-  def rpcTypeByNameAtPoint(name: String, f: String, range: OffsetRange, callId: Int)
-
-  def rpcCallCompletion(id: Int, callId: Int)
-
-  def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int, callId: Int)
-  def rpcPublicSymbolSearch(names: List[String], maxResults: Int, callId: Int)
-
-  def rpcUsesOfSymAtPoint(f: String, point: Int, callId: Int)
-
-  def rpcTypeAtPoint(f: String, range: OffsetRange, callId: Int)
-
-  def rpcInspectPackageByPath(path: String, callId: Int)
-
-  def rpcPrepareRefactor(procId: Int, refactorType: Symbol,
-    params: immutable.Map[Symbol, Any], interactive: Boolean, callId: Int)
-
-  def rpcExecRefactor(procId: Int, refactorType: Symbol, callId: Int)
-
-  def rpcCancelRefactor(procId: Int, callId: Int)
-
-  def rpcExpandSelection(filename: String, start: Int, stop: Int, callId: Int)
-
-  def rpcFormatFiles(filenames: List[String], callId: Int)
-}
 
 trait ProjectRPCTarget extends RPCTarget { self: Project =>
 
@@ -136,75 +65,75 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcDebugStartVM(commandLine: String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugStartVMReq(commandLine), callId)
+    acquireDebugger ! RPCRequestEvent(DebugStartVMReq(commandLine), callId)
   }
 
   override def rpcDebugAttachVM(hostname: String, port: String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugAttachVMReq(hostname, port), callId)
+    acquireDebugger ! RPCRequestEvent(DebugAttachVMReq(hostname, port), callId)
   }
 
   override def rpcDebugStopVM(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugStopVMReq, callId)
+    acquireDebugger ! RPCRequestEvent(DebugStopVMReq, callId)
   }
 
   override def rpcDebugRun(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugRunReq, callId)
+    acquireDebugger ! RPCRequestEvent(DebugRunReq, callId)
   }
 
   override def rpcDebugContinue(threadId: Long, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugContinueReq(threadId), callId)
+    acquireDebugger ! RPCRequestEvent(DebugContinueReq(threadId), callId)
   }
 
   override def rpcDebugBreak(file: String, line: Int, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugBreakReq(file, line), callId)
+    acquireDebugger ! RPCRequestEvent(DebugBreakReq(file, line), callId)
   }
 
   override def rpcDebugClearBreak(file: String, line: Int, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugClearBreakReq(file, line), callId)
+    acquireDebugger ! RPCRequestEvent(DebugClearBreakReq(file, line), callId)
   }
 
   override def rpcDebugClearAllBreaks(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugClearAllBreaksReq, callId)
+    acquireDebugger ! RPCRequestEvent(DebugClearAllBreaksReq, callId)
   }
 
   override def rpcDebugListBreaks(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugListBreaksReq, callId)
+    acquireDebugger ! RPCRequestEvent(DebugListBreaksReq, callId)
   }
 
   override def rpcDebugNext(threadId: Long, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugNextReq(threadId), callId)
+    acquireDebugger ! RPCRequestEvent(DebugNextReq(threadId), callId)
   }
 
   override def rpcDebugStep(threadId: Long, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugStepReq(threadId), callId)
+    acquireDebugger ! RPCRequestEvent(DebugStepReq(threadId), callId)
   }
 
   override def rpcDebugStepOut(threadId: Long, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugStepOutReq(threadId), callId)
+    acquireDebugger ! RPCRequestEvent(DebugStepOutReq(threadId), callId)
   }
 
   override def rpcDebugLocateName(threadId: Long, name: String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugLocateNameReq(threadId, name), callId)
+    acquireDebugger ! RPCRequestEvent(DebugLocateNameReq(threadId, name), callId)
   }
 
   override def rpcDebugValue(loc: DebugLocation, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugValueReq(loc), callId)
+    acquireDebugger ! RPCRequestEvent(DebugValueReq(loc), callId)
   }
 
   def rpcDebugToString(threadId: Long, loc: DebugLocation, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugToStringReq(threadId, loc), callId)
+    acquireDebugger ! RPCRequestEvent(DebugToStringReq(threadId, loc), callId)
   }
 
   override def rpcDebugSetValue(loc: DebugLocation, newValue: String, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugSetValueReq(loc, newValue), callId)
+    acquireDebugger ! RPCRequestEvent(DebugSetValueReq(loc, newValue), callId)
   }
 
   override def rpcDebugBacktrace(threadId: Long, index: Int, count: Int, callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugBacktraceReq(threadId, index, count), callId)
+    acquireDebugger ! RPCRequestEvent(DebugBacktraceReq(threadId, index, count), callId)
   }
 
   override def rpcDebugActiveVM(callId: Int) {
-    getOrStartDebugger ! RPCRequestEvent(DebugActiveVMReq, callId)
+    acquireDebugger ! RPCRequestEvent(DebugActiveVMReq, callId)
   }
 
   override def rpcPatchSource(f: String, edits: List[PatchOp], callId: Int) {
@@ -284,10 +213,8 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(InspectPackageByPathReq(path), callId)
   }
 
-  override def rpcPrepareRefactor(procId: Int, refactorType: Symbol, params: immutable.Map[Symbol, Any],
-    interactive: Boolean, callId: Int) {
-    getAnalyzer ! RPCRequestEvent(RefactorPerformReq(
-      procId, refactorType, params, interactive), callId)
+  override def rpcPrepareRefactor(procId: Int, refactorDesc: RefactorDesc, interactive: Boolean, callId: Int) {
+    getAnalyzer ! RPCRequestEvent(RefactorPrepareReq(procId, refactorDesc, interactive), callId)
   }
 
   override def rpcExecRefactor(procId: Int, refactorType: Symbol, callId: Int) {
@@ -323,14 +250,12 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
       val changeList = files.map { f =>
         FileUtils.readFile(f) match {
           case Right(contents) =>
-            val formatted = ScalaFormatter.format(
-              contents, config.formattingPrefs)
+            val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
             TextEdit(f, 0, contents.length, formatted)
           case Left(e) => throw e
         }
       }
-      addUndo("Formatted source of " + filenames.mkString(", ") + ".",
-        FileUtils.inverseEdits(changeList))
+      addUndo("Formatted source of " + filenames.mkString(", ") + ".", FileUtils.inverseEdits(changeList))
       FileUtils.writeChanges(changeList) match {
         case Right(_) => sendRPCAckOK(callId)
         case Left(e) =>
@@ -341,5 +266,4 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
         sendRPCError(ErrFormatFailed, "Cannot format broken syntax: " + e, callId)
     }
   }
-
 }

@@ -13,7 +13,7 @@ import scala.reflect.internal.util._
 import scala.tools.nsc.io.{ Path, PlainFile }
 import scala.reflect.internal.util.{ RangePosition, OffsetPosition, BatchSourceFile }
 
-class SwankProtocolConversionsSpec extends FunSpec with Matchers {
+object SwankProtocolConversionsSpec {
 
   // some useful example components
   val packageInfo = new PackageInfo("name", "fullName", List())
@@ -21,10 +21,13 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
   val paramSectionInfo = new ParamSectionInfo(List(("ABC", typeInfo)), false)
   val interfaceInfo = new InterfaceInfo(typeInfo, Some("DEF"))
 
-  val entityInfo: EntityInfo = new ArrowTypeInfo("Arrow1", 8, typeInfo, List(paramSectionInfo))
+  val entityInfo: TypeInfo = new ArrowTypeInfo("Arrow1", 8, typeInfo, List(paramSectionInfo))
 
   val completionInfo = new CompletionInfo("name",
     new CompletionSignature(List(List(("abc", "def"), ("hij", "lmn"))), "ABC"), 88, false, 90, Some("BAZ"))
+
+  val completionInfo2 = new CompletionInfo("name2",
+    new CompletionSignature(List(List(("abc", "def"))), "ABC"), 90, true, 91, None)
 
   val methodSearchRes = MethodSearchResult("abc", "a", 'abcd, Some("abd", 27), "ownerStr")
   val typeSearchRes = TypeSearchResult("abc", "a", 'abcd, Some("abd", 27))
@@ -58,6 +61,12 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
   val batchSourceFile = new BatchSourceFile(new PlainFile(Path("/abc")), "blah\nblah\nblah\n")
   val batchSourceFile_str = TestUtil.stringToWireString(batchSourceFile.path)
 
+}
+
+class SwankProtocolConversionsSpec extends FunSpec with Matchers {
+
+  import SwankProtocolConversionsSpec._
+
   describe("SwankProtocolConversionsSpec") {
 
     val protocol = new SwankProtocol
@@ -89,6 +98,9 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
       assert(toWF(DebugExceptionEvent(33L, 209L, "threadNameStr", Some(sourcePos1))).toWireString ===
         """(:debug-event (:type exception :exception "33" :thread-id "209" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
+
+      assert(toWF(DebugExceptionEvent(33L, 209L, "threadNameStr", None)).toWireString ===
+        """(:debug-event (:type exception :exception "33" :thread-id "209" :thread-name "threadNameStr" :file nil :line nil))""")
 
       assert(toWF(DebugThreadStartEvent(907L)).toWireString === """(:debug-event (:type threadStart :thread-id "907"))""")
       assert(toWF(DebugThreadDeathEvent(907L)).toWireString === """(:debug-event (:type threadDeath :thread-id "907"))""")
@@ -172,6 +184,9 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
       // toWF(value: CompletionInfo)
       assert(toWF(completionInfo).toWireString === """(:name "name" :type-sig (((("abc" "def") ("hij" "lmn"))) "ABC") :type-id 88 :to-insert "BAZ")""")
 
+      // toWF(value: CompletionInfo)
+      assert(toWF(completionInfo2).toWireString === """(:name "name2" :type-sig (((("abc" "def"))) "ABC") :type-id 90 :is-callable t)""")
+
       // toWF(value: CompletionInfoList)
       assert(toWF(CompletionInfoList("fooBar", List(completionInfo))).toWireString === """(:prefix "fooBar" :completions ((:name "name" :type-sig (((("abc" "def") ("hij" "lmn"))) "ABC") :type-id 88 :to-insert "BAZ")))""")
       // toWF(value: PackageMemberInfoLight)
@@ -196,7 +211,6 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
       // toWF(value: CallCompletionInfo)
       assert(toWF(new CallCompletionInfo(typeInfo, List(paramSectionInfo))).toWireString === """(:result-type (:name "type1" :type-id 7 :full-name "FOO.type1" :decl-as type1 :outer-type-id 8) :param-sections ((:params (("ABC" (:name "type1" :type-id 7 :full-name "FOO.type1" :decl-as type1 :outer-type-id 8))))))""")
 
-      // TODO this bit needs a lot more tests
       // toWF(value: InterfaceInfo)
       assert(toWF(interfaceInfo).toWireString === """(:type (:name "type1" :type-id 7 :full-name "FOO.type1" :decl-as type1 :outer-type-id 8) :via-view "DEF")""")
       // toWF(value: TypeInspectInfo)
