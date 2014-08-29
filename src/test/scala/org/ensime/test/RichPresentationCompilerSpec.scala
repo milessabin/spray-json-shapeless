@@ -3,9 +3,12 @@ package org.ensime.test
 import scala.reflect.internal.util.OffsetPosition
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
+import org.slf4j.LoggerFactory
 import org.ensime.test.util.Helpers
 
 class RichPresentationCompilerSpec extends FunSpec with Matchers {
+
+  val log = LoggerFactory.getLogger(this.getClass)
 
   describe("RichPresentationCompiler") {
 
@@ -46,7 +49,7 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers {
         ))
         val p = new OffsetPosition(file, 78)
         val infoList = cc.completionsAt(p, 10, false)
-        println(s"${infoList.completions}")
+        log.debug(s"${infoList.completions}")
         assert(infoList.completions.length > 1)
         assert(infoList.completions.head.name == "aMethod")
       }
@@ -60,9 +63,9 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers {
           "object B { val x = A.aMeth }"
         ))
         val p = new OffsetPosition(file, 83)
-        println("p = " + p)
+        log.info("p = " + p)
         val infoList = cc.completionsAt(p, 10, false)
-        println(s"${infoList.completions}")
+        log.info(s"${infoList.completions}")
         assert(infoList.completions.length == 1)
         assert(infoList.completions.head.name == "aMethod")
       }
@@ -76,9 +79,9 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers {
           "object B { val x = Ab }"
         ))
         val p = new OffsetPosition(file, 80)
-        println("p = " + p)
+        log.info("p = " + p)
         val infoList = cc.completionsAt(p, 10, false)
-        println(s"${infoList.completions}")
+        log.info(s"${infoList.completions}")
         assert(infoList.completions.length > 1)
         assert(infoList.completions.head.name == "Abc")
       }
