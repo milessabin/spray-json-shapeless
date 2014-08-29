@@ -190,7 +190,7 @@ object IntgUtil extends Assertions {
       val cmdLine =
         (if (sys.props("os.name").toLowerCase.contains("windows"))
           List("cmd", "/c")
-        else Nil) ::: List("sbt", "compile", "ensime")
+        else Nil) ::: List("sbt", "--warn", "compile", "ensime")
 
       val buildProcess = scala.sys.process.Process(cmdLine, Some(projectBase))
       buildProcess.!

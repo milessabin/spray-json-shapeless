@@ -16,6 +16,14 @@ object Helpers {
     implicit val actorSystem = ActorSystem.create()
     val settings = new Settings(Console.println)
     settings.embeddedDefaults[RichCompilerControl]
+
+    // Uncomment the following to enable pres compiler logging during tests
+    /*
+     settings.YpresentationDebug.value = true
+     settings.YpresentationVerbose.value = true
+     settings.verbose.value = true
+     */
+
     val reporter = new StoreReporter()
     val indexer = TestProbe()
     val parent = TestProbe()

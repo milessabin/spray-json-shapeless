@@ -155,9 +155,6 @@ class RichPresentationCompiler(
     }
   }
 
-  override val debugIDE: Boolean = true
-  override val verboseIDE: Boolean = true
-
   def activeUnits(): List[CompilationUnit] = {
     val invalidSet = toBeRemoved.synchronized { toBeRemoved.toSet }
     unitOfFile.filter { kv => !invalidSet.contains(kv._1) }.values.toList
