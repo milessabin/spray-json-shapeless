@@ -70,6 +70,8 @@ val JavaTools = List[Option[String]] (
 
 internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) }
 
+internalDependencyClasspath in Test += { Attributed.blank(JavaTools) }
+
 scalacOptions in Compile ++= Seq(
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", "-deprecation",
   "-Xfatal-warnings",
@@ -145,7 +147,7 @@ scalariformSettings
 instrumentSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 56
+ScoverageKeys.minimumCoverage := 61
 
 // might be buggy
 ScoverageKeys.highlighting := true

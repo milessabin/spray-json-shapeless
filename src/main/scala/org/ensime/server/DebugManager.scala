@@ -222,6 +222,8 @@ class DebugManager(
           case e: VMStartEvent =>
             withVM { vm =>
               vm.initLocationMap()
+              // by default we will attempt to start in suspended mode so we can attach breakpoints etc
+              vm.resume()
             }
             project ! AsyncEvent(DebugVMStartEvent())
           case e: VMDeathEvent => disconnectDebugVM()
@@ -443,7 +445,9 @@ class DebugManager(
           val allVMOpts = (List(opts) ++ vmOptions).mkString(" ")
           arguments.get("options").setValue(allVMOpts)
           arguments.get("main").setValue(commandLine)
-          arguments.get("suspend").setValue("false")
+          // set the debugged process into suspend mode so we can catch it and add
+          // breakpoints (see vm start  event), otherwise we have a race condition.
+          arguments.get("suspend").setValue("true")
 
           log.info("Using Connector: " + connector.name + " : " + connector.description())
           log.info("Connector class: " + connector.getClass.getName)
@@ -472,7 +476,8 @@ class DebugManager(
       }
     }
 
-    vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
+    //This flag is useful for debugging but not needed during general use
+    // vm.setDebugTraceMode(VirtualMachine.TRACE_EVENTS)
     val evtQ = new VMEventManager(vm.eventQueue())
     val erm: EventRequestManager = vm.eventRequestManager();
     {
@@ -969,7 +974,7 @@ class DebugManager(
             self ! t
             finished = true
           case t: Throwable =>
-            t.printStackTrace()
+            log.info("Exception during execution", t)
             finished = true
         }
       }
@@ -990,7 +995,7 @@ class DebugManager(
         }
       } catch {
         case t: Throwable =>
-          t.printStackTrace()
+          log.info("Exception during execution", t)
       }
     }
   }

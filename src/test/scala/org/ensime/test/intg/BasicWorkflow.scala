@@ -4,6 +4,7 @@ import org.ensime.test.TestUtil
 import org.ensime.util._
 import org.scalatest.{ FunSpec, Matchers }
 import org.slf4j.LoggerFactory
+
 import scala.concurrent.duration._
 import TestUtil.SlowTest
 import pimpathon.file._
