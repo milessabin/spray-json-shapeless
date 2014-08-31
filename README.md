@@ -3,9 +3,7 @@
 [![Bountysource](https://www.bountysource.com/badge/tracker?tracker_id=239449)](https://www.bountysource.com/trackers/239449-ensime?utm_source=239449&utm_medium=shield&utm_campaign=TRACKER_BADGE)
 [![Build Status](https://travis-ci.org/ensime/ensime-server.svg?branch=master)](https://travis-ci.org/ensime/ensime-server)
 [![Stories in Ready](https://badge.waffle.io/ensime/ensime-server.png?label=Low+Hanging+Fruit)](https://waffle.io/ensime/ensime-server)
-<!--
-[![Coverage Status](https://coveralls.io/repos/bountysource/frontend/badge.png)](https://coveralls.io/r/ensime/ensime-server)
--->
+[![Coverage Status](https://coveralls.io/repos/ensime/ensime-server/badge.png)](https://coveralls.io/r/ensime/ensime-server)
 
 
 ENhanced Scala Interaction Mode for text Editors, especially [GNU Emacs](http://www.gnu.org/software/emacs/).
@@ -50,7 +48,7 @@ We are using some great technologies to automate our build and testing process:
 
 * Kanban project planning from [waffle.io](https://waffle.io/ensime/ensime-server)
 * Continuous Integration from [travis-ci.org](https://travis-ci.org/ensime/ensime-server)
-* ~~Coverage reports from coveralls.io~~ [#473](http://github.com/ensime/ensime-server/issues/473)
+* Coverage reports from coveralls.io [coveralls.io](https://coveralls.io/repos/ensime/ensime-server)
 * Binary distribution from [sonatype.org](http://www.sonatype.org/)
 * Emacs distributions from [MELPA](http://melpa.milkbox.net/#/ensime)
 
