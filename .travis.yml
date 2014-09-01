@@ -21,7 +21,7 @@ after_success:
 - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" && "$JAVA_HOME" == "$(jdk_switcher home openjdk6)" ]]; then echo "publish"; fi)
 - sbt ++$TRAVIS_SCALA_VERSION scalastyleGenerateConfig scalastyle
 # https://github.com/scoverage/sbt-coveralls/issues/18
-#- sbt ++$TRAVIS_SCALA_VERSION coveralls
+- sbt ++$TRAVIS_SCALA_VERSION coveralls
 env:
   global:
     # travis encrypt -r ensime/ensime-server SONATYPE_USERNAME=<USERNAME>

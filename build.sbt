@@ -2,7 +2,8 @@ import sbt._
 import java.io._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin
-//import CoverallsPlugin.CoverallsKeys._
+import scoverage.ScoverageSbtPlugin.instrumentSettings
+import org.scoverage.coveralls.CoverallsPlugin.coverallsSettings
 
 organization := "org.ensime"
 
@@ -91,7 +92,7 @@ ScoverageKeys.highlighting := true
 
 ScoverageKeys.failOnMinimumCoverage := true
 
-//coverallsSettings
+coverallsSettings
 
 licenses := Seq("BSD 3 Clause" -> url("http://opensource.org/licenses/BSD-3-Clause"))
 
