@@ -23,7 +23,7 @@ class BasicWorkflow extends FunSpec with Matchers {
 
         // semantic highlighting
         interactor.expectRPC(20 seconds, s"""(swank:symbol-designations $fooFile -1 299 (var val varField valField functionCall operator param class trait object package))""",
-          s"""(:ok (:file $fooFile :syms ((package 12 19) (package 8 11) (trait 40 43) (valField 69 71) (class 100 103) (param 125 126) (class 128 131) (param 133 134) (class 136 142) (operator 156 157) (param 154 155) (functionCall 160 166) (param 158 159) (valField 183 187) (class 193 199) (class 201 204) (valField 214 218) (class 224 227) (functionCall 232 239) (operator 250 251) (valField 256 257) (valField 252 255) (functionCall 261 268) (functionCall 273 283) (valField 269 272))))""")
+          s"""(:ok (:file $fooFile :syms ((package 12 19) (package 8 11) (trait 40 43) (valField 69 70) (class 100 103) (param 125 126) (class 128 131) (param 133 134) (class 136 142) (operator 156 157) (param 154 155) (functionCall 160 166) (param 158 159) (valField 183 186) (class 193 199) (class 201 204) (valField 214 217) (class 224 227) (functionCall 232 239) (operator 250 251) (valField 256 257) (valField 252 255) (functionCall 261 268) (functionCall 273 283) (valField 269 272))))""")
 
         // inspect Int symbol
         // expected form(:ok (:name "scala.Int" :local-name "Int" :type (:name "Int" :type-id 1 :full-name "scala.Int" :decl-as class) :owner-type-id 2))
