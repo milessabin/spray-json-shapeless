@@ -354,6 +354,12 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       }
     }
 
+    it("should not fail on swank:prepareRefactor from bug 573") {
+      test("""(swank:prepare-refactor 2 organizeImports (file "/home/fommil/Projects/ensime-server/src/main/scala/org/ensime/indexer/DatabaseService.scala") t)""") { (t, m, id) =>
+        (t.rpcPrepareRefactor _).expects(2, OrganiseImportsRefactorDesc("/home/fommil/Projects/ensime-server/src/main/scala/org/ensime/indexer/DatabaseService.scala"), true, id)
+      }
+    }
+
     it("should understand swank:prepare-refactor - addImport") {
       test("""(swank:prepare-refactor 6 addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala" start 39504 end 39508) t)""") { (t, m, id) =>
         (t.rpcPrepareRefactor _).expects(6, AddImportRefactorDesc("com.bar.Foo", "SwankProtocol.scala", 39504, 39508), true, id)
@@ -559,6 +565,5 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
         (m.send _).expects(s"""(:return (:abort 202 "Malformed prepare-refactor - Incorrect arguments or unknown refactor type: unknownRefactor: (swank:prepare-refactor 9 unknownRefactor (file \\"SwankProtocol.scala\\") t)") $id)""")
       }
     }
-
   }
 }

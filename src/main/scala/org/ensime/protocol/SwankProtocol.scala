@@ -1675,6 +1675,8 @@ object SwankProtocol {
         Right(InlineLocalRefactorDesc(file, start, end))
       case ("organiseImports", (S.File, file: String) :: Nil) =>
         Right(OrganiseImportsRefactorDesc(file))
+      case ("organizeImports", (S.File, file: String) :: Nil) =>
+        Right(OrganiseImportsRefactorDesc(file))
       case ("addImport", (S.End, end: Int) :: (S.File, file: String) :: (S.QualifiedName, qualifiedName: String) :: (S.Start, start: Int) :: Nil) =>
         Right(AddImportRefactorDesc(qualifiedName, file, start, end))
       case _ =>
