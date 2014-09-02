@@ -76,6 +76,9 @@ maxErrors := 1
 
 scapegoatConsoleOutput := false
 
+// full stacktraces in scalatest
+testOptions in Test += Tests.Argument("-oF")
+
 graphSettings
 
 scalariformSettings

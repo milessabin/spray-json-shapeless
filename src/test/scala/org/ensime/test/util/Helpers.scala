@@ -2,6 +2,7 @@ package org.ensime.test.util
 
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
+import org.slf4j.LoggerFactory
 
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
@@ -11,18 +12,16 @@ import org.ensime.config._
 import org.scalatest.exceptions.TestFailedException
 
 object Helpers {
+  private val presCompLog = LoggerFactory.getLogger(classOf[RichPresentationCompiler])
 
   def withPresCompiler(action: RichCompilerControl => Any) = {
     implicit val actorSystem = ActorSystem.create()
-    val settings = new Settings(Console.println)
+    val settings = new Settings(presCompLog.error)
     settings.embeddedDefaults[RichCompilerControl]
 
-    // Uncomment the following to enable pres compiler logging during tests
-    /*
-     settings.YpresentationDebug.value = true
-     settings.YpresentationVerbose.value = true
-     settings.verbose.value = true
-     */
+    settings.YpresentationDebug.value = presCompLog.isTraceEnabled
+    settings.YpresentationVerbose.value = presCompLog.isDebugEnabled
+    settings.verbose.value = presCompLog.isDebugEnabled
 
     val reporter = new StoreReporter()
     val indexer = TestProbe()
