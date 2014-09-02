@@ -190,12 +190,12 @@ object IntgUtil extends Assertions {
       val cmdLine =
         (if (sys.props("os.name").toLowerCase.contains("windows"))
           List("cmd", "/c")
-        else Nil) ::: List("sbt", "--warn", "compile", "ensime")
+        else Nil) ::: List("sbt", "--warn", "gen-ensime")
 
       val buildProcess = scala.sys.process.Process(cmdLine, Some(projectBase))
       buildProcess.!
       log.info("Build done")
-      val dotEnsimeFile = SFile(new JFile(projectBase, ".ensime")).lines().drop(3).mkString("\n") // slurp()
+      val dotEnsimeFile = SFile(new JFile(projectBase, ".ensime")).lines().mkString("\n") // slurp()
 
       val cacheDir = new JFile(projectBase, ".ensime_cache")
 
@@ -222,8 +222,11 @@ object IntgUtil extends Assertions {
                         | )""".stripMargin
 
       val sourceRoots = TestUtil.fileToWireString(CanonFile(projectBase + "/src/main/scala"))
-      interactor.expectRPC(3 seconds, initMsg,
-        s"""(:ok (:project-name "$projectName" :source-roots ($sourceRoots)))""")
+      val initResult = interactor.sendRPCString(10 seconds, initMsg)
+      log.info("Got init response " + initResult)
+      assert(initResult.contains(sourceRoots))
+      //      interactor.expectRPC(3 seconds, initMsg,
+      //        s"""(:ok (:project-name "$projectName" :source-roots ($sourceRoots)))""")
 
       interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
       interactor.expectAsync(30 seconds, """(:compiler-ready)""")

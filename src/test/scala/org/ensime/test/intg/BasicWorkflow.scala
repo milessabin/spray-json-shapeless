@@ -20,6 +20,7 @@ class BasicWorkflow extends FunSpec with Matchers {
         interactor.expectRPC(20 seconds, s"""(swank:typecheck-file $fooFile)""",
           """(:ok t)""")
         interactor.expectAsync(10 seconds, "(:clear-all-scala-notes)")
+        interactor.expectAsync(10 seconds, "(:full-typecheck-finished)")
 
         // semantic highlighting
         interactor.expectRPC(20 seconds, s"""(swank:symbol-designations $fooFile -1 299 (var val varField valField functionCall operator param class trait object package))""",

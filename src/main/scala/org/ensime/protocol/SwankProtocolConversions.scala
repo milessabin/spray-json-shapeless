@@ -423,7 +423,7 @@ class SwankProtocolConversions extends ProtocolConversions {
     SExp(
       key(":project-name"), config.name.map(StringAtom).getOrElse('nil),
       key(":source-roots"), SExp(
-        (config.sourceRoots ++ config.referenceSourceRoots).map {
+        config.sourceRoots.map {
           f => StringAtom(f.getPath)
         }))
   }

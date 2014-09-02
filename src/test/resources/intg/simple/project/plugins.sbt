@@ -2,4 +2,6 @@
 def plugin(m: ModuleID) =
   Defaults.sbtPluginExtra(m, "0.13", "2.10") excludeAll ExclusionRule("org.scala-lang")
 
-libraryDependencies += plugin("org.ensime" % "ensime-sbt-cmd" % "0.1.4")
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+libraryDependencies += plugin("org.ensime" % "ensime-sbt" % "0.1.5-SNAPSHOT")
