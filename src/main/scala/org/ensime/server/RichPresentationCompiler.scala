@@ -117,7 +117,9 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(usesOfSymbolAtPoint(p).toList).getOrElse(List.empty)
 
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations =
-    askOption(symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty))
+    askOption(
+      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty)
+      )
 
   def askClearTypeCache() = clearTypeCache()
 
@@ -143,7 +145,7 @@ class RichPresentationCompiler(
   var indexer: ActorRef,
   val config: ProjectConfig) extends Global(settings, richReporter)
     with NamespaceTraversal with ModelBuilders with RichCompilerControl
-    with RefactoringImpl with IndexerInterface with SemanticHighlighting with Completion with Helpers {
+    with RefactoringImpl with IndexerInterface with Completion with Helpers {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 

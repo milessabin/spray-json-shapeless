@@ -147,19 +147,23 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
             package com.example
             object A { object B { } }
             case class C() { }
+            case class D(i: Int) { case class E(i: Int) { } }
             object Test {
-              def fun (x:Any) = x match { case C() => 1 }  // object6
-              val a = A    // object2
-              val b = A.B  // .B = object4
+              def fun (x:Any) = x match { case C() => 1 }
+              val b = A.B
+              val c = D(1)
+              val d = c.E(1)
             }
-            """,
+          """,
           List('object)
         )
         assert(sds === List(
           ('object, "C"),
           ('object, "A"),
-          ('object, "A"),
-          ('object, "B")
+          ('object, "B"),
+          ('object, "D"),
+          // TODO two problems there: "c" should be a varField ; E should be highlighted.
+          ('object, "c")
         ))
       }
     }
@@ -254,23 +258,26 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
       }
     }
 
-    ignore("should highlight typeParams") {
+    it("should highlight typeParams") {
       Helpers.withPresCompiler { cc =>
         val sds = getSymbolDesignations(
           cc, """
             package com.example
             class Test {
-              def f[X](x: X) = x
-              f[Int](1)
+              def f[XX,YY](y: YY, x: XX) = {
+                var z: YY
+              }
+              f[Int, String](1, "a")
             }
           """,
           List('typeParam)
         )
-        // TODO The following would be ideal. Right now we don't get any typeParam at all.
         assert(sds === List(
-          ('typeParam, "X"),
-          ('typeParam, "X"),
-          ('typeParam, "Int")
+          ('typeParam, "XX"),
+          ('typeParam, "YY"),
+          ('typeParam, "YY"),
+          ('typeParam, "XX"),
+          ('typeParam, "YY")
         ))
       }
     }
@@ -314,10 +321,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
           """,
           List('valField)
         )
-        // TODO There should be no "=" or ":"
         assert(sds === List(
-          ('valField, "u="),
-          ('valField, "v:"),
+          ('valField, "u"),
+          ('valField, "v"),
           ('valField, "u"),
           ('valField, "v")
         ))
@@ -363,10 +369,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
           """,
           List('varField)
         )
-        // TODO There should be no "=" or ":"
         assert(sds === List(
-          ('varField, "u="),
-          ('varField, "v:"),
+          ('varField, "u"),
+          ('varField, "v"),
           ('varField, "u"),
           ('varField, "v")
         ))
@@ -381,15 +386,14 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
             object Fubar {
                private var v: Int = 0
                def value = v
-               def value_=(a: Int) v = a
+               def value_=(a: Int) = v = a
             }
             class Test {
-              Fubar.value = false
+              Fubar.value = 1
             }
           """,
           List('operator)
         )
-        // TODO There should be no "=" or ":"
         assert(sds === List(
           ('operator, "value")
         ))
@@ -412,20 +416,38 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
       }
     }
 
-    ignore("should highlight method calls after operators") {
+    it("should highlight negation operators") {
       Helpers.withPresCompiler { cc =>
         val sds = getSymbolDesignations(
           cc, """
             package com.example
             class Test {
-              def fun(u: Int, v: Int) { u + v }
-              def foo(u: Int, v: Int) { u - v }
+              val x = !(3 == 4)
+            }
+          """,
+          List('operator)
+        )
+        // Call to foo is missing
+        assert(sds === List(
+          ('operator, "!"),
+          ('operator, "==")
+        ))
+      }
+    }
+
+    it("should highlight method calls after operators") {
+      Helpers.withPresCompiler { cc =>
+        val sds = getSymbolDesignations(
+          cc, """
+            package com.example
+            class Test {
+              def fun(u: Int, v: Int): Int = { u + v }
+              def foo(u: Int, v: Int): Int = { u - v }
               fun(1, 2) + foo(4, 5)
             }
           """,
           List('functionCall)
         )
-        // Call to foo is missing
         assert(sds === List(
           ('functionCall, "fun"),
           ('functionCall, "foo")

@@ -3,33 +3,88 @@ package org.ensime.server
 import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
+import scala.reflect.io.AbstractFile
 import scala.tools.nsc.interactive.Global
 import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.symtab.Flags._
+import scala.tools.refactoring.common.PimpedTrees
+import scala.tools.refactoring.common.CompilerAccess
 
-trait SemanticHighlighting { self: Global with Helpers =>
+class SemanticHighlighting(val global: RichPresentationCompiler) extends CompilerAccess with PimpedTrees {
+
+  import global._
 
   class SymDesigsTraverser(p: RangePosition, tpeSet: Set[scala.Symbol]) extends Traverser {
 
     val log = LoggerFactory.getLogger(getClass)
     val syms = ListBuffer[SymbolDesignation]()
 
-    override def traverse(t: Tree) {
+    override def traverse(t: Tree): Unit = {
 
       val treeP = t.pos
 
-      def addAt(start: Int, end: Int, designation: scala.Symbol) {
+      def addAt(start: Int, end: Int, designation: scala.Symbol): Boolean = {
         if (tpeSet.contains(designation)) {
           syms += SymbolDesignation(start, end, designation)
         }
+        true
       }
 
-      def add(designation: scala.Symbol) {
-        addAt(treeP.start, treeP.end, designation)
+      def add(designation: scala.Symbol): Boolean = {
+        val pos = t.namePosition()
+        addAt(pos.start, pos.end, designation)
+      }
+
+      def qualifySymbol(sym: Symbol): Boolean = {
+        if (sym == NoSymbol) {
+          false
+        } else if (sym.isCaseApplyOrUnapply) {
+          val owner = sym.owner
+          val start = treeP.start
+          val end = start + owner.name.length
+          addAt(start, end, 'object)
+        } else if (sym.isConstructor) {
+          addAt(treeP.start, treeP.end, 'constructor)
+        } else if (sym.isTypeParameterOrSkolem) {
+          add('typeParam)
+        } else if (sym.hasFlag(PARAM)) {
+          add('param)
+        } else if (sym.hasFlag(ACCESSOR)) {
+          val under = sym.accessed
+          if (under.isVariable) {
+            add('varField)
+          } else if (under.isValue) {
+            add('valField)
+          } else {
+            false
+          }
+        } else if (sym.isMethod) {
+          if (sym.nameString == "apply" || sym.nameString == "update") { true }
+          else if (sym.name.isOperatorName) {
+            add('operator)
+          } else {
+            add('functionCall)
+          }
+        } else if (sym.isVariable && sym.isLocalToBlock) {
+          add('var)
+        } else if (sym.isValue && sym.isLocalToBlock) {
+          add('val)
+        } else if (sym.hasPackageFlag) {
+          add('package)
+        } else if (sym.isTrait) {
+          add('trait)
+        } else if (sym.isClass) {
+          add('class)
+        } else if (sym.isModule) {
+          add('object)
+        } else {
+          false
+        }
       }
 
       if (!treeP.isTransparent && p.overlaps(treeP)) {
         try {
+          val sym = t.symbol
           t match {
             case Import(expr, selectors) =>
               for (impSel <- selectors) {
@@ -38,136 +93,49 @@ trait SemanticHighlighting { self: Global with Helpers =>
                 addAt(start, end, 'importedName)
               }
             case Ident(_) =>
-              val sym = t.symbol
-              if (sym != NoSymbol) {
-                if (sym.isCaseApplyOrUnapply) {
-                  val owner = sym.owner
-                  val start = treeP.start
-                  val end = start + owner.name.length
-                  addAt(start, end, 'object)
-                } else if (sym.isConstructor) {
-                  add('constructor)
-                } else if (sym.isTypeParameter) {
-                  add('typeParam)
-                } else if (sym.hasFlag(PARAM)) {
-                  add('param)
-                } else if (sym.isMethod) {
-                  add('functionCall)
-                } else if (sym.hasPackageFlag) {
-                  add('package)
-                } else if (sym.isTrait) {
-                  add('trait)
-                } else if (sym.isClass) {
-                  add('class)
-                } else if (sym.isModule) {
-                  add('object)
-                } else if (sym.isVariable && sym.isLocalToBlock) {
-                  add('var)
-                } else if (sym.isValue && sym.isLocalToBlock) {
-                  add('val)
-                } else if (sym.isVariable) {
-                  add('varField)
-                } else if (sym.isValue) {
-                  add('valField)
-                }
-              }
-            case Select(qual, selector: Name) =>
-              val sym = t.symbol
-              val len = selector.decode.length()
-              val end = treeP.end
-              val start = end - len
-
-              if (sym.isCaseApplyOrUnapply) {
-                val owner = sym.owner
-                val start = treeP.start
-                val end = start + owner.name.length
-                addAt(start, end, 'object)
-              } else if (sym.hasFlag(ACCESSOR)) {
-                val under = sym.accessed
-                if (under.isVariable) {
-                  addAt(start, end, 'varField)
-                } else if (under.isValue) {
-                  addAt(start, end, 'valField)
-                }
-              } else if (sym.isConstructor) {
-                val start = treeP.start
-                val end = treeP.end
-                addAt(start, end, 'constructor)
-              } else if (sym.isMethod) {
-                if (sym.nameString == "apply" || sym.nameString == "update") {}
-                else if (selector.isOperatorName) {
-                  if (nme.isSetterName(selector)) {
-                    val end = treeP.end
-                    val start = end - selector.dropSetter.length
-                    addAt(start, end, 'operator)
-                  } else {
-                    addAt(start, end, 'operator)
-                  }
-                } else {
-                  addAt(start, end, 'functionCall)
-                }
-              } else if (sym.hasPackageFlag) {
-                addAt(start, end, 'package)
-              } else if (sym.isTrait) {
-                addAt(start, end, 'trait)
-              } else if (sym.isClass) {
-                addAt(start, end, 'class)
-              } else if (sym.isModule) {
-                addAt(start, end, 'object)
-              } else {
-                addAt(start, end, 'functionCall)
-              }
+              qualifySymbol(sym)
+            case Select(_, _) =>
+              qualifySymbol(sym)
 
             case ValDef(mods, name, tpt, rhs) =>
-              val sym = t.symbol
               if (sym != NoSymbol) {
-
-                // TODO:
-                // Unfotunately t.symbol.pos returns a RangePosition
-                // that covers the entire declaration.
-                //
-                // This is brittle, but I don't know a better
-                // way to get the position of just the name.
-
-                val start = if (mods.positions.isEmpty) t.pos.start
-                else mods.positions.map(_._2.end).max + 2
-                val len = name.decode.length()
-                val end = start + len
                 val isField = sym.owner.isType || sym.owner.isModule
 
                 if (mods.hasFlag(PARAM)) {
-                  addAt(start, end, 'param)
+                  add('param)
                 } else if (mods.hasFlag(MUTABLE) && !isField) {
-                  addAt(start, end, 'var)
+                  add('var)
                 } else if (!isField) {
-                  addAt(start, end, 'val)
+                  add('val)
                 } else if (mods.hasFlag(MUTABLE) && isField) {
-                  addAt(start, end, 'varField)
+                  add('varField)
                 } else if (isField) {
-                  addAt(start, end, 'valField)
+                  add('valField)
+                }
+              }
+
+            case TypeDef(mods, name, params, rhs) =>
+              if (sym != NoSymbol) {
+                if (mods.hasFlag(PARAM)) {
+                  add('typeParam)
                 }
               }
 
             case TypeTree() =>
-              val sym = t.symbol
-              val start = treeP.start
-              val end = treeP.end
-              if (sym.isTrait) {
-                addAt(start, end, 'trait)
-              } else if (sym.isClass) {
-                addAt(start, end, 'class)
-              } else if (sym.isModule) {
-                addAt(start, end, 'object)
-              } else if (t.tpe != null) {
-                // TODO:
-                // This case occurs when
-                // pattern matching on
-                // case classes.
-                // As in:
-                // case MyClass(a:Int,b:Int)
-                //
-                // Works, but this is *way* under-constrained.
-                addAt(start, end, 'object)
+              if (!qualifySymbol(sym)) {
+                if (t.tpe != null) {
+                  // TODO:
+                  // This case occurs when
+                  // pattern matching on
+                  // case classes.
+                  // As in:
+                  // case MyClass(a:Int,b:Int)
+                  //
+                  // Works, but this is *way* under-constrained.
+                  val start = treeP.start
+                  val end = treeP.end
+                  addAt(start, end, 'object)
+                }
               }
             case _ =>
           }
@@ -180,35 +148,21 @@ trait SemanticHighlighting { self: Global with Helpers =>
     }
   }
 
-  protected def symbolDesignationsInRegion(
+  def symbolDesignationsInRegion(
     p: RangePosition,
     tpes: List[scala.Symbol]): SymbolDesignations = {
     val tpeSet = Set.empty[scala.Symbol] ++ tpes
-    val typed: Response[Tree] = new Response[Tree]
-    askLoadedTyped(p.source, keepLoaded = true, typed)
+    val typed: Response[global.Tree] = new Response[global.Tree]
+    global.askLoadedTyped(p.source, keepLoaded = true, typed)
     typed.get.left.toOption match {
       case Some(tree) =>
-
-        // TODO: Disable designations for
-        // regions with errors?
-
-        //        val cu = unitOf(p.source)
-        //        var startOfProblems = p.end
-        //        for (prob <- cu.problems) {
-        //	  if(prob.severityLevel >= 2){
-        //            startOfProblems = math.min(
-        //              prob.pos.start, startOfProblems)
-        //	  }
-        //        }
-
         val traverser = new SymDesigsTraverser(p, tpeSet)
         traverser.traverse(tree)
-        SymbolDesignations(
-          p.source.file.path,
-          traverser.syms.toList
-        )
+        SymbolDesignations(p.source.file.path, traverser.syms.toList)
       case None => SymbolDesignations("", List.empty)
     }
   }
+
+  def compilationUnitOfFile(f: AbstractFile): Option[CompilationUnit] = global.unitOfFile.get(f)
 
 }
