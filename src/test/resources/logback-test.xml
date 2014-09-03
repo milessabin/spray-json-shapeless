@@ -11,11 +11,20 @@
   <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
     <resetJUL>true</resetJUL>
   </contextListener>
+
+  <appender name="file" class="ch.qos.logback.core.FileAppender">
+    <file>test-output.log</file>
+    <append>false</append>
+    <encoder>
+      <pattern>${PATTERN}</pattern>
+    </encoder>
+  </appender>
   
   <!-- <logger name="org.ensime.indexer" level="DEBUG"/> -->
   <logger name="scala.tools" level="WARN"/>
+  <logger name="org.ensime.server.RichPresentationCompiler" level="WARN"/>
   
-  <root level="OFF">
-    <appender-ref ref="STDOUT" />
+  <root level="DEBUG">
+    <appender-ref ref="file"/>
   </root>
 </configuration>

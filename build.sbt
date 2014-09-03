@@ -1,7 +1,6 @@
 import sbt._
 import java.io._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
-import org.scalastyle.sbt.ScalastylePlugin
 import scoverage.ScoverageSbtPlugin.instrumentSettings
 import org.scoverage.coveralls.CoverallsPlugin.coverallsSettings
 
@@ -76,11 +75,12 @@ maxErrors := 1
 
 scapegoatConsoleOutput := false
 
+// full stacktraces in scalatest
+testOptions in Test += Tests.Argument("-oF")
+
 graphSettings
 
 scalariformSettings
-
-ScalastylePlugin.Settings
 
 instrumentSettings
 

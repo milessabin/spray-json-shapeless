@@ -14,58 +14,9 @@ import scala.io.Source
 import scala.util.Properties
 import scala.util.Properties._
 
-/**
- * For when your upstream dependencies can't be trusted with
- * stdout and stderr.
- */
-object ConsoleOutputWorkaround {
-  def redirectScalaConsole(): Unit = {
-    // workaround SI-8717
-    ConsoleRedirect.setOut(OutLog)
-    ConsoleRedirect.setErr(ErrLog)
-  }
-
-  private val blacklist = Set("sun.", "java.", "scala.Console", "scala.Predef")
-  private abstract class StreamToLog extends OutputStream {
-    val buffer = new StringBuilder
-
-    override def write(b: Int): Unit = try {
-      val c = b.toChar
-      if (c == '\n') {
-        val message = buffer.toString()
-        buffer.clear()
-
-        // reasonably expensive, but not as bad as printing to the
-        // screen (which is very slow and blocking)
-        val breadcrumbs = Thread.currentThread.getStackTrace.
-          toList.drop(2).map(_.getClassName).filterNot {
-            c => blacklist.exists(c.startsWith)
-          }
-        val logName = breadcrumbs.headOption.getOrElse("UNKNOWN SOURCE")
-        val log = LoggerFactory.getLogger(logName)
-
-        doLog(log, message)
-      } else buffer.append(c)
-    } catch {
-      case t: Throwable => // bad logging shouldn't kill the app
-    }
-
-    protected def doLog(log: Logger, message: String): Unit
-  }
-
-  private object ErrLog extends StreamToLog {
-    def doLog(log: Logger, m: String): Unit = log.warn(m)
-  }
-
-  private object OutLog extends StreamToLog {
-    def doLog(log: Logger, m: String): Unit = log.info(m)
-  }
-}
-
 object Server {
   SLF4JBridgeHandler.removeHandlersForRootLogger()
   SLF4JBridgeHandler.install()
-  ConsoleOutputWorkaround.redirectScalaConsole()
 
   val log = LoggerFactory.getLogger(classOf[Server])
 
