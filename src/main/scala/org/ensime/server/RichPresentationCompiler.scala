@@ -218,57 +218,56 @@ class RichPresentationCompiler(
     members.values
   }
 
-  protected def getMembersForTypeAt(p: Position): Iterable[Member] = {
-    typeAt(p) match {
-      case Some(tpe) =>
-        if (isNoParamArrowType(tpe)) {
-          typePublicMembers(typeOrArrowTypeResult(tpe))
-        } else {
-          val members: Iterable[Member] = try {
-            wrapTypeMembers(p)
-          } catch {
-            case e: Throwable =>
-              logger.error("Error retrieving type members:", e)
-              List.empty
-          }
-          // Remove duplicates
-          // Filter out synthetic things
-          val bySym = new mutable.LinkedHashMap[Symbol, Member]
-          for (m <- members ++ typePublicMembers(tpe)) {
-            if (!m.sym.nameString.contains("$")) {
-              bySym(m.sym) = m
-            }
-          }
-          bySym.values
+  protected def getMembersForTypeAt(tpe: Type, p: Position): Iterable[Member] = {
+    if (isNoParamArrowType(tpe)) {
+      typePublicMembers(typeOrArrowTypeResult(tpe))
+    } else {
+      val members: Iterable[Member] = try {
+        wrapTypeMembers(p)
+      } catch {
+        case e: Throwable =>
+          logger.error("Error retrieving type members:", e)
+          List.empty
+      }
+      // Remove duplicates
+      // Filter out synthetic things
+      val bySym = new mutable.LinkedHashMap[Symbol, Member]
+      for (m <- members ++ typePublicMembers(tpe)) {
+        if (!m.sym.nameString.contains("$")) {
+          bySym(m.sym) = m
         }
-      case None =>
-        logger.error("ERROR: Failed to get any type information :(  ")
-        List.empty
+      }
+      bySym.values
     }
   }
 
   protected def inspectType(tpe: Type): TypeInspectInfo = {
+    val parents = tpe.parents
     new TypeInspectInfo(
       TypeInfo(tpe, locateSymPos = true),
       companionTypeOf(tpe).map(cacheType),
-      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type])))
+      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]), parents))
   }
 
   protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
-    val members = getMembersForTypeAt(p)
-    val preparedMembers = prepareSortedInterfaceInfo(members)
-    typeAt(p).map { t =>
+    typeAt(p).map(tpe => {
+      val members = getMembersForTypeAt(tpe, p)
+      val parents = tpe.parents
+      val preparedMembers = prepareSortedInterfaceInfo(members, parents)
       new TypeInspectInfo(
-        TypeInfo(t, locateSymPos = true),
-        companionTypeOf(t).map(cacheType),
-        preparedMembers)
+        TypeInfo(tpe, locateSymPos = true),
+        companionTypeOf(tpe).map(cacheType),
+        preparedMembers
+      )
+    }).orElse {
+      logger.error("ERROR: Failed to get any type information :(  ")
+      None
     }
   }
 
   private def typeOfTree(t: Tree): Option[Type] = {
-    var tree = t
-    tree = tree match {
-      case Select(qual, name) if tree.tpe == ErrorType =>
+    val tree = t match {
+      case Select(qual, name) if t.tpe == ErrorType =>
         qual
       case t: ImplDef if t.impl != null =>
         t.impl
@@ -276,7 +275,8 @@ class RichPresentationCompiler(
         t.tpt
       case t: ValOrDefDef if t.rhs != null =>
         t.rhs
-      case t => t
+      case t =>
+        t
     }
 
     Option(tree.tpe)

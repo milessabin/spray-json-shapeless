@@ -604,7 +604,8 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":companion-id", value.companionId match {
         case Some(id) => id
         case None => 'nil
-      }), (":interfaces", SExp(value.supers.map(toWF))))
+      }),
+      (":interfaces", SExp(value.supers.map(toWF))))
   }
 
   def toWF(value: RefactorFailure): SExp = {
