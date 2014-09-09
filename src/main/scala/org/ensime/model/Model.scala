@@ -270,18 +270,19 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
   // When inspecting a type, transform a raw list of TypeMembers to a sorted
   // list of InterfaceInfo objects, each with its own list of sorted member infos.
-  def prepareSortedInterfaceInfo(members: Iterable[Member]): Iterable[InterfaceInfo] = {
+  def prepareSortedInterfaceInfo(members: Iterable[Member], parents: Iterable[Type]): Iterable[InterfaceInfo] = {
     // ...filtering out non-visible and non-type members
     val visMembers: Iterable[TypeMember] = members.flatMap {
       case m @ TypeMember(sym, tpe, true, _, _) => List(m)
       case _ => List.empty
     }
 
+    val parentMap = parents.map(_.typeSymbol -> List[TypeMember]()).toMap
+    val membersMap = visMembers.groupBy {
+      case TypeMember(sym, _, _, _, _) => sym.owner
+    }
     // Create a list of pairs [(typeSym, membersOfSym)]
-    val membersByOwner = visMembers.groupBy {
-      case TypeMember(sym, _, _, _, _) =>
-        sym.owner
-    }.toList.sortWith {
+    val membersByOwner = (parentMap ++ membersMap).toList.sortWith {
       // Sort the pairs on the subtype relation
       case ((s1, _), (s2, _)) => s1.tpe <:< s2.tpe
     }
