@@ -3,6 +3,7 @@ package org.ensime.util
 import java.io._
 import java.nio.charset.Charset
 import java.security.MessageDigest
+import org.slf4j.LoggerFactory
 import scala.collection.Seq
 import scala.collection.mutable
 import scala.tools.nsc.io.AbstractFile
@@ -48,7 +49,17 @@ object FileEdit {
 class RichFile(file: File) {
 
   def children: Iterable[File] = new Iterable[File] {
-    override def iterator: Iterator[File] = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
+    override def iterator: Iterator[File] = if (file.isDirectory) {
+      val dirContents = file.listFiles
+      if (dirContents == null) {
+        LoggerFactory.getLogger(getClass).warn("Could not read directory " + file)
+        Iterator.empty
+      } else {
+        dirContents.iterator
+      }
+    } else {
+      Iterator.empty
+    }
   }
 
   def andTree: Iterable[File] = Seq(file) ++ children.flatMap(child => new RichFile(child).andTree)
