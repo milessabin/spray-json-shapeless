@@ -4,6 +4,8 @@ import org.ensime.server.Server
 import org.ensime.test.TestUtil
 import org.scalatest.{ Matchers, FunSpec }
 
+import pimpathon.file._
+
 import java.io.{ PrintWriter, File }
 
 class EnsimeConfigSpec extends FunSpec with Matchers {
@@ -16,10 +18,14 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
   }
 
   def test(contents: String, testFn: (EnsimeConfig) => Unit): Unit = {
-    TestUtil.withTemporaryDirectory { dir =>
-      val ensimeFile = new File(dir, ".ensime")
+    withTempDirectory { dir =>
+      val ensimeFile = dir / ".ensime"
       writeToFile(contents, ensimeFile)
-      val config = Server.readEnsimeConfig(ensimeFile, "test", dir, new File(".ensime_cache)"))
+      (dir / "abc").mkdirs()
+      val cacheDir = (dir / ".ensime_cache")
+      cacheDir.mkdirs()
+
+      val config = Server.readEnsimeConfig(ensimeFile, dir, cacheDir)
       testFn(config)
     }
   }
@@ -46,14 +52,13 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
           |    :runtime-deps ()
           |    :test-deps ()
           |  )
-          |))""".stripMargin, { config =>
+          |))""".stripMargin, { implicit config =>
 
           assert(config.name == "project")
           assert(config.scalaVersion == "2.10.4")
-          println(config.modules)
-          val module1 = config.getModule("module1")
+          val module1 = config.modules("module1")
           assert(module1.name == "module1")
-          assert(module1.dependsOnModules.isEmpty)
+          assert(module1.dependencies.isEmpty)
         })
     }
   }

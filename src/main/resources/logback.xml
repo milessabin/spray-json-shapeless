@@ -12,8 +12,9 @@
     <resetJUL>true</resetJUL>
   </contextListener>
   
-  <!-- <logger name="org.ensime.indexer" level="DEBUG"/> -->
+  <logger name="org.ensime" level="DEBUG"/>
   <logger name="scala.tools" level="WARN"/>
+  <!-- <logger name="org.ensime.server.RichPresentationCompiler" level="WARN"/> -->
   
   <root level="INFO">
     <appender-ref ref="STDOUT" />

@@ -1,4 +1,4 @@
-
+package org.ensime.protocol
 
 case class RPCRequest(data: RPCCall, callId: Int)
 

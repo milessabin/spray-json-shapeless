@@ -1,8 +1,8 @@
 package org.ensime.server
 
 import java.io.File
-
 import org.ensime.model._
+import org.ensime.protocol._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.protocol.{ ConnectionInfo, RPCTarget }
 import org.ensime.util._
@@ -48,7 +48,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcReplConfig(callId: Int) {
-    sendRPCReturn(toWF(config.replConfig), callId)
+    sendRPCReturn(toWF(new ReplConfig(config.classpath)), callId)
   }
 
   override def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: List[Symbol], callId: Int) {

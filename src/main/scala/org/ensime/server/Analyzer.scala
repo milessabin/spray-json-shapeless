@@ -2,10 +2,9 @@ package org.ensime.server
 
 import java.io.File
 import akka.actor.{ ActorLogging, Actor, ActorRef }
-import org.ensime.config.ProjectConfig
-import org.ensime.model.SourceFileInfo
-import org.ensime.model.SymbolDesignations
-import org.ensime.model.OffsetRange
+import org.ensime.config._
+import org.ensime.indexer.SearchService
+import org.ensime.model._
 import org.ensime.protocol._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
@@ -14,29 +13,37 @@ import scala.concurrent.Future
 import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.Settings
 import scala.reflect.internal.util.OffsetPosition
+import scala.tools.nsc.interactive.Global
 
 case class CompilerFatalError(e: Throwable)
 
 class Analyzer(
   val project: Project,
   val indexer: ActorRef,
+  search: SearchService,
   val protocol: ProtocolConversions,
-  val config: ProjectConfig)
+  val config: EnsimeConfig)
     extends Actor with ActorLogging with RefactoringHandler {
 
-  // this still doesn't silence the PresentationCompiler
-  private val presCompLog = LoggerFactory.getLogger(classOf[RichPresentationCompiler])
+  private val presCompLog = LoggerFactory.getLogger(classOf[Global])
   private val settings = new Settings(presCompLog.error)
   settings.YpresentationDebug.value = presCompLog.isTraceEnabled
   settings.YpresentationVerbose.value = presCompLog.isDebugEnabled
   settings.verbose.value = presCompLog.isDebugEnabled
-
-  settings.processArguments(
-    List("-classpath", config.compilerClasspath) ++ config.extraCompilerArgs,
-    processAll = false)
   settings.usejavacp.value = false
 
+  // HACK: should really get scala-library from our classpath
+  //       and give the option to disable the scala-library (e.g. when working
+  //       on the standard library!)
+  val scalaLib = config.allJars.find(_.getName.contains("scala-library")).get
+  settings.bootclasspath.value = scalaLib.getAbsolutePath
+  // should we add the target folders to the classpath?
+  settings.classpath.value = config.allJars.mkString(File.pathSeparator)
+
+  settings.processArguments(config.compilerArgs, processAll = false)
+
   log.info("Presentation Compiler settings:\n" + settings)
+
   import protocol._
 
   private val reportHandler = new ReportHandler {
@@ -60,11 +67,11 @@ class Analyzer(
   private val reporter = new PresentationReporter(reportHandler)
 
   protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
-    settings, reporter, self, indexer, config)
-  protected val javaCompiler: JavaCompiler = new JavaCompiler(
-    config, reportHandler, indexer)
-  protected var awaitingInitialCompile = true
+    config, settings, reporter, self, indexer, search
+  )
+
   protected var initTime: Long = 0
+  private var awaitingInitialCompile = true
 
   import scalaCompiler._
 
@@ -75,16 +82,9 @@ class Analyzer(
     implicit val ec = context.dispatcher
 
     Future {
-      if (!config.disableSourceLoadOnStartup) {
-        log.info("Building Java sources...")
-        javaCompiler.compileAll()
-        log.info("Building Scala sources...")
-        reporter.disable()
-        scalaCompiler.askReloadAllFiles()
-        scalaCompiler.askNotifyWhenReady()
-      } else {
-        self ! FullTypeCheckCompleteEvent
-      }
+      reporter.disable()
+      scalaCompiler.askNotifyWhenReady()
+      scalaCompiler.askReloadAllFiles()
     }
   }
 
@@ -101,10 +101,10 @@ class Analyzer(
   def process(msg: Any): Unit = {
     msg match {
       case AnalyzerShutdownEvent =>
-        javaCompiler.shutdown()
         scalaCompiler.askClearTypeCache()
         scalaCompiler.askShutdown()
         context.stop(self)
+
       case FullTypeCheckCompleteEvent =>
         if (awaitingInitialCompile) {
           awaitingInitialCompile = false
@@ -112,7 +112,6 @@ class Analyzer(
           log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
           reporter.enable()
           project ! AsyncEvent(AnalyzerReadyEvent)
-          indexer ! CommitReq
         }
         project ! AsyncEvent(FullTypeCheckCompleteEvent)
 
@@ -129,8 +128,6 @@ class Analyzer(
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadAllReq =>
-                javaCompiler.reset()
-                javaCompiler.compileAll()
                 scalaCompiler.askRemoveAllDeleted()
                 scalaCompiler.askReloadAllFiles()
                 scalaCompiler.askNotifyWhenReady()
@@ -139,9 +136,7 @@ class Analyzer(
               case ReloadFilesReq(files) =>
                 val (javas, scalas) = files.filter(_.file.exists).partition(
                   _.file.getName.endsWith(".java"))
-                if (javas.nonEmpty) {
-                  javaCompiler.compileFiles(javas)
-                }
+
                 if (scalas.nonEmpty) {
                   scalaCompiler.askReloadFiles(scalas.map(createSourceFile))
                   scalaCompiler.askNotifyWhenReady()

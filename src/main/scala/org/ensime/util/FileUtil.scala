@@ -1,15 +1,20 @@
 package org.ensime.util
 
 import java.io._
+import java.net.URI
 import java.nio.charset.Charset
 import java.security.MessageDigest
-import org.slf4j.LoggerFactory
+import org.apache.commons.vfs2.FileObject
 import scala.collection.Seq
 import scala.collection.mutable
 import scala.tools.nsc.io.AbstractFile
 import scala.reflect.io.ZipArchive
 
-sealed trait FileEdit {
+import pimpathon.file._
+
+// This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
+
+trait FileEdit {
   def file: File
   def text: String
   def from: Int
@@ -48,27 +53,42 @@ object FileEdit {
 /** A wrapper around file, allowing iteration either on direct children or on directory tree */
 class RichFile(file: File) {
 
-  def children: Iterable[File] = new Iterable[File] {
-    override def iterator: Iterator[File] = if (file.isDirectory) {
-      val dirContents = file.listFiles
-      if (dirContents == null) {
-        LoggerFactory.getLogger(getClass).warn("Could not read directory " + file)
-        Iterator.empty
-      } else {
-        dirContents.iterator
-      }
-    } else {
-      Iterator.empty
+  def andTree: Iterable[File] = Seq(file) ++ file.children.flatMap(child => new RichFile(child).andTree)
+
+  def canon: File =
+    try file.getCanonicalFile
+    catch {
+      case e: Exception => file.getAbsoluteFile
     }
-  }
 
-  def andTree: Iterable[File] = Seq(file) ++ children.flatMap(child => new RichFile(child).andTree)
-
+  def rebaseIfRelative(base: File): File =
+    if (file.isAbsolute) file
+    else base / file.getPath
 }
 
 /** implicitely enrich java.io.File with methods of RichFile */
 object RichFile {
   implicit def toRichFile(file: File): RichFile = new RichFile(file)
+}
+
+class RichFileObject(fo: FileObject) {
+  // None if the fo is not an entry in an archive
+  def pathWithinArchive: Option[String] = {
+    val uri = fo.getName.getURI
+    if (uri.startsWith("jar") || uri.startsWith("zip"))
+      Some(fo.getName.getRoot.getRelativeName(fo.getName))
+    else None
+  }
+
+  // assumes it is a local file
+  def asLocalFile: File = {
+    require(fo.getName.getURI.startsWith("file"))
+    new File(new URI(fo.getName.getURI))
+  }
+}
+
+object RichFileObject {
+  implicit def toRichFileObject(fo: FileObject): RichFileObject = new RichFileObject(fo)
 }
 
 class CanonFile private (path: String) extends File(path)
@@ -87,16 +107,13 @@ object CanonFile {
 
 object FileUtils {
 
-  def error[T](s: String): T = {
+  private def error[T](s: String): T = {
     throw new IOException(s)
   }
 
-  implicit def toRichFile(file: File): RichFile = new RichFile(file)
-
   implicit def toCanonFile(file: File): CanonFile = CanonFile(file)
 
-  // This routine copied from http://rosettacode.org/wiki/Walk_a_directory/Recursively#Scala
-
+  import RichFile._
   def expandRecursively(rootDir: File, fileList: Iterable[File], isValid: (File => Boolean)): Set[CanonFile] = {
     (for (
       f <- fileList;

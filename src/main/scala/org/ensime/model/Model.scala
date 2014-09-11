@@ -1,22 +1,28 @@
 package org.ensime.model
 
+import akka.event.slf4j.SLF4JLogging
 import java.io.File
-import akka.pattern.Patterns
-import akka.util.Timeout
-
+import org.apache.commons.vfs2.FileObject
 import scala.collection.mutable
-import scala.concurrent.Await
 import scala.reflect.internal.util.{ NoPosition, Position }
-import org.ensime.util.CanonFile
-import org.ensime.server.RichPresentationCompiler
-import org.ensime.server.SourceFileCandidatesReq
-import org.ensime.server.AbstractFiles
-import scala.concurrent.duration._
+
+import org.ensime.config._
+import org.ensime.server._
+import org.ensime.indexer.DatabaseService._
+
+import org.ensime.util.RichFile._
 
 abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
 
-case class SourcePosition(file: CanonFile, line: Int)
-
+/**
+ * Common output from source and class information for source location.
+ *
+ * NOTE: the (legacy) protocol expects to see file and offset, but
+ * this information is only available from the presentation compiler:
+ * not from search results. We'll move the protocol toward Option
+ * offsets, but for now we have to do some server side inference.
+ */
+case class SourcePosition(file: File, line: Int, offset: Int)
 case class SourceFileInfo(file: File, contents: Option[String])
 object SourceFileInfo {
   def apply(file: String) = new SourceFileInfo(new File(file), None)
@@ -32,20 +38,20 @@ trait SymbolSearchResult {
   val name: String
   val localName: String
   val declaredAs: scala.Symbol
-  val pos: Option[(String, Int)]
+  val pos: Option[SourcePosition]
 }
 
 case class TypeSearchResult(
   name: String,
   localName: String,
   declaredAs: scala.Symbol,
-  pos: Option[(String, Int)]) extends SymbolSearchResult
+  pos: Option[SourcePosition]) extends SymbolSearchResult
 
 case class MethodSearchResult(
   name: String,
   localName: String,
   declaredAs: scala.Symbol,
-  pos: Option[(String, Int)],
+  pos: Option[SourcePosition],
   owner: String) extends SymbolSearchResult
 
 case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
@@ -63,10 +69,22 @@ case class SymbolDesignation(
 class SymbolInfo(
   val name: String,
   val localName: String,
-  val declPos: Position,
+  val declPos: Option[SourcePosition],
   val tpe: TypeInfo,
   val isCallable: Boolean,
   val ownerTypeId: Option[Int])
+
+case class Op(
+  op: String,
+  description: String)
+
+case class MethodBytecode(
+  className: String,
+  methodName: String,
+  methodSignature: Option[String],
+  byteCode: List[Op],
+  startLine: Int,
+  endLine: Int)
 
 case class CompletionSignature(
   sections: List[List[(String, String)]],
@@ -177,13 +195,8 @@ case class DebugBacktrace(
 
 class NamedTypeMemberInfo(override val name: String,
   val tpe: TypeInfo,
-  val pos: Position,
+  val pos: Option[SourcePosition],
   val declaredAs: scala.Symbol) extends EntityInfo(name, List.empty)
-
-class NamedTypeMemberInfoLight(override val name: String,
-  val tpeSig: String,
-  val tpeId: Int,
-  val isCallable: Boolean) extends EntityInfo(name, List.empty)
 
 class PackageMemberInfoLight(val name: String)
 
@@ -194,14 +207,14 @@ class TypeInfo(
   val fullName: String,
   val args: Iterable[TypeInfo],
   members: Iterable[EntityInfo],
-  val pos: Position,
+  val pos: Option[SourcePosition],
   val outerTypeId: Option[Int]) extends EntityInfo(name, members)
 
 class ArrowTypeInfo(
   override val name: String,
   override val id: Int,
   val resultType: TypeInfo,
-  val paramSections: Iterable[ParamSectionInfo]) extends TypeInfo(name, id, 'nil, name, List.empty, List.empty, NoPosition, None)
+  val paramSections: Iterable[ParamSectionInfo]) extends TypeInfo(name, id, 'nil, name, List.empty, List.empty, None, None)
 
 class CallCompletionInfo(
   val resultType: TypeInfo,
@@ -240,33 +253,17 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
   }
 
-  def locateSymbolPos(sym: Symbol): Position = {
-    if (sym == NoSymbol) NoPosition
-    else if (sym.pos != NoPosition) sym.pos
+  def locateSymbolPos(sym: Symbol): Option[SourcePosition] =
+    if (sym == NoSymbol) None
+    else if (sym.pos != NoPosition) SourcePosition.fromPosition(sym.pos)
     else {
-      val pack = sym.enclosingPackage.fullName
-      val top = sym.enclosingTopLevelClass
-      val name = if (sym.owner.isPackageObjectClass) "package$.class"
-      else top.name + (if (top.isModuleClass) "$" else "")
-
-      import scala.concurrent.ExecutionContext.Implicits.global
-      val askRes = Patterns.ask(indexer, SourceFileCandidatesReq(pack, name), Timeout(1000.milliseconds))
-      val optFut = askRes map (Some(_)) recover { case _ => None }
-      val result = Await.result(optFut, Duration.Inf)
-      result match {
-        case Some(f: AbstractFiles) =>
-          f.files.flatMap { f =>
-            logger.info("Linking:" + (sym, f))
-            askLinkPos(sym, f)
-          }.find(_.isDefined).getOrElse(NoPosition)
-        case None =>
-          logger.warn("WARNING - locateSymbolPos " + sym + " timed out")
-          NoPosition
-        case unknown =>
-          throw new IllegalStateException("Unexpected response type from request:" + unknown)
-      }
+      // we might need this for some Java fqns but we need some evidence
+      // val name = genASM.jsymbol(sym).fullName
+      val name = sym.fullName
+      val hit = search.findUnique(name)
+      logger.debug(s"search: $name = $hit")
+      hit.flatMap(SourcePosition.fromFqnSymbol(_)(config))
     }
-  }
 
   // When inspecting a type, transform a raw list of TypeMembers to a sorted
   // list of InterfaceInfo objects, each with its own list of sorted member infos.
@@ -337,7 +334,6 @@ trait ModelBuilders { self: RichPresentationCompiler =>
   }
 
   object PackageInfo {
-
     def root: PackageInfo = fromSymbol(RootPackage)
 
     def fromPath(path: String): PackageInfo = {
@@ -390,7 +386,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
   object TypeInfo {
 
-    def apply(typ: Type, members: Iterable[EntityInfo] = List.empty, locateSymPos: Boolean = false): TypeInfo = {
+    // WARNING: potentially does lots of I/O. should be refactored
+    def apply(typ: Type, members: Iterable[EntityInfo] = List.empty): TypeInfo = {
       val tpe = typ match {
         // TODO: Instead of throwing away this information, would be better to
         // alert the user that the type is existentially quantified.
@@ -405,7 +402,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
           val typeSym = tpe.typeSymbol
           val sym = if (typeSym.isModuleClass)
             typeSym.sourceModule else typeSym
-          val symPos = if (locateSymPos) locateSymbolPos(sym) else ask(() => sym.pos)
+          val symPos = locateSymbolPos(sym)
           val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
           new TypeInfo(
             typeShortName(tpe),
@@ -421,7 +418,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo = {
-      new TypeInfo("NA", -1, 'nil, "NA", List.empty, List.empty, NoPosition, None)
+      new TypeInfo("NA", -1, 'nil, "NA", List.empty, List.empty, None, None)
     }
   }
 
@@ -512,16 +509,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
   object NamedTypeMemberInfo {
     def apply(m: TypeMember): NamedTypeMemberInfo = {
       val decl = declaredAs(m.sym)
-      new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), m.sym.pos, decl)
-    }
-  }
-
-  object NamedTypeMemberInfoLight {
-    def apply(m: TypeMember): NamedTypeMemberInfoLight = {
-      new NamedTypeMemberInfoLight(m.sym.nameString,
-        typeShortNameWithArgs(m.tpe),
-        cacheType(m.tpe),
-        isArrowType(m.tpe))
+      val pos = SourcePosition.fromPosition(m.sym.pos)
+      new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), pos, decl)
     }
   }
 
@@ -556,3 +545,41 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
 }
 
+object SourcePosition extends SLF4JLogging {
+
+  // HACK: the emacs client currently can't open files in jars
+  //       so we extract to the cache and report that as the source
+  //       see the hack in the RichPresentationCompiler
+  import org.ensime.util.RichFileObject._
+  import pimpathon.java.io.outputStream._
+  import pimpathon.any._
+  import pimpathon.file._
+
+  private def possiblyExtractFile(fo: FileObject)(implicit config: EnsimeConfig): File =
+    fo.pathWithinArchive match {
+      case None => fo.asLocalFile
+      case Some(path) =>
+        // subpath expected by the client
+        (config.cacheDir / "dep-src" / "source-jars" / path) withSideEffect { f =>
+          if (!f.exists) {
+            f.getParentFile.mkdirs()
+            f.outputStream.drain(fo.getContent.getInputStream)
+            f.setWritable(false)
+          }
+        }
+    }
+
+  def fromFqnSymbol(sym: FqnSymbol)(implicit config: EnsimeConfig): Option[SourcePosition] =
+    (sym.sourceFileObject, sym.line, sym.offset) match {
+      case (None, _, _) => None
+      case (Some(fo), lineOpt, offsetOpt) =>
+        val f = possiblyExtractFile(fo)
+        Some(SourcePosition(f, lineOpt.getOrElse(0), offsetOpt.getOrElse(0)))
+    }
+
+  def fromPosition(p: Position): Option[SourcePosition] = p match {
+    case NoPosition => None
+    case p =>
+      Some(SourcePosition(file(p.source.file.path).canon, p.line, p.point))
+  }
+}

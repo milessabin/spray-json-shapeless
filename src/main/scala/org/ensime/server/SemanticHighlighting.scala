@@ -1,10 +1,9 @@
 package org.ensime.server
 
-import org.ensime.model.{ Helpers, SymbolDesignation, SymbolDesignations }
+import org.ensime.model.{ SymbolDesignation, SymbolDesignations }
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.reflect.io.AbstractFile
-import scala.tools.nsc.interactive.Global
 import scala.reflect.internal.util.RangePosition
 import scala.tools.nsc.symtab.Flags._
 import scala.tools.refactoring.common.PimpedTrees

@@ -72,8 +72,6 @@ trait Protocol {
   def sendMessage(o: WireFormat): Unit = {
     if (peer != null)
       peer ! OutgoingMessageEvent(o)
-    else
-      println("Failing to send " + o + " as peer is not up")
   }
 
   /**

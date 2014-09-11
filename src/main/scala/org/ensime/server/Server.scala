@@ -4,9 +4,9 @@ import java.io._
 import java.net.{ InetAddress, ServerSocket, Socket }
 
 import akka.actor._
-import org.ensime.config.{ EnsimeConfig, Environment, ProjectConfig }
+import org.ensime.config._
 import org.ensime.protocol._
-import org.ensime.util.{ SExpParser, WireFormat, _ }
+import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
@@ -38,15 +38,14 @@ object Server {
     val activeModule = propOrNone("ensime.active").getOrElse(
       throw new RuntimeException("ensime.active must be set"))
 
-    initialiseServer(ensimeFile, activeModule, rootDir, cacheDir)
+    val config = readEnsimeConfig(ensimeFile, rootDir, cacheDir)
+
+    initialiseServer(config)
   }
 
-  def initialiseServer(ensimeFile: File, activeModule: String, rootDir: File, cacheDir: File): Server = {
-    val oldConfig = readOldEnsimeConfig(ensimeFile, activeModule)
-    val newConfig = readEnsimeConfig(ensimeFile, activeModule, rootDir, cacheDir)
-    val server = new Server(newConfig, oldConfig, cacheDir, "127.0.0.1", 0)
+  def initialiseServer(config: EnsimeConfig): Server = {
+    val server = new Server(config, "127.0.0.1", 0)
     server.start()
-    //    println("HERE")
     server
   }
 
@@ -54,57 +53,29 @@ object Server {
    * ******************************************************************************
    * Read a new style config from the given files.
    * @param ensimeFile The base ensime file.
-   * @param activeModule The active module
    * @param rootDir The project root directory
    * @param cacheDir The
    * @return
    */
-  def readEnsimeConfig(ensimeFile: File, activeModule: String, rootDir: File, cacheDir: File): EnsimeConfig = {
-    // TODO Update this to currently parse the file
+  def readEnsimeConfig(ensimeFile: File, rootDir: File, cacheDir: File): EnsimeConfig = {
     val configSrc = Source.fromFile(ensimeFile)
     try {
       val content = configSrc.getLines().filterNot(_.startsWith(";;")).mkString("\n")
       val parsed = SExpParser.read(content).asInstanceOf[SExpList]
 
-      new EnsimeConfig(ensimeFile, rootDir, cacheDir, parsed)
-    } finally {
-      configSrc.close()
-    }
-  }
-  /**
-   * ******************************************************************************
-   * Read the .ensime config old style (add the active module as this is what
-   * is appended in the config file by emacs.  We manually add it to the config
-   * @param ensimeFile The .ensime file location
-   * @param activeModule the active module
-   * @return An old style ProjectConfig
-   */
-  def readOldEnsimeConfig(ensimeFile: File, activeModule: String): ProjectConfig = {
-
-    val configSrc = Source.fromFile(ensimeFile)
-    try {
-      val content = configSrc.getLines().filterNot(_.startsWith(";;")).mkString("\n")
-      val parsed = SExpParser.read(content).asInstanceOf[SExpList]
-      val withActiveProject = SExpList(parsed.items ::: List(KeywordAtom(":active-subproject"), StringAtom(activeModule)))
-
-      ProjectConfig.fromSExp(withActiveProject) match {
-        case Right(config) =>
-          config
-        case Left(ex) =>
-          throw ex
-      }
+      EnsimeConfig.parse(rootDir, cacheDir, parsed)
     } finally {
       configSrc.close()
     }
   }
 }
 
-class Server(ensimeConfig: EnsimeConfig, projectConfig: ProjectConfig, cacheDir: File, host: String, requestedPort: Int) {
+class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
 
   import org.ensime.server.Server.log
 
-  require(!cacheDir.exists || cacheDir.isDirectory, cacheDir + " is not a valid cache directory")
-  cacheDir.mkdirs()
+  // the config file parsing will attempt to create directories that are expected
+  require(config.cacheDir.isDirectory, config.cacheDir + " is not a valid cache directory")
 
   val actorSystem = ActorSystem.create()
   // TODO move this to only be started when we want to receive
@@ -112,13 +83,12 @@ class Server(ensimeConfig: EnsimeConfig, projectConfig: ProjectConfig, cacheDir:
   val actualPort = listener.getLocalPort
 
   log.info("ENSIME Server on " + host + ":" + actualPort)
-  log.info("cacheDir=" + cacheDir)
   log.info(Environment.info)
 
-  writePort(cacheDir, actualPort)
+  writePort(config.cacheDir, actualPort)
 
   val protocol = new SwankProtocol
-  val project = new Project(projectConfig, cacheDir, protocol, actorSystem)
+  val project = new Project(config, protocol, actorSystem)
 
   def start() {
     project.initProject()
