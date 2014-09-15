@@ -110,8 +110,7 @@ class SwankProtocol extends Protocol {
 
   private val headerBuf = new Array[Char](6)
 
-  def readMessage(in: java.io.InputStream): WireFormat = {
-    val reader = new InputStreamReader(in, "UTF-8")
+  def readMessage(reader: java.io.InputStreamReader): WireFormat = {
     fillArray(reader, headerBuf)
     val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
     if (msglen > 0) {

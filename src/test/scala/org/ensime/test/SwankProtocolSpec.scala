@@ -1,6 +1,6 @@
 package org.ensime.test
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, File }
+import java.io.{ InputStreamReader, ByteArrayInputStream, ByteArrayOutputStream, File }
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.TypedActor.MethodCall
@@ -73,8 +73,8 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val os = new ByteArrayOutputStream()
       protocol.writeMessage(msg, os)
 
-      val is = new ByteArrayInputStream(os.toByteArray)
-      val incomingMsg = protocol.readMessage(is).asInstanceOf[SExp]
+      val reader = new InputStreamReader(new ByteArrayInputStream(os.toByteArray))
+      val incomingMsg = protocol.readMessage(reader).asInstanceOf[SExp]
 
       assert(msg == incomingMsg)
     }
