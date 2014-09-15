@@ -122,11 +122,12 @@ case object SocketClosed
 class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extends Thread {
   val log = LoggerFactory.getLogger(this.getClass)
   val in = new BufferedInputStream(socket.getInputStream)
+  val reader = new InputStreamReader(in, "UTF-8")
 
   override def run() {
     try {
       while (true) {
-        val msg: WireFormat = protocol.readMessage(in)
+        val msg: WireFormat = protocol.readMessage(reader)
         handler ! IncomingMessageEvent(msg)
       }
     } catch {

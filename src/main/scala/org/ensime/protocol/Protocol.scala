@@ -2,7 +2,6 @@ package org.ensime.protocol
 
 import java.io._
 import akka.actor.ActorRef
-import org.ensime.server._
 import org.ensime.util._
 
 case class IncomingMessageEvent(obj: Any)
@@ -52,7 +51,7 @@ trait Protocol {
    * @param  reader  The stream from which to read the message.
    * @return         The message, in the intermediate format.
    */
-  def readMessage(reader: InputStream): WireFormat
+  def readMessage(reader: InputStreamReader): WireFormat
 
   /**
    * Write a message to the socket.
