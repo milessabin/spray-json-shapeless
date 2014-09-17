@@ -2,11 +2,78 @@ package org.ensime.util
 
 import scala.collection.immutable.Map
 
+object SExpExplorer {
+  def matchError(msg: String) = new MatchError(msg)
+  def apply(exp: SExp): SExpExplorer = {
+    exp match {
+      case l: SExpList =>
+        new SExpListExplorer(l)
+      case _ => throw matchError("Cannot convert type " + exp.getClass)
+    }
+  }
+}
+
+import SExpExplorer._
+
+abstract class SExpExplorer(val raw: SExp) {
+  def asList: SExpListExplorer = throw matchError("Not a list")
+  def asMap: SExpMapExplorer = throw matchError("Not a list/map")
+}
+
+class SExpListExplorer(list: SExpList) extends SExpExplorer(list) {
+  override def asMap = new SExpMapExplorer(list)
+  override def asList = this
+  def get(index: Int): SExpExplorer = SExpExplorer(list.iterator.toList(index))
+}
+
+class SExpMapExplorer(list: SExpList) extends SExpListExplorer(list) {
+  val map = list.toKeywordMap
+
+  def getString(name: String): String = getStringOpt(name).getOrElse(throw matchError("required key " + name + " not found"))
+
+  def getStringOpt(name: String): Option[String] = map.get(KeywordAtom(name)) match {
+    case Some(StringAtom(s)) => Some(s)
+    case Some(_) => throw matchError("Key " + name + " does not refer to a string element")
+    case None => None
+  }
+
+  def getStringListOpt(name: String): Option[List[String]] = getStringListOpt(KeywordAtom(name))
+  def getStringListOpt(name: KeywordAtom): Option[List[String]] = {
+    map.get(name) match {
+      case Some(SExpList(items: Iterable[_])) => Some(items.map {
+        case s: StringAtom => s.value
+        case _ =>
+          throw matchError("Expecting a list of string values at key: " + name)
+      }.toList)
+      case Some(NilAtom) => Some(List.empty)
+      case _ =>
+        None
+    }
+  }
+
+  def getStringList(name: String): List[String] = getStringList(KeywordAtom(name))
+  def getStringList(name: KeywordAtom): List[String] = getStringListOpt(name).getOrElse(
+    throw matchError("Expecting a list of string values at key: " + name))
+
+  def getList(name: String): List[SExpExplorer] = getList(KeywordAtom(name))
+  def getList(name: KeywordAtom): List[SExpExplorer] = {
+    map.get(name) match {
+      case Some(SExpList(items)) =>
+        items.map(SExpExplorer(_)).toList
+      case _ =>
+        throw matchError("Expecting a list of string values at key: " + name)
+    }
+  }
+}
+
 sealed trait SExp extends WireFormat {
   override def toWireString: String = toString
   def toScala: Any = toString
 }
 
+object SExpList {
+  def apply(): SExpList = SExpList(Nil)
+}
 trait Atom extends SExp
 
 case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
@@ -32,6 +99,7 @@ case class SExpList(items: List[SExp]) extends SExp with Iterable[SExp] {
       case (key: KeywordAtom) :: (sexp: SExp) :: rest =>
         m += (key -> sexp)
       case _ =>
+        throw new IllegalArgumentException("SExp is not of correct form (keyword value)* to convert to map")
     }
     m
   }

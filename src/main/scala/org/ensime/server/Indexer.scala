@@ -1,199 +1,92 @@
 package org.ensime.server
 
+import akka.actor.{ Actor, ActorLogging }
 import java.io.File
-import akka.actor.{ ActorLogging, Actor }
-import org.ensime.config.ProjectConfig
-import org.ensime.indexer.ClassFileIndex
-import org.ensime.indexer.LuceneIndex
-import scala.reflect.io.AbstractFile
-import org.ensime.model.{
-  ImportSuggestions,
-  MethodSearchResult,
-  SymbolSearchResult,
-  SymbolSearchResults,
-  TypeSearchResult
-}
+import java.net.URI
+import org.apache.commons.vfs2.FileObject
+import org.ensime.config.EnsimeConfig
+import org.ensime.indexer.DatabaseService.FqnSymbol
+import org.ensime.indexer.MemberName
+import org.ensime.indexer.SearchService
+import org.ensime.model._
 import org.ensime.protocol.ProtocolConst._
-import org.ensime.protocol.{ IndexerReadyEvent, ProtocolConversions }
-import scala.collection.mutable.ArrayBuffer
+import org.ensime.protocol.ProtocolConversions
+import scala.reflect.io.{ AbstractFile, ZipArchive }
 
-case object IndexerShutdownReq
-case object RebuildStaticIndexReq
+// legacy types
 case class TypeCompletionsReq(prefix: String, maxResults: Int)
 case class SourceFileCandidatesReq(enclosingPackage: String, classNamePrefix: String)
-case class AddSymbolsReq(syms: Iterable[SymbolSearchResult])
-case class RemoveSymbolsReq(syms: Iterable[String])
-case class ReindexClassFilesReq(files: Iterable[File])
-case object CommitReq
-
 case class AbstractFiles(files: Set[AbstractFile])
 
-/**
- * The main index actor.
- */
-class Indexer(project: Project,
-    cacheDir: File,
-    protocol: ProtocolConversions,
-    config: ProjectConfig) extends Actor with ActorLogging {
+//@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
+class Indexer(
+    config: EnsimeConfig,
+    index: SearchService,
+    project: Project,
+    protocol: ProtocolConversions) extends Actor with ActorLogging {
 
   import protocol._
 
-  val index = new LuceneIndex(cacheDir)
-  val classFileIndex = new ClassFileIndex(config)
+  private def typeResult(hit: FqnSymbol) = TypeSearchResult(
+    hit.fqn, hit.fqn.split("\\.").last, hit.declAs,
+    SourcePosition.fromFqnSymbol(hit)(config)
+  )
+
+  def oldSearchTypes(query: String, max: Int) =
+    index.searchClasses(query, max).filterNot {
+      name => name.fqn.endsWith("$") || name.fqn.endsWith("$class")
+    }.map(typeResult)
+
+  def oldSearchSymbols(query: String, max: Int) =
+    index.searchClassesFieldsMethods(query, max).flatMap {
+      case hit if hit.declAs == 'class => Some(typeResult(hit))
+      case hit if hit.declAs == 'method => Some(MethodSearchResult(
+        hit.fqn, hit.fqn.split("\\.").last, hit.declAs,
+        SourcePosition.fromFqnSymbol(hit)(config),
+        hit.fqn.split("\\.").init.mkString(".")
+      ))
+      case _ => None // were never supported
+    }
+
+  def toAbstractFile(f: FileObject): AbstractFile = {
+    val name = f.getName.getURI
+    if (name.startsWith("jar") || name.startsWith("zip"))
+      ZipArchive.fromURL(f.getURL)
+    else
+      AbstractFile.getFile(new File(new URI(name)))
+  }
 
   override def receive = {
-    case msg: Any => try {
-      process(msg)
-    } catch {
-      case e: Exception =>
-        log.error(e, "Error at Indexer message loop: " + e)
-    }
-  }
+    case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
+      val classes = index.searchClasses(enclosingPackage + "." + classNamePrefix, 10)
+      val srcs = classes.flatMap(_.sourceFileObject).map(toAbstractFile).toSet
+      sender ! AbstractFiles(srcs)
 
-  def process(msg: Any) {
-    msg match {
-      case IndexerShutdownReq =>
-        index.close()
-        context.stop(self)
-      case RebuildStaticIndexReq =>
-        index.initialize(
-          context.system,
-          config.root,
-          config.allFilesOnClasspath,
-          config.onlyIncludeInIndex,
-          config.excludeFromIndex)
-        classFileIndex.indexFiles(
-          config.allFilesOnClasspath
-            ++ List(config.target, config.testTarget).flatten
-        )
-        project ! AsyncEvent(IndexerReadyEvent)
-      case ReindexClassFilesReq(files) =>
-        classFileIndex.indexFiles(files)
-      case CommitReq =>
-        index.commit()
-      case AddSymbolsReq(syms) =>
-        syms.foreach { info =>
-          index.insert(info)
+    case TypeCompletionsReq(query: String, maxResults: Int) =>
+      sender ! SymbolSearchResults(oldSearchTypes(query, maxResults))
+
+    case RPCRequestEvent(req: Any, callId: Int) =>
+      try {
+        req match {
+          case ImportSuggestionsReq(file, point, names, maxResults) =>
+            val suggestions = names.map(oldSearchTypes(_, maxResults))
+            project ! RPCResultEvent(toWF(ImportSuggestions(suggestions)), callId)
+
+          case PublicSymbolSearchReq(keywords, maxResults) =>
+            val suggestions = keywords.flatMap(oldSearchSymbols(_, maxResults))
+            project ! RPCResultEvent(toWF(SymbolSearchResults(suggestions)), callId)
         }
-      case RemoveSymbolsReq(syms) =>
-        syms.foreach { s => index.remove(s) }
-      case TypeCompletionsReq(prefix: String, maxResults: Int) =>
-        val suggestions = index.keywordSearch(List(prefix), maxResults, restrictToTypes = true)
-        sender ! SymbolSearchResults(suggestions)
-      case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
-        sender ! AbstractFiles(classFileIndex.sourceFileCandidates(enclosingPackage, classNamePrefix))
-      case RPCRequestEvent(req: Any, callId: Int) =>
-        try {
-          req match {
-            case ImportSuggestionsReq(file, point, names, maxResults) =>
-              val suggestions = ImportSuggestions(index.getImportSuggestions(
-                names, maxResults))
-              project ! RPCResultEvent(toWF(suggestions), callId)
-            case PublicSymbolSearchReq(keywords, maxResults) =>
-              log.info("Received keywords: " + keywords)
-              val suggestions = SymbolSearchResults(
-                index.keywordSearch(keywords, maxResults))
-              project ! RPCResultEvent(toWF(suggestions), callId)
-            case MethodBytecodeReq(sourceName: String, line: Int) =>
-              classFileIndex.locateBytecode(sourceName, line) match {
-                case method :: rest =>
-                  project ! RPCResultEvent(
-                    toWF(method), callId)
-                case _ => project.sendRPCError(ErrExceptionInIndexer, "Failed to find method bytecode", callId)
-              }
-          }
-        } catch {
-          case e: Exception =>
-            log.error(e, "Error handling RPC: " + req)
-            project.sendRPCError(ErrExceptionInIndexer, "Error occurred in indexer. Check the server log.", callId)
-        }
-      case other =>
-        log.warning("Indexer: WTF, what's " + other)
-    }
-  }
-}
-
-/**
- * Main IDE interface to the Indexer.
- */
-
-object Indexer {
-  def isValidType(s: String): Boolean = {
-    LuceneIndex.isValidType(s)
-  }
-  def isValidMethod(s: String): Boolean = {
-    LuceneIndex.isValidMethod(s)
-  }
-}
-
-/**
- * Helper mixin for interfacing compiler (Symbols)
- * with the indexer.
- */
-trait IndexerInterface { self: RichPresentationCompiler =>
-
-  private def isType(sym: Symbol): Boolean = {
-    sym.isClass || sym.isModule || sym.isInterface
-  }
-
-  private def typeSymName(sym: Symbol): String = {
-    try {
-      typeFullName(sym.tpe)
-    } catch { case e: Throwable => sym.nameString }
-  }
-
-  private def lookupKey(sym: Symbol): String = {
-    if (isType(sym)) typeSymName(sym)
-    else typeSymName(sym.owner) + "." + sym.nameString
-  }
-
-  def unindexTopLevelSyms(syms: Iterable[Symbol]) {
-    val keys = new ArrayBuffer[String]
-    for (sym <- syms) {
-      keys += lookupKey(sym)
-      for (mem <- try { sym.tpe.members } catch { case e: Throwable => List.empty }) {
-        keys += lookupKey(mem)
+      } catch {
+        case e: Exception =>
+          log.error(e, "Error handling RPC: " + req)
+          project.sendRPCError(
+            ErrExceptionInIndexer,
+            "Error occurred in indexer. Check the server log.",
+            callId
+          )
       }
-    }
-    indexer ! RemoveSymbolsReq(keys)
-  }
 
-  private implicit def symToSearchResult(sym: Symbol): SymbolSearchResult = {
-    val pos = if (sym.pos.isDefined) {
-      Some((sym.pos.source.path, sym.pos.point))
-    } else None
-
-    if (isType(sym)) {
-      TypeSearchResult(
-        lookupKey(sym),
-        sym.nameString,
-        declaredAs(sym),
-        pos)
-    } else {
-      MethodSearchResult(
-        lookupKey(sym),
-        sym.nameString,
-        declaredAs(sym),
-        pos,
-        typeSymName(sym.owner))
-    }
-  }
-
-  def indexTopLevelSyms(syms: Iterable[Symbol]) {
-    val infos = new ArrayBuffer[SymbolSearchResult]
-    for (sym <- syms) {
-      if (Indexer.isValidType(typeSymName(sym))) {
-        val key = lookupKey(sym)
-        infos += sym
-        for (mem <- try { sym.tpe.members } catch { case e: Throwable => List.empty }) {
-          if (Indexer.isValidMethod(mem.nameString)) {
-            val key = lookupKey(mem)
-            infos += mem
-          }
-        }
-      }
-    }
-    indexer ! AddSymbolsReq(infos)
+    case other =>
+      log.warning("Indexer: WTF, what's " + other)
   }
 }
-

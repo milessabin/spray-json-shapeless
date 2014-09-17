@@ -1,5 +1,6 @@
 package org.ensime.test
 
+import java.io.File
 import org.ensime.server.CompletionControl
 import org.ensime.server.RichCompilerControl
 import org.scalatest.FunSpec
@@ -26,9 +27,13 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     'varField
   )
 
-  def getSymbolDesignations(cc: RichCompilerControl, contents: String, tpes: List[Symbol] = allTypes): List[(Symbol, String)] = {
+  def getSymbolDesignations(
+    dir: File,
+    cc: RichCompilerControl,
+    contents: String,
+    tpes: List[Symbol] = allTypes): List[(Symbol, String)] = {
 
-    val file = Helpers.srcFile("abc.scala", Helpers.contents(contents))
+    val file = Helpers.srcFile(dir, "abc.scala", Helpers.contents(contents))
     cc.askLoadedTyped(file)
     val pos = new RangePosition(file, 0, 0, file.length)
     val sds = cc.askSymbolDesignationsInRegion(pos, tpes)
@@ -41,9 +46,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
   describe("SemanticHighlighting") {
 
     it("should highlight classes") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class X1[+A] { }
             class X2 { class Y { } }
@@ -71,9 +76,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight constructors") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class X1(a: Int = 0) { }
             class X2(a: String) { }
@@ -98,9 +103,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight function calls") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               def fun(u: Int, v: Int) { u + v }
@@ -122,9 +127,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight imported names") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             import scala.reflect.internal.util.RangePosition
             import org.scalatest. { Matchers,
@@ -141,9 +146,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight objects") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             object A { object B { } }
             case class C() { }
@@ -169,9 +174,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight operators") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             object Test {
               var a = 1 + 2 * 3
@@ -189,9 +194,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight packages") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
              package com.example
              package other
           """,
@@ -206,9 +211,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight params") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               def f(u:  Int, v   :String) = v + u
@@ -226,9 +231,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight traits") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             trait X1 { }
             trait X2 { }
@@ -259,9 +264,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight typeParams") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               def f[XX,YY](y: YY, x: XX) = {
@@ -283,9 +288,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight vals") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               def fun() = {
@@ -306,9 +311,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight valFields") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               val u= 1
@@ -331,9 +336,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight vars") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               def fun() = {
@@ -354,9 +359,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight varFields") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               var u= 1
@@ -379,9 +384,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight setter operators") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             object Fubar {
                private var v: Int = 0
@@ -401,9 +406,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("selects should not be confused by whitespace") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.  example
           """,
           List('package)
@@ -417,9 +422,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight negation operators") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               val x = !(3 == 4)
@@ -436,9 +441,9 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
     }
 
     it("should highlight method calls after operators") {
-      Helpers.withPresCompiler { cc =>
+      Helpers.withPresCompiler { (dir, cc) =>
         val sds = getSymbolDesignations(
-          cc, """
+          dir, cc, """
             package com.example
             class Test {
               def fun(u: Int, v: Int): Int = { u + v }

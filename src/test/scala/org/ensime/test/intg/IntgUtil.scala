@@ -1,5 +1,6 @@
 package org.ensime.test.intg
 
+import akka.event.slf4j.SLF4JLogging
 import java.io.{ File => JFile }
 import java.util.concurrent.TimeoutException
 
@@ -7,6 +8,7 @@ import akka.actor._
 import akka.pattern.Patterns
 import org.apache.commons.io.filefilter.TrueFileFilter
 import org.apache.commons.io.{ FileUtils => IOFileUtils }
+import org.ensime.config.EnsimeConfig
 import org.ensime.protocol.{ IncomingMessageEvent, OutgoingMessageEvent }
 import org.ensime.server.Server
 import org.ensime.test.TestUtil
@@ -19,10 +21,13 @@ import scala.concurrent.duration._
 import scala.io.Source
 import scala.reflect.io.{ File => SFile, Path }
 
+import RichFile._
+import pimpathon.file._
+
 /**
  * Utility class to support integration level tests.
  */
-object IntgUtil extends Assertions {
+object IntgUtil extends Assertions with SLF4JLogging {
 
   class InteractorHelper(server: Server, actorSystem: ActorSystem) {
     private case class AsyncRequest(request: SExp)
@@ -113,9 +118,7 @@ object IntgUtil extends Assertions {
     def expectRPC(dur: FiniteDuration, toSend: String, expected: String) {
       val res = sendRPCString(dur, toSend)
       if (res != expected) {
-        println("Expected: " + expected)
-        println("Received: " + res)
-        fail("Expected and received do not match")
+        fail("Expected and received do not match:\n" + expected + "\n != \n" + res)
       }
     }
 
@@ -157,7 +160,7 @@ object IntgUtil extends Assertions {
       val destFile = Path(projectBase) / relativeSrc
       destFile.parent.createDirectory()
       val writer = destFile.bufferedWriter()
-      val source = Source.fromFile(srcFile.path)
+      val source = Source.fromFile(srcFile.path, "UTF-8")
       try {
         source.getLines().foreach(line => {
           writer.write(line)
@@ -173,36 +176,39 @@ object IntgUtil extends Assertions {
   /**
    * Run an integration test based on the given project
    * @param projectSource The directory containing the test project (will not be modified)
-   * @param projectName The ensime name of the project
    * @param f The test function to run
    */
-  def withTestProject(projectSource: String, projectName: String)(f: (JFile, InteractorHelper) => Unit): Unit = {
-    val log = LoggerFactory.getLogger("IntgTest_" + projectName)
+  def withTestProject(projectSource: String)(f: (EnsimeConfig, InteractorHelper) => Unit): Unit = {
 
-    TestUtil.withTemporaryDirectory { projectBase =>
+    withTempDirectory { base =>
+      val projectBase = base.canon
 
       log.info("Target dir = " + projectBase)
       log.info("Copying files from " + projectSource)
       copyFilesEnsuringUnixLines(projectSource, projectBase)
+
+      log.info("copied: " + projectBase.tree.toList)
 
       log.info("Building ensime configuration")
 
       val cmdLine =
         (if (sys.props("os.name").toLowerCase.contains("windows"))
           List("cmd", "/c")
-        else Nil) ::: List("sbt", "--warn", "gen-ensime")
+        else Nil) ::: List("sbt", "--warn", "compile", "gen-ensime")
 
       val buildProcess = scala.sys.process.Process(cmdLine, Some(projectBase))
       buildProcess.!
       log.info("Build done")
-      val dotEnsimeFile = SFile(new JFile(projectBase, ".ensime")).lines().mkString("\n") // slurp()
-
-      val cacheDir = new JFile(projectBase, ".ensime_cache")
+      val ensimeFile = projectBase / ".ensime"
+      val ensimeFileContents = ensimeFile.readLines().mkString("\n")
+      val cacheDir = projectBase / ".ensime_cache"
 
       if (cacheDir.exists())
         FileUtils.delete(cacheDir)
+      cacheDir.mkdirs()
 
-      val server = new Server(cacheDir, "localhost", 0)
+      val config = Server.readEnsimeConfig(ensimeFile, projectBase, cacheDir)
+      val server = Server.initialiseServer(config)
 
       implicit val actorSystem = server.actorSystem
 
@@ -210,33 +216,33 @@ object IntgUtil extends Assertions {
       interactor.expectRPC(1 seconds, "(swank:connection-info)",
         """(:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9"))""")
 
-      // drop the last brace in the ensime file and add some extra confg
-      val configStr = dotEnsimeFile.trim.dropRight(1) +
+      // drop the last brace in the ensime file and add some extra config
+      val configStr = ensimeFileContents.trim.dropRight(1) +
         s"""
          | :active-subproject "simple"
          |)
          """.stripMargin
 
       val initMsg = s"""(swank:init-project
-                        | $configStr
+                        | ($configStr)
                         | )""".stripMargin
 
-      val sourceRoots = TestUtil.fileToWireString(CanonFile(projectBase + "/src/main/scala"))
-      val initResult = interactor.sendRPCString(10 seconds, initMsg)
-      log.info("Got init response " + initResult)
-      assert(initResult.contains(sourceRoots))
-      //      interactor.expectRPC(3 seconds, initMsg,
-      //        s"""(:ok (:project-name "$projectName" :source-roots ($sourceRoots)))""")
+      val sourceRoot = projectBase / "/src/main/scala"
+      // we have to break it out because sourceroots also contains src.zip
+      val initResp = interactor.sendRPCString(3 seconds, initMsg)
+      // return is of the form (:ok ( :project-name ...)) so extract the data
+      val initExp = SExpExplorer(SExpParser.read(initResp)).asList.get(1).asMap
+      //assert(initExp.getString(":project-name") == projectName)
 
-      interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
-      interactor.expectAsync(30 seconds, """(:compiler-ready)""")
-      interactor.expectAsync(30 seconds, """(:full-typecheck-finished)""")
-      interactor.expectAsync(60 seconds, """(:indexer-ready)""")
+      assert(initExp.getStringList(":source-roots").toSet.contains(sourceRoot.getAbsolutePath))
+      //      interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
+      //      interactor.expectAsync(30 seconds, """(:full-typecheck-finished)""")
+      interactor.expectAsync(240 seconds, """(:indexer-ready)""")
+      interactor.expectAsync(60 seconds, """(:compiler-ready)""")
 
-      f(projectBase, interactor)
+      f(config, interactor)
 
       server.shutdown()
-
     }
   }
 }

@@ -6,13 +6,11 @@ import scala.tools.nsc.reporters.Reporter
 import scala.reflect.internal.util.Position
 
 trait ReportHandler {
-  def messageUser(str: String) {}
-  def clearAllScalaNotes() {}
-  def clearAllJavaNotes() {}
-  def clearScalaNotes(filenames: List[String]) {}
-  def clearJavaNotes(filenames: List[String]) {}
-  def reportScalaNotes(notes: List[Note]) {}
-  def reportJavaNotes(notes: List[Note]) {}
+  def messageUser(str: String)
+  def clearAllScalaNotes()
+  def clearAllJavaNotes()
+  def reportScalaNotes(notes: List[Note])
+  def reportJavaNotes(notes: List[Note])
 }
 
 class PresentationReporter(handler: ReportHandler) extends Reporter {

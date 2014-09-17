@@ -2,7 +2,8 @@ package org.ensime.server
 
 import java.io.File
 import akka.actor.ActorRef
-import org.ensime.config.ProjectConfig
+import org.ensime.config._
+import org.ensime.indexer.SearchService
 import org.ensime.model._
 import org.ensime.protocol.FullTypeCheckCompleteEvent
 import org.slf4j.LoggerFactory
@@ -42,13 +43,13 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
 
   def askTypeInfoAt(p: Position): Option[TypeInfo] =
-    askOption(typeAt(p).map(TypeInfo(_, locateSymPos = true))).getOrElse(None)
+    askOption(typeAt(p).map(TypeInfo(_))).getOrElse(None)
 
   def askTypeInfoById(id: Int): Option[TypeInfo] =
-    askOption(typeById(id).map(TypeInfo(_, locateSymPos = true))).getOrElse(None)
+    askOption(typeById(id).map(TypeInfo(_))).getOrElse(None)
 
   def askTypeInfoByName(name: String): Option[TypeInfo] =
-    askOption(typeByName(name).map(TypeInfo(_, locateSymPos = true))).getOrElse(None)
+    askOption(typeByName(name).map(TypeInfo(_))).getOrElse(None)
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = {
     val nameSegs = name.split("\\.")
@@ -61,7 +62,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
         val roots = filterMembersByPrefix(members, firstName, matchEntire = true, caseSens = true).map { _.sym }
         val restOfPath = nameSegs.drop(1).mkString(".")
         val syms = roots.flatMap { symsAtQualifiedPath(restOfPath, _) }
-        syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe, locateSymPos = true) }
+        syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe) }
       }
     ) yield infos).getOrElse(None)
   }
@@ -93,8 +94,12 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askRemoveDeleted(f: File) = askOption(removeDeleted(AbstractFile.getFile(f)))
 
   def askReloadAllFiles() = {
-    val all = (config.sourceFilenames.map(getSourceFile) ++
-      activeUnits().map(_.source)).toSet.toList
+    val all = {
+      for {
+        file <- config.sourceFiles
+        source = getSourceFile(file.getAbsolutePath)
+      } yield source
+    }.toSet ++ activeUnits.map(_.source)
     askReloadFiles(all)
   }
 
@@ -134,18 +139,20 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
     _.file.path == path)
 
+  // TODO: friends should not give friends other people's types (Position)
   def askLinkPos(sym: Symbol, path: AbstractFile): Option[Position] =
     askOption(linkPos(sym, createSourceFile(path)))
 }
 
 class RichPresentationCompiler(
+  val config: EnsimeConfig,
   settings: Settings,
   val richReporter: Reporter,
   var parent: ActorRef,
   var indexer: ActorRef,
-  val config: ProjectConfig) extends Global(settings, richReporter)
-    with NamespaceTraversal with ModelBuilders with RichCompilerControl
-    with RefactoringImpl with IndexerInterface with Completion with Helpers {
+  val search: SearchService) extends Global(settings, richReporter)
+    with ModelBuilders with RichCompilerControl
+    with RefactoringImpl with Completion with Helpers {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -185,7 +192,6 @@ class RichPresentationCompiler(
   /** Remove symbols defined by file that no longer exist. */
   def removeDeleted(f: AbstractFile) {
     val syms = symsByFile(f)
-    unindexTopLevelSyms(syms)
     for (s <- syms) {
       s.owner.info.decls unlink s
     }
@@ -244,7 +250,7 @@ class RichPresentationCompiler(
   protected def inspectType(tpe: Type): TypeInspectInfo = {
     val parents = tpe.parents
     new TypeInspectInfo(
-      TypeInfo(tpe, locateSymPos = true),
+      TypeInfo(tpe),
       companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]), parents))
   }
@@ -255,7 +261,7 @@ class RichPresentationCompiler(
       val parents = tpe.parents
       val preparedMembers = prepareSortedInterfaceInfo(members, parents)
       new TypeInspectInfo(
-        TypeInfo(tpe, locateSymPos = true),
+        TypeInfo(tpe),
         companionTypeOf(tpe).map(cacheType),
         preparedMembers
       )
@@ -287,7 +293,7 @@ class RichPresentationCompiler(
     typeOfTree(tree)
   }
 
-  protected def typeByName(name: String): Option[Type] = {
+  protected def typeByName(name: String): Option[Type] =
     symbolByName(name).flatMap {
       case NoSymbol => None
       case sym: Symbol => sym.tpe match {
@@ -295,7 +301,6 @@ class RichPresentationCompiler(
         case tpe: Type => Some(tpe)
       }
     }
-  }
 
   protected def symbolByName(name: String): Option[Symbol] = {
     try {
@@ -352,8 +357,6 @@ class RichPresentationCompiler(
         case st: SymTree =>
           List(tree.symbol)
         case _ =>
-          // `showRaw` was introduced in 2.10, so I commented it out to be compatible with 2.9
-          // logger.warn(showRaw(tree, printIds = true, printKinds = true, printTypes = true))
           logger.warn("symbolAt for " + tree.getClass + ": " + tree)
           Nil
       }

@@ -1,14 +1,16 @@
 package org.ensime.protocol
 
-import org.ensime.config.{ ReplConfig, ProjectConfig }
-import org.ensime.indexer.MethodBytecode
+import java.io.File
+import org.ensime.config._
 import org.ensime.model._
-import org.ensime.protocol.SExpConversion._
 import org.ensime.server._
 import org.ensime.util._
 import org.ensime.util.SExp._
 
-import scala.reflect.internal.util.{ RangePosition, Position }
+import scala.reflect.internal.util.RangePosition
+
+// bit of a rubbish class
+class ReplConfig(val classpath: Set[File])
 
 class SwankProtocolConversions extends ProtocolConversions {
 
@@ -131,6 +133,7 @@ class SwankProtocolConversions extends ProtocolConversions {
   override def toWF(pos: SourcePosition): SExp = {
     SExp(
       key(":file"), pos.file.getAbsolutePath,
+      key(":offset"), pos.offset, // we should deprecate this
       key(":line"), pos.line)
   }
 
@@ -143,6 +146,15 @@ class SwankProtocolConversions extends ProtocolConversions {
   }
 
   def toWF(evt: SwankEvent): SExp = {
+    evt match {
+      case g: GeneralSwankEvent =>
+        toWF(g)
+      case d: DebugEvent =>
+        toWF(d)
+    }
+  }
+
+  def toWF(evt: GeneralSwankEvent): SExp = {
     evt match {
       /**
        * Doc Event:
@@ -237,7 +249,7 @@ class SwankProtocolConversions extends ProtocolConversions {
     }
   }
 
-  override def toWF(evt: DebugEvent): SExp = {
+  def toWF(evt: DebugEvent): SExp = {
     evt match {
       /**
        * Doc Event:
@@ -419,17 +431,17 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":pending"), SExpList(bps.pending.map { toWF }))
   }
 
-  override def toWF(config: ProjectConfig): SExp = {
-    SExp(
-      key(":project-name"), config.name.map(StringAtom).getOrElse('nil),
-      key(":source-roots"), SExp(
-        config.sourceRoots.map {
-          f => StringAtom(f.getPath)
-        }))
-  }
+  override def toWF(config: EnsimeConfig): SExp = SExp(
+    key(":project-name"), StringAtom(config.name),
+    key(":source-roots"), SExp(
+      config.modules.values.flatMap {
+        _.sourceRoots.map { r => StringAtom(r.getAbsolutePath) }
+      }
+    )
+  )
 
   override def toWF(config: ReplConfig): SExp = {
-    SExp.propList((":classpath", strToSExp(config.classpath)))
+    SExp.propList((":classpath", strToSExp(config.classpath.mkString("\"", File.pathSeparator, "\""))))
   }
 
   override def toWF(value: Boolean): SExp = {
@@ -501,7 +513,8 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":name", value.name),
       (":local-name", value.localName),
       (":type", toWF(value.tpe)),
-      (":decl-pos", value.declPos),
+      // not entirely clear why "decl-pos" instead of "pos"
+      (":decl-pos", value.declPos.map(toWF).getOrElse('nil)),
       (":is-callable", value.isCallable),
       (":owner-type-id", value.ownerTypeId.map(intToSExp).getOrElse('nil)))
   }
@@ -513,27 +526,11 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":end", value.end))
   }
 
-  def toWF(value: Position): SExp = {
-    posToSExp(value)
-  }
-
-  def toWF(value: RangePosition): SExp = {
-    posToSExp(value)
-  }
-
-  def toWF(value: NamedTypeMemberInfoLight): SExp = {
-    SExp.propList(
-      (":name", value.name),
-      (":type-sig", value.tpeSig),
-      (":type-id", value.tpeId),
-      (":is-callable", value.isCallable))
-  }
-
   override def toWF(value: NamedTypeMemberInfo): SExp = {
     SExp.propList(
       (":name", value.name),
       (":type", toWF(value.tpe)),
-      (":pos", value.pos),
+      (":pos", value.pos.map(toWF).getOrElse('nil)),
       (":decl-as", value.declaredAs))
   }
 
@@ -542,7 +539,6 @@ class SwankProtocolConversions extends ProtocolConversions {
       case value: PackageInfo => toWF(value)
       case value: TypeInfo => toWF(value)
       case value: NamedTypeMemberInfo => toWF(value)
-      case value: NamedTypeMemberInfoLight => toWF(value)
       case unknownValue => throw new IllegalStateException("Unknown EntityInfo: " + unknownValue)
     }
   }
@@ -563,7 +559,7 @@ class SwankProtocolConversions extends ProtocolConversions {
           (":decl-as", value.declaredAs),
           (":type-args", SExp(value.args.map(toWF))),
           (":members", SExp(value.members.map(toWF))),
-          (":pos", value.pos),
+          (":pos", value.pos.map(toWF).getOrElse('nil)),
           (":outer-type-id", value.outerTypeId.map(intToSExp).getOrElse('nil)))
       case unknownValue => throw new IllegalStateException("Unknown TypeInfo: " + unknownValue)
     }
@@ -639,13 +635,8 @@ class SwankProtocolConversions extends ProtocolConversions {
     SExpList(value.symLists.map { l => SExpList(l.map(toWF).toList) }.toList)
   }
 
-  private def toWF(pos: Option[(String, Int)]): SExp = {
-    pos match {
-      case Some((f, o)) => SExp.propList((":file", f), (":offset", o))
-      case _ => 'nil
-    }
-  }
-
+  // FIXME: client expects offset, but we typically have line
+  //        infer for now and look at changing the protocol
   def toWF(value: SymbolSearchResult): SExp = {
     value match {
       case value: TypeSearchResult =>
@@ -653,15 +644,24 @@ class SwankProtocolConversions extends ProtocolConversions {
           (":name", value.name),
           (":local-name", value.localName),
           (":decl-as", value.declaredAs),
-          (":pos", toWF(value.pos)))
+          (":pos", value.pos.map(toWF).getOrElse('nil)))
       case value: MethodSearchResult =>
         SExp.propList(
           (":name", value.name),
           (":local-name", value.localName),
           (":decl-as", value.declaredAs),
-          (":pos", toWF(value.pos)),
+          (":pos", value.pos.map(toWF).getOrElse('nil)),
           (":owner-name", value.owner))
     }
+  }
+
+  def toWF(p: RangePosition): SExp = {
+    // assumes a real file. see discussion around SourcePosition
+    SExp.propList(
+      (":file", p.source.path),
+      (":offset", p.point),
+      (":start", p.start),
+      (":end", p.end))
   }
 
   def toWF(value: Undo): SExp = {

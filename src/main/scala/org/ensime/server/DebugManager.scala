@@ -2,11 +2,12 @@ package org.ensime.server
 
 import akka.actor.{ ActorLogging, Actor, ActorRef }
 import com.sun.jdi.request.{ EventRequestManager, EventRequest, StepRequest }
+import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
-import org.ensime.config.ProjectConfig
+import org.ensime.config._
 import org.ensime.model._
-import org.ensime.protocol.ProtocolConversions
+import org.ensime.protocol._
 import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import scala.collection.mutable.ListBuffer
@@ -40,24 +41,11 @@ abstract class DebugVmStatus
 case object DebugVmSuccess extends DebugVmStatus
 case class DebugVmError(code: Int, details: String) extends DebugVmStatus
 
-abstract class DebugEvent
-case class DebugStepEvent(threadId: Long,
-  threadName: String, pos: SourcePosition) extends DebugEvent
-case class DebugBreakEvent(threadId: Long,
-  threadName: String, pos: SourcePosition) extends DebugEvent
-case class DebugVMDeathEvent() extends DebugEvent
-case class DebugVMStartEvent() extends DebugEvent
-case class DebugVMDisconnectEvent() extends DebugEvent
-case class DebugExceptionEvent(excId: Long,
-  threadId: Long, threadName: String,
-  pos: Option[SourcePosition]) extends DebugEvent
-case class DebugThreadStartEvent(threadId: Long) extends DebugEvent
-case class DebugThreadDeathEvent(threadId: Long) extends DebugEvent
-case class DebugOutputEvent(out: String) extends DebugEvent
-
-class DebugManager(project: Project, indexer: ActorRef,
+class DebugManager(
+    project: Project,
+    indexer: ActorRef,
     protocol: ProtocolConversions,
-    config: ProjectConfig) extends Actor with ActorLogging {
+    config: EnsimeConfig) extends Actor with ActorLogging {
 
   import protocol._
 
@@ -71,7 +59,7 @@ class DebugManager(project: Project, indexer: ActorRef,
         if (set.size > 1) {
           log.warning("Warning, ambiguous source name: " + loc.sourceName())
         }
-        set.headOption.map(f => SourcePosition(f, loc.lineNumber))
+        set.headOption.map(f => SourcePosition(f, loc.lineNumber, -1))
       }).getOrElse(None)
     } catch {
       case e: AbsentInformationException => None
@@ -82,9 +70,9 @@ class DebugManager(project: Project, indexer: ActorRef,
   private val sourceMap = mutable.HashMap[String, mutable.HashSet[CanonFile]]()
   def rebuildSourceMap() {
     sourceMap.clear()
-    for (f <- config.sources) {
+    for (f <- config.sourceFiles) {
       val set = sourceMap.getOrElse(f.getName, mutable.HashSet())
-      set.add(f)
+      set.add(CanonFile(f))
       sourceMap(f.getName) = set
     }
   }
@@ -94,7 +82,7 @@ class DebugManager(project: Project, indexer: ActorRef,
     for (breaks <- pendingBreaksBySourceName.get(sourcename)) {
       val toTry = mutable.HashSet() ++ breaks
       for (bp <- toTry) {
-        setBreakpoint(bp.pos.file, bp.pos.line)
+        setBreakpoint(CanonFile(bp.pos.file), bp.pos.line)
       }
     }
   }
@@ -103,16 +91,16 @@ class DebugManager(project: Project, indexer: ActorRef,
     if ((for (vm <- maybeVM) yield {
       vm.setBreakpoint(file, line)
     }).getOrElse { false }) {
-      activeBreakpoints.add(Breakpoint(SourcePosition(file, line)))
+      activeBreakpoints.add(Breakpoint(SourcePosition(file, line, -1)))
       true
     } else {
-      addPendingBreakpoint(Breakpoint(SourcePosition(file, line)))
+      addPendingBreakpoint(Breakpoint(SourcePosition(file, line, -1)))
       false
     }
   }
 
   def clearBreakpoint(file: CanonFile, line: Int) {
-    val clearBp = Breakpoint(SourcePosition(file, line))
+    val clearBp = Breakpoint(SourcePosition(file, line, -1))
     for (bps <- pendingBreaksBySourceName.get(file.getName)) {
       bps.retain { _ != clearBp }
     }
@@ -163,9 +151,9 @@ class DebugManager(project: Project, indexer: ActorRef,
     project ! AsyncEvent(DebugVMDisconnectEvent())
   }
 
-  def vmOptions(): List[String] = {
-    List("-classpath", "\"" + config.debugClasspath + "\"")
-  }
+  def vmOptions(): List[String] = List("-classpath",
+    config.classpath.mkString("\"", File.pathSeparator, "\"")
+  )
 
   private var maybeVM: Option[VM] = None
 
@@ -518,12 +506,6 @@ class DebugManager(project: Project, indexer: ActorRef,
     private val savedObjects = new mutable.HashMap[Long, ObjectReference]()
 
     def start() {
-
-      // Re-index the classfiles on disk so our mappings are up
-      // to date.
-      indexer ! ReindexClassFilesReq(
-        List(config.target, config.testTarget).flatten)
-
       evtQ.start()
       monitor.map { _.start() }
     }
@@ -908,8 +890,8 @@ class DebugManager(project: Project, indexer: ActorRef,
         SourcePosition(
           CanonFile(
             frame.location.sourcePath()),
-          frame.location.lineNumber))
-      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1)
+          frame.location.lineNumber, -1))
+      val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1L)
       DebugStackFrame(index, locals, numArgs, className, methodName, pcLocation, thisObjId)
     }
 

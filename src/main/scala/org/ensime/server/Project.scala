@@ -2,11 +2,9 @@ package org.ensime.server
 
 import java.io.File
 import akka.actor.{ Actor, ActorRef, Props, ActorSystem }
-import org.ensime.config.ProjectConfig
-
-import org.ensime.model.PatchOp
-import org.ensime.model.SourceFileInfo
-import org.ensime.model.OffsetRange
+import org.ensime.config._
+import org.ensime.indexer._
+import org.ensime.model._
 import org.ensime.protocol._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
@@ -16,14 +14,7 @@ case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: String, callId: Int)
 case class RPCRequestEvent(req: Any, callId: Int)
 
-case class AsyncEvent(evt: WireFormat)
-
-object AsyncEvent {
-  val ev = new SwankProtocolConversions
-  import ev._
-  def apply(ev: SwankEvent) = new AsyncEvent(toWF(ev))
-  def apply(ev: DebugEvent) = new AsyncEvent(toWF(ev))
-}
+case class AsyncEvent(evt: SwankEvent)
 
 case object AnalyzerShutdownEvent
 
@@ -52,10 +43,15 @@ case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
 case class UndoResult(id: Int, touched: Iterable[File])
 
-class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) extends ProjectRPCTarget {
+case object ClientConnectedEvent
+
+class Project(
+    val config: EnsimeConfig,
+    val protocol: Protocol,
+    actorSystem: ActorSystem) extends ProjectRPCTarget {
   val log = LoggerFactory.getLogger(this.getClass)
 
-  private val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
+  protected val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
 
   def !(msg: AnyRef) {
     actor ! msg
@@ -63,18 +59,30 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
 
   protocol.setRPCTarget(this)
 
-  protected var config: ProjectConfig = ProjectConfig.nullConfig
-
   protected var analyzer: Option[ActorRef] = None
-  protected var indexer: Option[ActorRef] = None
+
+  private val resolver = new SourceResolver(config)
+  // TODO: add PresCompiler to the source watcher
+  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil)
+  private val search = new SearchService(config, resolver)
+  private val classfileWatcher = new ClassfileWatcher(config, search :: Nil)
+
+  import concurrent.ExecutionContext.Implicits.global
+  search.refresh().onSuccess {
+    case (inserts, deletes) =>
+      actor ! AsyncEvent(IndexerReadyEvent)
+      log.debug(s"indexed $inserts and removed $deletes")
+  }
+
+  protected val indexer: ActorRef = actorSystem.actorOf(Props(
+    new Indexer(config, search, this, protocol.conversions)), "indexer")
+
   protected var debugger: Option[ActorRef] = None
 
   def getAnalyzer: ActorRef = {
     analyzer.getOrElse(throw new RuntimeException("Analyzer unavailable."))
   }
-  def getIndexer: ActorRef = {
-    indexer.getOrElse(throw new RuntimeException("Indexer unavailable."))
-  }
+  def getIndexer: ActorRef = indexer
 
   private var undoCounter = 0
   private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
@@ -88,31 +96,35 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
   }
 
   class ProjectActor extends Actor {
-    override def receive = {
-      case x: Any =>
-        try {
-          process(x)
-        } catch {
-          case e: Exception =>
-            log.error("Error at Project message loop: ", e)
+    override def receive = waiting orElse connected
+
+    // buffer until the client connects
+    private var asyncs: List[AsyncEvent] = Nil
+
+    private val waiting: Receive = {
+      case ClientConnectedEvent =>
+        asyncs foreach {
+          case AsyncEvent(value) =>
+            protocol.sendEvent(value)
         }
+        asyncs = Nil
+        context.become(connected, true)
+
+      case e: AsyncEvent =>
+        asyncs ::= e
     }
 
-    log.info("Project waiting for init...")
-
-    def process(msg: Any): Unit = {
-      msg match {
-        case IncomingMessageEvent(msg: WireFormat) =>
-          protocol.handleIncomingMessage(msg)
-        case AddUndo(sum, changes) =>
-          addUndo(sum, changes)
-        case RPCResultEvent(value, callId) =>
-          protocol.sendRPCReturn(value, callId)
-        case AsyncEvent(value) =>
-          protocol.sendEvent(value)
-        case RPCErrorEvent(code, detail, callId) =>
-          protocol.sendRPCError(code, detail, callId)
-      }
+    private val connected: Receive = {
+      case IncomingMessageEvent(msg: WireFormat) =>
+        protocol.handleIncomingMessage(msg)
+      case AddUndo(sum, changes) =>
+        addUndo(sum, changes)
+      case RPCResultEvent(value, callId) =>
+        protocol.sendRPCReturn(value, callId)
+      case AsyncEvent(value) =>
+        protocol.sendEvent(value)
+      case RPCErrorEvent(code, detail, callId) =>
+        protocol.sendRPCError(code, detail, callId)
     }
   }
 
@@ -142,48 +154,28 @@ class Project(cacheDir: File, val protocol: Protocol, actorSystem: ActorSystem) 
     }
   }
 
-  protected def initProject(conf: ProjectConfig) {
-    config = conf
-    restartIndexer()
-    restartCompiler()
+  def initProject() {
+    startCompiler()
     shutdownDebugger()
     undos.clear()
     undoCounter = 0
   }
 
-  protected def restartIndexer() {
-    indexer.foreach(_ ! IndexerShutdownReq)
-    indexer = None
-    val newIndexer = actorSystem.actorOf(Props(new Indexer(this, this.cacheDir, protocol.conversions, config)), "indexer")
-    log.info("Initialising Indexer...")
-    if (!config.disableIndexOnStartup) {
-      newIndexer ! RebuildStaticIndexReq
-    }
-    indexer = Some(newIndexer)
-  }
-
-  protected def restartCompiler() {
-    analyzer.foreach(_ ! AnalyzerShutdownEvent)
-    analyzer = None
-    indexer match {
-      case Some(indexerVal) =>
-        val newAnalyzer = actorSystem.actorOf(Props(new Analyzer(this, indexerVal, protocol.conversions, config)), "analyzer")
-        analyzer = Some(newAnalyzer)
-      case None =>
-        throw new RuntimeException("Indexer must be started before analyzer.")
-    }
+  protected def startCompiler() {
+    val newAnalyzer = actorSystem.actorOf(Props(
+      new Analyzer(this, indexer, search, protocol.conversions, config)
+    ), "analyzer")
+    analyzer = Some(newAnalyzer)
   }
 
   protected def acquireDebugger(): ActorRef = {
-    ((debugger, indexer) match {
-      case (Some(b), _) => Some(b)
-      case (None, Some(indexerVal)) =>
-        val b = actorSystem.actorOf(Props(new DebugManager(this, indexerVal, protocol.conversions, config)))
+    (debugger, indexer) match {
+      case (Some(b), _) => b
+      case (None, indexer) =>
+        val b = actorSystem.actorOf(Props(new DebugManager(this, indexer, protocol.conversions, config)))
         debugger = Some(b)
-        Some(b)
-      case _ =>
-        None
-    }).getOrElse(throw new RuntimeException("Indexer must be started before debug manager."))
+        b
+    }
   }
 
   protected def shutdownDebugger() {
