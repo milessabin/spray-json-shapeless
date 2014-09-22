@@ -37,8 +37,7 @@ class Analyzer(
   //       on the standard library!)
   val scalaLib = config.allJars.find(_.getName.contains("scala-library")).get
   settings.bootclasspath.value = scalaLib.getAbsolutePath
-  // should we add the target folders to the classpath?
-  settings.classpath.value = config.allJars.mkString(File.pathSeparator)
+  settings.classpath.value = config.compileClasspath.mkString(File.pathSeparator)
 
   settings.processArguments(config.compilerArgs, processAll = false)
 
@@ -72,6 +71,7 @@ class Analyzer(
 
   protected var initTime: Long = 0
   private var awaitingInitialCompile = true
+  private var allFilesLoaded = false
 
   import scalaCompiler._
 
@@ -84,7 +84,6 @@ class Analyzer(
     Future {
       reporter.disable()
       scalaCompiler.askNotifyWhenReady()
-      scalaCompiler.askReloadAllFiles()
     }
   }
 
@@ -104,6 +103,14 @@ class Analyzer(
         scalaCompiler.askClearTypeCache()
         scalaCompiler.askShutdown()
         context.stop(self)
+
+      case ReloadExistingFilesEvent => if (!allFilesLoaded) {
+        scalaCompiler.askInvalidateTargets()
+        scalaCompiler.askRemoveAllDeleted()
+        scalaCompiler.askReloadExistingFiles()
+      } else {
+        presCompLog.warn("Skipping, in all-files mode")
+      }
 
       case FullTypeCheckCompleteEvent =>
         if (awaitingInitialCompile) {
@@ -128,9 +135,17 @@ class Analyzer(
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadAllReq =>
+                allFilesLoaded = true
                 scalaCompiler.askRemoveAllDeleted()
                 scalaCompiler.askReloadAllFiles()
                 scalaCompiler.askNotifyWhenReady()
+                project ! RPCResultEvent(toWF(value = true), callId)
+
+              case UnloadAllReq =>
+                allFilesLoaded = false
+                scalaCompiler.askInvalidateTargets()
+                scalaCompiler.askRemoveAllDeleted()
+                scalaCompiler.askUnloadAllFiles()
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadFilesReq(files) =>

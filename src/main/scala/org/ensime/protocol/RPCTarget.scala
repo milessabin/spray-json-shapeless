@@ -37,6 +37,7 @@ trait RPCTarget {
   def rpcPatchSource(f: String, edits: List[PatchOp], callId: Int)
   def rpcTypecheckFiles(fs: List[SourceFileInfo], callId: Int)
   def rpcRemoveFile(f: String, callId: Int)
+  def rpcUnloadAll(callId: Int)
   def rpcTypecheckAll(callId: Int)
   def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean, callId: Int)
   def rpcPackageMemberCompletion(path: String, prefix: String, callId: Int)
