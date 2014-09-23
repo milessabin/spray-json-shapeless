@@ -17,42 +17,35 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
     } finally { out.close() }
   }
 
-  def test(contents: String, testFn: (EnsimeConfig) => Unit): Unit = {
-    withTempDirectory { dir =>
-      val ensimeFile = dir / ".ensime"
-      writeToFile(contents, ensimeFile)
-      (dir / "abc").mkdirs()
-      val cacheDir = (dir / ".ensime_cache")
-      cacheDir.mkdirs()
-
-      val config = Server.readEnsimeConfig(ensimeFile, dir, cacheDir)
-      testFn(config)
-    }
+  def test(dir: File, contents: String, testFn: (EnsimeConfig) => Unit): Unit = {
+    val ensimeFile = dir / ".ensime"
+    writeToFile(contents, ensimeFile)
+    val config = Server.readEnsimeConfig(ensimeFile)
+    testFn(config)
   }
 
   describe("ProjectConfigSpec") {
 
     it("should parse a simple config") {
-      test(
-        """(
-          |:name "project"
-          |:scala-version "2.10.4"
-          |:reference-source-roots ()
-          |:subprojects
-          |(
-          |  (
-          |    :name "module1"
-          |    :scala-version "2.10.4"
-          |    :depends-on-modules ()
-          |    :target "abc"
-          |    :test-target "abc"
-          |    :source-roots ()
-          |    :reference-source-roots ()
-          |    :compiler-args ()
-          |    :runtime-deps ()
-          |    :test-deps ()
-          |  )
-          |))""".stripMargin, { implicit config =>
+      withTempDirectory { dir =>
+        (dir / ".ensime_cache").mkdirs()
+        (dir / "abc").mkdirs()
+        test(dir, s"""
+(:name "project"
+ :scala-version "2.10.4"
+ :root-dir "$dir"
+ :cache-dir "$dir/.ensime_cache"
+ :reference-source-roots ()
+ :subprojects ((:name "module1"
+                :scala-version "2.10.4"
+                :depends-on-modules ()
+                :target "abc"
+                :test-target "abc"
+                :source-roots ()
+                :reference-source-roots ()
+                :compiler-args ()
+                :runtime-deps ()
+                :test-deps ())))""", { implicit config =>
 
           assert(config.name == "project")
           assert(config.scalaVersion == "2.10.4")
@@ -60,6 +53,8 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
           assert(module1.name == "module1")
           assert(module1.dependencies.isEmpty)
         })
+      }
     }
   }
+
 }

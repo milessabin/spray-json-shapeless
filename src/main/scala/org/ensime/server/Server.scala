@@ -28,17 +28,7 @@ object Server {
     if (!ensimeFile.exists() || !ensimeFile.isFile)
       throw new RuntimeException(s".ensime file ($ensimeFile) not found")
 
-    val cacheDirStr = propOrNone("ensime.cachedir").getOrElse(
-      throw new RuntimeException("ensime.cachedir must be set"))
-
-    val cacheDir = new File(cacheDirStr)
-
-    val rootDir = ensimeFile.getParentFile
-
-    val activeModule = propOrNone("ensime.active").getOrElse(
-      throw new RuntimeException("ensime.active must be set"))
-
-    val config = readEnsimeConfig(ensimeFile, rootDir, cacheDir)
+    val config = readEnsimeConfig(ensimeFile)
 
     initialiseServer(config)
   }
@@ -57,13 +47,12 @@ object Server {
    * @param cacheDir The
    * @return
    */
-  def readEnsimeConfig(ensimeFile: File, rootDir: File, cacheDir: File): EnsimeConfig = {
+  def readEnsimeConfig(ensimeFile: File): EnsimeConfig = {
     val configSrc = Source.fromFile(ensimeFile)
     try {
       val content = configSrc.getLines().filterNot(_.startsWith(";;")).mkString("\n")
       val parsed = SExpParser.read(content).asInstanceOf[SExpList]
-
-      EnsimeConfig.parse(rootDir, cacheDir, parsed)
+      EnsimeConfig.parse(parsed)
     } finally {
       configSrc.close()
     }

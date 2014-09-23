@@ -65,9 +65,7 @@ case class EnsimeModule(
 }
 
 object EnsimeConfig extends SLF4JLogging {
-  def parse(root: File, cacheDir: File, configExp: SExp): EnsimeConfig = {
-    require(root.isAbsolute, "root must be absolute: $root")
-    require(cacheDir.isAbsolute, "cacheDir must be absolute: $cacheDir")
+  def parse(configExp: SExp): EnsimeConfig = {
     import RichFile._
     import pimpathon.any._
 
@@ -75,6 +73,10 @@ object EnsimeConfig extends SLF4JLogging {
     //       configuration files. But canon may fail to resolve if
     //       the file/directory does not exist, so we force create all
     //       directories, which is - admitedly - a weird side-effect.
+
+    val rootMap = SExpExplorer(configExp).asMap
+    val root = file(rootMap.getString(":root-dir")).canon
+    require(root.isDirectory, ":root-dir must exist")
 
     implicit class RichSExp(m: SExpMapExplorer) {
       def asDir(name: String): File =
@@ -90,7 +92,7 @@ object EnsimeConfig extends SLF4JLogging {
         }
     }
 
-    val rootMap = SExpExplorer(configExp).asMap
+    val cacheDir = rootMap.asDir(":cache-dir")
     val name = rootMap.getString(":name")
     val scalaVersion = rootMap.getString(":scala-version")
     val compilerArgs = rootMap.getStringListOpt(":compiler-args").getOrElse(Nil)
