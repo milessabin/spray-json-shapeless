@@ -4,6 +4,8 @@ import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.apache.commons.vfs2.impl._
 import org.ensime.config._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 trait ClassfileListener {
   def classfileAdded(f: FileObject): Unit
@@ -28,27 +30,39 @@ trait SourceListener {
 class ClassfileWatcher(
     config: EnsimeConfig,
     listeners: Seq[ClassfileListener]) extends SLF4JLogging {
+
+  // WORKAROUND https://issues.apache.org/jira/browse/VFS-536
+  // def, not val, incase dirs are recreated
+  private def targets =
+    config.compileClasspath.filter(_.isDirectory).map(vfile).map(_.getName)
+
   private val fm = new DefaultFileMonitor(new FileListener {
-    def watched(event: FileChangeEvent) =
-      ClassfileSelector.include(event.getFile.getName.getExtension)
+    def watched(event: FileChangeEvent) = {
+      val name = event.getFile.getName
+      ClassfileSelector.include(name.getExtension) && targets.exists {
+        target => name.isAncestor(target)
+      }
+    }
 
     def fileChanged(event: FileChangeEvent): Unit =
       if (watched(event))
-        listeners foreach (_.classfileChanged(event.getFile))
+        listeners foreach { list => Future { list.classfileChanged(event.getFile) } }
     def fileCreated(event: FileChangeEvent): Unit =
       if (watched(event))
-        listeners foreach (_.classfileAdded(event.getFile))
+        listeners foreach { list => Future { list.classfileAdded(event.getFile) } }
     def fileDeleted(event: FileChangeEvent): Unit =
       if (watched(event))
-        listeners foreach (_.classfileRemoved(event.getFile))
+        listeners foreach { list => Future { list.classfileRemoved(event.getFile) } }
   })
   fm.setRecursive(true)
   fm.start()
 
-  config.modules.values.foreach { m =>
-    fm.addFile(m.target)
-    fm.addFile(m.testTarget)
-  }
+  fm.addFile(config.root)
+
+  // config.modules.values.foreach { m =>
+  //   fm.addFile(m.target)
+  //   fm.addFile(m.testTarget)
+  // }
 }
 
 class SourceWatcher(
