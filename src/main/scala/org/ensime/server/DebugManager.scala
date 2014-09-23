@@ -152,7 +152,7 @@ class DebugManager(
   }
 
   def vmOptions(): List[String] = List("-classpath",
-    config.classpath.mkString("\"", File.pathSeparator, "\"")
+    config.runtimeClasspath.mkString("\"", File.pathSeparator, "\"")
   )
 
   private var maybeVM: Option[VM] = None

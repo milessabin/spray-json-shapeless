@@ -89,6 +89,15 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     x.get
   }
 
+  def askInvalidateTargets(): Unit = {
+    config.modules.values.foreach(m => {
+      askOption(invalidatePackage(m.target))
+      askOption(invalidatePackage(m.testTarget))
+    })
+  }
+
+  def askUnloadAllFiles(): Unit = askOption(unloadAllFiles())
+
   def askRemoveAllDeleted() = askOption(removeAllDeleted())
 
   def askRemoveDeleted(f: File) = askOption(removeDeleted(AbstractFile.getFile(f)))
@@ -101,6 +110,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       } yield source
     }.toSet ++ activeUnits.map(_.source)
     askReloadFiles(all)
+  }
+
+  def askReloadExistingFiles() = {
+    askReloadFiles(activeUnits.map(_.source))
   }
 
   def askInspectTypeById(id: Int): Option[TypeInspectInfo] =
@@ -173,6 +186,14 @@ class RichPresentationCompiler(
   override def registerTopLevelSym(sym: Symbol) {
     super.registerTopLevelSym(sym)
     symsByFile(sym.sourceFile) += sym
+  }
+
+  def invalidatePackage(f: File): Unit = {
+    invalidateClassPathEntries(f.getCanonicalPath())
+  }
+
+  def unloadAllFiles(): Unit = {
+    allSources.foreach(removeUnitOf(_))
   }
 
   /**
@@ -365,19 +386,6 @@ class RichPresentationCompiler(
 
   protected def linkPos(sym: Symbol, source: SourceFile): Position = {
     wrapLinkPos(sym, source)
-  }
-
-  // TODO:
-  // This hides the core implementation is Contexts.scala, which
-  // has been patched. Once this bug is fixed, we can get rid of
-  // this workaround.
-  private def transformImport(selectors: List[ImportSelector], sym: Symbol): List[Symbol] = selectors match {
-    case Nil => Nil
-    case List(ImportSelector(nme.WILDCARD, _, _, _)) => List(sym)
-    case ImportSelector(from, _, to, _) :: _ if from.toString == sym.name.toString =>
-      if (to == nme.WILDCARD) List.empty
-      else { val sym1 = sym.cloneSymbol; sym1.name = to; List(sym1) }
-    case _ :: rest => transformImport(rest, sym)
   }
 
   protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {

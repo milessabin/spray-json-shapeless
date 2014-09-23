@@ -94,8 +94,9 @@ class BasicWorkflow extends FunSpec with Matchers {
         // offset was 1846
 
         // C-c C-v p Inspect source of current package
-        interactor.expectRPC(30 seconds, s"""(swank:inspect-package-by-path "org.example")""",
-          s"""(:ok (:name "example" :info-type package :full-name "org.example" :members ((:name "Foo$$" :type-id 131 :full-name "org.example.Foo$$" :decl-as object :pos (:file $fooFile :offset 28 :line 3)))))""")
+        val insPacByPathRes = interactor.sendRPCString(30 seconds, s"""(swank:inspect-package-by-path "org.example")""")
+
+        assert(insPacByPathRes.contains("org.example.Foo"))
       }
     }
   }

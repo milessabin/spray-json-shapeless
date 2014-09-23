@@ -48,7 +48,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcReplConfig(callId: Int) {
-    sendRPCReturn(toWF(new ReplConfig(config.classpath)), callId)
+    sendRPCReturn(toWF(new ReplConfig(config.runtimeClasspath)), callId)
   }
 
   override def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: List[Symbol], callId: Int) {
@@ -145,6 +145,10 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     val file: File = new File(f)
     getAnalyzer ! RPCRequestEvent(RemoveFileReq(file), callId)
     sendRPCAckOK(callId)
+  }
+
+  override def rpcUnloadAll(callId: Int) {
+    getAnalyzer ! RPCRequestEvent(UnloadAllReq, callId)
   }
 
   override def rpcTypecheckAll(callId: Int) {

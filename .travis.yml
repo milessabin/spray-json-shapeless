@@ -19,10 +19,11 @@ install:
 script:
 - sbt ++$TRAVIS_SCALA_VERSION clean test
 - ./.check-diff.sh
-- sbt ++$TRAVIS_SCALA_VERSION clean scoverage:test
+# FIXME: https://github.com/ensime/ensime-server/issues/597
+#- sbt ++$TRAVIS_SCALA_VERSION clean scoverage:test
 after_success:
 # FIXME: blocked on https://github.com/scoverage/sbt-coveralls/issues/21
-- sbt ++$TRAVIS_SCALA_VERSION coveralls
+#- sbt ++$TRAVIS_SCALA_VERSION coveralls
 - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" && "$JAVA_HOME" == "$(jdk_switcher home openjdk6)" ]]; then echo "publish"; fi)
 env:
   global:

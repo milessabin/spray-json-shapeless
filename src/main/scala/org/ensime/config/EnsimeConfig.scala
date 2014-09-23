@@ -27,8 +27,12 @@ case class EnsimeConfig(
     if file.isFile & file.getName.endsWith(".scala")
   } yield file
 
-  def classpath: Set[File] = modules.values.toSet.flatMap {
+  def runtimeClasspath: Set[File] = modules.values.toSet.flatMap {
     m: EnsimeModule => m.compileJars ++ m.testJars ++ m.debugJars :+ m.target :+ m.testTarget
+  }
+
+  def compileClasspath: Set[File] = modules.values.toSet.flatMap {
+    m: EnsimeModule => m.compileJars ++ m.testJars :+ m.target :+ m.testTarget
   }
 
   val javaLib = file(Properties.jdkHome) / "jre/lib/rt.jar"

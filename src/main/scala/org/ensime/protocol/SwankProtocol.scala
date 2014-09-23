@@ -722,6 +722,24 @@ class SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:unload-all
+       * Summary:
+       *   Remove all sources from the presentation compiler. Reset the project's symbols
+       *    to the ones defiled in .class files.
+       * Arguments:
+       *   None
+       * Return:
+       *   None
+       * Example call:
+       *   (:swank-rpc (swank:unload-all) 42)
+       * Example return:
+       *   (:return (:ok t) 42)
+       */
+      case ("swank:unload-all", Nil) =>
+        rpcTarget.rpcUnloadAll(callId)
+
+      /**
+       * Doc RPC:
        *   swank:typecheck-all
        * Summary:
        *   Request immediate load and typecheck of all known sources.

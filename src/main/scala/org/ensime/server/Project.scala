@@ -1,7 +1,8 @@
 package org.ensime.server
 
 import java.io.File
-import akka.actor.{ Actor, ActorRef, Props, ActorSystem }
+import akka.actor.{ Actor, ActorRef, Props, ActorSystem, Cancellable }
+import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
 import org.ensime.indexer._
 import org.ensime.model._
@@ -17,9 +18,11 @@ case class RPCRequestEvent(req: Any, callId: Int)
 case class AsyncEvent(evt: SwankEvent)
 
 case object AnalyzerShutdownEvent
+case object ReloadExistingFilesEvent
 
 case class ReloadFilesReq(files: List[SourceFileInfo])
 case object ReloadAllReq
+case object UnloadAllReq
 case class PatchSourceReq(file: File, edits: List[PatchOp])
 case class RemoveFileReq(file: File)
 case class CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean)
@@ -61,11 +64,21 @@ class Project(
 
   protected var analyzer: Option[ActorRef] = None
 
+  private var reTypecheckNeededAt: Option[Long] = None;
+
   private val resolver = new SourceResolver(config)
   // TODO: add PresCompiler to the source watcher
   private val sourceWatcher = new SourceWatcher(config, resolver :: Nil)
   private val search = new SearchService(config, resolver)
-  private val classfileWatcher = new ClassfileWatcher(config, search :: Nil)
+  private val reTypecheck = new ClassfileListener {
+    def reTypeCheck(): Unit = {
+      reTypecheckNeededAt = Some(System.currentTimeMillis() + 1000)
+    }
+    def classfileAdded(f: FileObject): Unit = reTypeCheck()
+    def classfileChanged(f: FileObject): Unit = reTypeCheck()
+    def classfileRemoved(f: FileObject): Unit = reTypeCheck()
+  }
+  private val classfileWatcher = new ClassfileWatcher(config, search :: reTypecheck :: Nil)
 
   import concurrent.ExecutionContext.Implicits.global
   search.refresh().onSuccess {
@@ -96,6 +109,23 @@ class Project(
   }
 
   class ProjectActor extends Actor {
+    case object TickEvent
+    private var tick: Cancellable = _
+
+    override def preStart(): Unit = {
+      import scala.concurrent.duration._
+      tick = context.system.scheduler.schedule(
+        initialDelay = 2 seconds,
+        interval = 2 seconds,
+        receiver = self,
+        message = TickEvent
+      )
+    }
+
+    override def postStop(): Unit = {
+      tick.cancel()
+    }
+
     override def receive = waiting orElse connected
 
     // buffer until the client connects
@@ -115,6 +145,19 @@ class Project(
     }
 
     private val connected: Receive = {
+      case TickEvent =>
+        reTypecheckNeededAt.foreach(t =>
+          /*
+           Do not do this if we're in "reload all files" mode
+           - reloadallfiles sets flag
+           - unloadallfiles unsets the flag
+           */
+          if (System.currentTimeMillis() >= t) {
+            log.warn("Re-typecheck needed")
+            reTypecheckNeededAt = None
+            analyzer.foreach(_ ! ReloadExistingFilesEvent)
+          }
+        )
       case IncomingMessageEvent(msg: WireFormat) =>
         protocol.handleIncomingMessage(msg)
       case AddUndo(sum, changes) =>
