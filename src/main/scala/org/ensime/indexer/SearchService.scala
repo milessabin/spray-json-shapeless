@@ -3,8 +3,11 @@ package org.ensime.indexer
 import DatabaseService._
 import akka.event.slf4j.SLF4JLogging
 import java.sql.SQLException
+import java.util.ArrayList
+import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Executors
 import com.google.common.io.ByteStreams
+import java.util.concurrent.LinkedBlockingQueue
 import org.apache.commons.vfs2._
 import org.ensime.config.EnsimeConfig
 import pimpathon.file._
@@ -75,7 +78,7 @@ class SearchService(
       log.trace(s"STALE = $stale")
 
     // individual DELETEs in H2 are really slow
-    val removing = stale.grouped(100).map { files =>
+    val removing = stale.grouped(1000).map { files =>
       Future {
         index.remove(files)
         db.removeFiles(files)
@@ -198,25 +201,58 @@ class SearchService(
   /** only for exact fqns */
   def findUnique(fqn: String): Option[FqnSymbol] = db.find(fqn)
 
-  def classfileAdded(f: FileObject): Unit = Future {
-    val syms = extractSymbols(f, f)
-    persist(FileCheck(f), syms)
-    index.commit()
-  }(worker.context)
+  /* DELETE then INSERT in H2 is ridiculously slow, so we put all modifications
+   * into a blocking queue and dedicate a thread to block on draining the queue.
+   * This has the effect that we always react to a single change on disc but we
+   * will work through backlogs in bulk.
+   *
+   * We always do a DELETE, even if the entries are new, but only INSERT if
+   * the list of symbols is non-empty.
+   */
+  private val backlog = new LinkedBlockingQueue[(FileObject, List[FqnSymbol])]()
+  new Thread("Classfile Indexer") {
+    import scala.collection.JavaConverters._
+
+    override def run(): Unit = {
+      while (true) {
+        val head = backlog.take() // blocks until something appears
+        val buffer = new ArrayList[(FileObject, List[FqnSymbol])]()
+        backlog.drainTo(buffer, 999) // 1000 at a time to avoid blow-ups
+        val tail = buffer.asScala.toList
+
+        // removes earlier dupes
+        val work = {
+          (head :: tail).groupBy(_._1).map {
+            case (k, values) => values.last
+          }
+        }.toList
+
+        log.info(s"Indexing ${work.size} classfiles")
+
+        delete(work.map(_._1))
+
+        work.collect {
+          case (file, syms) if syms.nonEmpty =>
+            persist(FileCheck(file), syms)
+        }
+      }
+    }
+
+    def delete(files: List[FileObject]): Unit = {
+      index.remove(files)
+      db.removeFiles(files)
+    }
+  }.start()
+
+  def classfileAdded(f: FileObject): Unit = classfileChanged(f)
 
   def classfileRemoved(f: FileObject): Unit = Future {
-    index.remove(List(f))
-    index.commit()
-    db.removeFiles(List(f))
+    backlog.put(f, Nil)
   }(worker.context)
 
   def classfileChanged(f: FileObject): Unit = Future {
-    // hacky way of doing it, we could use UPDATE
-    index.remove(List(f))
-    db.removeFiles(List(f))
     val syms = extractSymbols(f, f)
-    persist(FileCheck(f), syms)
-    index.commit()
+    backlog.put(f, syms)
   }(worker.context)
 
 }
