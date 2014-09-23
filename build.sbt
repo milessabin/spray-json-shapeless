@@ -143,7 +143,7 @@ scalariformSettings
 instrumentSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 57
+ScoverageKeys.minimumCoverage := 56
 
 // might be buggy
 ScoverageKeys.highlighting := true

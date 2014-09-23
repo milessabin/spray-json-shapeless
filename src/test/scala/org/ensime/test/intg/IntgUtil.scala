@@ -207,7 +207,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
         FileUtils.delete(cacheDir)
       cacheDir.mkdirs()
 
-      val config = Server.readEnsimeConfig(ensimeFile, projectBase, cacheDir)
+      val config = Server.readEnsimeConfig(ensimeFile)
       val server = Server.initialiseServer(config)
 
       implicit val actorSystem = server.actorSystem
