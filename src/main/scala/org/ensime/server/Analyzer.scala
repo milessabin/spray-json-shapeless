@@ -32,11 +32,10 @@ class Analyzer(
   settings.verbose.value = presCompLog.isDebugEnabled
   settings.usejavacp.value = false
 
-  // HACK: should really get scala-library from our classpath
-  //       and give the option to disable the scala-library (e.g. when working
-  //       on the standard library!)
-  val scalaLib = config.allJars.find(_.getName.contains("scala-library")).get
-  settings.bootclasspath.value = scalaLib.getAbsolutePath
+  config.allJars.find(_.getName.contains("scala-library")) match {
+    case Some(scalaLib) => settings.bootclasspath.value = scalaLib.getAbsolutePath
+    case None => log.warning("scala-library.jar was not present")
+  }
   settings.classpath.value = config.compileClasspath.mkString(File.pathSeparator)
 
   settings.processArguments(config.compilerArgs, processAll = false)
