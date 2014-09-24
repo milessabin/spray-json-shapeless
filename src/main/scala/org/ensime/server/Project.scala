@@ -82,7 +82,7 @@ class Project(
 
   import concurrent.ExecutionContext.Implicits.global
   search.refresh().onSuccess {
-    case (inserts, deletes) =>
+    case (deletes, inserts) =>
       actor ! AsyncEvent(IndexerReadyEvent)
       log.debug(s"indexed $inserts and removed $deletes")
   }
