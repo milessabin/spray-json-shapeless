@@ -89,11 +89,11 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     x.get
   }
 
-  def askInvalidateTargets(): Unit = {
-    config.modules.values.foreach(m => {
-      askOption(invalidatePackage(m.target))
-      askOption(invalidatePackage(m.testTarget))
-    })
+  def askInvalidateTargets(): Unit = for {
+    m <- config.modules.values
+    dir <- (m.targets ++ m.testTargets)
+  } {
+    askOption(invalidatePackage(dir))
   }
 
   def askUnloadAllFiles(): Unit = askOption(unloadAllFiles())

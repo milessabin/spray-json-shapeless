@@ -27,12 +27,11 @@ case class EnsimeConfig(
     if file.isFile & file.getName.endsWith(".scala")
   } yield file
 
-  def runtimeClasspath: Set[File] = modules.values.toSet.flatMap {
-    m: EnsimeModule => m.compileJars ++ m.testJars ++ m.debugJars :+ m.target :+ m.testTarget
-  }
+  def runtimeClasspath: Set[File] =
+    compileClasspath ++ modules.values.flatMap(_.debugJars)
 
   def compileClasspath: Set[File] = modules.values.toSet.flatMap {
-    m: EnsimeModule => m.compileJars ++ m.testJars :+ m.target :+ m.testTarget
+    m: EnsimeModule => m.compileJars ++ m.testJars ++ m.targets ++ m.testTargets
   }
 
   val javaLib = file(Properties.jdkHome) / "jre/lib/rt.jar"
@@ -47,15 +46,15 @@ case class EnsimeConfig(
 
 case class EnsimeModule(
     name: String,
-    target: File,
-    testTarget: File,
+    targets: List[File],
+    testTargets: List[File],
     dependsOnNames: List[String],
     compileJars: List[File],
     debugJars: List[File],
     testJars: List[File],
     sourceRoots: List[File],
     referenceSourcesJars: List[File]) {
-  (target :: testTarget :: compileJars ::: debugJars :::
+  (targets ::: testTargets ::: compileJars ::: debugJars :::
     testJars ::: sourceRoots ::: referenceSourcesJars) foreach { f =>
       require(f.exists, s"$f is required by $name but does not exist")
     }
@@ -79,8 +78,12 @@ object EnsimeConfig extends SLF4JLogging {
     require(root.isDirectory, ":root-dir must exist")
 
     implicit class RichSExp(m: SExpMapExplorer) {
-      def asDir(name: String): File =
-        file(m.getString(name)).rebaseIfRelative(root).tap(_.mkdirs()).canon
+      def asDirOpt(name: String): Option[File] =
+        m.getStringOpt(name).map { f =>
+          file(f).rebaseIfRelative(root).tap(_.mkdirs()).canon
+        }
+
+      def asDir(name: String): File = asDirOpt(name).get
 
       def asDirs(name: String): List[File] =
         m.getStringListOpt(name).getOrElse(Nil).map { n =>
@@ -100,9 +103,15 @@ object EnsimeConfig extends SLF4JLogging {
     val subProjectsSExps = rootMap.getList(":subprojects").map(_.asMap)
     val subModules = subProjectsSExps.map { entry =>
       val moduleName = entry.getString(":name")
-      val target = entry.asDir(":target")
-      val testTarget = entry.asDir(":test-target")
-      val dependentModuleNames = entry.getStringList(":depends-on-modules")
+      val targets = entry.asDirOpt(":target") match {
+        case Some(target) => target :: Nil
+        case None => entry.asDirs(":targets")
+      }
+      val testTargets = entry.asDirOpt(":test-target") match {
+        case Some(target) => target :: Nil
+        case None => entry.asDirs(":test-targets")
+      }
+      val dependentModuleNames = entry.getStringListOpt(":depends-on-modules").getOrElse(Nil)
       val compileDeps = entry.asFiles(":compile-deps")
       val debugDeps = entry.asFiles(":runtime-deps")
       val testDeps = entry.asFiles(":test-deps")
@@ -110,7 +119,7 @@ object EnsimeConfig extends SLF4JLogging {
       val referenceSourceJars = entry.asFiles(":reference-source-roots")
 
       moduleName -> EnsimeModule(
-        moduleName, target, testTarget, dependentModuleNames,
+        moduleName, targets, testTargets, dependentModuleNames,
         compileDeps, debugDeps, testDeps, sourceRoots, referenceSourceJars
       )
     }.toMap

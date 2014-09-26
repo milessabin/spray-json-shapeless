@@ -58,7 +58,7 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
       val now = System.currentTimeMillis()
       for {
         m <- config.modules.values
-        r <- List(m.target, m.testTarget)
+        r <- m.targets ++ m.testTargets
         f <- r.tree
       } {
         // simulate a full recompile
@@ -72,7 +72,7 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
 
     it("should remove classfiles that have been deleted", SlowTest) {
       val module = config.modules.values.toList.head
-      val classfile = module.target / "org/ensime/indexer/SearchService.class"
+      val classfile = module.targets.head / "org/ensime/indexer/SearchService.class"
       assert(classfile.exists)
       classfile.delete()
       assert(refresh() === (1, 0))

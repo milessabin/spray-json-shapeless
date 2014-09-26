@@ -55,6 +55,30 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
         })
       }
     }
+
+    it("should parse a minimal config for a binary only project") {
+      withTempDirectory { dir =>
+        (dir / ".ensime_cache").mkdirs()
+        (dir / "abc").mkdirs()
+        test(dir, s"""
+(:name "project"
+ :scala-version "2.10.4"
+ :root-dir "$dir"
+ :cache-dir "$dir/.ensime_cache"
+ :subprojects ((:name "module1"
+                :scala-version "2.10.4"
+                :targets ("abc"))))""", { implicit config =>
+
+          assert(config.name == "project")
+          assert(config.scalaVersion == "2.10.4")
+          val module1 = config.modules("module1")
+          assert(module1.name == "module1")
+          assert(module1.dependencies.isEmpty)
+          assert(module1.targets.size === 1)
+        })
+      }
+    }
+
   }
 
 }
