@@ -16,7 +16,7 @@ scalaVersion := "2.11.2"
 
 version := "0.9.10-SNAPSHOT"
 
-resolvers += Resolver.sonatypeRepo("snapshots")
+//resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   "com.github.stacycurl"       %% "pimpathon-core"       % "1.0.0",
@@ -132,6 +132,9 @@ infoForTests := Seq(
     artifact = artifactFilter(classifier = "sources")
   ).mkString(",")
 )
+
+// adds our example projects to the test compile
+unmanagedSourceDirectories in Test += baseDirectory.value / "src/example-simple"
 
 // full stacktraces in scalatest
 testOptions in Test += Tests.Argument("-oF")

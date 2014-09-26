@@ -49,7 +49,8 @@ object TestUtil {
     sources: Boolean = false,
     testSources: Boolean = false,
     classes: Boolean = false,
-    testClasses: Boolean = false): EnsimeConfig = {
+    testClasses: Boolean = false,
+    jars: Boolean = true): EnsimeConfig = {
     val base = tmp.canon
     require(base.isDirectory())
 
@@ -70,9 +71,10 @@ object TestUtil {
 
       EnsimeModule(
         "single", classesDir :: Nil, testClassesDir :: Nil, Nil,
-        compileJars, Nil, testJars,
+        if (jars) compileJars else List(scalaLib), Nil,
+        if (jars) testJars else Nil,
         mainSourcesDir :: testSourcesDir :: Nil,
-        sourceJars
+        if (jars) sourceJars else Nil
       )
     }
 

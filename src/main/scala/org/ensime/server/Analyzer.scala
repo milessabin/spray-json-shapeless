@@ -148,6 +148,10 @@ class Analyzer(
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadFilesReq(files) =>
+                files foreach { file =>
+                  require(file.file.exists, file + " does not exist")
+                }
+
                 val (javas, scalas) = files.filter(_.file.exists).partition(
                   _.file.getName.endsWith(".java"))
 
