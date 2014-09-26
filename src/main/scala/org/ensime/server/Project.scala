@@ -10,6 +10,7 @@ import org.ensime.protocol._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
+import scala.concurrent.duration._
 
 case class RPCResultEvent(value: WireFormat, callId: Int)
 case class RPCErrorEvent(code: Int, detail: String, callId: Int)
@@ -19,6 +20,7 @@ case class AsyncEvent(evt: SwankEvent)
 
 case object AnalyzerShutdownEvent
 case object ReloadExistingFilesEvent
+case object AskReTypecheck
 
 case class ReloadFilesReq(files: List[SourceFileInfo])
 case object ReloadAllReq
@@ -36,6 +38,7 @@ case class InspectTypeReq(file: File, range: OffsetRange)
 case class InspectTypeByIdReq(id: Int)
 case class InspectPackageByPathReq(path: String)
 case class TypeByIdReq(id: Int)
+case class MemberByNameReq(typeFullName: String, memberName: String, memberIsType: Boolean)
 case class TypeByNameReq(name: String)
 case class TypeByNameAtPointReq(name: String, file: File, range: OffsetRange)
 case class CallCompletionReq(id: Int)
@@ -64,16 +67,12 @@ class Project(
 
   protected var analyzer: Option[ActorRef] = None
 
-  private var reTypecheckNeededAt: Option[Long] = None;
-
   private val resolver = new SourceResolver(config)
   // TODO: add PresCompiler to the source watcher
   private val sourceWatcher = new SourceWatcher(config, resolver :: Nil)
   private val search = new SearchService(config, resolver)
   private val reTypecheck = new ClassfileListener {
-    def reTypeCheck(): Unit = {
-      reTypecheckNeededAt = Some(System.currentTimeMillis() + 1000)
-    }
+    def reTypeCheck(): Unit = actor ! AskReTypecheck
     def classfileAdded(f: FileObject): Unit = reTypeCheck()
     def classfileChanged(f: FileObject): Unit = reTypeCheck()
     def classfileRemoved(f: FileObject): Unit = reTypeCheck()
@@ -109,21 +108,16 @@ class Project(
   }
 
   class ProjectActor extends Actor {
-    case object TickEvent
-    private var tick: Cancellable = _
+    case object Retypecheck
 
-    override def preStart(): Unit = {
-      import scala.concurrent.duration._
-      tick = context.system.scheduler.schedule(
-        initialDelay = 2 seconds,
-        interval = 2 seconds,
-        receiver = self,
-        message = TickEvent
-      )
-    }
+    val typecheckDelay = 1000 millis
+    val typecheckCooldown = 5000 millis
+    private var tick: Option[Cancellable] = None
+
+    private var earliestRetypecheck = Deadline.now
 
     override def postStop(): Unit = {
-      tick.cancel()
+      tick.foreach(_.cancel())
     }
 
     override def receive = waiting orElse connected
@@ -145,19 +139,15 @@ class Project(
     }
 
     private val connected: Receive = {
-      case TickEvent =>
-        reTypecheckNeededAt.foreach(t =>
-          /*
-           Do not do this if we're in "reload all files" mode
-           - reloadallfiles sets flag
-           - unloadallfiles unsets the flag
-           */
-          if (System.currentTimeMillis() >= t) {
-            log.warn("Re-typecheck needed")
-            reTypecheckNeededAt = None
-            analyzer.foreach(_ ! ReloadExistingFilesEvent)
-          }
-        )
+      case Retypecheck =>
+        log.warn("Re-typecheck needed")
+        analyzer.foreach(_ ! ReloadExistingFilesEvent)
+        earliestRetypecheck = typecheckCooldown.fromNow
+      case AskReTypecheck =>
+        tick.foreach(_.cancel())
+        val timeToTypecheck = earliestRetypecheck.timeLeft max typecheckDelay
+        tick = Some(context.system.scheduler.scheduleOnce(timeToTypecheck, self, Retypecheck))
+
       case IncomingMessageEvent(msg: WireFormat) =>
         protocol.handleIncomingMessage(msg)
       case AddUndo(sum, changes) =>

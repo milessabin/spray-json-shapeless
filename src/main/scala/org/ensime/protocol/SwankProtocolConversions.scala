@@ -189,6 +189,17 @@ class SwankProtocolConversions extends ProtocolConversions {
         SExp(key(":indexer-ready"))
       /**
        * Doc Event:
+       *   :compiler-restarted
+       * Summary:
+       *   Signal that the compiler was restarted. :type-id values received earlier
+       *    are now invalid.
+       * Structure:
+       *   (:compiler-restarted)
+       */
+      case CompilerRestartedEvent =>
+        SExp(key(":compiler-restarted"))
+      /**
+       * Doc Event:
        *   :scala-notes
        * Summary:
        *   Notify client when Scala compiler generates errors,warnings or other notes.

@@ -48,6 +48,11 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askTypeInfoById(id: Int): Option[TypeInfo] =
     askOption(typeById(id).map(TypeInfo(_))).getOrElse(None)
 
+  def askMemberInfoByName(typeName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo] = {
+    val name = typeName + "$" + memberName + (if (memberIsType) "" else "$")
+    askOption(symbolByName(name).map(SymbolInfo(_))).getOrElse(None)
+  }
+
   def askTypeInfoByName(name: String): Option[TypeInfo] =
     askOption(typeByName(name).map(TypeInfo(_))).getOrElse(None)
 
@@ -112,9 +117,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askReloadFiles(all)
   }
 
-  def askReloadExistingFiles() = {
-    askReloadFiles(activeUnits.map(_.source))
-  }
+  def loadedFiles: List[SourceFile] = activeUnits.map(_.source)
+
+  def askReloadExistingFiles() =
+    askReloadFiles(loadedFiles)
 
   def askInspectTypeById(id: Int): Option[TypeInspectInfo] =
     askOption(typeById(id).map(inspectType)).getOrElse(None)
@@ -136,8 +142,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations =
     askOption(
-      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty)
-      )
+      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty))
 
   def askClearTypeCache() = clearTypeCache()
 
@@ -325,11 +330,7 @@ class RichPresentationCompiler(
 
   protected def symbolByName(name: String): Option[Symbol] = {
     try {
-      val sym = if (name.endsWith("$")) {
-        rootMirror.getModuleByName(newTermName(name.substring(0, name.length - 1)))
-      } else {
-        rootMirror.getClassByName(newTypeName(name))
-      }
+      val sym = symbolFromString(name)
       sym match {
         case NoSymbol => None
         case sym: Symbol => Some(sym)

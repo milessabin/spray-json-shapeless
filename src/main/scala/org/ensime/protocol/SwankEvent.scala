@@ -14,6 +14,7 @@ case class SendBackgroundMessageEvent(code: Int, detail: Option[String]) extends
 case object AnalyzerReadyEvent extends GeneralSwankEvent
 case object FullTypeCheckCompleteEvent extends GeneralSwankEvent
 case object IndexerReadyEvent extends GeneralSwankEvent
+case object CompilerRestartedEvent extends GeneralSwankEvent
 
 case object ClearAllJavaNotesEvent extends GeneralSwankEvent
 case object ClearAllScalaNotesEvent extends GeneralSwankEvent

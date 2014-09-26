@@ -177,6 +177,10 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     getAnalyzer ! RPCRequestEvent(SymbolAtPointReq(new File(f), point), callId)
   }
 
+  override def rpcMemberByName(typeFullName: String, memberName: String, memberIsType: Boolean, callId: Int) {
+    getAnalyzer ! RPCRequestEvent(MemberByNameReq(typeFullName, memberName, memberIsType), callId)
+  }
+
   override def rpcTypeById(id: Int, callId: Int) {
     getAnalyzer ! RPCRequestEvent(TypeByIdReq(id), callId)
   }

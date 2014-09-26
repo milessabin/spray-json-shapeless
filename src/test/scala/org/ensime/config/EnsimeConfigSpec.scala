@@ -30,11 +30,15 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
       withTempDirectory { dir =>
         (dir / ".ensime_cache").mkdirs()
         (dir / "abc").mkdirs()
+
+        val dirStr = TestUtil.fileToWireString(dir)
+        val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
+
         test(dir, s"""
 (:name "project"
  :scala-version "2.10.4"
- :root-dir "$dir"
- :cache-dir "$dir/.ensime_cache"
+ :root-dir $dirStr
+ :cache-dir $cacheStr
  :reference-source-roots ()
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
@@ -60,11 +64,15 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
       withTempDirectory { dir =>
         (dir / ".ensime_cache").mkdirs()
         (dir / "abc").mkdirs()
+
+        val dirStr = TestUtil.fileToWireString(dir)
+        val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
+
         test(dir, s"""
 (:name "project"
  :scala-version "2.10.4"
- :root-dir "$dir"
- :cache-dir "$dir/.ensime_cache"
+ :root-dir $dirStr
+ :cache-dir $cacheStr
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
                 :targets ("abc"))))""", { implicit config =>

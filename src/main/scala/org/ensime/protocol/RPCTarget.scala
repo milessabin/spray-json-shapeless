@@ -47,6 +47,8 @@ trait RPCTarget {
 
   def rpcSymbolAtPoint(f: String, point: Int, callId: Int)
 
+  def rpcMemberByName(typeFullName: String, memberName: String, memberIsType: Boolean, callId: Int)
+
   def rpcTypeById(id: Int, callId: Int)
 
   def rpcTypeByName(name: String, callId: Int)
