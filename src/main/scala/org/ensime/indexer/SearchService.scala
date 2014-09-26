@@ -90,7 +90,7 @@ class SearchService(
     val bases = {
       config.modules.flatMap {
         case (name, m) =>
-          scan(m.target) ::: scan(m.testTarget) :::
+          m.targets.flatMap { d => scan(d) } ::: m.testTargets.flatMap { d => scan(d) } :::
             m.compileJars.map(vfile) ::: m.testJars.map(vfile)
       }
     }.toSet + vfile(config.javaLib)

@@ -69,7 +69,7 @@ object TestUtil {
         copyDirectory(file(testSourcePath), testSourcesDir)
 
       EnsimeModule(
-        "single", classesDir, testClassesDir, Nil,
+        "single", classesDir :: Nil, testClassesDir :: Nil, Nil,
         compileJars, Nil, testJars,
         mainSourcesDir :: testSourcesDir :: Nil,
         sourceJars
@@ -77,9 +77,9 @@ object TestUtil {
     }
 
     if (classes)
-      copyDirectory(compileClassDirs, module.target)
+      copyDirectory(compileClassDirs, module.targets.head)
     if (testClasses)
-      copyDirectory(testClassDirs, module.testTarget)
+      copyDirectory(testClassDirs, module.testTargets.head)
 
     val cacheDir = base / ".ensime_cache"
     cacheDir.mkdirs()
