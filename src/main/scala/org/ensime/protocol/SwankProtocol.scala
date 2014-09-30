@@ -917,6 +917,27 @@ class SwankProtocol extends Protocol {
 
       /**
        * Doc RPC:
+       *   swank:member-by-name
+       * Summary:
+       *   Request description of a member of a given type
+       * Arguments:
+       *   String: Type full-name as return by swank:typeInfo
+       *   String: Member name
+       *   Boolean: true if the member is a trait or class, flase otherwise
+       * Return:
+       *   A SymbolInfo
+       * Example call:
+       *   (:swank-rpc (swank:member-by-name "com.example.Class", "x", nil) 42)
+       * Example return:
+       *   (:return (:ok (:name "x" :local-name "x" :type (:name "String" :type-id 25
+       *   :full-name "java.lang.String" :decl-as class) :decl-pos
+       *   (:file "SwankProtocol.scala" :offset 36404))) 42)
+       */
+      case ("swank:member-by-name", StringAtom(typeFullName) :: StringAtom(memberName) :: BooleanAtom(memberIsType) :: Nil) =>
+        rpcTarget.rpcMemberByName(typeFullName, memberName, memberIsType, callId)
+
+      /**
+       * Doc RPC:
        *   swank:type-by-id
        * Summary:
        *   Request description of the type with given type id.

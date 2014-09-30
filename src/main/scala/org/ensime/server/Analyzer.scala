@@ -64,15 +64,10 @@ class Analyzer(
 
   private val reporter = new PresentationReporter(reportHandler)
 
-  protected val scalaCompiler: RichCompilerControl = new RichPresentationCompiler(
-    config, settings, reporter, self, indexer, search
-  )
-
+  protected var scalaCompiler: RichCompilerControl = makeScalaCompiler()
   protected var initTime: Long = 0
   private var awaitingInitialCompile = true
   private var allFilesLoaded = false
-
-  import scalaCompiler._
 
   override def preStart(): Unit = {
     project.bgMessage("Initializing Analyzer. Please wait...")
@@ -96,6 +91,24 @@ class Analyzer(
       }
   }
 
+  protected def makeScalaCompiler() = new RichPresentationCompiler(
+    config, settings, reporter, self, indexer, search)
+
+  protected def restartCompiler(keepLoaded: Boolean): Unit = {
+    val files = scalaCompiler.loadedFiles
+    presCompLog.warn("Shut down old PC")
+    scalaCompiler.askShutdown()
+    presCompLog.warn("Starting new PC")
+    scalaCompiler = makeScalaCompiler()
+    if (keepLoaded) {
+      presCompLog.warn("Reloading files")
+      scalaCompiler.askReloadFiles(files)
+    }
+    scalaCompiler.askNotifyWhenReady()
+    project ! AsyncEvent(CompilerRestartedEvent)
+    presCompLog.warn("Started")
+  }
+
   def process(msg: Any): Unit = {
     msg match {
       case AnalyzerShutdownEvent =>
@@ -103,12 +116,10 @@ class Analyzer(
         scalaCompiler.askShutdown()
         context.stop(self)
 
-      case ReloadExistingFilesEvent => if (!allFilesLoaded) {
-        scalaCompiler.askInvalidateTargets()
-        scalaCompiler.askRemoveAllDeleted()
-        scalaCompiler.askReloadExistingFiles()
+      case ReloadExistingFilesEvent => if (allFilesLoaded) {
+        presCompLog.warn("Skippi ng reload, in all-files mode")
       } else {
-        presCompLog.warn("Skipping, in all-files mode")
+        restartCompiler(true)
       }
 
       case FullTypeCheckCompleteEvent =>
@@ -130,7 +141,7 @@ class Analyzer(
 
             req match {
               case RemoveFileReq(file: File) =>
-                askRemoveDeleted(file)
+                scalaCompiler.askRemoveDeleted(file)
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadAllReq =>
@@ -142,9 +153,7 @@ class Analyzer(
 
               case UnloadAllReq =>
                 allFilesLoaded = false
-                scalaCompiler.askInvalidateTargets()
-                scalaCompiler.askRemoveAllDeleted()
-                scalaCompiler.askUnloadAllFiles()
+                restartCompiler(false)
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadFilesReq(files) =>
@@ -240,6 +249,13 @@ class Analyzer(
 
               case TypeByIdReq(id: Int) =>
                 val result = scalaCompiler.askTypeInfoById(id) match {
+                  case Some(info) => toWF(info)
+                  case None => wfNull
+                }
+                project ! RPCResultEvent(result, callId)
+
+              case MemberByNameReq(typeName: String, memberName: String, memberIsType: Boolean) =>
+                val result = scalaCompiler.askMemberInfoByName(typeName, memberName, memberIsType) match {
                   case Some(info) => toWF(info)
                   case None => wfNull
                 }

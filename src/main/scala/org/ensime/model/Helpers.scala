@@ -112,6 +112,53 @@ trait Helpers { self: Global =>
     else sym.nameString
   }
 
+  /**
+   * The reverse of typeFullName: convert a full-path string to a symbol
+   */
+  protected def symbolFromString(name: String): Symbol = {
+    def segments(name: String): List[Name] = {
+      val len = name.length
+      if (len == 0) {
+        throw new IllegalArgumentException("Empty symbol name")
+      }
+
+      val idx = name.indexWhere(ch => ch == '.' || ch == '$')
+      idx match {
+        case 0 => throw new IllegalArgumentException("Empty symbol part")
+        case -1 =>
+          // Last part of symbol, no '$' -> a class
+          return List(newTypeName(name))
+        case _ =>
+      }
+
+      val (cur, div, rest) = (name.take(idx), name.charAt(idx), name.drop(idx + 1))
+      if (div == '.') {
+        if (rest == "") {
+          throw new IllegalArgumentException("Unexpected period at end of symbol name")
+        } else {
+          // part ends with '.' : a package
+          newTermName(cur) :: segments(rest)
+        }
+      } else {
+        if (rest == "") {
+          // Last part ends with '$': an object or package
+          List(newTermName(cur))
+        } else if (rest.charAt(0) == '$') {
+          // Part ends with "$$": an object
+          newTermName(cur) :: segments(rest.drop(1))
+        } else {
+          // Part ends with "$": a class
+          newTypeName(cur) :: segments(rest)
+        }
+      }
+    }
+
+    val s = segments(name)
+    s.foldLeft[Symbol](RootClass) { (sym, name) =>
+      sym.info.member(name)
+    }
+  }
+
   /* Give the outerClass of a symbol representing a nested type */
   def outerClass(typeSym: Symbol): Option[Symbol] = {
     try {
