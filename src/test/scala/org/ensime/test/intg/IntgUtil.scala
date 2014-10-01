@@ -178,36 +178,22 @@ object IntgUtil extends Assertions with SLF4JLogging {
    * @param projectSource The directory containing the test project (will not be modified)
    * @param f The test function to run
    */
-  def withTestProject(projectSource: String)(f: (EnsimeConfig, InteractorHelper) => Unit): Unit = {
+  def withTestProject(path: String)(f: (EnsimeConfig, InteractorHelper) => Unit): Unit = {
 
     withTempDirectory { base =>
       val projectBase = base.canon
 
       log.info("Target dir = " + projectBase)
-      log.info("Copying files from " + projectSource)
-      copyFilesEnsuringUnixLines(projectSource, projectBase)
+      log.info("Copying files from " + path)
+
+      // copies all the test classes, this is more than is needed
+      val config = TestUtil.basicConfig(base, testClasses = true, jars = false)
+      val sourceRoot = config.modules.values.head.sourceRoots.head
+
+      copyFilesEnsuringUnixLines(path, sourceRoot)
 
       log.info("copied: " + projectBase.tree.toList)
 
-      log.info("Building ensime configuration")
-
-      val cmdLine =
-        (if (sys.props("os.name").toLowerCase.contains("windows"))
-          List("cmd", "/c")
-        else Nil) ::: List("sbt", "--warn", "compile", "gen-ensime")
-
-      val buildProcess = scala.sys.process.Process(cmdLine, Some(projectBase))
-      buildProcess.!
-      log.info("Build done")
-      val ensimeFile = projectBase / ".ensime"
-      val ensimeFileContents = ensimeFile.readLines().mkString("\n")
-      val cacheDir = projectBase / ".ensime_cache"
-
-      if (cacheDir.exists())
-        FileUtils.delete(cacheDir)
-      cacheDir.mkdirs()
-
-      val config = Server.readEnsimeConfig(ensimeFile)
       val server = Server.initialiseServer(config)
 
       implicit val actorSystem = server.actorSystem
@@ -216,18 +202,8 @@ object IntgUtil extends Assertions with SLF4JLogging {
       interactor.expectRPC(1 seconds, "(swank:connection-info)",
         """(:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9"))""")
 
-      // drop the last brace in the ensime file and add some extra config
-      val configStr = ensimeFileContents.trim.dropRight(1) +
-        s"""
-         | :active-subproject "simple"
-         |)
-         """.stripMargin
+      val initMsg = s"(swank:init-project ())"
 
-      val initMsg = s"""(swank:init-project
-                        | ($configStr)
-                        | )""".stripMargin
-
-      val sourceRoot = projectBase / "/src/main/scala"
       // we have to break it out because sourceroots also contains src.zip
       val initResp = interactor.sendRPCString(3 seconds, initMsg)
       // return is of the form (:ok ( :project-name ...)) so extract the data

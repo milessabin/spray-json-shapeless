@@ -15,9 +15,10 @@ class BasicWorkflow extends FunSpec with Matchers {
   describe("Server") {
     it("should open the test project", SlowTest) {
 
-      IntgUtil.withTestProject("src/test/resources/intg/simple") { (config, interactor) =>
+      IntgUtil.withTestProject("src/example-simple") { (config, interactor) =>
 
-        val fooFile = TestUtil.fileToWireString(config.root / "src/main/scala/org/example/Foo.scala")
+        val sourceRoot = config.modules.values.head.sourceRoots.head
+        val fooFile = TestUtil.fileToWireString(sourceRoot / "org/example/Foo.scala")
         // typecheck
         interactor.expectRPC(20 seconds, s"""(swank:typecheck-file $fooFile)""",
           """(:ok t)""")
