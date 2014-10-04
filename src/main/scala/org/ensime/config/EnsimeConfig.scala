@@ -15,7 +15,8 @@ case class EnsimeConfig(
     compilerArgs: List[String],
     modules: Map[String, EnsimeModule],
     referenceSourceJars: List[File],
-    formattingPrefs: FormattingPreferences = FormattingPreferences()) {
+    formattingPrefs: FormattingPreferences = FormattingPreferences(),
+    sourceMode: Boolean = false) {
   (root :: cacheDir :: referenceSourceJars).foreach { f =>
     require(f.exists, s"$f is required but does not exist")
   }
@@ -28,10 +29,14 @@ case class EnsimeConfig(
   } yield file
 
   def runtimeClasspath: Set[File] =
-    compileClasspath ++ modules.values.flatMap(_.debugJars)
+    compileClasspath ++ modules.values.flatMap(_.debugJars) ++ targetClasspath
 
   def compileClasspath: Set[File] = modules.values.toSet.flatMap {
-    m: EnsimeModule => m.compileJars ++ m.testJars ++ m.targets ++ m.testTargets
+    m: EnsimeModule => m.compileJars ++ m.testJars
+  } ++ (if (sourceMode) List.empty else targetClasspath)
+
+  def targetClasspath: Set[File] = modules.values.toSet.flatMap {
+    m: EnsimeModule => m.targets ++ m.testTargets
   }
 
   val javaLib = file(Properties.jdkHome) / "jre/lib/rt.jar"
@@ -178,10 +183,11 @@ object EnsimeConfig extends SLF4JLogging {
       }
     }
 
+    val sourceMode = rootMap.getBooleanOpt(":source-mode").getOrElse(false)
     EnsimeConfig(
       root.tap(_.mkdirs()).canon, cacheDir.tap(_.mkdirs()).canon,
       name, scalaVersion, compilerArgs, subModules,
-      referenceSourceJars, formattingPrefs
+      referenceSourceJars, formattingPrefs, sourceMode
     )
   }
 }

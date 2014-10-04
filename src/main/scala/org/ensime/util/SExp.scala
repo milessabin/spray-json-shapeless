@@ -37,6 +37,14 @@ class SExpMapExplorer(list: SExpList) extends SExpListExplorer(list) {
     case None => None
   }
 
+  def getBoolean(name: String): Boolean = getBooleanOpt(name).getOrElse(throw matchError("required key " + name + " not found"))
+
+  def getBooleanOpt(name: String): Option[Boolean] = map.get(KeywordAtom(name)) match {
+    case Some(BooleanAtom(s)) => Some(s)
+    case Some(_) => throw matchError("Key " + name + " does not refer to a string element")
+    case None => None
+  }
+
   def getStringListOpt(name: String): Option[List[String]] = getStringListOpt(KeywordAtom(name))
   def getStringListOpt(name: KeywordAtom): Option[List[String]] = {
     map.get(name) match {

@@ -78,6 +78,7 @@ class Analyzer(
     Future {
       reporter.disable()
       scalaCompiler.askNotifyWhenReady()
+      if (config.sourceMode) scalaCompiler.askReloadAllFiles()
     }
   }
 
@@ -117,7 +118,7 @@ class Analyzer(
         context.stop(self)
 
       case ReloadExistingFilesEvent => if (allFilesLoaded) {
-        presCompLog.warn("Skippi ng reload, in all-files mode")
+        presCompLog.warn("Skipping reload, in all-files mode")
       } else {
         restartCompiler(true)
       }
@@ -152,8 +153,14 @@ class Analyzer(
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case UnloadAllReq =>
-                allFilesLoaded = false
-                restartCompiler(false)
+                if (config.sourceMode) {
+                  log.info("in source mode, will reload all files")
+                  scalaCompiler.askRemoveAllDeleted()
+                  restartCompiler(true)
+                } else {
+                  allFilesLoaded = false
+                  restartCompiler(false)
+                }
                 project ! RPCResultEvent(toWF(value = true), callId)
 
               case ReloadFilesReq(files) =>
