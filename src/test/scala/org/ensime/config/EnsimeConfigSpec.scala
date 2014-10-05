@@ -56,6 +56,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
           val module1 = config.modules("module1")
           assert(module1.name == "module1")
           assert(module1.dependencies.isEmpty)
+          assert(config.sourceMode == false)
         })
       }
     }
@@ -87,6 +88,32 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
       }
     }
 
-  }
+    it("should base class paths on source-mode value") {
+      List(true, false) foreach { (sourceMode: Boolean) =>
+        withTempDirectory { dir =>
+          (dir / ".ensime_cache").mkdirs()
+          (dir / "abc").mkdirs()
 
+          val dirStr = TestUtil.fileToWireString(dir)
+          val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
+
+          test(dir, s"""
+(:name "project"
+ :scala-version "2.10.4"
+ :root-dir $dirStr
+ :cache-dir $cacheStr
+ :source-mode ${if (sourceMode) "t" else "nil"}
+ :subprojects ((:name "module1"
+                :scala-version "2.10.4"
+                :targets ("abc"))))""", { implicit config =>
+            assert(config.sourceMode == sourceMode)
+            assert(config.runtimeClasspath == Set(dir / "abc"))
+            assert(config.compileClasspath == (
+              if (sourceMode) Set.empty else Set(dir / "abc")
+            ))
+          })
+        }
+      }
+    }
+  }
 }
