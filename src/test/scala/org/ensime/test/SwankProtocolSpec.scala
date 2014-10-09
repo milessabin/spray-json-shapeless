@@ -280,6 +280,12 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       }
     }
 
+    it("should understand swank:inspect-type-by-name") {
+      test("""(swank:inspect-type-by-name "abc.d")""") { (t, m, id) =>
+        (t.rpcInspectTypeByName _).expects("abc.d", id)
+      }
+    }
+
     it("should understand symbol-at-point") {
       test("""(swank:symbol-at-point "SwankProtocol.scala" 36483)""") { (t, m, id) =>
         (t.rpcSymbolAtPoint _).expects("SwankProtocol.scala", 36483, id)

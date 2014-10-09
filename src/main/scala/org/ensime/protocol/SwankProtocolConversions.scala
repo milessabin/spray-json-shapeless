@@ -130,11 +130,14 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":thread-name"), obj.threadName)
   }
 
-  override def toWF(pos: SourcePosition): SExp = {
-    SExp(
-      key(":file"), pos.file.getAbsolutePath,
-      key(":offset"), pos.offset, // we should deprecate this
-      key(":line"), pos.line)
+  override def toWF(pos: SourcePosition): SExp = pos match {
+    case e: EmptySourcePosition => TruthAtom
+    case l: LineSourcePosition => SExp(
+      key(":file"), l.file.getAbsolutePath,
+      key(":line"), l.line)
+    case o: OffsetSourcePosition => SExp(
+      key(":file"), o.file.getAbsolutePath,
+      key(":offset"), o.offset)
   }
 
   override def toWF(info: ConnectionInfo): SExp = {

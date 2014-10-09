@@ -14,15 +14,16 @@ import org.ensime.util.RichFile._
 
 abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
 
-/**
- * Common output from source and class information for source location.
- *
- * NOTE: the (legacy) protocol expects to see file and offset, but
- * this information is only available from the presentation compiler:
- * not from search results. We'll move the protocol toward Option
- * offsets, but for now we have to do some server side inference.
- */
-case class SourcePosition(file: File, line: Int, offset: Int)
+sealed trait PosNeeded
+case object PosNeededNo extends PosNeeded
+case object PosNeededAvail extends PosNeeded
+case object PosNeededYes extends PosNeeded
+
+sealed trait SourcePosition
+case class EmptySourcePosition() extends SourcePosition
+case class OffsetSourcePosition(file: File, offset: Int) extends SourcePosition
+case class LineSourcePosition(file: File, line: Int) extends SourcePosition
+
 case class SourceFileInfo(file: File, contents: Option[String])
 object SourceFileInfo {
   def apply(file: String) = new SourceFileInfo(new File(file), None)
@@ -119,7 +120,7 @@ case class PatchReplace(
   end: Int,
   text: String) extends PatchOp
 
-case class Breakpoint(pos: SourcePosition)
+case class Breakpoint(pos: LineSourcePosition)
 case class BreakpointList(active: List[Breakpoint], pending: List[Breakpoint])
 
 case class OffsetRange(from: Int, to: Int)
@@ -185,7 +186,7 @@ case class DebugStackFrame(
   numArguments: Int,
   className: String,
   methodName: String,
-  pcLocation: SourcePosition,
+  pcLocation: LineSourcePosition,
   thisObjectId: Long)
 
 case class DebugBacktrace(
@@ -253,16 +254,23 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
   }
 
-  def locateSymbolPos(sym: Symbol): Option[SourcePosition] =
-    if (sym == NoSymbol) None
-    else if (sym.pos != NoPosition) SourcePosition.fromPosition(sym.pos)
-    else {
+  def locateSymbolPos(sym: Symbol, needPos: PosNeeded): Option[SourcePosition] =
+    if (sym == NoSymbol || needPos == PosNeededNo) None
+    else if (sym.pos != NoPosition) {
+      if (needPos eq PosNeededYes)
+        OffsetSourcePosition.fromPosition(sym.pos)
+      else Some(EmptySourcePosition())
+    } else {
       // we might need this for some Java fqns but we need some evidence
       // val name = genASM.jsymbol(sym).fullName
       val name = sym.fullName
       val hit = search.findUnique(name)
       logger.debug(s"search: $name = $hit")
-      hit.flatMap(SourcePosition.fromFqnSymbol(_)(config))
+      if (needPos eq PosNeededYes) {
+        hit.flatMap(LineSourcePosition.fromFqnSymbol(_)(config))
+      } else {
+        if (hit.isEmpty) None else Some(EmptySourcePosition())
+      }
     }
 
   // When inspecting a type, transform a raw list of TypeMembers to a sorted
@@ -328,7 +336,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
         val sortedInfos = nestedTypes ++ fields ++ constructors ++ methods
 
-        new InterfaceInfo(TypeInfo(ownerSym.tpe, sortedInfos),
+        new InterfaceInfo(TypeInfo(ownerSym.tpe, PosNeededAvail, sortedInfos),
           viaView.map(_.name.toString))
     }
   }
@@ -371,7 +379,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         } else if (!sym.nameString.contains("$") && (sym != NoSymbol) && (sym.tpe != NoType)) {
           if (sym.isClass || sym.isTrait || sym.isModule ||
             sym.isModuleClass || sym.isPackageClass) {
-            Some(TypeInfo(sym.tpe))
+            Some(TypeInfo(sym.tpe, PosNeededAvail))
           } else {
             None
           }
@@ -386,8 +394,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
   object TypeInfo {
 
-    // WARNING: potentially does lots of I/O. should be refactored
-    def apply(typ: Type, members: Iterable[EntityInfo] = List.empty): TypeInfo = {
+    // use needPos=PosNeededYes sparingly as it potentially causes lots of I/O
+    def apply(typ: Type, needPos: PosNeeded = PosNeededNo, members: Iterable[EntityInfo] = List.empty): TypeInfo = {
       val tpe = typ match {
         // TODO: Instead of throwing away this information, would be better to
         // alert the user that the type is existentially quantified.
@@ -402,7 +410,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
           val typeSym = tpe.typeSymbol
           val sym = if (typeSym.isModuleClass)
             typeSym.sourceModule else typeSym
-          val symPos = locateSymbolPos(sym)
+          val symPos = locateSymbolPos(sym, needPos)
           val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
           new TypeInfo(
             typeShortName(tpe),
@@ -470,8 +478,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       new SymbolInfo(
         name,
         localName,
-        locateSymbolPos(sym),
-        TypeInfo(tpe),
+        locateSymbolPos(sym, PosNeededYes),
+        TypeInfo(tpe, PosNeededYes),
         isArrowType(tpe),
         ownerTpe.map(cacheType))
     }
@@ -509,7 +517,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
   object NamedTypeMemberInfo {
     def apply(m: TypeMember): NamedTypeMemberInfo = {
       val decl = declaredAs(m.sym)
-      val pos = SourcePosition.fromPosition(m.sym.pos)
+      val pos = if (m.sym.pos == NoPosition) None else Some(EmptySourcePosition())
       new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), pos, decl)
     }
   }
@@ -545,7 +553,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
 }
 
-object SourcePosition extends SLF4JLogging {
+object LineSourcePosition {
 
   // HACK: the emacs client currently can't open files in jars
   //       so we extract to the cache and report that as the source
@@ -569,17 +577,22 @@ object SourcePosition extends SLF4JLogging {
         }
     }
 
-  def fromFqnSymbol(sym: FqnSymbol)(implicit config: EnsimeConfig): Option[SourcePosition] =
+  def fromFqnSymbol(sym: FqnSymbol)(implicit config: EnsimeConfig): Option[LineSourcePosition] =
     (sym.sourceFileObject, sym.line, sym.offset) match {
       case (None, _, _) => None
       case (Some(fo), lineOpt, offsetOpt) =>
         val f = possiblyExtractFile(fo)
-        Some(SourcePosition(f, lineOpt.getOrElse(0), offsetOpt.getOrElse(0)))
+        Some(new LineSourcePosition(f, lineOpt.getOrElse(0)))
     }
 
-  def fromPosition(p: Position): Option[SourcePosition] = p match {
+}
+
+object OffsetSourcePosition {
+  import pimpathon.file._
+
+  def fromPosition(p: Position): Option[OffsetSourcePosition] = p match {
     case NoPosition => None
     case p =>
-      Some(SourcePosition(file(p.source.file.path).canon, p.line, p.point))
+      Some(new OffsetSourcePosition(file(p.source.file.path).canon, p.point))
   }
 }

@@ -43,10 +43,10 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
 
   def askTypeInfoAt(p: Position): Option[TypeInfo] =
-    askOption(typeAt(p).map(TypeInfo(_))).getOrElse(None)
+    askOption(typeAt(p).map(TypeInfo(_, PosNeededYes))).getOrElse(None)
 
   def askTypeInfoById(id: Int): Option[TypeInfo] =
-    askOption(typeById(id).map(TypeInfo(_))).getOrElse(None)
+    askOption(typeById(id).map(TypeInfo(_, PosNeededYes))).getOrElse(None)
 
   def askMemberInfoByName(typeName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo] = {
     val name = typeName + "$" + memberName + (if (memberIsType) "" else "$")
@@ -54,7 +54,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   }
 
   def askTypeInfoByName(name: String): Option[TypeInfo] =
-    askOption(typeByName(name).map(TypeInfo(_))).getOrElse(None)
+    askOption(typeByName(name).map(TypeInfo(_, PosNeededYes))).getOrElse(None)
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = {
     val nameSegs = name.split("\\.")
@@ -127,6 +127,9 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] =
     askOption(inspectTypeAt(p)).getOrElse(None)
+
+  def askInspectTypeByName(name: String): Option[TypeInspectInfo] =
+    askOption(typeByName(name).map(inspectType)).getOrElse(None)
 
   def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] =
     askOption(completePackageMember(path, prefix)).getOrElse(List.empty)
@@ -276,7 +279,7 @@ class RichPresentationCompiler(
   protected def inspectType(tpe: Type): TypeInspectInfo = {
     val parents = tpe.parents
     new TypeInspectInfo(
-      TypeInfo(tpe),
+      TypeInfo(tpe, PosNeededAvail),
       companionTypeOf(tpe).map(cacheType),
       prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]), parents))
   }
@@ -287,7 +290,7 @@ class RichPresentationCompiler(
       val parents = tpe.parents
       val preparedMembers = prepareSortedInterfaceInfo(members, parents)
       new TypeInspectInfo(
-        TypeInfo(tpe),
+        TypeInfo(tpe, PosNeededAvail),
         companionTypeOf(tpe).map(cacheType),
         preparedMembers
       )
