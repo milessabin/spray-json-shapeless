@@ -235,6 +235,13 @@ class Analyzer(
                 }
                 project ! RPCResultEvent(result, callId)
 
+              case InspectTypeByNameReq(name: String) =>
+                val result = scalaCompiler.askInspectTypeByName(name) match {
+                  case Some(info) => toWF(info)
+                  case None => wfNull
+                }
+                project ! RPCResultEvent(result, callId)
+
               case SymbolAtPointReq(file: File, point: Int) =>
                 val p = pos(file, point)
                 val result = scalaCompiler.askSymbolInfoAt(p) match {

@@ -19,6 +19,7 @@ class DatabaseService(dir: File) extends SLF4JLogging {
     val ds = new BoneCPDataSource()
     ds.setDriverClass(driver)
     ds.setJdbcUrl(url)
+    ds.setStatementsCacheSize(50)
     Database.forDataSource(ds)
   }
 
@@ -75,13 +76,11 @@ class DatabaseService(dir: File) extends SLF4JLogging {
       fqnSymbols.insertAll(symbols: _*)
     }
 
+  private val findCompiled = Compiled((fqn: Column[String]) =>
+    fqnSymbols.filter(_.fqn === fqn).take(1)
+  )
   def find(fqn: String): Option[FqnSymbol] = db.withSession { implicit s =>
-    {
-      for {
-        row <- fqnSymbols
-        if row.fqn === fqn
-      } yield row
-    }.list.headOption
+    findCompiled(fqn).firstOption
   }
 
   import IndexService._
@@ -145,8 +144,7 @@ object DatabaseService {
       internal: Option[String], // for fields
       source: Option[String], // VFS
       line: Option[Int],
-      offset: Option[Int] // to be deprecated
-      // future features:
+      offset: Option[Int] = None // future features:
       //    type: ??? --- better than descriptor/internal
       ) {
     // this is just as a helper until we can use more sensible

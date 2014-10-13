@@ -53,13 +53,13 @@ class DebugManager(
     try { action } catch { case e: Exception => orElse }
   }
 
-  def locToPos(loc: Location): Option[SourcePosition] = {
+  def locToPos(loc: Location): Option[LineSourcePosition] = {
     try {
       (for (set <- sourceMap.get(loc.sourceName())) yield {
         if (set.size > 1) {
           log.warning("Warning, ambiguous source name: " + loc.sourceName())
         }
-        set.headOption.map(f => SourcePosition(f, loc.lineNumber, -1))
+        set.headOption.map(f => LineSourcePosition(f, loc.lineNumber))
       }).getOrElse(None)
     } catch {
       case e: AbsentInformationException => None
@@ -91,16 +91,16 @@ class DebugManager(
     if ((for (vm <- maybeVM) yield {
       vm.setBreakpoint(file, line)
     }).getOrElse { false }) {
-      activeBreakpoints.add(Breakpoint(SourcePosition(file, line, -1)))
+      activeBreakpoints.add(Breakpoint(LineSourcePosition(file, line)))
       true
     } else {
-      addPendingBreakpoint(Breakpoint(SourcePosition(file, line, -1)))
+      addPendingBreakpoint(Breakpoint(LineSourcePosition(file, line)))
       false
     }
   }
 
   def clearBreakpoint(file: CanonFile, line: Int) {
-    val clearBp = Breakpoint(SourcePosition(file, line, -1))
+    val clearBp = Breakpoint(LineSourcePosition(file, line))
     for (bps <- pendingBreaksBySourceName.get(file.getName)) {
       bps.retain { _ != clearBp }
     }
@@ -887,10 +887,10 @@ class DebugManager(
       val methodName = ignoreErr(frame.location.method().name(), "Method")
       val className = ignoreErr(frame.location.declaringType().name(), "Class")
       val pcLocation = locToPos(frame.location).getOrElse(
-        SourcePosition(
+        LineSourcePosition(
           CanonFile(
             frame.location.sourcePath()),
-          frame.location.lineNumber, -1))
+          frame.location.lineNumber))
       val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1L)
       DebugStackFrame(index, locals, numArgs, className, methodName, pcLocation, thisObjId)
     }

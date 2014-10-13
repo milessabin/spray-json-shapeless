@@ -31,8 +31,8 @@ object SwankProtocolConversionsSpec {
   val completionInfo2 = new CompletionInfo("name2",
     new CompletionSignature(List(List(("abc", "def"))), "ABC"), 90, true, 91, None)
 
-  val methodSearchRes = MethodSearchResult("abc", "a", 'abcd, Some(SourcePosition(file("abd"), 10, 27)), "ownerStr")
-  val typeSearchRes = TypeSearchResult("abc", "a", 'abcd, Some(SourcePosition(file("abd"), 10, 27)))
+  val methodSearchRes = MethodSearchResult("abc", "a", 'abcd, Some(LineSourcePosition(file("abd"), 10)), "ownerStr")
+  val typeSearchRes = TypeSearchResult("abc", "a", 'abcd, Some(LineSourcePosition(file("abd"), 10)))
 
   val note1 = new Note("file1", "note1", 2, 23, 33, 19, 8)
   val note2 = new Note("file1", "note2", 1, 23, 33, 19, 8)
@@ -50,8 +50,11 @@ object SwankProtocolConversionsSpec {
   val file5 = CanonFile("/foo/hij")
   val file5_str = TestUtil.fileToWireString(file5)
 
-  val sourcePos1 = new SourcePosition(file1, 57, 100)
-  val sourcePos2 = new SourcePosition(file1, 59, 101)
+  val sourcePos1 = new LineSourcePosition(file1, 57)
+  val sourcePos2 = new LineSourcePosition(file1, 59)
+  val sourcePos3 = new EmptySourcePosition()
+  val sourcePos4 = new OffsetSourcePosition(file1, 456)
+
   val breakPoint1 = new Breakpoint(sourcePos1)
   val breakPoint2 = new Breakpoint(sourcePos2)
 
@@ -148,13 +151,17 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
       assert(toWF(debugStackLocal1).toWireString === """(:index 3 :name "name1" :summary "summary1" :type-name "type1")""")
 
       // toWF(evt: DebugStackFrame)
-      assert(toWF(debugStackFrame).toWireString === """(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file """ + file1_str + """ :offset 100 :line 57) :this-object-id "7")""")
+      assert(toWF(debugStackFrame).toWireString === """(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file """ + file1_str + """ :line 57) :this-object-id "7")""")
 
       // toWF(evt: DebugBacktrace)
-      assert(toWF(DebugBacktrace(List(debugStackFrame), 17, "thread1")).toWireString === """(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file """ + file1_str + """ :offset 100 :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
+      assert(toWF(DebugBacktrace(List(debugStackFrame), 17, "thread1")).toWireString === """(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file """ + file1_str + """ :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
 
-      // toWF(pos: SourcePosition)
-      assert(toWF(sourcePos1).toWireString === """(:file """ + file1_str + """ :offset 100 :line 57)""")
+      // toWF(pos: LineSourcePosition)
+      assert(toWF(sourcePos1).toWireString === """(:file """ + file1_str + """ :line 57)""")
+      // toWF(pos: EmptySourcePosition)
+      assert(toWF(sourcePos3).toWireString === "t")
+      // toWF(pos: OffsetSourcePosition)
+      assert(toWF(sourcePos4).toWireString === """(:file """ + file1_str + """ :offset 456)""")
 
       // toWF(bp: Breakpoint)
       assert(toWF(breakPoint1).toWireString === """(:file """ + file1_str + """ :line 57)""")
@@ -219,15 +226,15 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
       assert(toWF(new TypeInspectInfo(typeInfo, Some(1), List(interfaceInfo))).toWireString === """(:type (:name "type1" :type-id 7 :full-name "FOO.type1" :decl-as type1 :outer-type-id 8) :info-type typeInspect :companion-id 1 :interfaces ((:type (:name "type1" :type-id 7 :full-name "FOO.type1" :decl-as type1 :outer-type-id 8) :via-view "DEF")))""")
 
       // toWF(value: SymbolSearchResults)
-      assert(toWF(new SymbolSearchResults(List(methodSearchRes, typeSearchRes))).toWireString === s"""((:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :offset 27 :line 10) :owner-name "ownerStr") (:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :offset 27 :line 10)))""")
+      assert(toWF(new SymbolSearchResults(List(methodSearchRes, typeSearchRes))).toWireString === s"""((:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10) :owner-name "ownerStr") (:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10)))""")
 
       // toWF(value: ImportSuggestions)
       assert(toWF(new ImportSuggestions(List(List(methodSearchRes, typeSearchRes)))).toWireString ===
-        s"""(((:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :offset 27 :line 10) :owner-name "ownerStr") (:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :offset 27 :line 10))))""")
+        s"""(((:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10) :owner-name "ownerStr") (:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10))))""")
 
       // toWF(value: SymbolSearchResult)
-      assert(toWF(methodSearchRes).toWireString === s"""(:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :offset 27 :line 10) :owner-name "ownerStr")""")
-      assert(toWF(typeSearchRes).toWireString === s"""(:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :offset 27 :line 10))""")
+      assert(toWF(methodSearchRes).toWireString === s"""(:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10) :owner-name "ownerStr")""")
+      assert(toWF(typeSearchRes).toWireString === s"""(:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10))""")
 
       assert(toWF(new RangePosition(batchSourceFile, 70, 75, 90)).toWireString === """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)""")
 

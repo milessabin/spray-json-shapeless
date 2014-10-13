@@ -153,34 +153,15 @@ class SearchService(
         val source = resolver.resolve(clazz.name.pack, clazz.source)
         val sourceUri = source.map(_.getName.getURI)
 
-        // very expensive. we'd like to remove the need for offsets in the
-        // swank protocol to avoid doing this. Doing it on the fly is far
-        // too expensive for end users.
-        val lineOffsets = source.map { fo =>
-          val data = ByteStreams.toByteArray(fo.getContent.getInputStream)
-          val nl = '\n'.toInt // should count only once even on windows
-          var i, lines = 0
-          var offsets: List[Int] = 0 :: 0 :: Nil
-          while (i < data.length) {
-            if (data(i) == nl) offsets ::= i
-            i += 1
-          }
-          offsets.reverse
-        }
-        def offset(lineOpt: Option[Int]) = for {
-          line <- lineOpt
-          offsets <- lineOffsets
-        } yield offsets.lift(line).getOrElse(0)
-
         // TODO: other types of visibility when we get more sophisticated
         if (clazz.access != Public) Nil
-        else FqnSymbol(None, name, path, clazz.name.fqnString, None, None, sourceUri, clazz.source.line, offset(clazz.source.line)) ::
+        else FqnSymbol(None, name, path, clazz.name.fqnString, None, None, sourceUri, clazz.source.line) ::
           clazz.methods.toList.filter(_.access == Public).map { method =>
             val descriptor = method.descriptor.descriptorString
-            FqnSymbol(None, name, path, method.name.fqnString, Some(descriptor), None, sourceUri, method.line, offset(method.line))
+            FqnSymbol(None, name, path, method.name.fqnString, Some(descriptor), None, sourceUri, method.line)
           } ::: clazz.fields.toList.filter(_.access == Public).map { field =>
             val internal = field.clazz.internalString
-            FqnSymbol(None, name, path, field.name.fqnString, None, Some(internal), sourceUri, clazz.source.line, offset(clazz.source.line))
+            FqnSymbol(None, name, path, field.name.fqnString, None, Some(internal), sourceUri, clazz.source.line)
           }
     }
   }.filterNot(sym => ignore.exists(sym.fqn.contains))
