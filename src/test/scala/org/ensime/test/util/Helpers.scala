@@ -9,9 +9,7 @@ import org.ensime.server._
 import org.ensime.test.TestUtil
 import org.scalatest.exceptions.TestFailedException
 import org.slf4j.LoggerFactory
-import pimpathon.file._
 import org.ensime.util.RichFile._
-import TestUtil._
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.Settings

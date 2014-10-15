@@ -7,6 +7,7 @@ import org.scalatest.{ Matchers, FunSpec }
 import pimpathon.file._
 
 import java.io.{ PrintWriter, File }
+import org.ensime.util.RichFile._
 
 class EnsimeConfigSpec extends FunSpec with Matchers {
 
@@ -27,7 +28,8 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
   describe("ProjectConfigSpec") {
 
     it("should parse a simple config") {
-      withTempDirectory { dir =>
+      withTempDirectory { dirRaw =>
+        val dir = dirRaw.canon
         (dir / ".ensime_cache").mkdirs()
         (dir / "abc").mkdirs()
 
@@ -62,7 +64,8 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
     }
 
     it("should parse a minimal config for a binary only project") {
-      withTempDirectory { dir =>
+      withTempDirectory { dirRaw =>
+        val dir = dirRaw.canon
         (dir / ".ensime_cache").mkdirs()
         (dir / "abc").mkdirs()
 
@@ -90,7 +93,8 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
 
     it("should base class paths on source-mode value") {
       List(true, false) foreach { (sourceMode: Boolean) =>
-        withTempDirectory { dir =>
+        withTempDirectory { dirRaw =>
+          val dir = dirRaw.canon
           (dir / ".ensime_cache").mkdirs()
           (dir / "abc").mkdirs()
 
