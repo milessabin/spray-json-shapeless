@@ -340,7 +340,7 @@ class DebugManager(
 
             case DebugListBreaksReq =>
               val breaks = BreakpointList(activeBreakpoints.toList, pendingBreakpoints)
-              sender ! breaks
+              project ! RPCResultEvent(toWF(breaks), callId)
 
             case DebugNextReq(threadId: Long) =>
               handleRPCWithVMAndThread(callId, threadId) {
