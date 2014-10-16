@@ -2,6 +2,7 @@ package org.ensime.server
 
 import java.io._
 import java.net.{ InetAddress, ServerSocket, Socket }
+import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor._
 import org.ensime.config._
@@ -84,18 +85,20 @@ class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
     startSocketListener()
   }
 
+  private val hasShutdownFlag = new AtomicBoolean(false)
   def startSocketListener(): Unit = {
     val t = new Thread(new Runnable() {
       def run() {
         try {
-          while (true) {
+          while (!hasShutdownFlag.get()) {
             try {
               val socket = listener.accept()
               log.info("Got connection, creating handler...")
               actorSystem.actorOf(Props(classOf[SocketHandler], socket, protocol, project))
             } catch {
               case e: IOException =>
-                log.error("ENSIME Server: ", e)
+                if (!hasShutdownFlag.get())
+                  log.error("ENSIME Server socket listener error: ", e)
             }
           }
         } finally {
@@ -108,8 +111,12 @@ class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
 
   def shutdown() {
     log.info("Shutting down server")
+    hasShutdownFlag.set(true)
     listener.close()
     actorSystem.shutdown()
+    log.info("Awaiting actor system shutdown")
+    actorSystem.awaitTermination()
+    log.info("Shutdown complete")
   }
   private def writePort(cacheDir: File, port: Int): Unit = {
     val portfile = new File(cacheDir, "port")
