@@ -4,7 +4,7 @@ import akka.event.slf4j.SLF4JLogging
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 
-class ClassfileIndexerTest extends FunSpec with Matchers with ClassfileIndexer with SLF4JLogging {
+class ClassfileIndexerSpec extends FunSpec with Matchers with ClassfileIndexer with SLF4JLogging {
 
   // TODO: some assertions (currently we're just checking that no exceptions are raised!)
 
