@@ -11,6 +11,7 @@ import pimpathon.file._
 import org.ensime.config._
 import org.ensime.util.FileUtils._
 import org.ensime.util.RichFile._
+import org.ensime.util.FileUtils.jdkDir
 
 object TestUtil {
 
@@ -29,7 +30,7 @@ object TestUtil {
   val scalaVersion = propOrEmpty("scala.version")
   val sourceJars = parseTestProp("ensime.jars.sources").toList
   val javaSource = {
-    val f = file(Properties.jdkHome) / "src.zip"
+    val f = jdkDir / "src.zip"
     if (f.exists) Some(f)
     else None
   }
