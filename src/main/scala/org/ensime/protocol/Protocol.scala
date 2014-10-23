@@ -44,7 +44,7 @@ trait Protocol {
    * Protocols must expose an appropriate class for converting messages to
    * the underlying wire format
    */
-  val conversions: ProtocolConversions
+  protected val conversions: ProtocolConversions
 
   /**
    * Read a message from the socket.

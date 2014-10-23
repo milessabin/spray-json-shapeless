@@ -35,6 +35,8 @@ class DebugWorkflow extends FunSpec with Matchers {
         //  :thread-id "1"
         //  :thread-name "main"))
 
+        //        interactor.expectRPC(20 seconds, s"""(swank:debug-list-breakpoints)""", """(:ok (:file "org/example/Foo.scala" 14))""")
+        //
         interactor.expectRPC(20 seconds, s"""(swank:debug-stop)""", """(:ok t)""")
       }
     }

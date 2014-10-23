@@ -12,20 +12,22 @@ import scala.tools.refactoring.common.CompilerAccess
 import scala.tools.refactoring.implementations._
 
 case class RefactorFailure(procedureId: Int, message: String)
-case class RefactorPrepareReq(procedureId: Int, refactor: RefactorDesc, interactive: Boolean)
-case class RefactorExecReq(procedureId: Int, refactorType: Symbol)
-case class RefactorCancelReq(procedureId: Int)
+case class RefactorPrepareReq(procedureId: Int, refactor: RefactorDesc) extends RPCRequest
+case class RefactorExecReq(procedureId: Int, refactorType: Symbol) extends RPCRequest
+case class RefactorCancelReq(procedureId: Int) extends RPCRequest
 
 trait RefactorProcedure {
   val procedureId: Int
   val refactorType: scala.Symbol
 }
-trait RefactorEffect extends RefactorProcedure {
-  val changes: Iterable[FileEdit]
-}
-trait RefactorResult extends RefactorProcedure {
-  val touched: Iterable[File]
-}
+
+case class RefactorEffect(procedureId: Int,
+  refactorType: scala.Symbol,
+  changes: Iterable[FileEdit]) extends RefactorProcedure
+
+case class RefactorResult(procedureId: Int,
+  refactorType: scala.Symbol,
+  touched: Iterable[File]) extends RefactorProcedure
 
 sealed abstract class RefactorDesc(val refactorType: Symbol)
 
@@ -61,11 +63,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
         refactoring.prepare(selection) match {
           case Right(prepare) =>
             refactoring.perform(selection, prepare, parameters) match {
-              case Right(modifications) => Right(new RefactorEffect {
-                val procedureId = procId
-                val refactorType = tpe
-                val changes = modifications.map(FileEdit.fromChange)
-              })
+              case Right(modifications) => Right(new RefactorEffect(procId, tpe, modifications.map(FileEdit.fromChange)))
               case Left(error) => Left(RefactorFailure(procId, error.cause))
             }
           case Left(error) => Left(RefactorFailure(procId, error.cause))
@@ -79,61 +77,41 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
 
 trait RefactoringHandler { self: Analyzer =>
 
-  import protocol._
-
   val effects: mutable.HashMap[Int, RefactorEffect] = new mutable.HashMap
 
-  def handleRefactorPrepareRequest(req: RefactorPrepareReq, callId: Int) {
+  def handleRefactorPrepareRequest(req: RefactorPrepareReq) {
     val procedureId = req.procedureId
     val refactor = req.refactor
     val result = scalaCompiler.askPerformRefactor(procedureId, refactor)
 
     result match {
-      case Right(effect) =>
-        if (req.interactive) {
-          effects(procedureId) = effect
-          project ! RPCResultEvent(toWF(effect), callId)
-        } else { // Execute the refactoring immediately..
-          project ! AddUndo("Refactoring of type: " + refactor.refactorType.toString,
-            FileUtils.inverseEdits(effect.changes))
-          val result = scalaCompiler.askExecRefactor(procedureId, refactor.refactorType, effect)
-          result match {
-            case Right(result: RefactorResult) =>
-              project ! RPCResultEvent(toWF(result), callId)
-            case Left(f) =>
-              project ! RPCResultEvent(toWF(f), callId)
-          }
-        }
-      case Left(f) => project ! RPCResultEvent(toWF(f), callId)
+      case Right(effect: RefactorEffect) =>
+        effects(procedureId) = effect
+        sender ! Right(effect)
+      case Left(failure) =>
+        sender ! Left(failure)
     }
-
   }
 
-  def handleRefactorExec(req: RefactorExecReq, callId: Int) {
+  def handleRefactorExec(req: RefactorExecReq) {
     val procedureId = req.procedureId
     effects.get(procedureId) match {
-      case Some(effect) =>
+      case Some(effect: RefactorEffect) =>
         project ! AddUndo(
           "Refactoring of type: " + req.refactorType.toString,
           FileUtils.inverseEdits(effect.changes))
         val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
-        result match {
-          case Right(result) =>
-            project ! RPCResultEvent(toWF(result), callId)
-          case Left(f) => project ! RPCResultEvent(toWF(f), callId)
-        }
+        sender ! result
       case None =>
-        val f = RefactorFailure(procedureId,
-          "No effect found for procId " + procedureId)
-        project ! RPCResultEvent(toWF(f), callId)
+        val f = RefactorFailure(procedureId, "No effect found for procId " + procedureId)
+        sender ! Left(f)
     }
   }
 
-  def handleRefactorCancel(req: RefactorCancelReq, callId: Int) {
+  def handleRefactorCancel(req: RefactorCancelReq) {
     effects.remove(req.procedureId)
-    project ! RPCResultEvent(toWF(value = true), callId)
+    sender ! VoidResponse
   }
-
 }
 
 trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
@@ -141,8 +119,7 @@ trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
   def askPerformRefactor(
     procId: Int,
     refactor: RefactorDesc): Either[RefactorFailure, RefactorEffect] = {
-    askOption(performRefactor(procId, refactor)).getOrElse(
-      Left(RefactorFailure(procId, "Refactor call failed")))
+    askOption(performRefactor(procId, refactor)).getOrElse(Left(RefactorFailure(procId, "Refactor call failed")))
   }
 
   def askExecRefactor(
@@ -225,11 +202,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     }
     val af = AbstractFile.getFile(file.getPath)
     val modifications = refactoring.addImport(af, qualName)
-    Right(new RefactorEffect {
-      val procedureId = procId
-      val refactorType = tpe
-      val changes = modifications.map(FileEdit.fromChange)
-    })
+    Right(new RefactorEffect(procId, tpe, modifications.map(FileEdit.fromChange)))
   }
 
   protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.createSourceFile(f.getPath)))
@@ -274,16 +247,12 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
 
   protected def execRefactor(
     procId: Int,
-    refctrType: scala.Symbol,
+    refactorType: scala.Symbol,
     effect: RefactorEffect): Either[RefactorFailure, RefactorResult] = {
     logger.info("Applying changes: " + effect.changes)
     writeChanges(effect.changes) match {
       case Right(touchedFiles) =>
-        Right(new RefactorResult {
-          val refactorType = refctrType
-          val procedureId = procId
-          val touched = touchedFiles
-        })
+        Right(new RefactorResult(procId, refactorType, touchedFiles))
       case Left(err) => Left(RefactorFailure(procId, err.toString))
     }
   }

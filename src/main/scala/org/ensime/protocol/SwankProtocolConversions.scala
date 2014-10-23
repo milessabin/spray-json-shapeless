@@ -455,7 +455,7 @@ class SwankProtocolConversions extends ProtocolConversions {
   )
 
   override def toWF(config: ReplConfig): SExp = {
-    SExp.propList((":classpath", strToSExp(config.classpath.mkString("\"", File.pathSeparator, "\""))))
+    SExp.propList((":classpath", strToSExp(config.classpath.mkString(File.pathSeparator))))
   }
 
   override def toWF(value: Boolean): SExp = {
@@ -464,6 +464,10 @@ class SwankProtocolConversions extends ProtocolConversions {
   }
 
   override val wfNull: SExp = NilAtom
+
+  override val wfTrue: SExp = TruthAtom
+
+  override val wfFalse: SExp = NilAtom
 
   override def toWF(value: String): SExp = {
     StringAtom(value)
@@ -709,16 +713,6 @@ class SwankProtocolConversions extends ProtocolConversions {
         key(":error-code"), code,
         key(":details"), details)
     }
-  }
-
-  def toWF(method: MethodBytecode): SExp = {
-    SExp.propList(
-      (":class-name", method.className),
-      (":name", method.methodName),
-      (":signature", method.methodSignature.map(strToSExp).getOrElse('nil)),
-      (":bytecode", SExpList(method.byteCode.map { op =>
-        SExp(op.op, op.description)
-      })))
   }
 
   private def changeToWF(ch: FileEdit): SExp = {

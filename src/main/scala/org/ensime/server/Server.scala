@@ -43,10 +43,7 @@ object Server {
   /**
    * ******************************************************************************
    * Read a new style config from the given files.
-   * @param ensimeFile The base ensime file.
-   * @param rootDir The project root directory
-   * @param cacheDir The
-   * @return
+   * @param ensimeFile The base ensime file.   * @return
    */
   def readEnsimeConfig(ensimeFile: File): EnsimeConfig = {
     val configSrc = Source.fromFile(ensimeFile)
@@ -77,7 +74,7 @@ class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
 
   writePort(config.cacheDir, actualPort)
 
-  val protocol = new SwankProtocol
+  val protocol = new SwankProtocol(actorSystem)
   val project = new Project(config, protocol, actorSystem)
 
   def start() {

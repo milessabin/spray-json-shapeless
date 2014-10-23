@@ -14,7 +14,6 @@ import org.ensime.server.Server
 import org.ensime.test.TestUtil
 import org.ensime.util._
 import org.scalatest.Assertions
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -175,7 +174,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
 
   /**
    * Run an integration test based on the given project
-   * @param projectSource The directory containing the test project (will not be modified)
+   * @param path The directory containing the test project (will not be modified)
    * @param f The test function to run
    */
   def withTestProject(path: String)(f: (EnsimeConfig, InteractorHelper) => Unit): Unit = {
@@ -222,3 +221,4 @@ object IntgUtil extends Assertions with SLF4JLogging {
     }
   }
 }
+
