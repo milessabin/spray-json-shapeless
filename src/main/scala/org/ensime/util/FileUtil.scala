@@ -9,6 +9,8 @@ import scala.collection.Seq
 import scala.collection.mutable
 import scala.tools.nsc.io.AbstractFile
 import scala.reflect.io.ZipArchive
+import scala.util.Try
+import scala.sys.process._
 
 import pimpathon.file._
 
@@ -106,6 +108,25 @@ object CanonFile {
 }
 
 object FileUtils {
+
+  // WORKAROUND: https://github.com/typelevel/scala/issues/75
+  val jdkDir: File = List(
+    // manual
+    sys.env.get("JDK_HOME"),
+    sys.env.get("JAVA_HOME"),
+    // osx
+    Try("/usr/libexec/java_home".!!.trim).toOption,
+    // fallback
+    sys.props.get("java.home").map(new File(_).getParent),
+    sys.props.get("java.home")
+  ).flatten.filter { n =>
+      new File(n + "/lib/tools.jar").exists
+    }.headOption.map(new File(_)).getOrElse(
+      throw new FileNotFoundException(
+        """Could not automatically find the JDK/lib/tools.jar.
+      |You must explicitly set JDK_HOME or JAVA_HOME.""".stripMargin
+      )
+    )
 
   private def error[T](s: String): T = {
     throw new IOException(s)

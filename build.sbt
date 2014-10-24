@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicReference
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import scoverage.ScoverageSbtPlugin.instrumentSettings
 import org.scoverage.coveralls.CoverallsPlugin.coverallsSettings
+import scala.util.Try
 
 // NOTE: the following skips the slower tests
 // test-only * -- -l SlowTest
@@ -46,27 +47,27 @@ libraryDependencies ++= Seq(
   "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )
 
-// epic hack to get the tools.jar JDK dependency
-val JavaTools = List[Option[String]] (
+// WORKAROUND: https://github.com/typelevel/scala/issues/75
+val jdkDir: File = List(
   // manual
   sys.env.get("JDK_HOME"),
   sys.env.get("JAVA_HOME"),
   // osx
-  try Some("/usr/libexec/java_home".!!.trim)
-  catch {
-    case _: Throwable => None
-  },
+  Try("/usr/libexec/java_home".!!.trim).toOption,
   // fallback
   sys.props.get("java.home").map(new File(_).getParent),
   sys.props.get("java.home")
-).flatten.map { n =>
-  new File(n + "/lib/tools.jar")
-}.find(_.exists).getOrElse (
-  throw new FileNotFoundException (
+).flatten.filter { n =>
+  new File(n + "/lib/tools.jar").exists
+}.headOption.map(new File(_)).getOrElse(
+  throw new FileNotFoundException(
     """Could not automatically find the JDK/lib/tools.jar.
       |You must explicitly set JDK_HOME or JAVA_HOME.""".stripMargin
   )
 )
+
+// epic hack to get the tools.jar JDK dependency
+val JavaTools = file(jdkDir + "/lib/tools.jar")
 
 internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) }
 

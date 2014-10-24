@@ -6,6 +6,7 @@ import org.ensime.util._
 import pimpathon.file._
 import scala.util.Properties
 import scalariform.formatter.preferences._
+import FileUtils.jdkDir
 
 case class EnsimeConfig(
     root: File,
@@ -39,7 +40,7 @@ case class EnsimeConfig(
     m: EnsimeModule => m.targets ++ m.testTargets
   }
 
-  val javaLib = file(Properties.jdkHome) / "jre/lib/rt.jar"
+  val javaLib = jdkDir / "jre/lib/rt.jar"
 
   def allJars: Set[File] = {
     modules.values.flatMap { m =>
