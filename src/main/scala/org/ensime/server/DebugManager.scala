@@ -151,9 +151,10 @@ class DebugManager(
     project ! AsyncEvent(DebugVMDisconnectEvent())
   }
 
-  def vmOptions(): List[String] = List("-classpath",
+  def vmOptions(): List[String] = List(
+    "-classpath",
     config.runtimeClasspath.mkString("\"", File.pathSeparator, "\"")
-  )
+  ) ++ config.debugVMArgs
 
   private var maybeVM: Option[VM] = None
 
