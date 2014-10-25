@@ -42,6 +42,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
  :root-dir $dirStr
  :cache-dir $cacheStr
  :reference-source-roots ()
+ :debug-args ("-Dthis=that")
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
                 :depends-on-modules ()
@@ -59,6 +60,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
           assert(module1.name == "module1")
           assert(module1.dependencies.isEmpty)
           assert(config.sourceMode == false)
+          assert(config.debugVMArgs === List("-Dthis=that"))
         })
       }
     }

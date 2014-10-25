@@ -17,7 +17,8 @@ case class EnsimeConfig(
     modules: Map[String, EnsimeModule],
     referenceSourceJars: List[File],
     formattingPrefs: FormattingPreferences = FormattingPreferences(),
-    sourceMode: Boolean = false) {
+    sourceMode: Boolean = false,
+    debugVMArgs: List[String] = List.empty) {
   (root :: cacheDir :: referenceSourceJars).foreach { f =>
     require(f.exists, s"$f is required but does not exist")
   }
@@ -185,10 +186,12 @@ object EnsimeConfig extends SLF4JLogging {
     }
 
     val sourceMode = rootMap.getBooleanOpt(":source-mode").getOrElse(false)
+    val debugVMArgs = rootMap.getStringListOpt(":debug-args").getOrElse(Nil)
     EnsimeConfig(
       root.tap(_.mkdirs()).canon, cacheDir.tap(_.mkdirs()).canon,
       name, scalaVersion, compilerArgs, subModules,
-      referenceSourceJars, formattingPrefs, sourceMode
+      referenceSourceJars, formattingPrefs, sourceMode,
+      debugVMArgs
     )
   }
 }
