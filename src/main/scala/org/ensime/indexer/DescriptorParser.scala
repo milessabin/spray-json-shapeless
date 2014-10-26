@@ -1,5 +1,8 @@
 package org.ensime.indexer
 
+import org.ensime.util.ParboiledParser
+import org.parboiled.errors.ErrorUtils
+import org.parboiled.errors.ParsingException
 import org.parboiled.scala._
 import ClassName._
 
@@ -7,31 +10,19 @@ import ClassName._
  * Parser for Java Descriptors as defined in Section 4.3 of
  * http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html
  */
-object DescriptorParser extends Parser {
-  override val buildParseTree = true
-
-  private def local[T](t: => T) = new ThreadLocal[T] {
-    override def initialValue = t
-  }
-
-  // always re-use the parser
-  // http://users.parboiled.org/Scala-performance-td4024217.html
-  // BUG IN PARBOILED? This parser should be thread safe
+object DescriptorParser extends ParboiledParser[Descriptor] {
   private val TypeParser = local(ReportingParseRunner(Type))
-  private val TopParser = local(ReportingParseRunner(Top))
 
-  def parseType(desc: String): Option[DescriptorType] =
-    TypeParser.get.run(desc).result
-
-  def parse(desc: String): Option[Descriptor] =
-    TopParser.get.run(desc).result
-
-  private implicit class RulePimp(val rule: Rule0) {
-    def save: Rule1[String] = { rule ~> (_.toString) }
-    def as[T](t: T): Rule1[T] = { rule ~> (_ => t) }
+  def parseType(desc: String): DescriptorType = {
+    val parsingResult = TypeParser.get.run(desc)
+    parsingResult.result.getOrElse {
+      throw new ParsingException(
+        "Invalid :\n" + ErrorUtils.printParseErrors(parsingResult)
+      )
+    }
   }
 
-  private def Top: Rule1[Descriptor] = rule("Top") {
+  protected def Top: Rule1[Descriptor] = rule("Top") {
     "(" ~ zeroOrMore(Type) ~ ")" ~ Type
   } ~~> { (params, ret) => Descriptor(params, ret) }
 
