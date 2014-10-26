@@ -13,16 +13,17 @@ organization := "org.ensime"
 
 name := "ensime"
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.4"
 
 version := "0.9.10-SNAPSHOT"
 
 //resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "com.github.stacycurl"       %% "pimpathon-core"       % "1.0.0",
+  "com.chuusai"                %% "shapeless"            % "2.0.0",
+  "com.github.stacycurl"       %% "pimpathon-core"       % "1.1.0",
   "org.parboiled"              %% "parboiled-scala"      % "1.1.6",
-  "com.h2database"             %  "h2"                   % "1.4.181",
+  "com.h2database"             %  "h2"                   % "1.4.182",
   "com.typesafe.slick"         %% "slick"                % "2.1.0",
   "com.jolbox"                 %  "bonecp"               % "0.8.0.RELEASE",
   "org.apache.commons"         %  "commons-vfs2"         % "2.0" intransitive(),
@@ -40,7 +41,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"          %% "akka-testkit"         % "2.3.6" % "test",
   "commons-io"                 %  "commons-io"           % "2.4"   % "test",
   "org.scalatest"              %% "scalatest"            % "2.2.2" % "test",
-  "org.scalamock"              %% "scalamock-scalatest-support" % "3.1.2" % "test",
+  "org.scalamock"              %% "scalamock-scalatest-support" % "3.1.4" % "test",
+  "org.scalacheck"             %% "scalacheck"           % "1.11.6" % "test",
   "ch.qos.logback"             %  "logback-classic"      % "1.1.2",
   "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.7",
   "org.slf4j"                  %  "jcl-over-slf4j"       % "1.7.7",
@@ -114,12 +116,13 @@ def classDirs(cp: Classpath): String = {
   } yield file.getAbsolutePath
 }.mkString(",")
 
-javaOptions ++= Seq("-XX:MaxPermSize=128m", "-Xmx1g", "-XX:+UseConcMarkSweepGC")
+javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC")
 
 // 0.13.7 introduced awesomely fast resolution caching
 updateOptions := updateOptions.value.withCachedResolution(true)
 
 javaOptions in Test ++= Seq(
+  "-XX:MaxPermSize=256m", "-Xmx4g", "-XX:+UseConcMarkSweepGC",
   "-Densime.compile.jars=" + jars((fullClasspath in Compile).value),
   "-Densime.test.jars=" + jars((fullClasspath in Test).value),
   "-Densime.compile.classDirs=" + classDirs((fullClasspath in Compile).value),
@@ -135,7 +138,7 @@ javaOptions in Test ++= Seq(
 unmanagedSourceDirectories in Test += baseDirectory.value / "src/example-simple"
 
 // full stacktraces in scalatest
-testOptions in Test += Tests.Argument("-oF")
+//testOptions in Test += Tests.Argument("-oF")
 
 graphSettings
 

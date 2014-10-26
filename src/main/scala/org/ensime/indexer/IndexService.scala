@@ -2,6 +2,7 @@ package org.ensime.indexer
 
 import akka.event.slf4j.SLF4JLogging
 import java.io.File
+import java.io.FileNotFoundException
 import org.apache.commons.vfs2.FileObject
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.TextField
@@ -90,7 +91,16 @@ class IndexService(path: File) {
     lucene.create(fqns, commit = false)
   }
 
-  def commit(): Unit = lucene.commit()
+  def commit(): Unit = {
+    try lucene.commit()
+    catch {
+      case e: FileNotFoundException =>
+        // one of those useless exceptions that is either harmless
+        // (testing, commits are happening after we're interested) or
+        // utterly fatal (the user deleted the files on disk)
+        log.error("the Lucene database was deleted: " + e.getMessage)
+    }
+  }
 
   def remove(fs: List[FileObject]): Unit = {
     val terms = fs.map { f => new TermQuery(new Term("file", f.getName.getURI)) }

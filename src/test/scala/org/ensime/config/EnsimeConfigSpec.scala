@@ -19,10 +19,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
   }
 
   def test(dir: File, contents: String, testFn: (EnsimeConfig) => Unit): Unit = {
-    val ensimeFile = dir / ".ensime"
-    writeToFile(contents, ensimeFile)
-    val config = Server.readEnsimeConfig(ensimeFile)
-    testFn(config)
+    testFn(EnsimeConfig.parse(contents))
   }
 
   describe("ProjectConfigSpec") {
@@ -88,7 +85,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
           val module1 = config.modules("module1")
           assert(module1.name == "module1")
           assert(module1.dependencies.isEmpty)
-          assert(module1.targets.size === 1)
+          assert(module1.targetDirs.size === 1)
         })
       }
     }
@@ -102,6 +99,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
 
           val dirStr = TestUtil.fileToWireString(dir)
           val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
+          val abcDirStr = TestUtil.fileToWireString(dir / "abc")
 
           test(dir, s"""
 (:name "project"
@@ -111,9 +109,9 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
  :source-mode ${if (sourceMode) "t" else "nil"}
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
-                :targets ("abc"))))""", { implicit config =>
+                :targets (${abcDirStr}))))""", { implicit config =>
             assert(config.sourceMode == sourceMode)
-            assert(config.runtimeClasspath == Set(dir / "abc"))
+            assert(config.runtimeClasspath == Set(dir / "abc"), config)
             assert(config.compileClasspath == (
               if (sourceMode) Set.empty else Set(dir / "abc")
             ))
