@@ -94,13 +94,6 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     x.get
   }
 
-  def askInvalidateTargets(): Unit = for {
-    m <- config.modules.values
-    dir <- (m.targets ++ m.testTargets)
-  } {
-    askOption(invalidatePackage(dir))
-  }
-
   def askUnloadAllFiles(): Unit = askOption(unloadAllFiles())
 
   def askRemoveAllDeleted() = askOption(removeAllDeleted())
@@ -194,10 +187,6 @@ class RichPresentationCompiler(
   override def registerTopLevelSym(sym: Symbol) {
     super.registerTopLevelSym(sym)
     symsByFile(sym.sourceFile) += sym
-  }
-
-  def invalidatePackage(f: File): Unit = {
-    invalidateClassPathEntries(f.getCanonicalPath())
   }
 
   def unloadAllFiles(): Unit = {
