@@ -115,15 +115,10 @@ def classDirs(cp: Classpath): String = {
 
 javaOptions ++= Seq("-XX:MaxPermSize=128m", "-Xmx1g", "-XX:+UseConcMarkSweepGC")
 
-javaOptions in Test ++= infoForTests.value
+// 0.13.7 introduced awesomely fast resolution caching
+updateOptions := updateOptions.value.withCachedResolution(true)
 
-javaOptions in Test += "-Dakka.actor.debug.receive=on"
-
-lazy val infoForTests = TaskKey[Seq[String]]("infoForTests", "for use in tests")
-
-// TODO: cache the results
-// http://stackoverflow.com/questions/25410484
-infoForTests := Seq(
+javaOptions in Test ++= Seq(
   "-Densime.compile.jars=" + jars((fullClasspath in Compile).value),
   "-Densime.test.jars=" + jars((fullClasspath in Test).value),
   "-Densime.compile.classDirs=" + classDirs((fullClasspath in Compile).value),

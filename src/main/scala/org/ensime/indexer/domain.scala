@@ -64,11 +64,10 @@ object ClassName {
   // must be a single type descriptor
   // strips array reification
   def fromDescriptor(desc: String): ClassName =
-    DescriptorParser.parseType(desc).
-      getOrThrow(s"$desc is not a descriptor") match {
-        case c: ClassName => c
-        case a: ArrayDescriptor => a.reifier
-      }
+    DescriptorParser.parseType(desc) match {
+      case c: ClassName => c
+      case a: ArrayDescriptor => a.reifier
+    }
 
   // internal name is effectively the FQN with / instead of dots
   def fromInternal(internal: String): ClassName = {
