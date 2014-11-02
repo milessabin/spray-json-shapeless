@@ -106,11 +106,11 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
         file <- config.sourceFiles
         source = getSourceFile(file.getAbsolutePath)
       } yield source
-    }.toSet ++ activeUnits.map(_.source)
+    }.toSet ++ activeUnits().map(_.source)
     askReloadFiles(all)
   }
 
-  def loadedFiles: List[SourceFile] = activeUnits.map(_.source)
+  def loadedFiles: List[SourceFile] = activeUnits().map(_.source)
 
   def askReloadExistingFiles() =
     askReloadFiles(loadedFiles)
@@ -190,7 +190,7 @@ class RichPresentationCompiler(
   }
 
   def unloadAllFiles(): Unit = {
-    allSources.foreach(removeUnitOf(_))
+    allSources.foreach(removeUnitOf)
   }
 
   /**

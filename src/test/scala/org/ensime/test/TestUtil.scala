@@ -1,17 +1,15 @@
 package org.ensime.test
 
+import akka.actor.ActorSystem
 import org.apache.commons.io.FileUtils.copyDirectory
 import java.io.File
-import java.io.IOException
-import org.ensime.util.CanonFile
 import org.scalatest.Tag
-import scala.util.Properties
 import scala.util.Properties._
 import pimpathon.file._
 import org.ensime.config._
-import org.ensime.util.FileUtils._
 import org.ensime.util.RichFile._
 import org.ensime.util.FileUtils.jdkDir
+import scala.concurrent.duration._
 
 object TestUtil {
 
@@ -25,7 +23,7 @@ object TestUtil {
   val testJars = (parseTestProp("ensime.test.jars") -- compileJars).toList
   val mainSourcePath = "src/main/scala"
   val testSourcePath = "src/test/scala"
-  val compileClassDirs = (parseTestProp("ensime.compile.classDirs")).head
+  val compileClassDirs = parseTestProp("ensime.compile.classDirs").head
   val testClassDirs = parseTestProp("ensime.test.classDirs").head
   val scalaVersion = propOrEmpty("scala.version")
   val sourceJars = parseTestProp("ensime.jars.sources").toList
@@ -53,7 +51,7 @@ object TestUtil {
     testClasses: Boolean = false,
     jars: Boolean = true): EnsimeConfig = {
     val base = tmp.canon
-    require(base.isDirectory())
+    require(base.isDirectory)
 
     val module = {
       val classesDir = base / "target/classes"
@@ -92,6 +90,16 @@ object TestUtil {
       "simple", scalaVersion, Nil, Map(module.name -> module),
       javaSource.toList
     )
+  }
+
+  def withActorSystem[T](f: ActorSystem => T): T = {
+    implicit val system = ActorSystem.create()
+    try {
+      f(system)
+    } finally {
+      system.shutdown()
+      system.awaitTermination(20.seconds)
+    }
   }
 }
 

@@ -59,6 +59,7 @@ trait ProtocolConversions {
   def toWF(value: UndoResult): WireFormat
   // a wire format message representing null
   def wfNull: WireFormat
+  def wfTrue: WireFormat
+  def wfFalse: WireFormat
   def toWF(vmStatus: DebugVmStatus): WireFormat
-  def toWF(method: MethodBytecode): WireFormat
 }

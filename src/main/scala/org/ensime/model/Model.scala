@@ -1,6 +1,5 @@
 package org.ensime.model
 
-import akka.event.slf4j.SLF4JLogging
 import java.io.File
 import org.apache.commons.vfs2.FileObject
 import scala.collection.mutable
@@ -544,13 +543,6 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       new ArrowTypeInfo("NA", -1, TypeInfo.nullInfo, List.empty)
     }
   }
-
-  object TypeInspectInfo {
-    def nullInfo() = {
-      new TypeInspectInfo(TypeInfo.nullInfo, None, List.empty)
-    }
-  }
-
 }
 
 object LineSourcePosition {
@@ -592,7 +584,7 @@ object OffsetSourcePosition {
 
   def fromPosition(p: Position): Option[OffsetSourcePosition] = p match {
     case NoPosition => None
-    case p =>
-      Some(new OffsetSourcePosition(file(p.source.file.path).canon, p.point))
+    case realPos =>
+      Some(new OffsetSourcePosition(file(realPos.source.file.path).canon, realPos.point))
   }
 }
