@@ -3,18 +3,14 @@ package org.ensime.test
 import java.io.File
 
 import org.ensime.model._
-import org.ensime.protocol.ReplConfig
-import org.ensime.server.{ UndoResult, RefactorResult, RefactorEffect, RefactorFailure }
+import org.ensime.protocol.swank.ReplConfig
+import org.ensime.server.{ RefactorResult, RefactorEffect, RefactorFailure }
 import org.ensime.util._
 import pimpathon.file._
 
-import scala.reflect.internal.util.{ RangePosition, BatchSourceFile }
-import scala.reflect.io.PlainFile
-import scala.tools.nsc.io._
-
 object SwankTestData {
 
-  val typeInfo = new TypeInfo("type1", 7, 'type1, "FOO.type1", List(), List(), None, Some(8))
+  val typeInfo = new BasicTypeInfo("type1", 7, 'type1, "FOO.type1", List(), List(), None, Some(8))
   val typeInfoStr = """(:name "type1" :type-id 7 :full-name "FOO.type1" :decl-as type1 :outer-type-id 8)"""
 
   val interfaceInfo = new InterfaceInfo(typeInfo, Some("DEF"))
@@ -33,13 +29,13 @@ object SwankTestData {
   val symbolInfo = new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))
   val symbolInfoStr = """(:name "name" :local-name "localName" :type """ + typeInfoStr + """ :owner-type-id 2)"""
 
-  val batchSourceFile = new BatchSourceFile(new PlainFile(Path("/abc")), "blah\nblah\nblah\n")
-  val batchSourceFile_str = TestUtil.stringToWireString(batchSourceFile.path)
+  val batchSourceFile = "/abc"
+  val batchSourceFile_str = TestUtil.stringToWireString(batchSourceFile)
 
-  val rangePos1 = new RangePosition(batchSourceFile, 70, 75, 90)
+  val rangePos1 = new ERangePosition(batchSourceFile, 75, 70, 90)
   val rangePos1Str = """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)"""
 
-  val rangePos2 = new RangePosition(batchSourceFile, 80, 85, 100)
+  val rangePos2 = new ERangePosition(batchSourceFile, 85, 80, 100)
   val rangePos2Str = """(:file """ + batchSourceFile_str + """ :offset 85 :start 80 :end 100)"""
 
   val packageInfo = new PackageInfo("name", "fullName", List())
@@ -118,7 +114,7 @@ object SwankTestData {
   val completionInfoCListStr = """(:prefix "fooBar" :completions (""" + completionInfoStr + """))"""
 
   val refactorRenameEffect = new RefactorEffect(7, 'rename, List(TextEdit(file3, 5, 7, "aaa")))
-  val refactorRanameEffectStr = """(:procedure-id 7 :refactor-type rename :status success :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7)))"""
+  val refactorRenameEffectStr = """(:procedure-id 7 :refactor-type rename :status success :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7)))"""
 
   val fileRange = FileRange("/abc", 7, 9)
   val fileRangeStr = """(:file "/abc" :start 7 :end 9)"""

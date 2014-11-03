@@ -28,7 +28,7 @@ class StandardFormatsSpec extends FormatSpec with StandardFormats with BasicForm
 
     it("should support UUID") {
       val uuid = UUID.randomUUID()
-      assertFormat(uuid, SexpString(uuid.toString()))
+      assertFormat(uuid, SexpString(uuid.toString))
     }
 
     // it("should support URL") {

@@ -9,8 +9,8 @@ import akka.pattern.Patterns
 import org.apache.commons.io.filefilter.TrueFileFilter
 import org.apache.commons.io.{ FileUtils => IOFileUtils }
 import org.ensime.config.EnsimeConfig
-import org.ensime.protocol.{ IncomingMessageEvent, OutgoingMessageEvent }
-import org.ensime.server.Server
+import org.ensime.protocol.{ FullTypeCheckCompleteEvent, AnalyzerReadyEvent, IndexerReadyEvent, ProtocolEvent }
+import org.ensime.server.{ Project, Server }
 import org.ensime.test.TestUtil
 import org.ensime.util._
 import org.scalatest.Assertions
@@ -28,31 +28,25 @@ import pimpathon.file._
  */
 object IntgUtil extends Assertions with SLF4JLogging {
 
-  class InteractorHelper(server: Server, actorSystem: ActorSystem) {
-    private case class AsyncRequest(request: SExp)
-    private case class RPCRequest(request: SExp)
-    private case class RPCResponse(resp: SExp)
+  class AsyncMsgHelper(actorSystem: ActorSystem) {
+    private case class AsyncSent(pe: ProtocolEvent)
+    private case class AsyncRequest(pe: ProtocolEvent)
 
-    val project = server.project
-    private class InteractorHelperActor extends Actor with ActorLogging {
+    private class AsyncMsgHelperActor extends Actor with ActorLogging {
+      private var asyncMsgs = Map[ProtocolEvent, Int]()
 
-      var nextRPCid = 1
-      var rpcExpectations: Map[Int, ActorRef] = Map.empty
-
-      var asyncMsgs = Map[SExp, Int]()
-
-      var outstandingAsyncs = Vector[(SExp, ActorRef)]()
+      private var outstandingAsyncs = Vector[(ProtocolEvent, ActorRef)]()
 
       def processOutstandingRequests(): Unit = {
         outstandingAsyncs = outstandingAsyncs.filter {
-          case (exp, sender) =>
-            asyncMsgs.get(exp) match {
+          case (event, sender) =>
+            asyncMsgs.get(event) match {
               case None =>
                 true
               case Some(0) =>
                 true
               case Some(n) =>
-                asyncMsgs += (exp -> (n - 1))
+                asyncMsgs += (event -> (n - 1))
                 sender ! None
                 false
             }
@@ -63,69 +57,20 @@ object IntgUtil extends Assertions with SLF4JLogging {
         case AsyncRequest(req) =>
           outstandingAsyncs = outstandingAsyncs :+ (req, sender())
           processOutstandingRequests()
-        case RPCRequest(req) =>
-          val rpcId = nextRPCid
-          nextRPCid += 1
-          val msg = s"""(:swank-rpc ${req.toWireString} $rpcId)"""
-          project ! IncomingMessageEvent(SExpParser.read(msg))
-          rpcExpectations += (rpcId -> sender())
-        // this is the message from the server
-        case OutgoingMessageEvent(obj) =>
-          log.info("Received message from server: ")
-          obj match {
-            case receivedMsg @ SExpList(KeywordAtom(":return") :: res :: IntAtom(rpcId) :: Nil) =>
-              log.info("Recognized as RPC response")
-              rpcExpectations.get(rpcId) match {
-                case Some(rpcSender) =>
-                  rpcSender ! RPCResponse(res)
-                  rpcExpectations = rpcExpectations - rpcId
-                case None =>
-                  log.error("got rpc response with no rpcSender")
-              }
-            case receivedMsg: SExp =>
-              log.info("Non-rpc response - storing in async queue: " + receivedMsg)
-              val newCount = asyncMsgs.getOrElse(receivedMsg, 0) + 1
-              asyncMsgs = asyncMsgs + (receivedMsg -> newCount)
-              processOutstandingRequests()
-
-            case m => log.error("cannot handle received " + m)
-          }
+        case AsyncSent(event) =>
+          val newCount = asyncMsgs.getOrElse(event, 0) + 1
+          asyncMsgs = asyncMsgs + (event -> newCount)
+          processOutstandingRequests()
       }
     }
 
-    def sendRPCExp(dur: FiniteDuration, msg: SExp): SExp = {
-      val askRes = Patterns.ask(actor, RPCRequest(msg), dur)
-      try {
-        val rawResult = Await.result(askRes, Duration.Inf)
-        rawResult match {
-          case RPCResponse(s) =>
-            s
-          case r =>
-            throw new IllegalStateException("Unknown type returned from rpc request: " + r)
-        }
-      } catch {
-        case t: TimeoutException =>
-          fail("Timed out waiting for rpc response to " + msg)
-      }
+    def asyncReceived(event: ProtocolEvent): Unit = {
+      actor ! AsyncSent(event)
     }
 
-    def sendRPCString(dur: FiniteDuration, msg: String): String = {
-      val sexpReq = SExpParser.read(msg)
-      sendRPCExp(dur, sexpReq).toString
-    }
+    def expectAsync(dur: FiniteDuration, expected: ProtocolEvent) {
 
-    def expectRPC(dur: FiniteDuration, toSend: String, expected: String) {
-      val res = sendRPCString(dur, toSend)
-      if (res != expected) {
-        fail("Expected and received do not match:\n" + expected + "\n != \n" + res)
-      }
-    }
-
-    def expectAsync(dur: FiniteDuration, expected: String) {
-
-      val expectedSExp = SExpParser.read(expected)
-
-      val askRes = Patterns.ask(actor, AsyncRequest(expectedSExp), dur)
+      val askRes = Patterns.ask(actor, AsyncRequest(expected), dur)
       try {
         Await.result(askRes, Duration.Inf)
       } catch {
@@ -135,13 +80,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
 
     }
 
-    private val actor = actorSystem.actorOf(Props(new InteractorHelperActor()))
-    server.protocol.setOutputActor(actor)
-  }
-
-  trait Interactor {
-    def send(msg: String): Unit
-    def receive(dur: FiniteDuration, msg: String): Unit
+    private val actor = actorSystem.actorOf(Props(new AsyncMsgHelperActor()))
   }
 
   private def listFiles(srcDir: String): List[SFile] = {
@@ -177,7 +116,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
    * @param path The directory containing the test project (will not be modified)
    * @param f The test function to run
    */
-  def withTestProject(path: String)(f: (EnsimeConfig, InteractorHelper) => Unit): Unit = {
+  def withTestProject(path: String)(f: (EnsimeConfig, Project, AsyncMsgHelper) => Unit): Unit = {
 
     withTempDirectory { base =>
       val projectBase = base.canon
@@ -194,20 +133,26 @@ object IntgUtil extends Assertions with SLF4JLogging {
       log.info("copied: " + projectBase.tree.toList)
 
       val server = Server.initialiseServer(config)
+      val project = server.project
 
       implicit val actorSystem = server.actorSystem
 
-      val interactor = new InteractorHelper(server, actorSystem)
-      interactor.expectRPC(1 seconds, "(swank:connection-info)",
-        """(:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.10"))""")
+      val connInfo = project.rpcConnectionInfo()
+      assert(connInfo.pid == None)
+      assert(connInfo.serverName == "ENSIME-ReferenceServer")
+      assert(connInfo.protocolVersion == "0.8.10")
 
-      val initMsg = s"(swank:init-project)"
-      val initResp = interactor.sendRPCString(3 seconds, initMsg)
-      interactor.expectAsync(60 seconds, """(:compiler-ready)""")
-      interactor.expectAsync(60 seconds, """(:full-typecheck-finished)""")
-      interactor.expectAsync(240 seconds, """(:indexer-ready)""")
+      project.rpcNotifyClientReady()
 
-      f(config, interactor)
+      val asyncHelper = new AsyncMsgHelper(actorSystem)
+
+      project.rpcSubscribeAsync(event => { asyncHelper.asyncReceived(event) })
+
+      asyncHelper.expectAsync(60 seconds, AnalyzerReadyEvent) // compiler ready
+      asyncHelper.expectAsync(60 seconds, FullTypeCheckCompleteEvent)
+      asyncHelper.expectAsync(240 seconds, IndexerReadyEvent)
+
+      f(config, server.project, asyncHelper)
 
       server.shutdown()
     }

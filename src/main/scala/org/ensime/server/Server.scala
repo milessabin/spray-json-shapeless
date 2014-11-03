@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import akka.actor._
 import org.ensime.config._
 import org.ensime.protocol._
+import org.ensime.protocol.swank.SwankProtocol
 import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -37,13 +38,18 @@ object Server {
   }
 
   def initialiseServer(config: EnsimeConfig): Server = {
-    val server = new Server(config, "127.0.0.1", 0)
+    val server = new Server(config, "127.0.0.1", 0,
+      (actorSystem, peerRef, rpcTarget) => { new SwankProtocol(actorSystem, peerRef, rpcTarget) }
+    )
     server.start()
     server
   }
 }
 
-class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
+class Server(config: EnsimeConfig,
+    host: String,
+    requestedPort: Int,
+    connectionCreator: (ActorSystem, ActorRef, RPCTarget) => Protocol) {
 
   import org.ensime.server.Server.log
 
@@ -60,8 +66,7 @@ class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
 
   writePort(config.cacheDir, actualPort)
 
-  val protocol = new SwankProtocol(actorSystem)
-  val project = new Project(config, protocol, actorSystem)
+  val project = new Project(config, actorSystem)
 
   def start() {
     project.initProject()
@@ -77,7 +82,7 @@ class Server(config: EnsimeConfig, host: String, requestedPort: Int) {
             try {
               val socket = listener.accept()
               log.info("Got connection, creating handler...")
-              actorSystem.actorOf(Props(classOf[SocketHandler], socket, protocol, project))
+              actorSystem.actorOf(Props(classOf[SocketHandler], socket, project, connectionCreator))
             } catch {
               case e: IOException =>
                 if (!hasShutdownFlag.get())
@@ -149,8 +154,15 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
   }
 }
 
-class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extends Actor with ActorLogging {
-  protocol.setOutputActor(self)
+/**
+ * Create a socket handler
+ * @param socket The incoming socket
+ * @param connectionCreator Function to create protocol instance given actorSystem and the peer (this) ref
+ */
+class SocketHandler(socket: Socket,
+    rpcTarget: RPCTarget,
+    connectionCreator: (ActorSystem, ActorRef, RPCTarget) => Protocol) extends Actor with ActorLogging {
+  val protocol = connectionCreator(context.system, self, rpcTarget)
 
   val reader = new SocketReader(socket, protocol, self)
   val out = new BufferedOutputStream(socket.getOutputStream)
@@ -170,10 +182,10 @@ class SocketHandler(socket: Socket, protocol: Protocol, project: Project) extend
   }
 
   override def receive = {
-    case IncomingMessageEvent(value: WireFormat) =>
-      project ! IncomingMessageEvent(value)
-    case OutgoingMessageEvent(value: WireFormat) =>
-      write(value)
+    case IncomingMessageEvent(message) =>
+      protocol.handleIncomingMessage(message)
+    case OutgoingMessageEvent(message: WireFormat) =>
+      write(message)
     case SocketClosed =>
       log.error("Socket closed, stopping self")
       context.stop(self)

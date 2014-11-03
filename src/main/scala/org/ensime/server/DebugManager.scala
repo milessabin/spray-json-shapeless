@@ -31,10 +31,10 @@ case class DebugToStringReq(threadId: Long, loc: DebugLocation) extends RPCReque
 case class DebugSetValueReq(loc: DebugLocation, newValue: String) extends RPCRequest
 case class DebugBacktraceReq(threadId: Long, index: Int, count: Int) extends RPCRequest
 case object DebugActiveVMReq extends RPCRequest
-case class DebugBreakReq(file: String, line: Int) extends RPCRequest
-case class DebugClearBreakReq(file: String, line: Int) extends RPCRequest
-case object DebugClearAllBreaksReq extends RPCRequest
-case object DebugListBreaksReq extends RPCRequest
+case class DebugSetBreakpointReq(file: String, line: Int) extends RPCRequest
+case class DebugClearBreakpointReq(file: String, line: Int) extends RPCRequest
+case object DebugClearAllBreakpointsReq extends RPCRequest
+case object DebugListBreakpointsReq extends RPCRequest
 
 abstract class DebugVmStatus
 
@@ -318,22 +318,22 @@ class DebugManager(
                   vm.resume()
                   sender ! true
               }
-            case DebugBreakReq(filepath: String, line: Int) =>
+            case DebugSetBreakpointReq(filepath: String, line: Int) =>
               val file = CanonFile(filepath)
               if (!setBreakpoint(file, line)) {
                 project.bgMessage("Location not loaded. Set pending breakpoint.")
               }
               sender ! VoidResponse
-            case DebugClearBreakReq(filepath: String, line: Int) =>
+            case DebugClearBreakpointReq(filepath: String, line: Int) =>
               val file = CanonFile(filepath)
               clearBreakpoint(file, line)
               sender ! VoidResponse
 
-            case DebugClearAllBreaksReq =>
+            case DebugClearAllBreakpointsReq =>
               clearAllBreakpoints()
               sender ! VoidResponse
 
-            case DebugListBreaksReq =>
+            case DebugListBreakpointsReq =>
               val breaks = BreakpointList(activeBreakpoints.toList, pendingBreakpoints)
               sender ! breaks
 
@@ -917,7 +917,7 @@ class DebugManager(
       if (thread.frameCount > frame &&
         thread.frame(frame).visibleVariables.length > offset) {
         val stackFrame = thread.frame(frame)
-        val localVar = stackFrame.visibleVariables.get(offset)
+        val localVar: LocalVariable = stackFrame.visibleVariables.get(offset)
         mirrorFromString(localVar.`type`(), newValue) match {
           case Some(v) =>
             stackFrame.setValue(localVar, v); true

@@ -6,9 +6,9 @@ import org.ensime.util.NoteList
 /**
  * A asynchronous swank protocol event
  */
-sealed trait SwankEvent
+sealed trait ProtocolEvent
 
-sealed trait GeneralSwankEvent extends SwankEvent
+sealed trait GeneralSwankEvent extends ProtocolEvent
 
 case class SendBackgroundMessageEvent(code: Int, detail: Option[String]) extends GeneralSwankEvent
 case object AnalyzerReadyEvent extends GeneralSwankEvent
@@ -21,7 +21,7 @@ case object ClearAllScalaNotesEvent extends GeneralSwankEvent
 case class NewScalaNotesEvent(noteList: NoteList) extends GeneralSwankEvent
 case class NewJavaNotesEvent(noteList: NoteList) extends GeneralSwankEvent
 
-sealed trait DebugEvent extends SwankEvent
+sealed trait DebugEvent extends ProtocolEvent
 case class DebugStepEvent(threadId: Long, threadName: String, pos: LineSourcePosition) extends DebugEvent
 case class DebugBreakEvent(threadId: Long, threadName: String, pos: LineSourcePosition) extends DebugEvent
 case class DebugVMDeathEvent() extends DebugEvent

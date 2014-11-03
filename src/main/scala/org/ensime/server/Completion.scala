@@ -111,24 +111,24 @@ trait CompletionControl {
     }
 
     val (prefix, results) = completionContext(p) match {
-      case Some(PackageContext(path, prefix)) =>
+      case Some(PackageContext(path, pcPrefix)) =>
         askReloadFile(p.source)
         val typeSearchSyms = if (path.isEmpty) {
-          makeTypeSearchCompletions(prefix)
+          makeTypeSearchCompletions(pcPrefix)
         } else List.empty
-        (prefix,
-          askCompletePackageMember(path, prefix) ++
+        (pcPrefix,
+          askCompletePackageMember(path, pcPrefix) ++
           typeSearchSyms)
-      case Some(SymbolContext(p, prefix, constructing)) =>
-        askReloadFile(p.source)
+      case Some(SymbolContext(scPosition, scPrefix, constructing)) =>
+        askReloadFile(scPosition.source)
         val x = new Response[List[Member]]
-        askScopeCompletion(p, x)
-        (prefix, makeAll(x, prefix, constructing))
-      case Some(MemberContext(p, prefix, constructing)) =>
-        askReloadFile(p.source)
+        askScopeCompletion(scPosition, x)
+        (scPrefix, makeAll(x, scPrefix, constructing))
+      case Some(MemberContext(mcPosition, mcPrefix, constructing)) =>
+        askReloadFile(mcPosition.source)
         val x = new Response[List[Member]]
-        askTypeCompletion(p, x)
-        (prefix, makeAll(x, prefix, constructing))
+        askTypeCompletion(mcPosition, x)
+        (mcPrefix, makeAll(x, mcPrefix, constructing))
       case _ =>
         logger.error("Unrecognized completion context.")
         ("", List.empty)
@@ -299,7 +299,7 @@ trait Completion { self: RichPresentationCompiler =>
           if (name.startsWith(prefix)) {
             Some(CompletionInfo(name, CompletionSignature(List.empty, ""), -1, isCallable = false, 50, None))
           } else None
-        }.toList
+        }.toList.sortBy(ci => (ci.relevance, ci.name))
       case _ => List.empty
     }
   }

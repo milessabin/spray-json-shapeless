@@ -291,16 +291,16 @@ class RichPresentationCompiler(
 
   private def typeOfTree(t: Tree): Option[Type] = {
     val tree = t match {
-      case Select(qual, name) if t.tpe == ErrorType =>
-        qual
+      case Select(qualifier, name) if t.tpe == ErrorType =>
+        qualifier
       case t: ImplDef if t.impl != null =>
         t.impl
       case t: ValOrDefDef if t.tpt != null =>
         t.tpt
       case t: ValOrDefDef if t.rhs != null =>
         t.rhs
-      case t =>
-        t
+      case otherTree =>
+        otherTree
     }
 
     Option(tree.tpe)
@@ -455,11 +455,11 @@ class RichPresentationCompiler(
     wrapReloadSources(List(source))
 
   def wrapReloadSources(sources: List[SourceFile]): Unit = {
-    val superseeded = scheduler.dequeueAll {
+    val superseded = scheduler.dequeueAll {
       case ri: ReloadItem if ri.sources == sources => Some(ri)
       case _ => None
     }
-    superseeded.foreach(_.response.set(()))
+    superseded.foreach(_.response.set(()))
     wrap[Unit](r => new ReloadItem(sources, r).apply(), _ => ())
   }
 

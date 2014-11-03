@@ -2,8 +2,9 @@ package org.ensime.model
 
 import java.io.File
 import org.apache.commons.vfs2.FileObject
+import org.ensime.util.FileEdit
 import scala.collection.mutable
-import scala.reflect.internal.util.{ NoPosition, Position }
+import scala.reflect.internal.util.{ RangePosition, NoPosition, Position }
 
 import org.ensime.config._
 import org.ensime.server._
@@ -12,7 +13,10 @@ import org.ensime.indexer.DatabaseService._
 import org.ensime.util.RichFile._
 import scala.tools.nsc.io.AbstractFile
 
-abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
+trait EntityInfo {
+  val name: String
+  val members: Iterable[EntityInfo]
+}
 
 sealed trait PosNeeded
 case object PosNeededNo extends PosNeeded
@@ -30,10 +34,15 @@ object SourceFileInfo {
   def apply(file: File) = new SourceFileInfo(file, None)
 }
 
-class PackageInfo(
-  override val name: String,
-  val fullname: String,
-  override val members: Iterable[EntityInfo]) extends EntityInfo(name, members)
+case class PackageInfo(
+    override val name: String,
+    fullName: String,
+
+    // n.b. members should be sorted by name for consistency
+    override val members: Seq[EntityInfo]) extends EntityInfo {
+
+  require(members == members.sortBy(_.name), "members should be sorted by name")
+}
 
 trait SymbolSearchResult {
   val name: String
@@ -67,13 +76,13 @@ case class SymbolDesignation(
   end: Int,
   symType: scala.Symbol)
 
-class SymbolInfo(
-  val name: String,
-  val localName: String,
-  val declPos: Option[SourcePosition],
-  val tpe: TypeInfo,
-  val isCallable: Boolean,
-  val ownerTypeId: Option[Int])
+case class SymbolInfo(
+  name: String,
+  localName: String,
+  declPos: Option[SourcePosition],
+  tpe: TypeInfo,
+  isCallable: Boolean,
+  ownerTypeId: Option[Int])
 
 case class Op(
   op: String,
@@ -194,40 +203,61 @@ case class DebugBacktrace(
   threadId: Long,
   threadName: String)
 
-class NamedTypeMemberInfo(override val name: String,
-  val tpe: TypeInfo,
-  val pos: Option[SourcePosition],
-  val declaredAs: scala.Symbol) extends EntityInfo(name, List.empty)
+case class NamedTypeMemberInfo(
+    name: String,
+    tpe: TypeInfo,
+    pos: Option[SourcePosition],
+    declaredAs: scala.Symbol) extends EntityInfo {
+  override val members = List.empty
+}
 
 class PackageMemberInfoLight(val name: String)
 
-class TypeInfo(
-  name: String,
-  val id: Int,
-  val declaredAs: scala.Symbol,
-  val fullName: String,
-  val args: Iterable[TypeInfo],
-  members: Iterable[EntityInfo],
-  val pos: Option[SourcePosition],
-  val outerTypeId: Option[Int]) extends EntityInfo(name, members)
+trait TypeInfo extends EntityInfo {
+  val name: String
+  val id: Int
+  val declaredAs: scala.Symbol
+  val fullName: String
+  val args: Iterable[TypeInfo]
+  val members: Iterable[EntityInfo]
+  val pos: Option[SourcePosition]
+  val outerTypeId: Option[Int]
+}
 
-class ArrowTypeInfo(
+case class BasicTypeInfo(
   override val name: String,
-  override val id: Int,
-  val resultType: TypeInfo,
-  val paramSections: Iterable[ParamSectionInfo]) extends TypeInfo(name, id, 'nil, name, List.empty, List.empty, None, None)
+  id: Int,
+  declaredAs: scala.Symbol,
+  fullName: String,
+  args: Iterable[TypeInfo],
+  override val members: Iterable[EntityInfo],
+  pos: Option[SourcePosition],
+  outerTypeId: Option[Int]) extends TypeInfo
 
-class CallCompletionInfo(
-  val resultType: TypeInfo,
-  val paramSections: Iterable[ParamSectionInfo])
+case class ArrowTypeInfo(
+    override val name: String,
+    override val id: Int,
+    resultType: TypeInfo,
+    paramSections: Iterable[ParamSectionInfo]) extends TypeInfo {
+  val declaredAs = 'nil
+  val fullName = name
+  val args = List.empty
+  val members = List.empty
+  val pos = None
+  val outerTypeId = None
+}
 
-class ParamSectionInfo(
-  val params: Iterable[(String, TypeInfo)],
-  val isImplicit: Boolean)
+case class CallCompletionInfo(
+  resultType: TypeInfo,
+  paramSections: Iterable[ParamSectionInfo])
 
-class InterfaceInfo(val tpe: TypeInfo, val viaView: Option[String])
+case class ParamSectionInfo(
+  params: Iterable[(String, TypeInfo)],
+  isImplicit: Boolean)
 
-class TypeInspectInfo(val tpe: TypeInfo, val companionId: Option[Int], val supers: Iterable[InterfaceInfo])
+case class InterfaceInfo(tpe: TypeInfo, viaView: Option[String])
+
+case class TypeInspectInfo(tpe: TypeInfo, companionId: Option[Int], supers: Iterable[InterfaceInfo])
 
 trait ModelBuilders { self: RichPresentationCompiler =>
 
@@ -315,7 +345,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         }
 
         // Convert type members into NamedTypeMemberInfos
-        // and divid into different kinds..
+        // and divide into different kinds..
 
         val nestedTypes = new mutable.ArrayBuffer[NamedTypeMemberInfo]()
         val constructors = new mutable.ArrayBuffer[NamedTypeMemberInfo]()
@@ -341,8 +371,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
         val sortedInfos = nestedTypes ++ fields ++ constructors ++ methods
 
-        new InterfaceInfo(TypeInfo(ownerSym.tpe, PosNeededAvail, sortedInfos),
-          viaView.map(_.name.toString))
+        new InterfaceInfo(TypeInfo(ownerSym.tpe, PosNeededAvail, sortedInfos), viaView.map(_.name.toString))
     }
   }
 
@@ -361,17 +390,21 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       new PackageInfo("NA", "NA", List.empty)
     }
 
+    private def sortedMembers(items: Iterable[EntityInfo]) = {
+      items.toList.sortBy(_.name)
+    }
+
     def fromSymbol(sym: Symbol): PackageInfo = {
       if (sym.isRoot || sym.isRootPackage) {
         new PackageInfo(
           "root",
           "_root_",
-          packageMembers(sym).flatMap(packageMemberInfoFromSym))
+          sortedMembers(packageMembers(sym).flatMap(packageMemberInfoFromSym)))
       } else {
         new PackageInfo(
           sym.name.toString,
           sym.fullName,
-          packageMembers(sym).flatMap(packageMemberInfoFromSym))
+          sortedMembers(packageMembers(sym).flatMap(packageMemberInfoFromSym)))
       }
     }
 
@@ -417,7 +450,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
             typeSym.sourceModule else typeSym
           val symPos = locateSymbolPos(sym, needPos)
           val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
-          new TypeInfo(
+          new BasicTypeInfo(
             typeShortName(tpe),
             cacheType(tpe),
             declaredAs(typeSym),
@@ -431,7 +464,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo = {
-      new TypeInfo("NA", -1, 'nil, "NA", List.empty, List.empty, None, None)
+      new BasicTypeInfo("NA", -1, 'nil, "NA", List.empty, List.empty, None, None)
     }
   }
 
@@ -594,3 +627,14 @@ object OffsetSourcePosition {
       Some(new OffsetSourcePosition(file(realPos.source.file.path).canon, realPos.point))
   }
 }
+
+case class AddUndo(summary: String, changes: List[FileEdit])
+case class Undo(id: Int, summary: String, changes: List[FileEdit])
+case class UndoResult(id: Int, touched: List[File])
+
+/** ERangePosition is a mirror of scala compiler internal RangePosition as a case class to */
+case class ERangePosition(file: String, offset: Int, start: Int, end: Int)
+object ERangePosition {
+  def apply(rp: RangePosition): ERangePosition = new ERangePosition(rp.source.path, rp.point, rp.start, rp.end)
+}
+

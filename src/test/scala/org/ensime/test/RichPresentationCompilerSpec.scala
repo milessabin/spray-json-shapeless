@@ -1,16 +1,12 @@
 package org.ensime.test
 
 import akka.event.slf4j.SLF4JLogging
-import concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.reflect.internal.util.OffsetPosition
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
-import org.slf4j.LoggerFactory
 
-import org.ensime.indexer.SearchService
-import org.ensime.indexer.SourceResolver
 import org.ensime.model.OffsetSourcePosition
 import org.ensime.server.RichPresentationCompiler
 import org.ensime.test.util.Helpers
@@ -83,14 +79,14 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
           assert(sym.tpe.declaredAs === expectedDeclAs)
         }
 
-        test("com.example$", "A", false, "com.example.A$", 'object)
-        test("com.example.A$", "x", false, "scala.Int", 'class)
-        test("com.example.A$", "X", false, "com.example.A$$X$", 'object)
-        test("com.example.A$", "X", true, "com.example.A$$X", 'class)
+        test("com.example$", "A", isType = false, "com.example.A$", 'object)
+        test("com.example.A$", "x", isType = false, "scala.Int", 'class)
+        test("com.example.A$", "X", isType = false, "com.example.A$$X$", 'object)
+        test("com.example.A$", "X", isType = true, "com.example.A$$X", 'class)
 
-        test("com.example$", "A", true, "com.example.A", 'class)
-        test("com.example.A", "X", false, "com.example.A$X$", 'object)
-        test("com.example.A", "X", true, "com.example.A$X", 'class)
+        test("com.example$", "A", isType = true, "com.example.A", 'class)
+        test("com.example.A", "X", isType = false, "com.example.A$X$", 'object)
+        test("com.example.A", "X", isType = true, "com.example.A$X", 'class)
       }
     }
 
@@ -104,7 +100,7 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         cc.askReloadFile(file)
         cc.askLoadedTyped(file)
         val p = new OffsetPosition(file, 78)
-        val infoList = cc.completionsAt(p, 10, false)
+        val infoList = cc.completionsAt(p, 10, caseSens = false)
         assert(infoList.completions.length > 1)
         assert(infoList.completions.head.name == "aMethod")
       }
@@ -120,7 +116,7 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         cc.askReloadFile(file)
         cc.askLoadedTyped(file)
         val p = new OffsetPosition(file, 83)
-        val infoList = cc.completionsAt(p, 10, false)
+        val infoList = cc.completionsAt(p, 10, caseSens = false)
         assert(infoList.completions.length == 1)
         assert(infoList.completions.head.name == "aMethod")
       }
@@ -136,7 +132,7 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         cc.askReloadFile(file)
         cc.askLoadedTyped(file)
         val p = new OffsetPosition(file, 80)
-        val infoList = cc.completionsAt(p, 10, false)
+        val infoList = cc.completionsAt(p, 10, caseSens = false)
         assert(infoList.completions.length > 1)
         assert(infoList.completions.head.name == "Abc")
       }
@@ -195,8 +191,8 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
 
         def test(label: String, cc: RichPresentationCompiler) = {
           val comment = "/*" + label + "*/"
-          val defPos = defsFile.content.mkString.indexOf(comment) + comment.length;
-          val usePos = usesFile.content.mkString.indexOf(comment) - 1;
+          val defPos = defsFile.content.mkString.indexOf(comment) + comment.length
+          val usePos = usesFile.content.mkString.indexOf(comment) - 1
 
           // Create a fresh pres. compiler unaffected by previous tests
 

@@ -2,12 +2,11 @@ package org.ensime.test
 
 import org.ensime.model._
 import org.ensime.protocol._
+import org.ensime.protocol.swank.{ SwankProtocolConversions, ReplConfig }
 import org.ensime.server._
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.util._
-
-import scala.reflect.internal.util.RangePosition
 
 class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
@@ -16,8 +15,8 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
   describe("SwankProtocolConversionsSpec") {
     TestUtil.withActorSystem { as =>
 
-      val protocol = new SwankProtocol(as)
-      import protocol.conversions._
+      val protConversions = new SwankProtocolConversions
+      import protConversions._
       it("should encode all message types correctly") {
         assert(toWF(SendBackgroundMessageEvent(1, Some("ABCDEF"))).toWireString === """(:background-message 1 "ABCDEF")""")
         assert(toWF(SendBackgroundMessageEvent(1, None)).toWireString === "(:background-message 1 nil)")
@@ -175,7 +174,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(methodSearchRes).toWireString === s"""(:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10) :owner-name "ownerStr")""")
         assert(toWF(typeSearchRes).toWireString === s"""(:name "abc" :local-name "a" :decl-as abcd :pos (:file $abd_str :line 10))""")
 
-        assert(toWF(new RangePosition(batchSourceFile, 70, 75, 90)).toWireString === """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)""")
+        assert(toWF(new ERangePosition(batchSourceFile, 75, 70, 90)).toWireString === """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)""")
 
         assert(toWF(FileRange("/abc", 7, 9)).toWireString === """(:file "/abc" :start 7 :end 9)""")
 

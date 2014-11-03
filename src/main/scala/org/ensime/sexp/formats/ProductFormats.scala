@@ -70,7 +70,7 @@ trait LowPriorityProductFormats {
       case SexpData(pairs) =>
         val els = keys.map { k =>
           // missing keys are interpreted as nil
-          pairs.get(k).getOrElse(SexpNil)
+          pairs.getOrElse(k, SexpNil)
         }
         g.from(r.read(els))
 
