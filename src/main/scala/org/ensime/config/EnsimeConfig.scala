@@ -2,25 +2,44 @@ package org.ensime.config
 
 import akka.event.slf4j.SLF4JLogging
 import java.io.File
+import org.ensime.sexp._
+import org.ensime.sexp.formats._
 import org.ensime.util._
 import pimpathon.file._
 import scala.util.Properties
-import scalariform.formatter.preferences._
+import scalariform.formatter.preferences.FormattingPreferences
+import RichFile._
 import FileUtils.jdkDir
 
 case class EnsimeConfig(
-    root: File,
-    cacheDir: File,
+    `root-dir`: File,
+    `cache-dir`: File,
     name: String,
-    scalaVersion: String,
-    compilerArgs: List[String],
-    modules: Map[String, EnsimeModule],
-    referenceSourceJars: List[File],
-    formattingPrefs: FormattingPreferences = FormattingPreferences(),
-    sourceMode: Boolean = false,
-    debugVMArgs: List[String] = List.empty) {
-  (root :: cacheDir :: referenceSourceJars).foreach { f =>
-    require(f.exists, s"$f is required but does not exist")
+    `scala-version`: String,
+    `compiler-args`: List[String],
+    `reference-source-roots`: List[File],
+    subprojects: List[EnsimeModule],
+    `formatting-prefs`: FormattingPreferences,
+    `source-mode`: Boolean,
+    `debug-args`: List[String]) extends SLF4JLogging {
+  (`root-dir` :: `cache-dir` :: referenceSourceJars).foreach { f =>
+    require(f.exists, f + " is required but does not exist")
+  }
+
+  // convertors between the "legacy" names and the preferred ones
+  // (with fallback defaults)
+  def root = `root-dir`
+  def cacheDir = `cache-dir`
+  def scalaVersion = `scala-version`
+  def compilerArgs = `compiler-args`
+  val modules = subprojects.map { module => (module.name, module) }.toMap
+  def referenceSourceJars = `reference-source-roots`
+  val formattingPrefs = `formatting-prefs`
+  val sourceMode = `source-mode`
+  def debugVMArgs = `debug-args`
+
+  private[config] def validated(): EnsimeConfig = {
+    copy(subprojects = subprojects.map(_.validated()))
   }
 
   def sourceFiles: Set[File] = for {
@@ -38,160 +57,86 @@ case class EnsimeConfig(
   } ++ (if (sourceMode) List.empty else targetClasspath)
 
   def targetClasspath: Set[File] = modules.values.toSet.flatMap {
-    m: EnsimeModule => m.targets ++ m.testTargets
+    m: EnsimeModule => m.targetDirs ++ m.testTargetDirs
   }
 
   val javaLib = jdkDir / "jre/lib/rt.jar"
+  require(javaLib.exists, "The JRE does not exist at the expected location " + javaLib)
 
   def allJars: Set[File] = {
     modules.values.flatMap { m =>
       m.compileJars ::: m.testJars
     }.toSet
   } + javaLib
-
 }
 
 case class EnsimeModule(
     name: String,
+    target: Option[File],
     targets: List[File],
-    testTargets: List[File],
-    dependsOnNames: List[String],
-    compileJars: List[File],
-    debugJars: List[File],
-    testJars: List[File],
-    sourceRoots: List[File],
-    referenceSourcesJars: List[File]) {
-  (targets ::: testTargets ::: compileJars ::: debugJars :::
-    testJars ::: sourceRoots ::: referenceSourcesJars) foreach { f =>
-      require(f.exists, s"$f is required by $name but does not exist")
+    `test-target`: Option[File],
+    `test-targets`: List[File],
+    `depends-on-modules`: List[String],
+    `compile-deps`: List[File],
+    `runtime-deps`: List[File],
+    `test-deps`: List[File],
+    `source-roots`: List[File],
+    `reference-source-roots`: List[File]) extends SLF4JLogging {
+  // only check the files, not the directories, see below
+  (`compile-deps` ::: `runtime-deps` :::
+    `test-deps` ::: `reference-source-roots`).foreach { f =>
+      require(f.exists, f + " is required but does not exist")
     }
+  // the preferred accessors
+  val targetDirs = targets ++ target.toIterable
+  val testTargetDirs = `test-targets` ++ `test-target`.toIterable
+  def dependsOnNames = `depends-on-modules`
+  def compileJars = `compile-deps`
+  def debugJars = `runtime-deps` // yuck
+  def testJars = `test-deps`
+  def sourceRoots = `source-roots`
+  def referenceSourcesJars = `reference-source-roots`
 
   def dependencies(implicit config: EnsimeConfig): List[EnsimeModule] =
     dependsOnNames.map(config.modules)
+
+  /*
+   We use the canonical form of files/directories to keep OS X happy
+   when loading S-Expressions. But the canon may fail to resolve if
+   the file/directory does not exist, so we force create all required
+   directories and then re-canon them, which is - admitedly - a weird
+   side-effect.
+   */
+  private[config] def validated(): EnsimeModule = {
+    (targetDirs ++ testTargetDirs ++ sourceRoots).foreach { dir =>
+      if (!dir.exists()) {
+        log.warn(dir + " does not exist, creating")
+        dir.mkdirs()
+      }
+    }
+    copy(
+      target = None,
+      targets = targetDirs.map(_.canon),
+      `test-target` = None,
+      `test-targets` = testTargetDirs.map(_.canon),
+      `source-roots` = sourceRoots.map(_.canon)
+    )
+  }
 }
 
-object EnsimeConfig extends SLF4JLogging {
-  def parse(configExp: SExp): EnsimeConfig = {
-    import RichFile._
-    import pimpathon.any._
+object EnsimeConfig {
+  // we customise how some basic object types are handled
+  object Protocol extends DefaultSexpProtocol
+    with OptionAltFormat
+    with CanonFileFormat
+    with ScalariformFormat
+  import Protocol._
 
-    // NOTE: we use 'canon' to obtain the canonical form of the
-    //       configuration files. But canon may fail to resolve if
-    //       the file/directory does not exist, so we force create all
-    //       directories, which is - admitedly - a weird side-effect.
+  private implicit val moduleFormat = SexpFormat[EnsimeModule]
+  private implicit val configFormat = SexpFormat[EnsimeConfig]
 
-    val rootMap = SExpExplorer(configExp).asMap
-    val root = file(rootMap.getString(":root-dir")).canon
-    require(root.isDirectory, ":root-dir must exist")
-
-    implicit class RichSExp(m: SExpMapExplorer) {
-      def asDirOpt(name: String): Option[File] =
-        m.getStringOpt(name).map { f =>
-          file(f).rebaseIfRelative(root).tap(_.mkdirs()).canon
-        }
-
-      def asDir(name: String): File = asDirOpt(name).get
-
-      def asDirs(name: String): List[File] =
-        m.getStringListOpt(name).getOrElse(Nil).map { n =>
-          file(n).rebaseIfRelative(root).tap(_.mkdirs()).canon
-        }
-      def asFiles(name: String): List[File] =
-        m.getStringListOpt(name).getOrElse(Nil).map { n =>
-          file(n).rebaseIfRelative(root).canon
-        }
-    }
-
-    val cacheDir = rootMap.asDir(":cache-dir")
-    val name = rootMap.getString(":name")
-    val scalaVersion = rootMap.getString(":scala-version")
-    val compilerArgs = rootMap.getStringListOpt(":compiler-args").getOrElse(Nil)
-    val referenceSourceJars = rootMap.asFiles(":reference-source-roots")
-    val subProjectsSExps = rootMap.getList(":subprojects").map(_.asMap)
-    val subModules = subProjectsSExps.map { entry =>
-      val moduleName = entry.getString(":name")
-      val targets = entry.asDirOpt(":target") match {
-        case Some(target) => target :: Nil
-        case None => entry.asDirs(":targets")
-      }
-      val testTargets = entry.asDirOpt(":test-target") match {
-        case Some(target) => target :: Nil
-        case None => entry.asDirs(":test-targets")
-      }
-      val dependentModuleNames = entry.getStringListOpt(":depends-on-modules").getOrElse(Nil)
-      val compileDeps = entry.asFiles(":compile-deps")
-      val debugDeps = entry.asFiles(":runtime-deps")
-      val testDeps = entry.asFiles(":test-deps")
-      val sourceRoots = entry.asDirs(":source-roots")
-      val referenceSourceJars = entry.asFiles(":reference-source-roots")
-
-      moduleName -> EnsimeModule(
-        moduleName, targets, testTargets, dependentModuleNames,
-        compileDeps, debugDeps, testDeps, sourceRoots, referenceSourceJars
-      )
-    }.toMap
-
-    // TODO: surely there is a cleaner way to load the formatting prefs...
-    val formattingPrefs = {
-      rootMap.map.get(KeywordAtom(":formatting-prefs")) match {
-        case Some(list: SExpList) =>
-          list.toKeywordMap.map {
-            case (KeywordAtom(key), sexp: SExp) =>
-              (Symbol(key.substring(1)), sexp.toScala)
-          }
-        case _ => Map[Symbol, Any]()
-      }
-    }.foldLeft(FormattingPreferences()) { (fp, p) =>
-      p match {
-        case ('alignParameters, value: Boolean) =>
-          fp.setPreference(AlignParameters, value)
-        case ('alignSingleLineCaseStatements, value: Boolean) =>
-          fp.setPreference(AlignSingleLineCaseStatements, value)
-        case ('alignSingleLineCaseStatements_maxArrowIndent, value: Int) =>
-          fp.setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, value)
-        case ('compactStringConcatenation, value: Boolean) =>
-          fp.setPreference(CompactStringConcatenation, value)
-        case ('doubleIndentClassDeclaration, value: Boolean) =>
-          fp.setPreference(DoubleIndentClassDeclaration, value)
-        case ('formatXml, value: Boolean) =>
-          fp.setPreference(FormatXml, value)
-        case ('indentLocalDefs, value: Boolean) =>
-          fp.setPreference(IndentLocalDefs, value)
-        case ('indentPackageBlocks, value: Boolean) =>
-          fp.setPreference(IndentPackageBlocks, value)
-        case ('indentSpaces, value: Int) =>
-          fp.setPreference(IndentSpaces, value)
-        case ('indentWithTabs, value: Boolean) =>
-          fp.setPreference(IndentWithTabs, value)
-        case ('multilineScaladocCommentsStartOnFirstLine, value: Boolean) =>
-          fp.setPreference(MultilineScaladocCommentsStartOnFirstLine, value)
-        case ('placeScaladocAsterisksBeneathSecondAsterisk, value: Boolean) =>
-          fp.setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, value)
-        case ('preserveSpaceBeforeArguments, value: Boolean) =>
-          fp.setPreference(PreserveSpaceBeforeArguments, value)
-        case ('spaceInsideBrackets, value: Boolean) =>
-          fp.setPreference(SpaceInsideBrackets, value)
-        case ('spaceInsideParentheses, value: Boolean) =>
-          fp.setPreference(SpaceInsideParentheses, value)
-        case ('spaceBeforeColon, value: Boolean) =>
-          fp.setPreference(SpaceBeforeColon, value)
-        case ('spacesWithinPatternBinders, value: Boolean) =>
-          fp.setPreference(SpacesWithinPatternBinders, value)
-        case ('rewriteArrowSymbols, value: Boolean) =>
-          fp.setPreference(RewriteArrowSymbols, value)
-        case (name, _) =>
-          log.warn("unrecognized formatting option: " + name)
-          fp
-      }
-    }
-
-    val sourceMode = rootMap.getBooleanOpt(":source-mode").getOrElse(false)
-    val debugVMArgs = rootMap.getStringListOpt(":debug-args").getOrElse(Nil)
-    EnsimeConfig(
-      root.tap(_.mkdirs()).canon, cacheDir.tap(_.mkdirs()).canon,
-      name, scalaVersion, compilerArgs, subModules,
-      referenceSourceJars, formattingPrefs, sourceMode,
-      debugVMArgs
-    )
+  def parse(config: String): EnsimeConfig = {
+    val raw = config.parseSexp.convertTo[EnsimeConfig]
+    raw.validated
   }
 }

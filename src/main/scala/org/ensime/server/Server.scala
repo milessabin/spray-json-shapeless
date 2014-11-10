@@ -1,5 +1,7 @@
 package org.ensime.server
 
+import com.google.common.base.Charsets
+import com.google.common.io.Files
 import java.io._
 import java.net.{ InetAddress, ServerSocket, Socket }
 import java.util.concurrent.atomic.AtomicBoolean
@@ -29,7 +31,7 @@ object Server {
     if (!ensimeFile.exists() || !ensimeFile.isFile)
       throw new RuntimeException(s".ensime file ($ensimeFile) not found")
 
-    val config = readEnsimeConfig(ensimeFile)
+    val config = EnsimeConfig.parse(Files.toString(ensimeFile, Charsets.UTF_8))
 
     initialiseServer(config)
   }
@@ -38,22 +40,6 @@ object Server {
     val server = new Server(config, "127.0.0.1", 0)
     server.start()
     server
-  }
-
-  /**
-   * ******************************************************************************
-   * Read a new style config from the given files.
-   * @param ensimeFile The base ensime file.   * @return
-   */
-  def readEnsimeConfig(ensimeFile: File): EnsimeConfig = {
-    val configSrc = Source.fromFile(ensimeFile)
-    try {
-      val content = configSrc.getLines().filterNot(_.startsWith(";;")).mkString("\n")
-      val parsed = SExpParser.read(content).asInstanceOf[SExpList]
-      EnsimeConfig.parse(parsed)
-    } finally {
-      configSrc.close()
-    }
   }
 }
 

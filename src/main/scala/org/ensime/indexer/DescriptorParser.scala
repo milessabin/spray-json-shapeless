@@ -22,42 +22,42 @@ object DescriptorParser extends ParboiledParser[Descriptor] {
     }
   }
 
-  protected def Top: Rule1[Descriptor] = rule("Top") {
+  protected val Top: Rule1[Descriptor] = rule("Top") {
     "(" ~ zeroOrMore(Type) ~ ")" ~ Type
   } ~~> { (params, ret) => Descriptor(params, ret) }
 
-  private def Type: Rule1[DescriptorType] = rule("Type") {
+  private lazy val Type: Rule1[DescriptorType] = rule("Type") {
     (Class | Primitive | Array)
   }
 
-  private def Array: Rule1[DescriptorType] = rule("Array") {
+  private lazy val Array: Rule1[DescriptorType] = rule("Array") {
     ch('[') ~ (Class | Primitive | Array)
   } ~~> { c => ArrayDescriptor(c) }
 
-  private def Class: Rule1[DescriptorType] = rule("Class") {
+  private lazy val Class: Rule1[DescriptorType] = rule("Class") {
     "L" ~ Package ~ Name ~ ";"
   } ~~> { (p, n) => ClassName(p, n) }
 
-  private def Package: Rule1[PackageName] = rule("Package") {
+  private lazy val Package: Rule1[PackageName] = rule("Package") {
     zeroOrMore(oneOrMore("a" - "z" | "A" - "Z" | "_" | "0" - "9").save ~ "/")
   } ~~> { PackageName.apply }
 
-  private def Name: Rule1[String] = rule("Name") {
+  private lazy val Name: Rule1[String] = rule("Name") {
     oneOrMore(noneOf(";/()"))
   } save
 
-  private def Primitive: Rule1[DescriptorType] = rule("Primitive") {
+  private lazy val Primitive: Rule1[DescriptorType] = rule("Primitive") {
     Boolean | Byte | Char | Short | Int | Long | Float | Double | Void
   }
 
-  private def Boolean: Rule1[ClassName] = rule { ch('Z') as PrimitiveBoolean }
-  private def Byte: Rule1[ClassName] = rule { ch('B') as PrimitiveByte }
-  private def Char: Rule1[ClassName] = rule { ch('C') as PrimitiveChar }
-  private def Short: Rule1[ClassName] = rule { ch('S') as PrimitiveShort }
-  private def Int: Rule1[ClassName] = rule { ch('I') as PrimitiveInt }
-  private def Long: Rule1[ClassName] = rule { ch('J') as PrimitiveLong }
-  private def Float: Rule1[ClassName] = rule { ch('F') as PrimitiveFloat }
-  private def Double: Rule1[ClassName] = rule { ch('D') as PrimitiveDouble }
-  private def Void: Rule1[ClassName] = rule { ch('V') as PrimitiveVoid }
+  private lazy val Boolean: Rule1[ClassName] = rule { ch('Z') as PrimitiveBoolean }
+  private lazy val Byte: Rule1[ClassName] = rule { ch('B') as PrimitiveByte }
+  private lazy val Char: Rule1[ClassName] = rule { ch('C') as PrimitiveChar }
+  private lazy val Short: Rule1[ClassName] = rule { ch('S') as PrimitiveShort }
+  private lazy val Int: Rule1[ClassName] = rule { ch('I') as PrimitiveInt }
+  private lazy val Long: Rule1[ClassName] = rule { ch('J') as PrimitiveLong }
+  private lazy val Float: Rule1[ClassName] = rule { ch('F') as PrimitiveFloat }
+  private lazy val Double: Rule1[ClassName] = rule { ch('D') as PrimitiveDouble }
+  private lazy val Void: Rule1[ClassName] = rule { ch('V') as PrimitiveVoid }
 
 }

@@ -10,6 +10,7 @@ import org.ensime.config._
 import org.ensime.util.RichFile._
 import org.ensime.util.FileUtils.jdkDir
 import scala.concurrent.duration._
+import scalariform.formatter.preferences.FormattingPreferences
 
 object TestUtil {
 
@@ -69,7 +70,7 @@ object TestUtil {
         copyDirectory(file(testSourcePath), testSourcesDir)
 
       EnsimeModule(
-        "single", classesDir :: Nil, testClassesDir :: Nil, Nil,
+        "single", None, classesDir :: Nil, None, testClassesDir :: Nil, Nil,
         if (jars) compileJars else List(scalaLib), Nil,
         if (jars) testJars else Nil,
         mainSourcesDir :: testSourcesDir :: Nil,
@@ -78,17 +79,17 @@ object TestUtil {
     }
 
     if (classes)
-      copyDirectory(compileClassDirs, module.targets.head)
+      copyDirectory(compileClassDirs, module.targetDirs.head)
     if (testClasses)
-      copyDirectory(testClassDirs, module.testTargets.head)
+      copyDirectory(testClassDirs, module.testTargetDirs.head)
 
     val cacheDir = base / ".ensime_cache"
     cacheDir.mkdirs()
 
     EnsimeConfig(
-      base.canon, cacheDir.canon,
-      "simple", scalaVersion, Nil, Map(module.name -> module),
-      javaSource.toList
+      base.canon, cacheDir.canon, "simple", scalaVersion,
+      Nil, javaSource.toList, List(module),
+      FormattingPreferences(), false, Nil
     )
   }
 
