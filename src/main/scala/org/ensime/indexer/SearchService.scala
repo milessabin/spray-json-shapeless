@@ -130,6 +130,8 @@ class SearchService(
     } yield (r, i)
   }
 
+  def refreshResolver(): Unit = resolver.update()
+
   private def persist(check: FileCheck, symbols: List[FqnSymbol]): Unit = try {
     index.persist(check, symbols)
     db.persist(check, symbols)

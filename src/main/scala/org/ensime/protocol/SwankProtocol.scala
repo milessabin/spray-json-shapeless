@@ -93,7 +93,13 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
     val dataString: String = value.toWireString
     val data: Array[Byte] = dataString.getBytes("UTF-8")
     val header: Array[Byte] = "%06x".format(data.length).getBytes("UTF-8")
-    log.info("Writing: " + dataString)
+
+    val displayStr = if (dataString.length > 3000)
+      dataString.take(3000) + "..."
+    else
+      dataString
+    log.info("Writing: " + displayStr)
+
     out.write(header)
     out.write(data)
     out.flush()

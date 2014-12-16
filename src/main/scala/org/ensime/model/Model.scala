@@ -10,6 +10,7 @@ import org.ensime.server._
 import org.ensime.indexer.DatabaseService._
 
 import org.ensime.util.RichFile._
+import scala.tools.nsc.io.AbstractFile
 
 abstract class EntityInfo(val name: String, val members: Iterable[EntityInfo]) {}
 
@@ -262,14 +263,19 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     } else {
       // we might need this for some Java fqns but we need some evidence
       // val name = genASM.jsymbol(sym).fullName
-      val name = sym.fullName
+      val name = symbolIndexerName(sym)
       val hit = search.findUnique(name)
       logger.debug(s"search: $name = $hit")
-      if (needPos eq PosNeededYes) {
-        hit.flatMap(LineSourcePosition.fromFqnSymbol(_)(config))
-      } else {
-        if (hit.isEmpty) None else Some(EmptySourcePosition())
-      }
+      if (needPos eq PosNeededYes)
+        hit.flatMap(LineSourcePosition.fromFqnSymbol(_)(config)).
+          flatMap(sourcePos =>
+            if (sourcePos.file.getName.endsWith(".scala"))
+              askLinkPos(sym, AbstractFile.getFile(sourcePos.file)).
+              flatMap(pos => OffsetSourcePosition.fromPosition(pos))
+            else
+              Some(sourcePos))
+      else
+        hit.map(_ => EmptySourcePosition())
     }
 
   // When inspecting a type, transform a raw list of TypeMembers to a sorted
@@ -478,7 +484,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         name,
         localName,
         locateSymbolPos(sym, PosNeededYes),
-        TypeInfo(tpe, PosNeededYes),
+        TypeInfo(tpe, PosNeededAvail),
         isArrowType(tpe),
         ownerTpe.map(cacheType))
     }
