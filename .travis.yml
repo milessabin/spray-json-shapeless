@@ -4,6 +4,7 @@ branches:
   - scala-2.9
   - scala-2.10
 language: scala
+sudo: false
 jdk:
 - openjdk6
 #- openjdk7
