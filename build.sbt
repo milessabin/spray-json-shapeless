@@ -144,7 +144,7 @@ graphSettings
 scalariformSettings
 
 // let's bump this every time we get more tests
-ScoverageKeys.coverageMinimum := 64
+ScoverageKeys.coverageMinimum := 68
 
 ScoverageKeys.coverageFailOnMinimum := true
 
