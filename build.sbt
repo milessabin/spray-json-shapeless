@@ -2,7 +2,7 @@ import sbt._
 import java.io._
 import java.util.concurrent.atomic.AtomicReference
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
-import scoverage.ScoverageSbtPlugin.instrumentSettings
+import ScoverageSbtPlugin.ScoverageKeys
 import org.scoverage.coveralls.CoverallsPlugin.coverallsSettings
 import scala.util.Try
 
@@ -21,9 +21,9 @@ version := "0.9.10-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "com.chuusai"                %% "shapeless"            % "2.0.0",
-  "com.github.stacycurl"       %% "pimpathon-core"       % "1.1.0",
+  "com.github.stacycurl"       %% "pimpathon-core"       % "1.2.0",
   "org.parboiled"              %% "parboiled-scala"      % "1.1.6",
-  "com.h2database"             %  "h2"                   % "1.4.182",
+  "com.h2database"             %  "h2"                   % "1.4.183",
   "com.typesafe.slick"         %% "slick"                % "2.1.0",
   "com.jolbox"                 %  "bonecp"               % "0.8.0.RELEASE",
   "org.apache.commons"         %  "commons-vfs2"         % "2.0" intransitive(),
@@ -36,18 +36,17 @@ libraryDependencies ++= Seq(
   "org.scala-lang"             %  "scala-compiler"       % scalaVersion.value,
   "org.scala-lang"             %  "scala-reflect"        % scalaVersion.value,
   "org.scala-lang"             %  "scalap"               % scalaVersion.value,
-  "com.typesafe.akka"          %% "akka-actor"           % "2.3.6",
-  "com.typesafe.akka"          %% "akka-slf4j"           % "2.3.6",
-  "com.typesafe.akka"          %% "akka-testkit"         % "2.3.6" % "test",
+  "com.typesafe.akka"          %% "akka-actor"           % "2.3.8",
+  "com.typesafe.akka"          %% "akka-slf4j"           % "2.3.8",
+  "com.typesafe.akka"          %% "akka-testkit"         % "2.3.8" % "test",
   "commons-io"                 %  "commons-io"           % "2.4"   % "test",
-  "org.scalatest"              %% "scalatest"            % "2.2.2" % "test",
-  "org.scalamock"              %% "scalamock-scalatest-support" % "3.1.4" % "test",
-  "org.scalacheck"             %% "scalacheck"           % "1.11.6" % "test",
+  "org.scalatest"              %% "scalatest"            % "2.2.3" % "test",
+  "org.scalamock"              %% "scalamock-scalatest-support" % "3.2.1" % "test",
+  "org.scalacheck"             %% "scalacheck"           % "1.12.1" % "test",
   "ch.qos.logback"             %  "logback-classic"      % "1.1.2",
-  "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.7",
-  "org.slf4j"                  %  "jcl-over-slf4j"       % "1.7.7",
-  "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2",
-  "com.chuusai"                %% "shapeless"            % "2.0.0"
+  "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.9",
+  "org.slf4j"                  %  "jcl-over-slf4j"       % "1.7.9",
+  "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
 )
 
 // WORKAROUND: https://github.com/typelevel/scala/issues/75
@@ -144,15 +143,10 @@ graphSettings
 
 scalariformSettings
 
-instrumentSettings
-
 // let's bump this every time we get more tests
-ScoverageKeys.minimumCoverage := 64
+ScoverageKeys.coverageMinimum := 64
 
-// might be buggy
-ScoverageKeys.highlighting := true
-
-ScoverageKeys.failOnMinimumCoverage := true
+ScoverageKeys.coverageFailOnMinimum := true
 
 coverallsSettings
 
