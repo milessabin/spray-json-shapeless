@@ -1,7 +1,6 @@
 package org.ensime.sexp.formats
 
 import org.scalatest.FunSpec
-import org.scalatest.Matchers
 import org.ensime.sexp._
 
 trait FormatSpec extends FunSpec {

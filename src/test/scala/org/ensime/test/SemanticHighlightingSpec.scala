@@ -1,7 +1,7 @@
 package org.ensime.test
 
 import java.io.File
-import org.ensime.server.CompletionControl
+import org.ensime.model._
 import org.ensime.server.RichCompilerControl
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
@@ -10,28 +10,11 @@ import scala.reflect.internal.util.RangePosition
 
 class SemanticHighlightingSpec extends FunSpec with Matchers {
 
-  val allTypes = List[Symbol](
-    'class,
-    'constructor,
-    'functionCall,
-    'importedName,
-    'object,
-    'operator,
-    'package,
-    'param,
-    'trait,
-    'typeParam,
-    'val,
-    'valField,
-    'var,
-    'varField
-  )
-
   def getSymbolDesignations(
     dir: File,
     cc: RichCompilerControl,
     contents: String,
-    tpes: List[Symbol] = allTypes): List[(Symbol, String)] = {
+    tpes: Set[SourceSymbol] = SourceSymbol.allSymbols): List[(SourceSymbol, String)] = {
 
     val file = Helpers.srcFile(dir, "abc.scala", Helpers.contents(contents))
     cc.askLoadedTyped(file)
@@ -60,17 +43,17 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               def fun(a: Any) = a match { case x: Test => Unit }
             }
           """,
-          List('class)
+          Set(ClassSymbol)
         )
         assert(sds === List(
-          ('class, "Int"),
-          ('class, "X1[Any]"),
-          ('class, "X1[String]"),
-          ('class, "X2"),
-          ('class, "X2"),
-          ('class, "Y"),
-          ('class, "Any"),
-          ('class, "Test")
+          (ClassSymbol, "Int"),
+          (ClassSymbol, "X1[Any]"),
+          (ClassSymbol, "X1[String]"),
+          (ClassSymbol, "X2"),
+          (ClassSymbol, "X2"),
+          (ClassSymbol, "Y"),
+          (ClassSymbol, "Any"),
+          (ClassSymbol, "Test")
         ))
       }
     }
@@ -90,14 +73,14 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               val e1 = new   X3
             }
           """,
-          List('constructor)
+          Set(ConstructorSymbol)
         )
         // TODO It would be better if the "new" was consistent.
         assert(sds === List(
-          ('constructor, "X1"),
-          ('constructor, "new X1(  )"),
-          ('constructor, "X2"),
-          ('constructor, "new   X3")
+          (ConstructorSymbol, "X1"),
+          (ConstructorSymbol, "new X1(  )"),
+          (ConstructorSymbol, "X2"),
+          (ConstructorSymbol, "new   X3")
         ))
       }
     }
@@ -115,13 +98,13 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               def baz { def quux(): Int = { 1 } ; quux() }
             }
           """,
-          List('functionCall)
+          Set(FunctionCallSymbol)
         )
         assert(sds === List(
-          ('functionCall, "fun"),
-          ('functionCall, "foo"),
-          ('functionCall, "substring"),
-          ('functionCall, "quux")
+          (FunctionCallSymbol, "fun"),
+          (FunctionCallSymbol, "foo"),
+          (FunctionCallSymbol, "substring"),
+          (FunctionCallSymbol, "quux")
         ))
       }
     }
@@ -135,12 +118,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
             import org.scalatest. { Matchers,
                  FunSpec }
             """,
-          List('importedName)
+          Set(ImportedNameSymbol)
         )
         assert(sds === List(
-          ('importedName, "RangePosition"),
-          ('importedName, "Matchers"),
-          ('importedName, "FunSpec")
+          (ImportedNameSymbol, "RangePosition"),
+          (ImportedNameSymbol, "Matchers"),
+          (ImportedNameSymbol, "FunSpec")
         ))
       }
     }
@@ -160,15 +143,15 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               val d = c.E(1)
             }
           """,
-          List('object)
+          Set(ObjectSymbol)
         )
         assert(sds === List(
-          ('object, "C"),
-          ('object, "A"),
-          ('object, "B"),
-          ('object, "D"),
+          (ObjectSymbol, "C"),
+          (ObjectSymbol, "A"),
+          (ObjectSymbol, "B"),
+          (ObjectSymbol, "D"),
           // TODO two problems there: "c" should be a varField ; E should be highlighted.
-          ('object, "c")
+          (ObjectSymbol, "c")
         ))
       }
     }
@@ -183,12 +166,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               a += 8
             }
           """,
-          List('operator)
+          Set(OperatorFieldSymbol)
         )
         // TODO We should highlight the "+="
         assert(sds === List(
-          ('operator, "+"),
-          ('operator, "*")
+          (OperatorFieldSymbol, "+"),
+          (OperatorFieldSymbol, "*")
         ))
       }
     }
@@ -200,12 +183,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
              package com.example
              package other
           """,
-          List('package)
+          Set(PackageSymbol)
         )
         assert(sds === List(
-          ('package, "com"),
-          ('package, "example"),
-          ('package, "other")
+          (PackageSymbol, "com"),
+          (PackageSymbol, "example"),
+          (PackageSymbol, "other")
         ))
       }
     }
@@ -219,13 +202,13 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               def f(u:  Int, v   :String) = v + u
             }
           """,
-          List('param)
+          Set(ParamSymbol)
         )
         assert(sds === List(
-          ('param, "u"),
-          ('param, "v"),
-          ('param, "v"),
-          ('param, "u")
+          (ParamSymbol, "u"),
+          (ParamSymbol, "v"),
+          (ParamSymbol, "v"),
+          (ParamSymbol, "u")
         ))
       }
     }
@@ -251,14 +234,14 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               }
             }
           """,
-          List('trait)
+          Set(TraitSymbol)
         )
         assert(sds === List(
-          ('trait, "X2"),
-          ('trait, "X3"),
-          ('trait, "X4"),
-          ('trait, "X5[ String]"),
-          ('trait, "v2 .X6")
+          (TraitSymbol, "X2"),
+          (TraitSymbol, "X3"),
+          (TraitSymbol, "X4"),
+          (TraitSymbol, "X5[ String]"),
+          (TraitSymbol, "v2 .X6")
         ))
       }
     }
@@ -275,14 +258,14 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               f[Int, String](1, "a")
             }
           """,
-          List('typeParam)
+          Set(TypeParamSymbol)
         )
         assert(sds === List(
-          ('typeParam, "XX"),
-          ('typeParam, "YY"),
-          ('typeParam, "YY"),
-          ('typeParam, "XX"),
-          ('typeParam, "YY")
+          (TypeParamSymbol, "XX"),
+          (TypeParamSymbol, "YY"),
+          (TypeParamSymbol, "YY"),
+          (TypeParamSymbol, "XX"),
+          (TypeParamSymbol, "YY")
         ))
       }
     }
@@ -300,12 +283,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               }
             }
           """,
-          List('val)
+          Set(ValSymbol)
         )
         assert(sds === List(
-          ('val, "u"),
-          ('val, "v"),
-          ('val, "u")
+          (ValSymbol, "u"),
+          (ValSymbol, "v"),
+          (ValSymbol, "u")
         ))
       }
     }
@@ -324,13 +307,13 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               println((new Test).v)
             }
           """,
-          List('valField)
+          Set(ValFieldSymbol)
         )
         assert(sds === List(
-          ('valField, "u"),
-          ('valField, "v"),
-          ('valField, "u"),
-          ('valField, "v")
+          (ValFieldSymbol, "u"),
+          (ValFieldSymbol, "v"),
+          (ValFieldSymbol, "u"),
+          (ValFieldSymbol, "v")
         ))
       }
     }
@@ -348,12 +331,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               }
             }
           """,
-          List('var)
+          Set(VarSymbol)
         )
         assert(sds === List(
-          ('var, "u"),
-          ('var, "v"),
-          ('var, "u")
+          (VarSymbol, "u"),
+          (VarSymbol, "v"),
+          (VarSymbol, "u")
         ))
       }
     }
@@ -372,13 +355,13 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               println((new Test).v)
             }
           """,
-          List('varField)
+          Set(VarFieldSymbol)
         )
         assert(sds === List(
-          ('varField, "u"),
-          ('varField, "v"),
-          ('varField, "u"),
-          ('varField, "v")
+          (VarFieldSymbol, "u"),
+          (VarFieldSymbol, "v"),
+          (VarFieldSymbol, "u"),
+          (VarFieldSymbol, "v")
         ))
       }
     }
@@ -397,10 +380,10 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               Fubar.value = 1
             }
           """,
-          List('operator)
+          Set(OperatorFieldSymbol)
         )
         assert(sds === List(
-          ('operator, "value")
+          (OperatorFieldSymbol, "value")
         ))
       }
     }
@@ -411,12 +394,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
           dir, cc, """
             package com.  example
           """,
-          List('package)
+          Set(PackageSymbol)
         )
         // only part of "example" is highlighted
         assert(sds === List(
-          ('package, "com"),
-          ('package, "example")
+          (PackageSymbol, "com"),
+          (PackageSymbol, "example")
         ))
       }
     }
@@ -430,12 +413,12 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               val x = !(3 == 4)
             }
           """,
-          List('operator)
+          Set(OperatorFieldSymbol)
         )
         // Call to foo is missing
         assert(sds === List(
-          ('operator, "!"),
-          ('operator, "==")
+          (OperatorFieldSymbol, "!"),
+          (OperatorFieldSymbol, "==")
         ))
       }
     }
@@ -451,11 +434,11 @@ class SemanticHighlightingSpec extends FunSpec with Matchers {
               fun(1, 2) + foo(4, 5)
             }
           """,
-          List('functionCall)
+          Set(FunctionCallSymbol)
         )
         assert(sds === List(
-          ('functionCall, "fun"),
-          ('functionCall, "foo")
+          (FunctionCallSymbol, "fun"),
+          (FunctionCallSymbol, "foo")
         ))
       }
     }

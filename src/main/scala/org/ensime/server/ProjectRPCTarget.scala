@@ -72,7 +72,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcSymbolDesignations(f: String, start: Int, end: Int,
-    requestedTypes: List[Symbol]): SymbolDesignations = {
+    requestedTypes: Set[SourceSymbol]): SymbolDesignations = {
     val file: File = new File(f)
     callRPC[SymbolDesignations](getAnalyzer, SymbolDesignationsReq(file, start, end, requestedTypes))
   }

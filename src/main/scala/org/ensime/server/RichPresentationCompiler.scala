@@ -139,7 +139,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askUsesOfSymAtPoint(p: Position): List[RangePosition] =
     askOption(usesOfSymbolAtPoint(p).toList).getOrElse(List.empty)
 
-  def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[scala.Symbol]): SymbolDesignations =
+  // force the full path of Set because nsc appears to have a conflicting Set....
+  def askSymbolDesignationsInRegion(p: RangePosition, tpes: collection.immutable.Set[SourceSymbol]): SymbolDesignations =
     askOption(
       new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty))
 
@@ -347,14 +348,14 @@ class RichPresentationCompiler(
       && !sym.nameString.contains("$"))
   }
 
-  protected def symbolAt(p: Position): Option[Symbol] = {
-    val tree = wrapTypedTreeAt(p)
+  protected def symbolAt(pos: Position): Option[Symbol] = {
+    val tree = wrapTypedTreeAt(pos)
     // This code taken mostly verbatim from Scala IDE sources. Licensed
     // under SCALA LICENSE.
     val wannabes =
       tree match {
-        case Import(expr, sels) =>
-          if (expr.pos.includes(p)) {
+        case Import(expr, selectors) =>
+          if (expr.pos.includes(pos)) {
             @annotation.tailrec
             def locate(p: Position, inExpr: Tree): Symbol = inExpr match {
               case Select(qualifier, name) =>
@@ -362,9 +363,9 @@ class RichPresentationCompiler(
                 else inExpr.symbol
               case tree => tree.symbol
             }
-            List(locate(p, expr))
+            List(locate(pos, expr))
           } else {
-            sels.filter(_.namePos < p.point).sortBy(_.namePos).lastOption map { sel =>
+            selectors.filter(_.namePos < pos.point).sortBy(_.namePos).lastOption map { sel =>
               val tpe = stabilizedType(expr)
               List(tpe.member(sel.name), tpe.member(sel.name.toTypeName))
             } getOrElse Nil
@@ -384,8 +385,8 @@ class RichPresentationCompiler(
     wrapLinkPos(sym, source)
   }
 
-  protected def usesOfSymbolAtPoint(p: Position): Iterable[RangePosition] = {
-    symbolAt(p) match {
+  protected def usesOfSymbolAtPoint(point: Position): Iterable[RangePosition] = {
+    symbolAt(point) match {
       case Some(s) =>
         class CompilerGlobalIndexes extends GlobalIndexes {
           val global = RichPresentationCompiler.this

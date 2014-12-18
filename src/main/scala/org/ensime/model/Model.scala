@@ -18,6 +18,31 @@ trait EntityInfo {
   val members: Iterable[EntityInfo]
 }
 
+object SourceSymbol {
+  val allSymbols: Set[SourceSymbol] = Set(
+    ObjectSymbol, ClassSymbol, TraitSymbol, PackageSymbol, ConstructorSymbol, ImportedNameSymbol, TypeParamSymbol,
+    ParamSymbol, VarFieldSymbol, ValFieldSymbol, OperatorFieldSymbol, VarSymbol, ValSymbol, FunctionCallSymbol)
+}
+
+sealed trait RefactorType
+
+sealed trait SourceSymbol
+
+case object ObjectSymbol extends SourceSymbol
+case object ClassSymbol extends SourceSymbol
+case object TraitSymbol extends SourceSymbol
+case object PackageSymbol extends SourceSymbol
+case object ConstructorSymbol extends SourceSymbol
+case object ImportedNameSymbol extends SourceSymbol
+case object TypeParamSymbol extends SourceSymbol
+case object ParamSymbol extends SourceSymbol
+case object VarFieldSymbol extends SourceSymbol
+case object ValFieldSymbol extends SourceSymbol
+case object OperatorFieldSymbol extends SourceSymbol
+case object VarSymbol extends SourceSymbol
+case object ValSymbol extends SourceSymbol
+case object FunctionCallSymbol extends SourceSymbol
+
 sealed trait PosNeeded
 case object PosNeededNo extends PosNeeded
 case object PosNeededAvail extends PosNeeded
@@ -74,7 +99,7 @@ case class SymbolDesignations(
 case class SymbolDesignation(
   start: Int,
   end: Int,
-  symType: scala.Symbol)
+  symType: SourceSymbol)
 
 case class SymbolInfo(
   name: String,

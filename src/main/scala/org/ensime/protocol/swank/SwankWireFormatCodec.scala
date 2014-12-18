@@ -47,9 +47,9 @@ trait SwankWireFormatCodec extends ProtocolWireFormatCodec {
 
   override def readMessage(reader: java.io.InputStreamReader): WireFormat = {
     fillArray(reader, headerBuf)
-    val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
-    if (msglen > 0) {
-      val buf: Array[Char] = new Array[Char](msglen)
+    val msgLen = Integer.valueOf(new String(headerBuf), 16).intValue()
+    if (msgLen > 0) {
+      val buf: Array[Char] = new Array[Char](msgLen)
       fillArray(reader, buf)
       SExpParser.read(new input.CharArrayReader(buf))
     } else {

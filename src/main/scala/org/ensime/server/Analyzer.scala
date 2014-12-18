@@ -230,8 +230,7 @@ class Analyzer(
                   val clampedEnd = math.max(end, start)
                   val pos = new RangePosition(f, start, start, clampedEnd)
                   if (tpes.nonEmpty) {
-                    val syms = scalaCompiler.askSymbolDesignationsInRegion(
-                      pos, tpes)
+                    val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                     sender ! syms
                   } else {
                     sender ! SymbolDesignations(f.path, List.empty)

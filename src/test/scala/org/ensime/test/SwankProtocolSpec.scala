@@ -421,7 +421,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       testWithResponse("""(swank:symbol-designations "SwankProtocol.scala" 0 46857 (var val varField valField))""") {
         (t, m, id) =>
           (t.rpcSymbolDesignations _).expects("SwankProtocol.scala", 0, 46857,
-            List(Symbol("var"), Symbol("val"), Symbol("varField"), Symbol("valField"))).returns(symbolDesignations)
+            Set[SourceSymbol](VarSymbol, ValSymbol, VarFieldSymbol, ValFieldSymbol)).returns(symbolDesignations)
           (m.send _).expects(s"""(:return (:ok $symbolDesignationsStr) $id)""")
       }
     }

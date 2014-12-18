@@ -6,8 +6,6 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import scala.util.Properties.userHome
 import pimpathon.file._
-import pimpathon.java.io.outputStream
-import pimpathon.java.io.inputStream
 
 class SexpParserSpec extends FunSpec with Matchers {
   import SexpParser.{ parse, flatParse }

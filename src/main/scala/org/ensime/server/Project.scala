@@ -44,7 +44,7 @@ case class TypeByNameReq(name: String) extends RPCRequest
 case class TypeByNameAtPointReq(name: String, file: File, range: OffsetRange) extends RPCRequest
 case class CallCompletionReq(id: Int) extends RPCRequest
 case class TypeAtPointReq(file: File, range: OffsetRange) extends RPCRequest
-case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) extends RPCRequest
+case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: Set[SourceSymbol]) extends RPCRequest
 case class ExecUndoReq(undo: Undo) extends RPCRequest
 case class FormatFilesReq(filenames: List[String]) extends RPCRequest
 case class ExpandSelectionReq(filename: String, start: Int, stop: Int) extends RPCRequest

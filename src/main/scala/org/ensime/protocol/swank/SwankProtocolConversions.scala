@@ -12,9 +12,31 @@ import org.ensime.util._
 // bit of a rubbish class
 class ReplConfig(val classpath: Set[File])
 
-class SwankProtocolConversions extends ProtocolConversions {
+object SwankProtocolConversions {
 
-  override def toWF(obj: DebugLocation): SExp = {
+  val sourceSymbolMap = Map(
+    "object" -> ObjectSymbol,
+    "class" -> ClassSymbol,
+    "trait" -> TraitSymbol,
+    "package" -> PackageSymbol,
+    "constructor" -> ConstructorSymbol,
+    "importedName" -> ImportedNameSymbol,
+    "typeParam" -> TypeParamSymbol,
+    "param" -> ParamSymbol,
+    "varField" -> VarFieldSymbol,
+    "valField" -> ValFieldSymbol,
+    "operator" -> OperatorFieldSymbol,
+    "var" -> VarSymbol,
+    "val" -> ValSymbol,
+    "functionCall" -> FunctionCallSymbol
+  )
+
+  val reverseSourceSymbolMap: Map[SourceSymbol, String] = sourceSymbolMap.map { case (name, symbol) => symbol -> name }
+
+  def symbolToSourceSymbol(stringRep: String): Option[SourceSymbol] = sourceSymbolMap.get(stringRep)
+  def sourceSymbolToSymbol(sym: SourceSymbol): String = reverseSourceSymbolMap.get(sym).get
+
+  def toWF(obj: DebugLocation): SExp = {
     obj match {
       case obj: DebugObjectReference => toWF(obj)
       case obj: DebugArrayElement => toWF(obj)
@@ -47,7 +69,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":offset"), obj.offset)
   }
 
-  override def toWF(obj: DebugValue): SExp = {
+  def toWF(obj: DebugValue): SExp = {
     obj match {
       case obj: DebugPrimitiveValue => toWF(obj)
       case obj: DebugObjectInstance => toWF(obj)
@@ -57,20 +79,20 @@ class SwankProtocolConversions extends ProtocolConversions {
     }
   }
 
-  override def toWF(obj: DebugNullValue): SExp = {
+  def toWF(obj: DebugNullValue): SExp = {
     SExp(
       key(":val-type"), 'null,
       key(":type-name"), obj.typeName)
   }
 
-  override def toWF(obj: DebugPrimitiveValue): SExp = {
+  def toWF(obj: DebugPrimitiveValue): SExp = {
     SExp(
       key(":val-type"), 'prim,
       key(":summary"), obj.summary,
       key(":type-name"), obj.typeName)
   }
 
-  override def toWF(obj: DebugClassField): SExp = {
+  def toWF(obj: DebugClassField): SExp = {
     SExp(
       key(":index"), obj.index,
       key(":name"), obj.name,
@@ -78,7 +100,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":type-name"), obj.typeName)
   }
 
-  override def toWF(obj: DebugObjectInstance): SExp = {
+  def toWF(obj: DebugObjectInstance): SExp = {
     SExp(
       key(":val-type"), 'obj,
       key(":fields"), SExpList(obj.fields.map(toWF)),
@@ -86,7 +108,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":object-id"), obj.objectId.toString)
   }
 
-  override def toWF(obj: DebugStringInstance): SExp = {
+  def toWF(obj: DebugStringInstance): SExp = {
     SExp(
       key(":val-type"), 'str,
       key(":summary"), obj.summary,
@@ -95,7 +117,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":object-id"), obj.objectId.toString)
   }
 
-  override def toWF(obj: DebugArrayInstance): SExp = {
+  def toWF(obj: DebugArrayInstance): SExp = {
     SExp(
       key(":val-type"), 'arr,
       key(":length"), obj.length,
@@ -104,7 +126,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":object-id"), obj.objectId.toString)
   }
 
-  override def toWF(obj: DebugStackLocal): SExp = {
+  def toWF(obj: DebugStackLocal): SExp = {
     SExp(
       key(":index"), obj.index,
       key(":name"), obj.name,
@@ -112,7 +134,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":type-name"), obj.typeName)
   }
 
-  override def toWF(obj: DebugStackFrame): SExp = {
+  def toWF(obj: DebugStackFrame): SExp = {
     SExp(
       key(":index"), obj.index,
       key(":locals"), SExpList(obj.locals.map(toWF)),
@@ -123,14 +145,14 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":this-object-id"), obj.thisObjectId.toString)
   }
 
-  override def toWF(obj: DebugBacktrace): SExp = {
+  def toWF(obj: DebugBacktrace): SExp = {
     SExp(
       key(":frames"), SExpList(obj.frames.map(toWF)),
       key(":thread-id"), obj.threadId.toString,
       key(":thread-name"), obj.threadName)
   }
 
-  override def toWF(pos: SourcePosition): SExp = pos match {
+  def toWF(pos: SourcePosition): SExp = pos match {
     case e: EmptySourcePosition => TruthAtom
     case l: LineSourcePosition => SExp(
       key(":file"), l.file.getAbsolutePath,
@@ -140,7 +162,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":offset"), o.offset)
   }
 
-  override def toWF(info: ConnectionInfo): SExp = {
+  def toWF(info: ConnectionInfo): SExp = {
     SExp(
       key(":pid"), 'nil,
       key(":implementation"),
@@ -439,13 +461,13 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":line"), bp.pos.line)
   }
 
-  override def toWF(bps: BreakpointList): SExp = {
+  def toWF(bps: BreakpointList): SExp = {
     SExp(
       key(":active"), SExpList(bps.active.map { toWF }),
       key(":pending"), SExpList(bps.pending.map { toWF }))
   }
 
-  override def toWF(config: EnsimeConfig): SExp = SExp(
+  def toWF(config: EnsimeConfig): SExp = SExp(
     key(":project-name"), StringAtom(config.name),
     key(":source-roots"), SExp(
       config.modules.values.flatMap {
@@ -454,26 +476,26 @@ class SwankProtocolConversions extends ProtocolConversions {
     )
   )
 
-  override def toWF(config: ReplConfig): SExp = {
+  def toWF(config: ReplConfig): SExp = {
     SExp.propList((":classpath", strToSExp(config.classpath.mkString(File.pathSeparator))))
   }
 
-  override def toWF(value: Boolean): SExp = {
+  def toWF(value: Boolean): SExp = {
     if (value) TruthAtom
     else NilAtom
   }
 
-  override val wfNull: SExp = NilAtom
+  val wfNull: SExp = NilAtom
 
-  override val wfTrue: SExp = TruthAtom
+  val wfTrue: SExp = TruthAtom
 
-  override val wfFalse: SExp = NilAtom
+  val wfFalse: SExp = NilAtom
 
-  override def toWF(value: String): SExp = {
+  def toWF(value: String): SExp = {
     StringAtom(value)
   }
 
-  override def toWF(note: Note): SExp = {
+  def toWF(note: Note): SExp = {
     SExp(
       key(":severity"), note.friendlySeverity,
       key(":msg"), note.msg,
@@ -484,7 +506,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":file"), note.file)
   }
 
-  override def toWF(notelist: NoteList): SExp = {
+  def toWF(notelist: NoteList): SExp = {
     val NoteList(isFull, notes) = notelist
     SExp(
       key(":is-full"),
@@ -493,7 +515,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       SExpList(notes.map(toWF).toList))
   }
 
-  override def toWF(values: Iterable[WireFormat]): SExp = {
+  def toWF(values: Iterable[WireFormat]): SExp = {
     SExpList(values.map(ea => ea.asInstanceOf[SExp]).toList)
   }
 
@@ -507,7 +529,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       value.result)
   }
 
-  override def toWF(value: CompletionInfo): SExp = {
+  def toWF(value: CompletionInfo): SExp = {
     SExp.propList(
       (":name", value.name),
       (":type-sig", toWF(value.tpeSig)),
@@ -516,7 +538,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":to-insert", value.toInsert.map(strToSExp).getOrElse('nil)))
   }
 
-  override def toWF(value: CompletionInfoList): SExp = {
+  def toWF(value: CompletionInfoList): SExp = {
     SExp.propList(
       (":prefix", value.prefix),
       (":completions", SExpList(value.completions.map(toWF))))
@@ -544,7 +566,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":end", value.end))
   }
 
-  override def toWF(value: NamedTypeMemberInfo): SExp = {
+  def toWF(value: NamedTypeMemberInfo): SExp = {
     SExp.propList(
       (":name", value.name),
       (":type", toWF(value.tpe)),
@@ -552,7 +574,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":decl-as", value.declaredAs))
   }
 
-  override def toWF(value: EntityInfo): SExp = {
+  def toWF(value: EntityInfo): SExp = {
     value match {
       case value: PackageInfo => toWF(value)
       case value: TypeInfo => toWF(value)
@@ -700,7 +722,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       (":file", value.file),
       (":syms",
         SExpList(value.syms.map { s =>
-          SExpList(List(s.symType, s.start, s.end))
+          SExpList(List(SymbolAtom(sourceSymbolToSymbol(s.symType)), s.start, s.end))
         })))
   }
 

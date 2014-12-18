@@ -1,6 +1,6 @@
 package org.ensime.server
 
-import org.ensime.model.{ SymbolDesignation, SymbolDesignations }
+import org.ensime.model._
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.reflect.io.AbstractFile
@@ -13,7 +13,7 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
 
   import global._
 
-  class SymDesigsTraverser(p: RangePosition, tpeSet: Set[scala.Symbol]) extends Traverser {
+  class SymDesigsTraverser(p: RangePosition, tpeSet: Set[SourceSymbol]) extends Traverser {
 
     val log = LoggerFactory.getLogger(getClass)
     val syms = ListBuffer[SymbolDesignation]()
@@ -22,14 +22,14 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
 
       val treeP = t.pos
 
-      def addAt(start: Int, end: Int, designation: scala.Symbol): Boolean = {
+      def addAt(start: Int, end: Int, designation: SourceSymbol): Boolean = {
         if (tpeSet.contains(designation)) {
           syms += SymbolDesignation(start, end, designation)
         }
         true
       }
 
-      def add(designation: scala.Symbol): Boolean = {
+      def add(designation: SourceSymbol): Boolean = {
         val pos = t.namePosition()
         addAt(pos.start, pos.end, designation)
       }
@@ -41,41 +41,41 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
           val owner = sym.owner
           val start = treeP.start
           val end = start + owner.name.length
-          addAt(start, end, 'object)
+          addAt(start, end, ObjectSymbol)
         } else if (sym.isConstructor) {
-          addAt(treeP.start, treeP.end, 'constructor)
+          addAt(treeP.start, treeP.end, ConstructorSymbol)
         } else if (sym.isTypeParameterOrSkolem) {
-          add('typeParam)
+          add(TypeParamSymbol)
         } else if (sym.hasFlag(PARAM)) {
-          add('param)
+          add(ParamSymbol)
         } else if (sym.hasFlag(ACCESSOR)) {
           val under = sym.accessed
           if (under.isVariable) {
-            add('varField)
+            add(VarFieldSymbol)
           } else if (under.isValue) {
-            add('valField)
+            add(ValFieldSymbol)
           } else {
             false
           }
         } else if (sym.isMethod) {
           if (sym.nameString == "apply" || sym.nameString == "update") { true }
           else if (sym.name.isOperatorName) {
-            add('operator)
+            add(OperatorFieldSymbol)
           } else {
-            add('functionCall)
+            add(FunctionCallSymbol)
           }
         } else if (sym.isVariable && sym.isLocalToBlock) {
-          add('var)
+          add(VarSymbol)
         } else if (sym.isValue && sym.isLocalToBlock) {
-          add('val)
+          add(ValSymbol)
         } else if (sym.hasPackageFlag) {
-          add('package)
+          add(PackageSymbol)
         } else if (sym.isTrait) {
-          add('trait)
+          add(TraitSymbol)
         } else if (sym.isClass) {
-          add('class)
+          add(ClassSymbol)
         } else if (sym.isModule) {
-          add('object)
+          add(ObjectSymbol)
         } else {
           false
         }
@@ -89,7 +89,7 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
               for (impSel <- selectors) {
                 val start = impSel.namePos
                 val end = start + impSel.name.decode.length()
-                addAt(start, end, 'importedName)
+                addAt(start, end, ImportedNameSymbol)
               }
             case Ident(_) =>
               qualifySymbol(sym)
@@ -101,22 +101,22 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
                 val isField = sym.owner.isType || sym.owner.isModule
 
                 if (mods.hasFlag(PARAM)) {
-                  add('param)
+                  add(ParamSymbol)
                 } else if (mods.hasFlag(MUTABLE) && !isField) {
-                  add('var)
+                  add(VarSymbol)
                 } else if (!isField) {
-                  add('val)
+                  add(ValSymbol)
                 } else if (mods.hasFlag(MUTABLE) && isField) {
-                  add('varField)
+                  add(VarFieldSymbol)
                 } else if (isField) {
-                  add('valField)
+                  add(ValFieldSymbol)
                 }
               }
 
             case TypeDef(mods, name, params, rhs) =>
               if (sym != NoSymbol) {
                 if (mods.hasFlag(PARAM)) {
-                  add('typeParam)
+                  add(TypeParamSymbol)
                 }
               }
 
@@ -133,7 +133,7 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
                   // Works, but this is *way* under-constrained.
                   val start = treeP.start
                   val end = treeP.end
-                  addAt(start, end, 'object)
+                  addAt(start, end, ObjectSymbol)
                 }
               }
             case _ =>
@@ -149,16 +149,16 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
 
   def symbolDesignationsInRegion(
     p: RangePosition,
-    tpes: List[scala.Symbol]): SymbolDesignations = {
-    val tpeSet = Set.empty[scala.Symbol] ++ tpes
-    val typed: Response[global.Tree] = new Response[global.Tree]
+    requestedTypes: Set[SourceSymbol]): SymbolDesignations = {
+    val typed = new Response[global.Tree]
     global.askLoadedTyped(p.source, keepLoaded = true, typed)
     typed.get.left.toOption match {
       case Some(tree) =>
-        val traverser = new SymDesigsTraverser(p, tpeSet)
+        val traverser = new SymDesigsTraverser(p, requestedTypes)
         traverser.traverse(tree)
         SymbolDesignations(p.source.file.path, traverser.syms.toList)
-      case None => SymbolDesignations("", List.empty)
+      case None =>
+        SymbolDesignations("", List.empty)
     }
   }
 
