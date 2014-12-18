@@ -20,7 +20,7 @@ script:
 - sbt ++$TRAVIS_SCALA_VERSION clean test
 - ./.check-diff.sh
 # FIXME: https://github.com/ensime/ensime-server/issues/597
-#- sbt ++$TRAVIS_SCALA_VERSION clean scoverage:test
+#- sbt ++$TRAVIS_SCALA_VERSION clean coverage test
 after_success:
 # FIXME: blocked on https://github.com/scoverage/sbt-coveralls/issues/21
 #- sbt ++$TRAVIS_SCALA_VERSION coveralls
