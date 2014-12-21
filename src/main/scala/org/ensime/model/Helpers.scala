@@ -84,6 +84,30 @@ trait Helpers { self: Global =>
   }
 
   /**
+   *  Return the string used to index a symbol
+   */
+  def symbolIndexerName(sym: Symbol): String = {
+    def typeIndexerName(sym: Symbol): String = {
+      val owner = sym.owner
+      if (owner.isRoot || owner.isRootPackage) {
+        sym.nameString
+      } else if (owner.hasPackageFlag) {
+        owner.fullName + "." + sym.nameString
+      } else {
+        typeIndexerName(owner) + "$" + sym.nameString
+      }
+    }
+
+    if (sym.isType) {
+      typeIndexerName(sym)
+    } else if (sym.isModule || sym.isModuleClass) {
+      typeIndexerName(sym) + "$"
+    } else {
+      symbolIndexerName(sym.owner) + "." + sym.nameString
+    }
+  }
+
+  /**
    * Generate qualified name, without args postfix.
    */
   def typeFullName(tpe: Type): String = {
