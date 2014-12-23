@@ -50,7 +50,8 @@ object TestUtil {
     testSources: Boolean = false,
     classes: Boolean = false,
     testClasses: Boolean = false,
-    jars: Boolean = true): EnsimeConfig = {
+    jars: Boolean = true,
+    compilerArgs: List[String] = List.empty): EnsimeConfig = {
     val base = tmp.canon
     require(base.isDirectory)
 
@@ -88,7 +89,7 @@ object TestUtil {
 
     EnsimeConfig(
       base.canon, cacheDir.canon, "simple", scalaVersion,
-      Nil, javaSource.toList, List(module),
+      compilerArgs, javaSource.toList, List(module),
       FormattingPreferences(), false, Nil
     )
   }

@@ -3,10 +3,17 @@ package org.ensime.test.util
 import java.io.File
 
 import akka.actor.ActorSystem
+import akka.actor.Props
 import akka.testkit.TestProbe
+import akka.testkit.TestActorRef
+import java.nio.charset.Charset
+
+import org.ensime.config.EnsimeConfig
 import org.ensime.indexer._
+import org.ensime.protocol.swank.SwankProtocol
 import org.ensime.server._
 import org.ensime.test.TestUtil
+import org.ensime.util.FileUtils
 import org.scalatest.exceptions.TestFailedException
 import org.slf4j.LoggerFactory
 import org.ensime.util.RichFile._
@@ -23,6 +30,28 @@ import pimpathon.file._
 import TestUtil._
 
 object Helpers {
+
+  def withAnalyzer(
+    action: (File, TestActorRef[Analyzer]) => Any)(implicit cfg: (File) => EnsimeConfig = { dir => basicConfig(dir, jars = false) }) =
+    withTempDirectory { tmpRaw =>
+      val tmp = tmpRaw.canon
+      require(tmp.isDirectory)
+      implicit val actorSystem = ActorSystem.create()
+      try {
+        val config = cfg(tmp)
+        val resolver = new SourceResolver(config)
+        val search = new SearchService(config, resolver)
+        val indexer = TestProbe()
+        val projectActor = TestProbe()
+        val analyzerRef: TestActorRef[Analyzer] = TestActorRef(Props(
+          new Analyzer(projectActor.ref, indexer.ref, search, config)
+        ))
+
+        action(tmp, analyzerRef)
+      } finally {
+        actorSystem.shutdown()
+      }
+    }
 
   def withPresCompiler(action: (File, RichPresentationCompiler) => Any) =
     withTempDirectory { tmpRaw =>
@@ -70,14 +99,17 @@ object Helpers {
   }
 
   // TODO: needs to be in the right place, need to get tmp dir
-  def srcFile(base: File, name: String, content: String, write: Boolean = false) = {
+  def srcFile(base: File, name: String, content: String, write: Boolean = false, encoding: String = "UTF-8"): BatchSourceFile = {
     val src = base / mainSourcePath / name
     if (write) {
       src.create()
-      src.writeBytes(content.getBytes)
+      scala.tools.nsc.io.File(src)(encoding).writeAll(content)
     }
     new BatchSourceFile(src.getPath, content)
   }
+
+  def readSrcFile(src: BatchSourceFile, encoding: String = "UTF-8"): String =
+    scala.tools.nsc.io.File(src.path)(encoding).slurp
 
   def contents(lines: String*) = lines.mkString("\n")
 
@@ -90,5 +122,4 @@ object Helpers {
       case e: Throwable => throw e
     }
   }
-
 }

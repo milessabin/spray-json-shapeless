@@ -42,7 +42,7 @@ case object DebugVmSuccess extends DebugVmStatus
 case class DebugVmError(code: Int, details: String) extends DebugVmStatus
 
 class DebugManager(
-    project: Project,
+    project: ActorRef,
     indexer: ActorRef,
     config: EnsimeConfig) extends Actor with ActorLogging {
 
@@ -196,6 +196,10 @@ class DebugManager(
     }
   }
 
+  def bgMessage(msg: String) {
+    project ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
+  }
+
   override def receive = {
     case x: Any =>
       try {
@@ -321,7 +325,7 @@ class DebugManager(
             case DebugSetBreakpointReq(filepath: String, line: Int) =>
               val file = CanonFile(filepath)
               if (!setBreakpoint(file, line)) {
-                project.bgMessage("Location not loaded. Set pending breakpoint.")
+                bgMessage("Location not loaded. Set pending breakpoint.")
               }
               sender ! VoidResponse
             case DebugClearBreakpointReq(filepath: String, line: Int) =>
@@ -533,8 +537,8 @@ class DebugManager(
     def setBreakpoint(file: CanonFile, line: Int): Boolean = {
       val locs = locations(file, line)
       if (locs.nonEmpty) {
-        project.bgMessage("Resolved breakpoint at: " + file + " : " + line)
-        project.bgMessage("Installing breakpoint at locations: " + locs)
+        bgMessage("Resolved breakpoint at: " + file + " : " + line)
+        bgMessage("Installing breakpoint at locations: " + locs)
         for (loc <- locs) {
           val request = erm.createBreakpointRequest(loc)
           request.setSuspendPolicy(EventRequest.SUSPEND_ALL)

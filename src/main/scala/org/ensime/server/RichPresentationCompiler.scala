@@ -1,6 +1,7 @@
 package org.ensime.server
 
 import java.io.File
+import java.nio.charset.Charset
 import akka.actor.ActorRef
 import org.ensime.config._
 import org.ensime.indexer.SearchService
@@ -19,6 +20,8 @@ import scala.tools.refactoring.analysis.GlobalIndexes
 
 trait RichCompilerControl extends CompilerControl with RefactoringControl with CompletionControl {
   self: RichPresentationCompiler =>
+
+  def charset: Charset = Charset.forName(settings.encoding.value)
 
   def askOption[A](op: => A): Option[A] =
     try {
