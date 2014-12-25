@@ -55,13 +55,8 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     shutdownServer()
   }
 
-  override def rcpInitProject(confSExp: SExp): EnsimeConfig = {
-    // bit of a hack - simply return the init string right now until it goes away
-    self.config
-  }
-
-  override def rpcNotifyClientConnected(): Unit = {
-    actor ! ClientConnectedEvent
+  override def rpcNotifyClientReady(): Unit = {
+    actor ! ClientReadyEvent
   }
 
   override def rpcPeekUndo(): Either[String, Undo] = {

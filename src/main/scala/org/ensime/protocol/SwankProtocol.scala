@@ -18,9 +18,12 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
   implicit val rpcExecutionContext = actorSystem.dispatchers.lookup("akka.swank-dispatcher")
 
   /**
-   * Protocol Version: 0.8.9
+   * Protocol Version: 0.8.10 (Must match version at ConnectionInfo.protocolVersion)
    *
    * Protocol Change Log:
+   *   0.8.10
+   *     Remove the config argument from init-project. Server loads
+   *     configuration on its own.
    *   0.8.9
    *     Remove Incremental builder - removed
    *       swank:builder-init
@@ -574,32 +577,20 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
        * Doc RPC:
        *   swank:init-project
        * Summary:
-       *   Initialize the server with a project configuration. The
-       *   server returns it's own knowledge about the project, including
-       *   source roots which can be used by clients to determine whether
-       *   a given source file belongs to this project.
+       *   Notify the server that the client is ready to receive
+       *   project events.
        * Arguments:
-       *   A complete ENSIME configuration property list. See manual.
+       *   None
        * Return:
-       *   (
-       *   :project-name //String:The name of the project.
-       *   :source-roots //List of Strings:The source code directory roots..
-       *   )
+       *   None
        * Example call:
-       *   (:swank-rpc (swank:init-project (:use-sbt t :compiler-args
-       *   ("-Ywarn-dead-code" "-Ywarn-catches" "-Xstrict-warnings")
-       *   :root-dir "/Users/aemon/projects/ensime/")) 42)
+       *   (:swank-rpc (swank:init-project) 42)
        * Example return:
-       *   (:return (:ok (:project-name "ensime" :source-roots
-       *   ("/Users/aemon/projects/ensime/src/main/scala"
-       *   "/Users/aemon/projects/ensime/src/test/scala"
-       *   "/Users/aemon/projects/ensime/src/main/java"))) 42)
+       *   (:return (:ok t) 42)
        */
-      case ("swank:init-project", (conf: SExpList) :: Nil) =>
-        val config = rpcTarget.rcpInitProject(conf)
-        sendRPCReturn(toWF(config), callId)
-        // seperate out notication so that config goes back before any async messages
-        rpcTarget.rpcNotifyClientConnected()
+      case ("swank:init-project", Nil) =>
+        sendRPCAckOK(callId)
+        rpcTarget.rpcNotifyClientReady()
 
       /**
        * Doc RPC:

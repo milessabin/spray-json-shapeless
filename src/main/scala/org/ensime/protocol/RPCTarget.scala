@@ -11,8 +11,7 @@ trait RPCTarget {
 
   def rpcConnectionInfo(): ConnectionInfo
   def rpcShutdownServer(): Unit
-  def rcpInitProject(confSExp: SExp): EnsimeConfig
-  def rpcNotifyClientConnected(): Unit
+  def rpcNotifyClientReady(): Unit
   def rpcPeekUndo(): Either[String, Undo]
   def rpcExecUndo(undoId: Int): Either[String, UndoResult]
   def rpcReplConfig(): ReplConfig

@@ -50,7 +50,7 @@ case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
 case class UndoResult(id: Int, touched: Iterable[File])
 
-case object ClientConnectedEvent
+case object ClientReadyEvent
 
 class Project(
     val config: EnsimeConfig,
@@ -117,12 +117,12 @@ class Project(
       tick.foreach(_.cancel())
     }
 
-    override def receive = waiting orElse connected
+    override def receive = waiting orElse ready
 
-    // buffer until the client connects
-    private var asyncs: List[AsyncEvent] = Nil
+    // buffer events until the client connects
+    private var asyncs: Vector[AsyncEvent] = Vector()
 
-    private val connected: Receive = {
+    private val ready: Receive = {
       case Retypecheck =>
         log.warn("Re-typecheck needed")
         analyzer.foreach(_ ! ReloadExistingFilesEvent)
@@ -141,16 +141,16 @@ class Project(
     }
 
     private val waiting: Receive = {
-      case ClientConnectedEvent =>
+      case ClientReadyEvent =>
         asyncs foreach {
           case AsyncEvent(value) =>
             protocol.sendEvent(value)
         }
-        asyncs = Nil
-        context.become(connected, discardOld = true)
+        asyncs = Vector()
+        context.become(ready, discardOld = true)
 
       case e: AsyncEvent =>
-        asyncs ::= e
+        asyncs :+= e
     }
   }
 
