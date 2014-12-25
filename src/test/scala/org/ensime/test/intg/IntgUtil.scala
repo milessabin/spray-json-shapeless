@@ -199,21 +199,13 @@ object IntgUtil extends Assertions with SLF4JLogging {
 
       val interactor = new InteractorHelper(server, actorSystem)
       interactor.expectRPC(1 seconds, "(swank:connection-info)",
-        """(:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.9"))""")
+        """(:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.10"))""")
 
-      val initMsg = s"(swank:init-project ())"
-
-      // we have to break it out because sourceroots also contains src.zip
+      val initMsg = s"(swank:init-project)"
       val initResp = interactor.sendRPCString(3 seconds, initMsg)
-      // return is of the form (:ok ( :project-name ...)) so extract the data
-      val initExp = SExpExplorer(SExpParser.read(initResp)).asList.get(1).asMap
-      //assert(initExp.getString(":project-name") == projectName)
-
-      assert(initExp.getStringList(":source-roots").toSet.contains(sourceRoot.getAbsolutePath))
-      //      interactor.expectAsync(30 seconds, """(:background-message 105 "Initializing Analyzer. Please wait...")""")
-      //      interactor.expectAsync(30 seconds, """(:full-typecheck-finished)""")
-      interactor.expectAsync(240 seconds, """(:indexer-ready)""")
       interactor.expectAsync(60 seconds, """(:compiler-ready)""")
+      interactor.expectAsync(60 seconds, """(:full-typecheck-finished)""")
+      interactor.expectAsync(240 seconds, """(:indexer-ready)""")
 
       f(config, interactor)
 
