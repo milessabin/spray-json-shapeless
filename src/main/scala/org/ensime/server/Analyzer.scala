@@ -2,6 +2,7 @@ package org.ensime.server
 
 import java.io.File
 import akka.actor.{ ActorLogging, Actor, ActorRef }
+import java.nio.charset.Charset
 import org.ensime.config._
 import org.ensime.indexer.SearchService
 import org.ensime.model._
@@ -18,7 +19,7 @@ import scala.tools.nsc.interactive.Global
 case class CompilerFatalError(e: Throwable)
 
 class Analyzer(
-  val project: Project,
+  val project: ActorRef,
   val indexer: ActorRef,
   search: SearchService,
   val config: EnsimeConfig)
@@ -66,8 +67,12 @@ class Analyzer(
   private var awaitingInitialCompile = true
   private var allFilesLoaded = false
 
+  protected def bgMessage(msg: String) {
+    project ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
+  }
+
   override def preStart(): Unit = {
-    project.bgMessage("Initializing Analyzer. Please wait...")
+    bgMessage("Initializing Analyzer. Please wait...")
     initTime = System.currentTimeMillis()
 
     implicit val ec = context.dispatcher
@@ -106,6 +111,8 @@ class Analyzer(
     project ! AsyncEvent(CompilerRestartedEvent)
     presCompLog.warn("Started")
   }
+
+  def charset: Charset = scalaCompiler.charset
 
   def process(msg: Any): Unit = {
     msg match {
@@ -158,17 +165,7 @@ class Analyzer(
                 }
                 sender ! VoidResponse
               case ReloadFilesReq(files) =>
-                files foreach { file =>
-                  require(file.file.exists, file + " does not exist")
-                }
-
-                val (javas, scalas) = files.filter(_.file.exists).partition(
-                  _.file.getName.endsWith(".java"))
-
-                if (scalas.nonEmpty) {
-                  scalaCompiler.askReloadFiles(scalas.map(createSourceFile))
-                  scalaCompiler.askNotifyWhenReady()
-                }
+                handleReloadFiles(files)
                 sender ! VoidResponse
               case PatchSourceReq(file, edits) =>
                 if (!file.exists()) {
@@ -240,6 +237,13 @@ class Analyzer(
                     sender ! SymbolDesignations(f.path, List.empty)
                   }
                 }
+              case ExecUndoReq(undo: Undo) =>
+                sender ! handleExecUndo(undo)
+              case ExpandSelectionReq(filename: String, start: Int, stop: Int) =>
+                sender ! handleExpandselection(filename, start, stop)
+              case FormatFilesReq(filenames: List[String]) =>
+                handleFormatFiles(filenames)
+                sender ! VoidResponse
             }
           }
         } catch {
@@ -250,6 +254,20 @@ class Analyzer(
 
       case other =>
         log.error("Unknown message type: " + other)
+    }
+  }
+
+  def handleReloadFiles(files: List[SourceFileInfo]): Unit = {
+    files foreach { file =>
+      require(file.file.exists, file + " does not exist")
+    }
+
+    val (javas, scalas) = files.filter(_.file.exists).partition(
+      _.file.getName.endsWith(".java"))
+
+    if (scalas.nonEmpty) {
+      scalaCompiler.askReloadFiles(scalas.map(createSourceFile))
+      scalaCompiler.askNotifyWhenReady()
     }
   }
 
@@ -276,5 +294,6 @@ class Analyzer(
   def createSourceFile(file: SourceFileInfo) = {
     scalaCompiler.createSourceFile(file)
   }
+
 }
 

@@ -86,8 +86,7 @@ object FileUtils {
     f.exists && f.getName.endsWith(".scala")
   }
 
-  def readFile(file: File): Either[IOException, String] = {
-    val cs = Charset.defaultCharset()
+  def readFile(file: File, cs: Charset): Either[IOException, String] = {
     try {
       val stream = new FileInputStream(file)
       try {
@@ -110,29 +109,32 @@ object FileUtils {
     }
   }
 
-  def replaceFileContents(file: File, newContents: String): Either[Exception, Unit] = {
+  def replaceFileContents(file: File, newContents: String, cs: Charset): Either[Exception, Unit] = {
     try {
-      val writer = new FileWriter(file)
+      val stream = new FileOutputStream(file)
+      val writer = new OutputStreamWriter(stream, cs)
       try {
         writer.write(newContents)
         Right(())
       } catch {
-        case e: IOException => Left(e)
+        case e: IOException =>
+          Left(e)
       } finally {
         writer.close()
       }
     } catch {
-      case e: Exception => Left(e)
+      case e: Exception =>
+        Left(e)
     }
   }
 
   // Note: we assume changes do not overlap
-  def inverseEdits(edits: Iterable[FileEdit]): List[FileEdit] = {
+  def inverseEdits(edits: Iterable[FileEdit], cs: Charset): List[FileEdit] = {
     val result = new mutable.ListBuffer[FileEdit]
     val editsByFile = edits.groupBy(_.file)
     editsByFile.foreach {
       case (file, fileEdits) =>
-        readFile(file) match {
+        readFile(file, cs) match {
           case Right(contents) =>
             var dy = 0
             for (ch <- fileEdits) {
@@ -155,14 +157,14 @@ object FileUtils {
     result.toList
   }
 
-  def writeChanges(changes: Iterable[FileEdit]): Either[Exception, Iterable[File]] = {
+  def writeChanges(changes: Iterable[FileEdit], cs: Charset): Either[Exception, Iterable[File]] = {
     val editsByFile = changes.collect { case ed: TextEdit => ed }.groupBy(_.file)
     val newFiles = changes.collect { case ed: NewFile => ed }
     try {
       val rewriteList = newFiles.map { ed => (ed.file, ed.text) } ++
         editsByFile.map {
           case (file, fileChanges) =>
-            readFile(file) match {
+            readFile(file, cs) match {
               case Right(contents) =>
                 val newContents = FileEdit.applyEdits(fileChanges.toList, contents)
                 (file, newContents)
@@ -175,7 +177,7 @@ object FileUtils {
         ed.file.delete()
       }
 
-      rewriteFiles(rewriteList) match {
+      rewriteFiles(rewriteList, cs) match {
         case Right(Right(_)) => Right(changes.groupBy(_.file).keys)
         case Right(Left(e)) => Left(new IllegalStateException(
           "Possibly incomplete write of change-set caused by: " + e))
@@ -191,7 +193,7 @@ object FileUtils {
    * before any disk writes, return Left(exception). If  an error occurs DURING
    * disk writes, return Right(Left(exception)). Otherwise, return Right(Right(()))
    */
-  def rewriteFiles(changes: Iterable[(File, String)]): Either[Exception, Either[Exception, Unit]] = {
+  def rewriteFiles(changes: Iterable[(File, String)], cs: Charset): Either[Exception, Either[Exception, Unit]] = {
     try {
 
       // Try to fail fast, before writing anything to disk.
@@ -206,7 +208,7 @@ object FileUtils {
       // Apply the changes. An error here may result in a corrupt disk state :(
       changes.foreach {
         case (file, newContents) =>
-          replaceFileContents(file, newContents) match {
+          replaceFileContents(file, newContents, cs) match {
             case Right(_) =>
             case Left(e) => Right(Left(e))
           }

@@ -10,11 +10,6 @@ import org.ensime.protocol.swank.ReplConfig
 import org.ensime.protocol.{ ConnectionInfo, RPCTarget }
 import org.ensime.util._
 
-import scalariform.astselect.AstSelector
-import scalariform.formatter.ScalaFormatter
-import scalariform.parser.ScalaParserException
-import scalariform.utils.Range
-
 import scala.concurrent.Await
 import akka.pattern.ask
 import scala.concurrent.duration._
@@ -257,44 +252,11 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
   }
 
   override def rpcExpandSelection(filename: String, start: Int, stop: Int): FileRange = {
-    try {
-      FileUtils.readFile(new File(filename)) match {
-        case Right(contents) =>
-          val selectionRange = Range(start, stop - start)
-          AstSelector.expandSelection(contents, selectionRange) match {
-            case Some(range) => FileRange(filename, range.offset, range.offset + range.length)
-            case _ =>
-              FileRange(filename, start, stop)
-          }
-        case Left(e) => throw e
-      }
-    } catch {
-      case e: ScalaParserException =>
-        throw RPCError(ErrFormatFailed, "Could not parse broken syntax: " + e)
-    }
+    callRPC[FileRange](getAnalyzer, ExpandSelectionReq(filename, start, stop))
   }
 
   override def rpcFormatFiles(filenames: List[String]): Unit = {
-    val files = filenames.map { new File(_) }
-    try {
-      val changeList = files.map { f =>
-        FileUtils.readFile(f) match {
-          case Right(contents) =>
-            val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
-            TextEdit(f, 0, contents.length, formatted)
-          case Left(e) => throw e
-        }
-      }
-      addUndo("Formatted source of " + filenames.mkString(", ") + ".", FileUtils.inverseEdits(changeList))
-      FileUtils.writeChanges(changeList) match {
-        case Right(_) =>
-        // do nothing - returning signals success
-        case Left(e) =>
-          throw RPCError(ErrFormatFailed, "Could not write any formatting changes: " + e)
-      }
-    } catch {
-      case e: ScalaParserException =>
-        throw RPCError(ErrFormatFailed, "Cannot format broken syntax: " + e)
-    }
+    callVoidRPC(getAnalyzer, FormatFilesReq(filenames))
   }
+
 }

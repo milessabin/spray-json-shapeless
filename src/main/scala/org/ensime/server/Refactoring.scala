@@ -3,6 +3,10 @@ package org.ensime.server
 import java.io.File
 
 import org.ensime.model.AddUndo
+import org.ensime.model.SourceFileInfo
+import org.ensime.model.Undo
+import org.ensime.model.UndoResult
+import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 
 import scala.collection.mutable
@@ -11,6 +15,10 @@ import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.common.CompilerAccess
 import scala.tools.refactoring.implementations._
+import scalariform.formatter.ScalaFormatter
+import scalariform.parser.ScalaParserException
+import scalariform.astselect.AstSelector
+import scalariform.utils.Range
 
 case class RefactorFailure(procedureId: Int, message: String)
 case class RefactorPrepareReq(procedureId: Int, refactor: RefactorDesc) extends RPCRequest
@@ -102,7 +110,7 @@ trait RefactoringHandler { self: Analyzer =>
       case Some(effect: RefactorEffect) =>
         project ! AddUndo(
           "Refactoring of type: " + req.refactorType.toString,
-          FileUtils.inverseEdits(effect.changes))
+          FileUtils.inverseEdits(effect.changes, charset))
         val result = scalaCompiler.askExecRefactor(procedureId, req.refactorType, effect)
         sender ! result
       case None =>
@@ -114,6 +122,59 @@ trait RefactoringHandler { self: Analyzer =>
   def handleRefactorCancel(req: RefactorCancelReq) {
     effects.remove(req.procedureId)
     sender ! VoidResponse
+  }
+
+  def handleExecUndo(undo: Undo): Either[String, UndoResult] = {
+    FileUtils.writeChanges(undo.changes, charset) match {
+      case Right(touched) =>
+        handleReloadFiles(touched.toList.map { SourceFileInfo(_) })
+        val sortedTouched = touched.toList.sortBy(_.getCanonicalPath)
+        Right(UndoResult(undo.id, sortedTouched))
+      case Left(e) => Left(e.getMessage)
+    }
+  }
+
+  def handleExpandselection(filename: String, start: Int, stop: Int): FileRange = {
+    try {
+      FileUtils.readFile(new File(filename), charset) match {
+        case Right(contents) =>
+          val selectionRange = Range(start, stop - start)
+          AstSelector.expandSelection(contents, selectionRange) match {
+            case Some(range) => FileRange(filename, range.offset, range.offset + range.length)
+            case _ =>
+              FileRange(filename, start, stop)
+          }
+        case Left(e) => throw e
+      }
+    } catch {
+      case e: ScalaParserException =>
+        throw RPCError(ErrFormatFailed, "Could not parse broken syntax: " + e)
+    }
+  }
+
+  def handleFormatFiles(filenames: List[String]): Unit = {
+    val files = filenames.map { new File(_) }
+    try {
+      val cs = charset
+      val changeList = files.map { f =>
+        FileUtils.readFile(f, cs) match {
+          case Right(contents) =>
+            val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
+            TextEdit(f, 0, contents.length, formatted)
+          case Left(e) => throw e
+        }
+      }
+      project ! AddUndo("Formatted source of " + filenames.mkString(", ") + ".", FileUtils.inverseEdits(changeList, charset))
+      FileUtils.writeChanges(changeList, cs) match {
+        case Right(_) =>
+        // do nothing - returning signals success
+        case Left(e) =>
+          throw RPCError(ErrFormatFailed, "Could not write any formatting changes: " + e)
+      }
+    } catch {
+      case e: ScalaParserException =>
+        throw RPCError(ErrFormatFailed, "Cannot format broken syntax: " + e)
+    }
   }
 }
 
@@ -252,7 +313,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     refactorType: scala.Symbol,
     effect: RefactorEffect): Either[RefactorFailure, RefactorResult] = {
     logger.info("Applying changes: " + effect.changes)
-    writeChanges(effect.changes) match {
+    writeChanges(effect.changes, charset) match {
       case Right(touchedFiles) =>
         val sortedTouchedFiles = touchedFiles.toList.sortBy(_.getCanonicalPath)
         Right(new RefactorResult(procId, refactorType, sortedTouchedFiles))

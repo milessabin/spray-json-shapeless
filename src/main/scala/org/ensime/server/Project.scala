@@ -45,6 +45,9 @@ case class TypeByNameAtPointReq(name: String, file: File, range: OffsetRange) ex
 case class CallCompletionReq(id: Int) extends RPCRequest
 case class TypeAtPointReq(file: File, range: OffsetRange) extends RPCRequest
 case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) extends RPCRequest
+case class ExecUndoReq(undo: Undo) extends RPCRequest
+case class FormatFilesReq(filenames: List[String]) extends RPCRequest
+case class ExpandSelectionReq(filename: String, start: Int, stop: Int) extends RPCRequest
 
 case class SubscribeAsync(handler: ProtocolEvent => Unit) extends RPCRequest
 
@@ -93,10 +96,6 @@ class Project(
 
   private var undoCounter = 0
   private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
-
-  def bgMessage(msg: String) {
-    actor ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
-  }
 
   class ProjectActor extends Actor {
     case object Retypecheck
@@ -168,13 +167,7 @@ class Project(
     undos.get(undoId) match {
       case Some(u) =>
         undos.remove(u.id)
-        FileUtils.writeChanges(u.changes) match {
-          case Right(touched) =>
-            analyzer.foreach(ea => ea ! ReloadFilesReq(touched.toList.map { SourceFileInfo(_) }))
-            val sortedTouched = touched.toList.sortBy(_.getCanonicalPath)
-            Right(UndoResult(undoId, sortedTouched))
-          case Left(e) => Left(e.getMessage)
-        }
+        callRPC[Either[String, UndoResult]](getAnalyzer, ExecUndoReq(u))
       case _ => Left("No such undo.")
     }
   }
@@ -188,7 +181,7 @@ class Project(
 
   protected def startCompiler() {
     val newAnalyzer = actorSystem.actorOf(Props(
-      new Analyzer(this, indexer, search, config)), "analyzer")
+      new Analyzer(actor, indexer, search, config)), "analyzer")
     analyzer = Some(newAnalyzer)
   }
 
@@ -196,7 +189,7 @@ class Project(
     debugger match {
       case Some(d) => d
       case None =>
-        val d = actorSystem.actorOf(Props(new DebugManager(this, indexer, config)))
+        val d = actorSystem.actorOf(Props(new DebugManager(actor, indexer, config)))
         debugger = Some(d)
         d
     }
