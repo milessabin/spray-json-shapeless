@@ -14,20 +14,14 @@ import pimpathon.file._
 /** A wrapper around file, allowing iteration either on direct children or on directory tree */
 class RichFile(file: File) {
 
-  def andTree: Iterable[File] = Seq(file) ++ file.children.flatMap(child => new RichFile(child).andTree)
-
   def canon: File =
     try file.getCanonicalFile
     catch {
       case e: Exception => file.getAbsoluteFile
     }
-
-  def rebaseIfRelative(base: File): File =
-    if (file.isAbsolute) file
-    else base / file.getPath
 }
 
-/** implicitely enrich java.io.File with methods of RichFile */
+/** implicitly enrich java.io.File with methods of RichFile */
 object RichFile {
   implicit def toRichFile(file: File): RichFile = new RichFile(file)
 }
@@ -78,9 +72,8 @@ object FileUtils {
     // fallback
     sys.props.get("java.home").map(new File(_).getParent),
     sys.props.get("java.home")
-  ).flatten.filter { n =>
-      new File(n + "/lib/tools.jar").exists
-    }.headOption.map(new File(_)).getOrElse(
+  ).flatten.find(n =>
+      new File(n + "/lib/tools.jar").exists).map(new File(_)).getOrElse(
       throw new FileNotFoundException(
         """Could not automatically find the JDK/lib/tools.jar.
       |You must explicitly set JDK_HOME or JAVA_HOME.""".stripMargin

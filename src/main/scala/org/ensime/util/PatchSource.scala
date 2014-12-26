@@ -35,16 +35,16 @@ object PatchSource {
         srcCursor + offset, copyLen)
       srcCursor += copyLen
       op match {
-        case PatchInsert(i, text) =>
-          text.getChars(0, text.length, result, i + offset)
+        case PatchInsert(start, text) =>
+          text.getChars(0, text.length, result, start + offset)
           offset += text.length
-        case PatchReplace(i, j, text) =>
-          text.getChars(0, text.length, result, i + offset)
-          offset += text.length - (j - i)
-          srcCursor += j - i
-        case PatchDelete(i, j) =>
-          offset -= j - i
-          srcCursor += j - i
+        case PatchReplace(start, end, text) =>
+          text.getChars(0, text.length, result, start + offset)
+          offset += text.length - (end - start)
+          srcCursor += end - start
+        case PatchDelete(start, end) =>
+          offset -= end - start
+          srcCursor += end - start
       }
     }
     val copyLen = input.length - srcCursor
@@ -57,12 +57,12 @@ object PatchSource {
     var offset = 0
     for (op <- ops) {
       op match {
-        case PatchInsert(i, text) =>
+        case PatchInsert(start, text) =>
           offset += text.length
-        case PatchReplace(i, j, text) =>
-          offset += text.length - (j - i)
-        case PatchDelete(i, j) =>
-          offset -= j - i
+        case PatchReplace(start, end, text) =>
+          offset += text.length - (end - start)
+        case PatchDelete(start, end) =>
+          offset -= end - start
       }
     }
     offset

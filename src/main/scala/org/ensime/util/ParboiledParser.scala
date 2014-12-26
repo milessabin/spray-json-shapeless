@@ -2,7 +2,6 @@ package org.ensime.util
 
 import org.parboiled.scala._
 import org.parboiled.errors.{ ErrorUtils, ParsingException }
-import org.parboiled.Context
 
 trait ThreadLocalSupport {
   protected def local[T](t: => T) = new ThreadLocal[T] {

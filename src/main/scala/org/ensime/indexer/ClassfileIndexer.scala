@@ -7,8 +7,6 @@ import org.objectweb.asm.Opcodes._
 import collection.immutable.Queue
 import collection.immutable.BitSet
 
-import pimpathon.option._
-
 trait ClassfileIndexer {
   this: SLF4JLogging =>
 

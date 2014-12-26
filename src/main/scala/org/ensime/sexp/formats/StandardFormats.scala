@@ -90,7 +90,7 @@ trait StandardFormats extends ThreadLocalSupport {
    * If you want to canonise files, mix in the optional `CanonFileFormat`
    */
   implicit val FileFormat: SexpFormat[File] = viaString(new ViaString[File] {
-    def toSexpString(file: File) = file.getPath()
+    def toSexpString(file: File) = file.getPath
     def fromSexpString(s: String) = new File(s)
   })
 
@@ -128,7 +128,7 @@ trait CanonFileFormat {
    * Intentionally canonicalises, round trip will not always equal.
    */
   override implicit val FileFormat: SexpFormat[File] = viaString(new ViaString[File] {
-    def toSexpString(file: File) = file.canon.getPath()
+    def toSexpString(file: File) = file.canon.getPath
     def fromSexpString(s: String) = new File(s).canon
   })
 }

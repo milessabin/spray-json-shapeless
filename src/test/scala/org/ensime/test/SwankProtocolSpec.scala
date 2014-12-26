@@ -1,19 +1,19 @@
 package org.ensime.test
 
-import java.io.{ InputStreamReader, ByteArrayInputStream, ByteArrayOutputStream, File }
+import java.io.{ InputStreamReader, ByteArrayInputStream, ByteArrayOutputStream }
 import java.util.concurrent.{ TimeUnit, CountDownLatch }
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.ensime.model._
-import org.ensime.protocol.{ ReplConfig, ConnectionInfo, RPCTarget, SwankProtocol }
+import org.ensime.protocol.swank.{ SwankWireFormatCodec, SwankProtocol }
+import org.ensime.protocol.{ ConnectionInfo, RPCTarget }
 import org.ensime.server._
 import org.ensime.util._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
-import pimpathon.file._
+import org.slf4j.{ LoggerFactory, Logger }
 
-import scala.reflect.internal.util.{ BatchSourceFile, RangePosition }
-import scala.reflect.io.{ PlainFile, ZipArchive }
+import scala.reflect.io.ZipArchive
 import scala.tools.nsc.io._
 
 class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
@@ -28,7 +28,9 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("can encode and decode sexp to wire") {
       TestUtil.withActorSystem { actorSystem =>
         val msg = SExpParser.read("""(:XXXX "abc") """)
-        val protocol = new SwankProtocol(actorSystem)
+        val protocol = new SwankWireFormatCodec {
+          override val log: Logger = LoggerFactory.getLogger(this.getClass)
+        }
 
         val os = new ByteArrayOutputStream()
         protocol.writeMessage(msg, os)
@@ -51,13 +53,13 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
         val out = mock[MsgHandler]
 
         val latch = new CountDownLatch(1)
-        val prot = new SwankProtocol(actorSystem) {
+
+        val prot = new SwankProtocol(actorSystem, null, t) {
           override def sendMessage(o: WireFormat) {
             out.send(o.toString)
             latch.countDown()
           }
         }
-        prot.setRPCTarget(t)
 
         val rpcId = nextId.getAndIncrement
         expectation(t, out, rpcId)
@@ -328,7 +330,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       testWithResponse("""(swank:prepare-refactor 7 inlineLocal (file "SwankProtocol.scala" start 100 end 200) t)""") { (t, m, id) =>
         (t.rpcPrepareRefactor _).expects(7, InlineLocalRefactorDesc("SwankProtocol.scala", 100, 200)).returns(
           Right(refactorRenameEffect))
-        (m.send _).expects(s"""(:return (:ok $refactorRanameEffectStr) $id)""")
+        (m.send _).expects(s"""(:return (:ok $refactorRenameEffectStr) $id)""")
       }
     }
 
@@ -387,7 +389,11 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:prepare-refactor - addImport") {
       testRefactorMethod("""addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala" start 39504 end 39508)""",
-        AddImportRefactorDesc("com.bar.Foo", "SwankProtocol.scala", 39504, 39508))
+        AddImportRefactorDesc("com.bar.Foo", "SwankProtocol.scala"))
+
+      testRefactorMethod("""addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala")""",
+        AddImportRefactorDesc("com.bar.Foo", "SwankProtocol.scala"))
+
     }
 
     it("should understand swank:exec-refactor - refactor failure") {
@@ -485,28 +491,28 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-set-break") {
       testWithResponse("""(swank:debug-set-break "hello.scala" 12)""") { (t, m, id) =>
-        (t.rpcDebugBreak _).expects("hello.scala", 12)
+        (t.rpcDebugSetBreakpoint _).expects("hello.scala", 12)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-clear-break") {
       testWithResponse("""(swank:debug-clear-break "hello.scala" 12)""") { (t, m, id) =>
-        (t.rpcDebugClearBreak _).expects("hello.scala", 12)
+        (t.rpcDebugClearBreakpoint _).expects("hello.scala", 12)
         (m.send _).expects("(:return (:ok t) " + id + ")")
       }
     }
 
     it("should understand swank:debug-clear-all-breaks") {
       testWithResponse("""(swank:debug-clear-all-breaks)""") { (t, m, id) =>
-        (t.rpcDebugClearAllBreaks _).expects()
+        (t.rpcDebugClearAllBreakpoints _).expects()
         (m.send _).expects("(:return (:ok t) " + id + ")")
       }
     }
 
     it("debug-list-breakpoints test") {
       testWithResponse("""(swank:debug-list-breakpoints)""") { (t, m, id) =>
-        (t.rpcDebugListBreaks _).expects().returns(breakpointList)
+        (t.rpcDebugListBreakpoints _).expects().returns(breakpointList)
         (m.send _).expects(s"""(:return (:ok $breakpointListStr) $id)""")
       }
     }

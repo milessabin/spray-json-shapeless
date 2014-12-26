@@ -23,7 +23,7 @@ object SexpParser extends ParboiledParser[Sexp] {
   }
 
   private lazy val SexpNilP: Rule1[SexpAtom] = rule("nil") {
-    ("nil" | (LeftBrace ~ RightBrace))
+    "nil" | (LeftBrace ~ RightBrace)
   } ~> { _ => SexpNil }
 
   private lazy val SexpCharP: Rule1[SexpChar] = rule("Char") {
@@ -35,7 +35,7 @@ object SexpParser extends ParboiledParser[Sexp] {
   }
 
   private lazy val SexpNumberP: Rule1[SexpNumber] = rule("Number") {
-    (group(Integer ~ optional(Frac) ~ optional(Exp)))
+    group(Integer ~ optional(Frac) ~ optional(Exp))
   } ~> {
     value => SexpNumber(BigDecimal(value))
   }

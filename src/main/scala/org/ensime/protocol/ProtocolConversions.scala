@@ -2,14 +2,13 @@ package org.ensime.protocol
 
 import org.ensime.config._
 import org.ensime.model._
+import org.ensime.protocol.swank.ReplConfig
 import org.ensime.server._
 import org.ensime.util.{ FileRange, NoteList, Note, WireFormat }
 
-import scala.reflect.internal.util.RangePosition
-
 trait ProtocolConversions {
   def toWF(evt: ConnectionInfo): WireFormat
-  def toWF(evt: SwankEvent): WireFormat
+  def toWF(evt: ProtocolEvent): WireFormat
 
   def toWF(obj: DebugLocation): WireFormat
   def toWF(obj: DebugValue): WireFormat
@@ -46,7 +45,7 @@ trait ProtocolConversions {
   def toWF(value: InterfaceInfo): WireFormat
   def toWF(value: TypeInspectInfo): WireFormat
   def toWF(value: SymbolSearchResults): WireFormat
-  def toWF(value: RangePosition): WireFormat
+  def toWF(value: ERangePosition): WireFormat
   def toWF(value: ImportSuggestions): WireFormat
   def toWF(value: SymbolSearchResult): WireFormat
   def toWF(value: FileRange): WireFormat

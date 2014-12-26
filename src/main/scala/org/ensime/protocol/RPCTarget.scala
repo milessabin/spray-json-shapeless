@@ -1,17 +1,23 @@
 package org.ensime.protocol
 
-import org.ensime.config.EnsimeConfig
 import org.ensime.model._
+import org.ensime.protocol.swank.ReplConfig
 import org.ensime.server._
-import org.ensime.util.{ FileRange, SExp }
-
-import scala.reflect.internal.util.RangePosition
+import org.ensime.util.FileRange
 
 trait RPCTarget {
 
   def rpcConnectionInfo(): ConnectionInfo
   def rpcShutdownServer(): Unit
   def rpcNotifyClientReady(): Unit
+
+  /**
+   * Subscribe to async events from the project, replaying previously seen events if requested.
+   * The first subscriber will get all undelivered events (subsequent subscribers do not).
+   * @param handler The callback handler for events
+   * @return True if caller is first subscriber, False otherwise
+   */
+  def rpcSubscribeAsync(handler: ProtocolEvent => Unit): Boolean
   def rpcPeekUndo(): Either[String, Undo]
   def rpcExecUndo(undoId: Int): Either[String, UndoResult]
   def rpcReplConfig(): ReplConfig
@@ -21,10 +27,10 @@ trait RPCTarget {
   def rpcDebugStopVM(): Boolean
   def rpcDebugRun(): Boolean
   def rpcDebugContinue(threadId: Long): Boolean
-  def rpcDebugBreak(file: String, line: Int): Unit
-  def rpcDebugClearBreak(file: String, line: Int): Unit
-  def rpcDebugClearAllBreaks(): Unit
-  def rpcDebugListBreaks(): BreakpointList
+  def rpcDebugSetBreakpoint(file: String, line: Int): Unit
+  def rpcDebugClearBreakpoint(file: String, line: Int): Unit
+  def rpcDebugClearAllBreakpoints(): Unit
+  def rpcDebugListBreakpoints(): BreakpointList
   def rpcDebugNext(threadId: Long): Boolean
   def rpcDebugStep(threadId: Long): Boolean
   def rpcDebugStepOut(threadId: Long): Boolean
@@ -52,7 +58,7 @@ trait RPCTarget {
   def rpcCallCompletion(id: Int): Option[CallCompletionInfo]
   def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int): ImportSuggestions
   def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults
-  def rpcUsesOfSymAtPoint(f: String, point: Int): List[RangePosition]
+  def rpcUsesOfSymAtPoint(f: String, point: Int): List[ERangePosition]
   def rpcTypeAtPoint(f: String, range: OffsetRange): Option[TypeInfo]
   def rpcInspectPackageByPath(path: String): Option[PackageInfo]
   def rpcPrepareRefactor(procId: Int, refactorDesc: RefactorDesc): Either[RefactorFailure, RefactorEffect]

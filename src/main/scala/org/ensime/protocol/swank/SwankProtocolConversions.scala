@@ -1,13 +1,13 @@
-package org.ensime.protocol
+package org.ensime.protocol.swank
 
 import java.io.File
+
 import org.ensime.config._
 import org.ensime.model._
+import org.ensime.protocol._
 import org.ensime.server._
-import org.ensime.util._
 import org.ensime.util.SExp._
-
-import scala.reflect.internal.util.RangePosition
+import org.ensime.util._
 
 // bit of a rubbish class
 class ReplConfig(val classpath: Set[File])
@@ -148,7 +148,7 @@ class SwankProtocolConversions extends ProtocolConversions {
       key(":version"), info.protocolVersion)
   }
 
-  def toWF(evt: SwankEvent): SExp = {
+  def toWF(evt: ProtocolEvent): SExp = {
     evt match {
       case g: GeneralSwankEvent =>
         toWF(g)
@@ -586,7 +586,7 @@ class SwankProtocolConversions extends ProtocolConversions {
   def toWF(value: PackageInfo): SExp = {
     SExp.propList((":name", value.name),
       (":info-type", 'package),
-      (":full-name", value.fullname),
+      (":full-name", value.fullName),
       (":members", SExpList(value.members.map(toWF).toList)))
   }
 
@@ -673,11 +673,11 @@ class SwankProtocolConversions extends ProtocolConversions {
     }
   }
 
-  def toWF(p: RangePosition): SExp = {
+  def toWF(p: ERangePosition): SExp = {
     // assumes a real file. see discussion around SourcePosition
     SExp.propList(
-      (":file", p.source.path),
-      (":offset", p.point),
+      (":file", p.file),
+      (":offset", p.offset),
       (":start", p.start),
       (":end", p.end))
   }

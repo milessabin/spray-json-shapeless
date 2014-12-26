@@ -32,8 +32,7 @@ class DynamicSynonymFilterSpec extends FunSpec with Matchers {
 
     val words: mutable.ListBuffer[String] = mutable.ListBuffer()
     filter.reset()
-    var tokens = true
-    while (filter.incrementToken) {
+    while (filter.incrementToken()) {
       words += source.getAttribute(classOf[CharTermAttribute]).toString
     }
     filter.close()

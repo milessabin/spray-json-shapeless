@@ -38,7 +38,7 @@ class DescriptorParserSpec extends FunSpec with Matchers with SLF4JLogging {
       assert(parse("(I[IILjava/lang/String;Z)V") === D(List(I, A(I), I, S, Z), V))
     }
 
-    it("should be invertable") {
+    it("should be invertible") {
       def invert(desc: String) =
         assert(parse(desc).descriptorString === desc)
 
@@ -66,7 +66,7 @@ class DescriptorParserSpec extends FunSpec with Matchers with SLF4JLogging {
       assert(Try(parseType("Lcom/sun/tools/corba/se/idl/toJavaPortable/NameModifierImpl;")).isSuccess)
     }
 
-    it("should be invertable") {
+    it("should be invertible") {
       def invert(desc: String) =
         assert(parseType(desc).internalString === desc)
 

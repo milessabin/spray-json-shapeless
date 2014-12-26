@@ -13,7 +13,7 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 case class RPCError(code: Int, detail: String) extends RuntimeException()
-case class AsyncEvent(evt: SwankEvent)
+case class AsyncEvent(evt: ProtocolEvent)
 
 case object AnalyzerShutdownEvent
 case object ReloadExistingFilesEvent
@@ -46,15 +46,12 @@ case class CallCompletionReq(id: Int) extends RPCRequest
 case class TypeAtPointReq(file: File, range: OffsetRange) extends RPCRequest
 case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: List[Symbol]) extends RPCRequest
 
-case class AddUndo(summary: String, changes: List[FileEdit])
-case class Undo(id: Int, summary: String, changes: List[FileEdit])
-case class UndoResult(id: Int, touched: Iterable[File])
+case class SubscribeAsync(handler: ProtocolEvent => Unit) extends RPCRequest
 
 case object ClientReadyEvent
 
 class Project(
     val config: EnsimeConfig,
-    val protocol: Protocol,
     actorSystem: ActorSystem) extends ProjectRPCTarget {
   val log = LoggerFactory.getLogger(this.getClass)
 
@@ -63,8 +60,6 @@ class Project(
   def !(msg: AnyRef) {
     actor ! msg
   }
-
-  protocol.setRPCTarget(this)
 
   protected var analyzer: Option[ActorRef] = None
 
@@ -95,7 +90,6 @@ class Project(
   def getAnalyzer: ActorRef = {
     analyzer.getOrElse(throw new RuntimeException("Analyzer unavailable."))
   }
-  def getIndexer: ActorRef = indexer
 
   private var undoCounter = 0
   private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
@@ -117,10 +111,11 @@ class Project(
       tick.foreach(_.cancel())
     }
 
-    override def receive = waiting orElse ready
+    // buffer events until the first client connects
+    private var asyncEvents = Vector[ProtocolEvent]()
+    private var asyncListeners: List[ProtocolEvent => Unit] = Nil
 
-    // buffer events until the client connects
-    private var asyncs: Vector[AsyncEvent] = Vector()
+    override def receive = waiting orElse ready
 
     private val ready: Receive = {
       case Retypecheck =>
@@ -132,25 +127,28 @@ class Project(
         val timeToTypecheck = earliestRetypecheck.timeLeft max typecheckDelay
         tick = Some(context.system.scheduler.scheduleOnce(timeToTypecheck, self, Retypecheck))
 
-      case IncomingMessageEvent(msg: WireFormat) =>
-        protocol.handleIncomingMessage(msg)
       case AddUndo(sum, changes) =>
         addUndo(sum, changes)
-      case AsyncEvent(value) =>
-        protocol.sendEvent(value)
+
+      case AsyncEvent(event) =>
+        asyncListeners foreach { l =>
+          l(event)
+        }
+      case SubscribeAsync(handler) =>
+        asyncListeners ::= handler
+        sender ! false
     }
 
     private val waiting: Receive = {
       case ClientReadyEvent =>
-        asyncs foreach {
-          case AsyncEvent(value) =>
-            protocol.sendEvent(value)
-        }
-        asyncs = Vector()
+      case SubscribeAsync(handler) =>
+        asyncListeners ::= handler
+        asyncEvents.foreach { event => handler(event) }
+        asyncEvents = Vector.empty
         context.become(ready, discardOld = true)
-
-      case e: AsyncEvent =>
-        asyncs :+= e
+        sender ! true
+      case AsyncEvent(event) =>
+        asyncEvents :+= event
     }
   }
 
@@ -173,7 +171,8 @@ class Project(
         FileUtils.writeChanges(u.changes) match {
           case Right(touched) =>
             analyzer.foreach(ea => ea ! ReloadFilesReq(touched.toList.map { SourceFileInfo(_) }))
-            Right(UndoResult(undoId, touched))
+            val sortedTouched = touched.toList.sortBy(_.getCanonicalPath)
+            Right(UndoResult(undoId, sortedTouched))
           case Left(e) => Left(e.getMessage)
         }
       case _ => Left("No such undo.")

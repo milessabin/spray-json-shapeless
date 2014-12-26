@@ -27,7 +27,7 @@ object DescriptorParser extends ParboiledParser[Descriptor] {
   } ~~> { (params, ret) => Descriptor(params, ret) }
 
   private lazy val Type: Rule1[DescriptorType] = rule("Type") {
-    (Class | Primitive | Array)
+    Class | Primitive | Array
   }
 
   private lazy val Array: Rule1[DescriptorType] = rule("Array") {

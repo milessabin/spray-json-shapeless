@@ -188,7 +188,7 @@ trait CollectionFormats {
     def read(s: Sexp): im.NumericRange[E] = s match {
       case SexpData(data) =>
         (data(start), data(end), data(step), data(inclusive)) match {
-          case (s, e, st, incl) if (BooleanFormat.read(incl)) =>
+          case (s, e, st, incl) if BooleanFormat.read(incl) =>
             im.NumericRange.inclusive(
               s.convertTo[E], e.convertTo[E], st.convertTo[E])
           case (s, e, st, incl) =>

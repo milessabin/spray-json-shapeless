@@ -5,16 +5,12 @@ import java.util
 import DatabaseService._
 import akka.event.slf4j.SLF4JLogging
 import java.sql.SQLException
-import java.util.ArrayList
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Executors
-import com.google.common.io.ByteStreams
 import java.util.concurrent.LinkedBlockingQueue
 import org.apache.commons.vfs2._
 import org.ensime.config.EnsimeConfig
 import pimpathon.file._
 import scala.concurrent.Future
-import scala.util.Properties
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**

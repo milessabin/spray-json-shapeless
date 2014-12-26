@@ -1,19 +1,22 @@
-package org.ensime.protocol
+package org.ensime.protocol.swank
 
 import java.io._
 
-import akka.actor.{ ActorSystem, ActorRef }
+import akka.actor.{ ActorRef, ActorSystem }
 import org.ensime.model._
+import org.ensime.protocol._
 import org.ensime.server._
 import org.ensime.util.SExp._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import scala.util.parsing.input
 
-class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
-  import SwankProtocol._
+class SwankProtocol(actorSystem: ActorSystem,
+    val peer: ActorRef,
+    val rpcTarget: RPCTarget) extends Protocol with SwankWireFormatCodec {
+
+  import org.ensime.protocol.swank.SwankProtocol._
 
   implicit val rpcExecutionContext = actorSystem.dispatchers.lookup("akka.swank-dispatcher")
 
@@ -77,66 +80,12 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
   import org.ensime.protocol.ProtocolConst._
 
   val log = LoggerFactory.getLogger(this.getClass)
-  override val conversions: ProtocolConversions = new SwankProtocolConversions
+
+  val conversions: ProtocolConversions = new SwankProtocolConversions
 
   import conversions._
 
-  private var outPeer: ActorRef = null
-  private var rpcTarget: RPCTarget = null
-
-  def peer = outPeer
-
-  def setOutputActor(peer: ActorRef) { outPeer = peer }
-
-  def setRPCTarget(target: RPCTarget) { this.rpcTarget = target }
-
-  // Handle reading / writing of messages
-
-  def writeMessage(value: WireFormat, out: OutputStream): Unit = {
-    val dataString: String = value.toWireString
-    val data: Array[Byte] = dataString.getBytes("UTF-8")
-    val header: Array[Byte] = "%06x".format(data.length).getBytes("UTF-8")
-
-    val displayStr = if (dataString.length > 3000)
-      dataString.take(3000) + "..."
-    else
-      dataString
-    log.info("Writing: " + displayStr)
-
-    out.write(header)
-    out.write(data)
-    out.flush()
-  }
-
-  private def fillArray(in: java.io.Reader, a: Array[Char]): Unit = {
-    var n = 0
-    val l = a.length
-    var charsRead = 0
-    while (n < l) {
-      charsRead = in.read(a, n, l - n)
-      if (charsRead == -1) {
-        throw new EOFException("End of file reached in socket reader.")
-      } else {
-        n += charsRead
-      }
-    }
-  }
-
-  private val headerBuf = new Array[Char](6)
-
-  def readMessage(reader: java.io.InputStreamReader): WireFormat = {
-    fillArray(reader, headerBuf)
-    val msglen = Integer.valueOf(new String(headerBuf), 16).intValue()
-    if (msglen > 0) {
-      val buf: Array[Char] = new Array[Char](msglen)
-      fillArray(reader, buf)
-      SExpParser.read(new input.CharArrayReader(buf))
-    } else {
-      throw new IllegalStateException("Empty message read from socket!")
-    }
-  }
-
-  def handleIncomingMessage(msg: Any): Unit = {
+  def handleIncomingMessage(msg: Any): Unit = synchronized {
     msg match {
       case sexp: SExp => handleMessageForm(sexp)
       case _ => log.error("Unexpected message type: " + msg)
@@ -302,11 +251,11 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
    * Doc DataStructure:
    *   InterfaceInfo
    * Summary:
-   *   Describes an inteface that a type supports
+   *   Describes an interface that a type supports
    * Structure:
    *   (
    *   :type //TypeInfo:The type of the interface.
-   *   :via-view //Bool:Is this type suppoted via an implicit conversion?
+   *   :via-view //Bool:Is this type supported via an implicit conversion?
    *   )
    */
 
@@ -556,7 +505,7 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
        *   None
        * Return:
        *   (
-       *   :pid  //Int:The integer process id of the server (or nil if unnavailable)
+       *   :pid  //Int:The integer process id of the server (or nil if unavailable)
        *   :implementation
        *     (
        *     :name  //String:An identifying name for this server implementation.
@@ -591,6 +540,7 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
       case ("swank:init-project", Nil) =>
         sendRPCAckOK(callId)
         rpcTarget.rpcNotifyClientReady()
+        rpcTarget.rpcSubscribeAsync((e) => { sendEvent(e) })
 
       /**
        * Doc RPC:
@@ -1408,7 +1358,7 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
        *   (:return (:ok t) 42)
        */
       case ("swank:debug-set-break", StringAtom(filename) :: IntAtom(line) :: Nil) =>
-        rpcTarget.rpcDebugBreak(filename, line)
+        rpcTarget.rpcDebugSetBreakpoint(filename, line)
         sendRPCAckOK(callId)
 
       /**
@@ -1427,7 +1377,7 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
        *   (:return (:ok t) 42)
        */
       case ("swank:debug-clear-break", StringAtom(filename) :: IntAtom(line) :: Nil) =>
-        rpcTarget.rpcDebugClearBreak(filename, line)
+        rpcTarget.rpcDebugClearBreakpoint(filename, line)
         sendRPCAckOK(callId)
 
       /**
@@ -1445,7 +1395,7 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
        *   (:return (:ok t) 42)
        */
       case ("swank:debug-clear-all-breaks", Nil) =>
-        rpcTarget.rpcDebugClearAllBreaks()
+        rpcTarget.rpcDebugClearAllBreakpoints()
         sendRPCAckOK(callId)
 
       /**
@@ -1465,7 +1415,7 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
        *   (:file "hello.scala" :line 23)) 42)
        */
       case ("swank:debug-list-breakpoints", Nil) =>
-        val result = rpcTarget.rpcDebugListBreaks()
+        val result = rpcTarget.rpcDebugListBreakpoints()
         sendRPCReturn(toWF(result), callId)
 
       /**
@@ -1696,10 +1646,23 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
     }
   }
 
+  /**
+   * Send a simple RPC Return with a 'true' value.
+   * Serves to acknowledge the RPC call when no
+   * other return value is required.
+   *
+   * @param  callId The id of the RPC call.
+   */
   def sendRPCAckOK(callId: Int): Unit = {
     sendRPCReturn(true, callId)
   }
 
+  /**
+   * Send an RPC Return with the given value.
+   *
+   * @param  value  The value to return.
+   * @param  callId The id of the RPC call.
+   */
   def sendRPCReturn(value: WireFormat, callId: Int): Unit = {
     value match {
       case sexp: SExp =>
@@ -1708,10 +1671,18 @@ class SwankProtocol(actorSystem: ActorSystem) extends Protocol {
     }
   }
 
-  override def sendEvent(event: SwankEvent): Unit = {
+  override def sendEvent(event: ProtocolEvent): Unit = {
     sendMessage(toWF(event))
   }
 
+  /**
+   * Notify the client that the RPC call could not
+   * be handled.
+   *
+   * @param  code  Integer code denoting error type.
+   * @param  detail  A message describing the error.
+   * @param  callId The id of the failed RPC call.
+   */
   def sendRPCError(code: Int, detail: String, callId: Int): Unit = {
     sendMessage(SExp(key(":return"), SExp(key(":abort"), code, detail), callId))
   }
@@ -1802,7 +1773,7 @@ object SwankProtocol {
   import org.ensime.util.{ Symbols => S }
 
   def parseRefactor(tpe: String, params: Map[Symbol, Any]): Either[String, RefactorDesc] = {
-    // a bit ugly, but we cant match the map - so match a sorted list, so expected tokens have to be in lexographic order
+    // a bit ugly, but we cant match the map - so match a sorted list, so expected tokens have to be in lexicographic order
     val orderedParams = params.toList.sortBy(_._1.name)
     (tpe, orderedParams) match {
       case ("rename", (S.End, end: Int) :: (S.File, file: String) :: (S.NewName, newName: String) :: (S.Start, start: Int) :: Nil) =>
@@ -1817,8 +1788,11 @@ object SwankProtocol {
         Right(OrganiseImportsRefactorDesc(file))
       case ("organizeImports", (S.File, file: String) :: Nil) =>
         Right(OrganiseImportsRefactorDesc(file))
+      // TODO Add import does not need start/end - remove from emacs protocol side
       case ("addImport", (S.End, end: Int) :: (S.File, file: String) :: (S.QualifiedName, qualifiedName: String) :: (S.Start, start: Int) :: Nil) =>
-        Right(AddImportRefactorDesc(qualifiedName, file, start, end))
+        Right(AddImportRefactorDesc(qualifiedName, file))
+      case ("addImport", (S.File, file: String) :: (S.QualifiedName, qualifiedName: String) :: Nil) =>
+        Right(AddImportRefactorDesc(qualifiedName, file))
       case _ =>
         Left("Incorrect arguments or unknown refactor type: " + tpe)
     }

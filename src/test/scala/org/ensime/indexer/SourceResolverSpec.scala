@@ -32,7 +32,7 @@ class SourceResolverSpec extends FunSpec with Matchers {
       PackageName(pkg.split('.').toList), RawSource(Some(file), None)
     ).map(fo => fo.pathWithinArchive match {
         case None => fo.asLocalFile.getAbsolutePath
-        case _ => fo.getName.getPath()
+        case _ => fo.getName.getPath
       })
   }
 

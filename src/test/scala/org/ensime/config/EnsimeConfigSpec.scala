@@ -56,7 +56,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
           val module1 = config.modules("module1")
           assert(module1.name == "module1")
           assert(module1.dependencies.isEmpty)
-          assert(config.sourceMode == false)
+          assert(!config.sourceMode)
           assert(config.debugVMArgs === List("-Dthis=that"))
         })
       }
