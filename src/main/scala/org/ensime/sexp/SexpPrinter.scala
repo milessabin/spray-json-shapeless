@@ -11,7 +11,7 @@ trait SexpPrinter extends (Sexp => String) {
   def apply(x: Sexp): String = {
     val sb = new StringBuilder
     print(x, sb)
-    sb.toString
+    sb.toString()
   }
 
   /**
@@ -20,7 +20,7 @@ trait SexpPrinter extends (Sexp => String) {
   def apply(x: Sexp, swank: String, rpc: Long): String = {
     val sb = new StringBuilder
     print(x, swank, rpc, sb)
-    sb.toString
+    sb.toString()
   }
 
   /**
@@ -54,7 +54,7 @@ trait SexpPrinter extends (Sexp => String) {
       // but PlainString can be *really* slow and eat up loads of memory
       //sb.append(n.underlying.toPlainString)
       //sb.append(n.underlying.toEngineeringString())
-      sb.append(n.toString)
+      sb.append(n.toString())
   }
 
   // we prefer not to escape some characters when in strings
@@ -78,7 +78,7 @@ trait SexpPrinter extends (Sexp => String) {
     sb.append('"').append(escaped).append('"')
   }
 
-  protected def printSeq[A](iterable: Iterable[A], printSeparator: => Unit)(f: A => Unit) {
+  protected def printSeq[A](iterable: Iterable[A], printSeparator: => Unit)(f: A => Unit): Unit = {
     var first = true
     iterable.foreach { a =>
       if (first) first = false else printSeparator

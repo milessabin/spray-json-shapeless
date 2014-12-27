@@ -68,7 +68,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
       actor ! AsyncSent(event)
     }
 
-    def expectAsync(dur: FiniteDuration, expected: ProtocolEvent) {
+    def expectAsync(dur: FiniteDuration, expected: ProtocolEvent): Unit = {
 
       val askRes = Patterns.ask(actor, AsyncRequest(expected), dur)
       try {

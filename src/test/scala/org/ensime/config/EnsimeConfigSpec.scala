@@ -1,6 +1,5 @@
 package org.ensime.config
 
-import org.ensime.server.Server
 import org.ensime.test.TestUtil
 import org.scalatest.{ Matchers, FunSpec }
 
@@ -109,7 +108,7 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
  :source-mode ${if (sourceMode) "t" else "nil"}
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
-                :targets (${abcDirStr}))))""", { implicit config =>
+                :targets ($abcDirStr))))""", { implicit config =>
             assert(config.sourceMode == sourceMode)
             assert(config.runtimeClasspath == Set(dir / "abc"), config)
             assert(config.compileClasspath == (

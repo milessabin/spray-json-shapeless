@@ -14,7 +14,6 @@ import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
-import scala.io.Source
 import scala.util.Properties
 import scala.util.Properties._
 
@@ -54,7 +53,7 @@ class Server(config: EnsimeConfig,
   import org.ensime.server.Server.log
 
   // the config file parsing will attempt to create directories that are expected
-  require(config.cacheDir.isDirectory, config.cacheDir + " is not a valid cache directory")
+  require(config.cacheDir.isDirectory, "" + config.cacheDir + " is not a valid cache directory")
 
   val actorSystem = ActorSystem.create()
   // TODO move this to only be started when we want to receive
@@ -68,7 +67,7 @@ class Server(config: EnsimeConfig,
 
   val project = new Project(config, actorSystem)
 
-  def start() {
+  def start(): Unit = {
     project.initProject()
     startSocketListener()
   }
@@ -76,7 +75,7 @@ class Server(config: EnsimeConfig,
   private val hasShutdownFlag = new AtomicBoolean(false)
   def startSocketListener(): Unit = {
     val t = new Thread(new Runnable() {
-      def run() {
+      def run(): Unit = {
         try {
           while (!hasShutdownFlag.get()) {
             try {
@@ -97,7 +96,7 @@ class Server(config: EnsimeConfig,
     t.start()
   }
 
-  def shutdown() {
+  def shutdown(): Unit = {
     log.info("Shutting down server")
     hasShutdownFlag.set(true)
     listener.close()
@@ -134,7 +133,7 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
   val in = new BufferedInputStream(socket.getInputStream)
   val reader = new InputStreamReader(in, "UTF-8")
 
-  override def run() {
+  override def run(): Unit = {
     try {
       while (true) {
         val msg: WireFormat = protocol.readMessage(reader)
@@ -167,7 +166,7 @@ class SocketHandler(socket: Socket,
   val reader = new SocketReader(socket, protocol, self)
   val out = new BufferedOutputStream(socket.getOutputStream)
 
-  def write(value: WireFormat) {
+  def write(value: WireFormat): Unit = {
     try {
       protocol.writeMessage(value, out)
     } catch {
@@ -177,7 +176,7 @@ class SocketHandler(socket: Socket,
     }
   }
 
-  override def preStart() {
+  override def preStart(): Unit = {
     reader.start()
   }
 

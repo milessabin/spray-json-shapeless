@@ -65,7 +65,8 @@ class DebugManager(
 
   // Map unqualified file names to sets of fully qualified paths.
   private val sourceMap = mutable.HashMap[String, mutable.HashSet[CanonFile]]()
-  def rebuildSourceMap() {
+
+  def rebuildSourceMap(): Unit = {
     sourceMap.clear()
     for (f <- config.sourceFiles) {
       val set = sourceMap.getOrElse(f.getName, mutable.HashSet())
@@ -75,7 +76,7 @@ class DebugManager(
   }
   rebuildSourceMap()
 
-  def tryPendingBreaksForSourcename(sourcename: String) {
+  def tryPendingBreaksForSourcename(sourcename: String): Unit = {
     for (breaks <- pendingBreaksBySourceName.get(sourcename)) {
       val toTry = mutable.HashSet() ++ breaks
       for (bp <- toTry) {
@@ -96,7 +97,7 @@ class DebugManager(
     }
   }
 
-  def clearBreakpoint(file: CanonFile, line: Int) {
+  def clearBreakpoint(file: CanonFile, line: Int): Unit = {
     val clearBp = Breakpoint(LineSourcePosition(file, line))
     for (bps <- pendingBreaksBySourceName.get(file.getName)) {
       bps.retain { _ != clearBp }
@@ -108,7 +109,7 @@ class DebugManager(
     activeBreakpoints --= toRemove
   }
 
-  def clearAllBreakpoints() {
+  def clearAllBreakpoints(): Unit = {
     pendingBreaksBySourceName.clear()
     activeBreakpoints.clear()
     for (vm <- maybeVM) {
@@ -116,14 +117,14 @@ class DebugManager(
     }
   }
 
-  def moveActiveBreaksToPending() {
+  def moveActiveBreaksToPending(): Unit = {
     for (bp <- activeBreakpoints) {
       addPendingBreakpoint(bp)
     }
     activeBreakpoints.clear()
   }
 
-  def addPendingBreakpoint(bp: Breakpoint) {
+  def addPendingBreakpoint(bp: Breakpoint): Unit = {
     val file = bp.pos.file
     val breaks = pendingBreaksBySourceName.getOrElse(file.getName, mutable.HashSet())
     breaks.add(bp)
@@ -139,7 +140,7 @@ class DebugManager(
     pendingBreaksBySourceName.values.flatten.toList
   }
 
-  def disconnectDebugVM() {
+  def disconnectDebugVM(): Unit = {
     withVM { vm =>
       vm.dispose()
     }
@@ -196,7 +197,7 @@ class DebugManager(
     }
   }
 
-  def bgMessage(msg: String) {
+  def bgMessage(msg: String): Unit = {
     project ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
   }
 
@@ -210,7 +211,7 @@ class DebugManager(
       }
   }
 
-  def processMsg(x: Any) {
+  def processMsg(x: Any): Unit = {
     x match {
       case DebuggerShutdownEvent =>
         withVM { vm =>
@@ -322,14 +323,14 @@ class DebugManager(
                   vm.resume()
                   sender ! true
               }
-            case DebugSetBreakpointReq(filepath: String, line: Int) =>
-              val file = CanonFile(filepath)
+            case DebugSetBreakpointReq(filePath: String, line: Int) =>
+              val file = CanonFile(filePath)
               if (!setBreakpoint(file, line)) {
                 bgMessage("Location not loaded. Set pending breakpoint.")
               }
               sender ! VoidResponse
-            case DebugClearBreakpointReq(filepath: String, line: Int) =>
-              val file = CanonFile(filepath)
+            case DebugClearBreakpointReq(filePath: String, line: Int) =>
+              val file = CanonFile(filePath)
               clearBreakpoint(file, line)
               sender ! VoidResponse
 
@@ -494,7 +495,7 @@ class DebugManager(
     }
     private val savedObjects = new mutable.HashMap[Long, ObjectReference]()
 
-    def start() {
+    def start(): Unit = {
       evtQ.start()
       monitor.map { _.start() }
     }
@@ -519,11 +520,11 @@ class DebugManager(
       v
     }
 
-    def resume() {
+    def resume(): Unit = {
       vm.resume()
     }
 
-    def newStepRequest(thread: ThreadReference, stride: Int, depth: Int) {
+    def newStepRequest(thread: ThreadReference, stride: Int, depth: Int): Unit = {
       erm.deleteEventRequests(erm.stepRequests)
       val request = erm.createStepRequest(
         thread,
@@ -550,11 +551,11 @@ class DebugManager(
       }
     }
 
-    def clearAllBreakpoints() {
+    def clearAllBreakpoints(): Unit = {
       erm.deleteAllBreakpoints()
     }
 
-    def clearBreakpoints(bps: Iterable[Breakpoint]) {
+    def clearBreakpoints(bps: Iterable[Breakpoint]): Unit = {
       for (bp <- bps) {
         for (
           req <- erm.breakpointRequests();
@@ -567,7 +568,7 @@ class DebugManager(
       }
     }
 
-    def typeAdded(t: ReferenceType) {
+    def typeAdded(t: ReferenceType): Unit = {
       try {
         val key = t.sourceName
         val types = fileToUnits.getOrElse(key, mutable.HashSet[ReferenceType]())
@@ -934,7 +935,7 @@ class DebugManager(
 
   private class VMEventManager(val eventQueue: EventQueue) extends Thread {
     @volatile var finished = false
-    override def run() {
+    override def run(): Unit = {
       while (!finished) {
         try {
           val eventSet = eventQueue.remove()
@@ -968,7 +969,7 @@ class DebugManager(
   private class MonitorOutput(val inStream: InputStream) extends Thread {
     val in = new InputStreamReader(inStream)
     @volatile var finished = false
-    override def run() {
+    override def run(): Unit = {
       try {
         var i = 0
         val buf = new Array[Char](512)

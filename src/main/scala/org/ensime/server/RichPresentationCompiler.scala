@@ -81,17 +81,17 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askPackageByPath(path: String): Option[PackageInfo] =
     askOption(PackageInfo.fromPath(path))
 
-  def askReloadFile(f: SourceFile) {
+  def askReloadFile(f: SourceFile): Unit = {
     askReloadFiles(List(f))
   }
 
-  def askReloadFiles(files: Iterable[SourceFile]) {
+  def askReloadFiles(files: Iterable[SourceFile]): Either[Unit, Throwable] = {
     val x = new Response[Unit]()
     askReload(files.toList, x)
     x.get
   }
 
-  def askLoadedTyped(f: SourceFile) {
+  def askLoadedTyped(f: SourceFile): Either[Tree, Throwable] = {
     val x = new Response[Tree]()
     askLoadedTyped(f, x)
     x.get
@@ -99,7 +99,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
 
   def askUnloadAllFiles(): Unit = askOption(unloadAllFiles())
 
-  def askRemoveAllDeleted() = askOption(removeAllDeleted())
+  def askRemoveAllDeleted(): Option[Unit] = askOption(removeAllDeleted())
 
   def askRemoveDeleted(f: File) = askOption(removeDeleted(AbstractFile.getFile(f)))
 
@@ -144,9 +144,9 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(
       new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty))
 
-  def askClearTypeCache() = clearTypeCache()
+  def askClearTypeCache(): Unit = clearTypeCache()
 
-  def askNotifyWhenReady() = ask(setNotifyWhenReady)
+  def askNotifyWhenReady(): Unit = ask(setNotifyWhenReady)
 
   def createSourceFile(path: String) = getSourceFile(path)
   def createSourceFile(file: AbstractFile) = getSourceFile(file)
@@ -188,7 +188,7 @@ class RichPresentationCompiler(
   }
 
   /** Called from typechecker every time a top-level class or object is entered.*/
-  override def registerTopLevelSym(sym: Symbol) {
+  override def registerTopLevelSym(sym: Symbol): Unit = {
     super.registerTopLevelSym(sym)
     symsByFile(sym.sourceFile) += sym
   }
@@ -203,7 +203,7 @@ class RichPresentationCompiler(
    * syncTopLevelSyms, since the units in question will
    * never be reloaded again.
    */
-  def removeAllDeleted() {
+  def removeAllDeleted(): Unit = {
     allSources = allSources.filter { _.file.exists }
     val deleted = symsByFile.keys.filter { !_.exists }
     for (f <- deleted) {
@@ -212,7 +212,7 @@ class RichPresentationCompiler(
   }
 
   /** Remove symbols defined by file that no longer exist. */
-  def removeDeleted(f: AbstractFile) {
+  def removeDeleted(f: AbstractFile): Unit = {
     val syms = symsByFile(f)
     for (s <- syms) {
       s.owner.info.decls unlink s
@@ -223,7 +223,7 @@ class RichPresentationCompiler(
 
   private def typePublicMembers(tpe: Type): Iterable[TypeMember] = {
     val members = new mutable.LinkedHashMap[Symbol, TypeMember]
-    def addTypeMember(sym: Symbol, pre: Type, inherited: Boolean, viaView: Symbol) {
+    def addTypeMember(sym: Symbol, pre: Type, inherited: Boolean, viaView: Symbol): Unit = {
       try {
         val m = new TypeMember(
           sym,
@@ -420,7 +420,7 @@ class RichPresentationCompiler(
     super.isOutOfDate
   }
 
-  protected def setNotifyWhenReady() {
+  protected def setNotifyWhenReady(): Unit = {
     notifyWhenReady = true
   }
 
@@ -431,7 +431,7 @@ class RichPresentationCompiler(
     }
   }
 
-  override def askShutdown() {
+  override def askShutdown(): Unit = {
     super.askShutdown()
     parent = null
     indexer = null

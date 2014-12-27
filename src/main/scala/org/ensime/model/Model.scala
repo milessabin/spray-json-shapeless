@@ -291,13 +291,14 @@ trait ModelBuilders { self: RichPresentationCompiler =>
   private val typeCache = new mutable.HashMap[Int, Type]
   private val typeCacheReverse = new mutable.HashMap[Type, Int]
 
-  def clearTypeCache() {
+  def clearTypeCache(): Unit = {
     typeCache.clear()
     typeCacheReverse.clear()
   }
   def typeById(id: Int): Option[Type] = {
     typeCache.get(id)
   }
+
   def cacheType(tpe: Type): Int = {
     if (typeCacheReverse.contains(tpe)) {
       typeCacheReverse(tpe)

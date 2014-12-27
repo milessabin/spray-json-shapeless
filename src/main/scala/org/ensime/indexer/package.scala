@@ -14,13 +14,6 @@ package object indexer {
   private[indexer] def vjar(jar: File) = vfs.resolveFile("jar:" + jar.getAbsolutePath)
   private[indexer] def vjar(jar: FileObject) = vfs.resolveFile("jar:" + jar.getName.getURI)
 
-  private[indexer] abstract class RecursiveExtSelector extends FileSelector {
-    def includeFile(info: FileSelectInfo): Boolean =
-      include(info.getFile.getName.getExtension)
-    def traverseDescendents(info: FileSelectInfo) = true
-    def include: Set[String]
-  }
-
   private[indexer] object ClassfileSelector extends RecursiveExtSelector {
     val include = Set("class")
   }

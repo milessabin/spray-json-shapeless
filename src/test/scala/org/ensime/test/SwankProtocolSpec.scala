@@ -55,7 +55,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
         val latch = new CountDownLatch(1)
 
         val prot = new SwankProtocol(actorSystem, null, t) {
-          override def sendMessage(o: WireFormat) {
+          override def sendMessage(o: WireFormat): Unit = {
             out.send(o.toString)
             latch.countDown()
           }
@@ -344,7 +344,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       }
     }
 
-    def testRefactorMethod(msg: String, desc: RefactorDesc) {
+    def testRefactorMethod(msg: String, desc: RefactorDesc): Unit = {
 
       val refactorEffect = new RefactorEffect(7, desc.refactorType, List(TextEdit(file3, 5, 7, "aaa")))
       val refactorResult = new RefactorResult(7, desc.refactorType, List(file3, file1))

@@ -1,6 +1,5 @@
 import sbt._
 import java.io._
-import java.util.concurrent.atomic.AtomicReference
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import ScoverageSbtPlugin.ScoverageKeys
 import org.scoverage.coveralls.CoverallsPlugin.coverallsSettings
@@ -80,8 +79,6 @@ scalacOptions in Compile ++= Seq(
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", "-deprecation",
   "-Xfatal-warnings",
   "-language:postfixOps", "-language:implicitConversions"
-  //"-P:wartremover:only-warn-traverser:org.brianmckenna.wartremover.warts.Unsafe"
-  //"-P:wartremover:traverser:org.brianmckenna.wartremover.warts.Unsafe"
 )
 
 javacOptions in (Compile, compile) ++= Seq (

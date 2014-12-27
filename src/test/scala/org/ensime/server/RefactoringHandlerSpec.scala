@@ -1,4 +1,4 @@
-package org.ensime
+package org.ensime.server
 
 import java.io.File
 import org.ensime.test.util.Helpers
