@@ -15,8 +15,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
   describe("SwankProtocolConversionsSpec") {
     TestUtil.withActorSystem { as =>
 
-      val protConversions = new SwankProtocolConversions
-      import protConversions._
+      import SwankProtocolConversions._
       it("should encode all message types correctly") {
         assert(toWF(SendBackgroundMessageEvent(1, Some("ABCDEF"))).toWireString === """(:background-message 1 "ABCDEF")""")
         assert(toWF(SendBackgroundMessageEvent(1, None)).toWireString === "(:background-message 1 nil)")
@@ -178,10 +177,11 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
         assert(toWF(FileRange("/abc", 7, 9)).toWireString === """(:file "/abc" :start 7 :end 9)""")
 
+        // TODO Add all the other symbols
         assert(toWF(SymbolDesignations("/abc", List(
-          SymbolDesignation(7, 9, 'abc),
-          SymbolDesignation(11, 22, 'def)
-        ))).toWireString === """(:file "/abc" :syms ((abc 7 9) (def 11 22)))""")
+          SymbolDesignation(7, 9, VarFieldSymbol),
+          SymbolDesignation(11, 22, ClassSymbol)
+        ))).toWireString === """(:file "/abc" :syms ((varField 7 9) (class 11 22)))""")
 
         assert(toWF(RefactorFailure(7, "message")).toWireString === """(:procedure-id 7 :status failure :reason "message")""")
 

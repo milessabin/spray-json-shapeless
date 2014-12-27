@@ -81,9 +81,7 @@ class SwankProtocol(actorSystem: ActorSystem,
 
   val log = LoggerFactory.getLogger(this.getClass)
 
-  val conversions: ProtocolConversions = new SwankProtocolConversions
-
-  import conversions._
+  import SwankProtocolConversions._
 
   def handleIncomingMessage(msg: Any): Unit = synchronized {
     msg match {
@@ -1242,7 +1240,8 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   ((varField 33625 33634) (val 33657 33661) (val 33663 33668)
        *   (varField 34369 34378) (val 34398 34400)))) 42)
        */
-      case ("swank:symbol-designations", StringAtom(filename) :: IntAtom(start) :: IntAtom(end) :: SymbolListExtractor(requestedTypes) :: Nil) =>
+      case ("swank:symbol-designations", StringAtom(filename) :: IntAtom(start) :: IntAtom(end) ::
+        SourceSymbolSetExtractor(requestedTypes) :: Nil) =>
         val res = rpcTarget.rpcSymbolDesignations(filename, start, end, requestedTypes)
         sendRPCReturn(toWF(res), callId)
 
@@ -1701,6 +1700,7 @@ class SwankProtocol(actorSystem: ActorSystem,
 }
 
 object SwankProtocol {
+
   object OffsetRangeExtractor {
     def unapply(sexp: SExp): Option[OffsetRange] = sexp match {
       case IntAtom(a) => Some(OffsetRange(a, a))
@@ -1725,13 +1725,18 @@ object SwankProtocol {
     }
   }
 
-  object SymbolListExtractor {
-    def unapply(l: SExpList): Option[List[Symbol]] = {
-      Some(l.items.map {
-        case SymbolAtom(value) => Symbol(value)
-        // this is a bit evil
-        case _ => return None
-      })
+  object SourceSymbolSetExtractor {
+    def unapply(l: SExpList): Option[Set[SourceSymbol]] = {
+      val result = l.items.flatMap {
+        case SymbolAtom(value) => SwankProtocolConversions.symbolToSourceSymbol(value).toList
+        case _ => Nil
+      }
+
+      if (result.size != l.size)
+        None
+      else
+        Some(result.toSet)
+
     }
   }
 

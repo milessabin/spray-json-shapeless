@@ -1,11 +1,9 @@
 
 package org.ensime.sexp.formats
 
-import collection.{ immutable => im, mutable => mut }
+import collection.{ immutable => im }
 
 import org.ensime.sexp._
-import collection.generic.CanBuildFrom
-import collection.breakOut
 
 // http://docs.scala-lang.org/overviews/collections/overview.html
 class CollectionFormatsSpec extends FormatSpec

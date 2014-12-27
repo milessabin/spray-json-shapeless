@@ -21,7 +21,7 @@ trait RPCTarget {
   def rpcPeekUndo(): Either[String, Undo]
   def rpcExecUndo(undoId: Int): Either[String, UndoResult]
   def rpcReplConfig(): ReplConfig
-  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: List[Symbol]): SymbolDesignations
+  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: Set[SourceSymbol]): SymbolDesignations
   def rpcDebugStartVM(commandLine: String): DebugVmStatus
   def rpcDebugAttachVM(hostname: String, port: String): DebugVmStatus
   def rpcDebugStopVM(): Boolean

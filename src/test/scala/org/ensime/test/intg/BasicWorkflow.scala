@@ -33,10 +33,9 @@ class BasicWorkflow extends FunSpec with Matchers {
 
         //-----------------------------------------------------------------------------------------------
         // semantic highlighting
-        // TODO does it reject invalid symbols - should these be types (probably)?
-        val designations = project.rpcSymbolDesignations(fooFilePath, -1, 299, List('var, 'val, 'var, 'val, 'varField, 'valField, 'functionCall, 'operator, 'param, 'class, 'trait, 'object, 'package))
+        val designations = project.rpcSymbolDesignations(fooFilePath, -1, 299, SourceSymbol.allSymbols)
         assert(designations.file == fooFilePath)
-        assert(designations.syms.contains(SymbolDesignation(12, 19, 'package)))
+        assert(designations.syms.contains(SymbolDesignation(12, 19, PackageSymbol)))
         // expected Symbols
         // ((package 12 19) (package 8 11) (trait 40 43) (valField 69 70) (class 100 103) (param 125 126) (class 128 131) (param 133 134) (class 136 142) (operator 156 157) (param 154 155) (functionCall 160 166) (param 158 159) (valField 183 186) (class 193 199) (class 201 204) (valField 214 217) (class 224 227) (functionCall 232 239) (operator 250 251) (valField 256 257) (valField 252 255) (functionCall 261 268) (functionCall 273 283) (valField 269 272)))
 

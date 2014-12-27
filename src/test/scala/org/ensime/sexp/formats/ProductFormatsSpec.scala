@@ -2,8 +2,6 @@ package org.ensime.sexp.formats
 
 import org.ensime.sexp._
 
-import shapeless._
-
 class ProductFormatsSpec extends FormatSpec
     with BasicFormats with StandardFormats with ProductFormats {
 

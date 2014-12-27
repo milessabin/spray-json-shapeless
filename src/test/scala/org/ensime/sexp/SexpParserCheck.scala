@@ -33,7 +33,7 @@ trait ArbitrarySexp {
   // avoid stackoverflows with http://stackoverflow.com/questions/19829293
 
   lazy val genSexpSymbol: Gen[SexpSymbol] =
-    alphaStr.filter(_.nonEmpty).map(SexpSymbol(_))
+    alphaStr.filter(_.nonEmpty).map(SexpSymbol)
 
   lazy val genSexpKey: Gen[SexpSymbol] =
     alphaStr.filter(_.nonEmpty).map { s => SexpSymbol(":" + s) }
@@ -42,8 +42,8 @@ trait ArbitrarySexp {
   // TODO: arbitrary[BigDecimal] but it freezes the tests
   // TODO: cons in SexpCons car, but it dramatically slows things
   lazy val genSexpAtom: Gen[SexpAtom] = oneOf(
-    alphaNumChar.map(SexpChar(_)),
-    alphaStr.map(SexpString(_)),
+    alphaNumChar.map(SexpChar),
+    alphaStr.map(SexpString),
     genSexpSymbol,
     arbitrary[Double].map(SexpNumber(_)),
     //arbitrary[BigDecimal].map(SexpNumber(_)),
