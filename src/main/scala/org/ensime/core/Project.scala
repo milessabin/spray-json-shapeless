@@ -22,12 +22,12 @@ case object VoidResponse
 
 trait RPCRequest
 
-case class ReloadFilesReq(files: List[SourceFileInfo]) extends RPCRequest
+case class ReloadFilesReq(files: List[SourceFileInfo], async: Boolean) extends RPCRequest
 case object ReloadAllReq extends RPCRequest
 case object UnloadAllReq extends RPCRequest
 case class PatchSourceReq(file: File, edits: List[PatchOp]) extends RPCRequest
 case class RemoveFileReq(file: File) extends RPCRequest
-case class CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean) extends RPCRequest
+case class CompletionsReq(fileInfo: SourceFileInfo, point: Int, maxResults: Int, caseSens: Boolean) extends RPCRequest
 case class TypeCompletionsReq(prefix: String, maxResults: Int) extends RPCRequest
 case class ImportSuggestionsReq(file: File, point: Int, names: List[String], maxResults: Int) extends RPCRequest
 case class PublicSymbolSearchReq(names: List[String], maxResults: Int) extends RPCRequest
@@ -47,6 +47,7 @@ case class TypeAtPointReq(file: File, range: OffsetRange) extends RPCRequest
 case class SymbolDesignationsReq(file: File, start: Int, end: Int, tpes: Set[SourceSymbol]) extends RPCRequest
 case class ExecUndoReq(undo: Undo) extends RPCRequest
 case class FormatFilesReq(filenames: List[String]) extends RPCRequest
+case class FormatFileReq(fileInfo: SourceFileInfo) extends RPCRequest
 case class ExpandSelectionReq(filename: String, start: Int, stop: Int) extends RPCRequest
 
 case class SubscribeAsync(handler: EnsimeEvent => Unit) extends RPCRequest

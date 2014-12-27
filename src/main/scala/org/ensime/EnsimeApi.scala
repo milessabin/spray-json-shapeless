@@ -41,11 +41,11 @@ trait EnsimeApi {
   def rpcDebugBacktrace(threadId: Long, index: Int, count: Int): DebugBacktrace
   def rpcDebugActiveVM(): Boolean
   def rpcPatchSource(f: String, edits: List[PatchOp]): Unit
-  def rpcTypecheckFiles(fs: List[SourceFileInfo]): Unit
+  def rpcTypecheckFiles(fs: List[SourceFileInfo], async: Boolean): Unit
   def rpcRemoveFile(f: String): Unit
   def rpcUnloadAll(): Unit
   def rpcTypecheckAll(): Unit
-  def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean): CompletionInfoList
+  def rpcCompletionsAtPoint(fileInfo: SourceFileInfo, point: Int, maxResults: Int, caseSens: Boolean): CompletionInfoList
   def rpcPackageMemberCompletion(path: String, prefix: String): List[CompletionInfo]
   def rpcInspectTypeAtPoint(f: String, range: OffsetRange): Option[TypeInspectInfo]
   def rpcInspectTypeById(id: Int): Option[TypeInspectInfo]
@@ -66,5 +66,6 @@ trait EnsimeApi {
   def rpcCancelRefactor(procId: Int): Unit
   def rpcExpandSelection(filename: String, start: Int, stop: Int): FileRange
   def rpcFormatFiles(filenames: List[String]): Unit
+  def rpcFormatFile(fileInfo: SourceFileInfo): String
 }
 

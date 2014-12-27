@@ -25,7 +25,7 @@ class BasicWorkflow extends FunSpec with Matchers {
         val fooFile = (sourceRoot / "org/example/Foo.scala").getCanonicalFile
 
         // trigger typeCheck
-        project.rpcTypecheckFiles(List(SourceFileInfo(fooFile)))
+        project.rpcTypecheckFiles(List(FileSourceFileInfo(fooFile)), async = false)
 
         asyncHelper.expectAsync(30 seconds, ClearAllScalaNotesEvent)
         asyncHelper.expectAsync(30 seconds, FullTypeCheckCompleteEvent)
