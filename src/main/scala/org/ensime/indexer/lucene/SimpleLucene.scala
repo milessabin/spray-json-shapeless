@@ -87,7 +87,7 @@ class SimpleLucene(path: File, analyzers: Map[String, Analyzer]) extends SLF4JLo
       results += result
       if (log.isTraceEnabled) {
         val explanation = searcher.explain(query, hit.doc)
-        log.trace(result + " scored " + explanation)
+        log.trace("" + result + " scored " + explanation)
       }
     }
 

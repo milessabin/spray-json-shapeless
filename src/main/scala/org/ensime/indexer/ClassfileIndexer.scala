@@ -5,7 +5,6 @@ import org.apache.commons.vfs2.FileObject
 import org.objectweb.asm._
 import org.objectweb.asm.Opcodes._
 import collection.immutable.Queue
-import collection.immutable.BitSet
 
 trait ClassfileIndexer {
   this: SLF4JLogging =>
@@ -47,7 +46,6 @@ trait ClassfileIndexer {
       version: Int, access: Int, name: String, signature: String,
       superName: String, interfaces: Array[String]): Unit = {
 
-      val bits = BitSet.fromBitMaskNoCopy(Array(access << 1))
       clazz = RawClassfile(
         ClassName.fromInternal(name),
         Option(signature),
@@ -78,9 +76,11 @@ trait ClassfileIndexer {
       new MethodVisitor(ASM5) with ReferenceInMethodHunter {
         var firstLine: Option[Int] = None
 
-        override def visitLineNumber(line: Int, start: Label): Unit =
-          if (firstLine.isEmpty || firstLine.get > line)
+        override def visitLineNumber(line: Int, start: Label): Unit = {
+          val isEarliestLineSeen = firstLine.map(_ < line).getOrElse(true)
+          if (isEarliestLineSeen)
             firstLine = Some(line)
+        }
 
         override def visitEnd(): Unit = {
           addRefs(internalRefs)

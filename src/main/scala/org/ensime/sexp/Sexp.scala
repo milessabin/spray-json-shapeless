@@ -1,7 +1,6 @@
 package org.ensime.sexp
 
 import collection.breakOut
-import pimpathon.map._
 
 /**
  * An S-Expression is either
@@ -42,8 +41,8 @@ object SexpNumber {
   def apply(n: Int) = new SexpNumber(BigDecimal(n))
   def apply(n: Long) = new SexpNumber(BigDecimal(n))
   def apply(n: Double) = n match {
-    case n if n.isNaN => SexpNil
-    case n if n.isInfinity => SexpNil
+    case _ if n.isNaN => SexpNil
+    case _ if n.isInfinity => SexpNil
     case _ => new SexpNumber(BigDecimal(n))
   }
   def apply(n: BigInt) = new SexpNumber(BigDecimal(n))

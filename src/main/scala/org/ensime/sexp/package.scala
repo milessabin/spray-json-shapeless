@@ -1,8 +1,8 @@
 package org.ensime
 
 package object sexp {
-  implicit def pimpAny[T](any: T) = new PimpedAny(any)
-  implicit def pimpString(string: String) = new PimpedString(string)
+  implicit def pimpAny[T](any: T): PimpedAny[T] = new PimpedAny(any)
+  implicit def pimpString(string: String): PimpedString = new PimpedString(string)
 }
 
 package sexp {

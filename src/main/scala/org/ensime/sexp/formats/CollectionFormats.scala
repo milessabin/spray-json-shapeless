@@ -1,14 +1,12 @@
 package org.ensime.sexp.formats
 
-import collection.GenTraversableOnce
 import collection.generic.CanBuildFrom
 import collection.breakOut
-import collection.{ immutable => im, mutable => mut }
+import collection.{ immutable => im }
 
 import org.ensime.sexp._
 import scala.collection.GenMap
 import scala.collection.GenTraversable
-import scala.collection.generic.IsTraversableLike
 
 /**
  * Support for anything with a `CanBuildFrom`.
@@ -85,7 +83,7 @@ trait CollectionFormats {
       )
 
     def read(v: Sexp): M[K, V] = v match {
-      case SexpNil => cbf().result
+      case SexpNil => cbf().result()
       case SexpList(els) => els.map {
         case SexpList(sk :: sv :: Nil) => (sk.convertTo[K], sv.convertTo[V])
         case x => deserializationError(x)

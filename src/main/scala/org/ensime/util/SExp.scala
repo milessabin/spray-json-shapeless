@@ -119,7 +119,7 @@ object SExp {
   def propList(items: Iterable[(String, SExp)]): SExpList = {
     val nonNil = items.filter {
       case (s, NilAtom) => false
-      case (s, SExpList(items)) if items.isEmpty => false
+      case (s, SExpList(listItems)) if listItems.isEmpty => false
       case _ => true
     }
     SExpList(nonNil.flatMap(ea => List(key(ea._1), ea._2)).toList)

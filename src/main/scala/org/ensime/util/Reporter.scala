@@ -6,28 +6,28 @@ import scala.tools.nsc.reporters.Reporter
 import scala.reflect.internal.util.Position
 
 trait ReportHandler {
-  def messageUser(str: String)
-  def clearAllScalaNotes()
-  def clearAllJavaNotes()
-  def reportScalaNotes(notes: List[Note])
-  def reportJavaNotes(notes: List[Note])
+  def messageUser(str: String): Unit
+  def clearAllScalaNotes(): Unit
+  def clearAllJavaNotes(): Unit
+  def reportScalaNotes(notes: List[Note]): Unit
+  def reportJavaNotes(notes: List[Note]): Unit
 }
 
 class PresentationReporter(handler: ReportHandler) extends Reporter {
 
   val log = LoggerFactory.getLogger(classOf[PresentationReporter])
   private var enabled = true
-  def enable() { enabled = true }
-  def disable() { enabled = false }
+  def enable(): Unit = { enabled = true }
+  def disable(): Unit = { enabled = false }
 
-  override def reset() {
+  override def reset(): Unit = {
     super.reset()
     if (enabled) {
       handler.clearAllScalaNotes()
     }
   }
 
-  override def info0(pos: Position, msg: String, severity: Severity, force: Boolean) {
+  override def info0(pos: Position, msg: String, severity: Severity, force: Boolean): Unit = {
     severity.count += 1
     try {
       if (severity.id == 0) {
@@ -62,6 +62,5 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
       case c => c
     }
   }
-
 }
 

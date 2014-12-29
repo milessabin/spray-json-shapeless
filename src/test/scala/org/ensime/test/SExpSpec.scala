@@ -1,4 +1,5 @@
 package org.ensime.test
+
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.util.{ SExpList, StringAtom, SExpParser, BooleanAtom }
@@ -6,7 +7,7 @@ import org.ensime.util.{ SExpList, StringAtom, SExpParser, BooleanAtom }
 class SExpSpec extends FunSpec with Matchers {
 
   describe("SExpSpec") {
-    def check(input: String, expected: String) {
+    def check(input: String, expected: String): Unit = {
       val result = SExpParser.read(input).toString
       assert(result == expected, "expected " + expected + " got " + result)
       // throw it through again - everything should round trip perfectly

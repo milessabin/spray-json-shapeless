@@ -6,7 +6,6 @@ import org.ensime.sexp._
 import org.ensime.sexp.formats._
 import org.ensime.util._
 import pimpathon.file._
-import scala.util.Properties
 import scalariform.formatter.preferences.FormattingPreferences
 import RichFile._
 import FileUtils.jdkDir
@@ -23,7 +22,7 @@ case class EnsimeConfig(
     `source-mode`: Boolean,
     `debug-args`: List[String]) extends SLF4JLogging {
   (`root-dir` :: `cache-dir` :: referenceSourceJars).foreach { f =>
-    require(f.exists, f + " is required but does not exist")
+    require(f.exists, "" + f + " is required but does not exist")
   }
 
   // convertors between the "legacy" names and the preferred ones
@@ -85,7 +84,7 @@ case class EnsimeModule(
   // only check the files, not the directories, see below
   (`compile-deps` ::: `runtime-deps` :::
     `test-deps` ::: `reference-source-roots`).foreach { f =>
-      require(f.exists, f + " is required but does not exist")
+      require(f.exists, "" + f + " is required but does not exist")
     }
   // the preferred accessors
   val targetDirs = targets ++ target.toIterable
@@ -104,13 +103,13 @@ case class EnsimeModule(
    We use the canonical form of files/directories to keep OS X happy
    when loading S-Expressions. But the canon may fail to resolve if
    the file/directory does not exist, so we force create all required
-   directories and then re-canon them, which is - admitedly - a weird
+   directories and then re-canon them, which is - admittedly - a weird
    side-effect.
    */
   private[config] def validated(): EnsimeModule = {
     (targetDirs ++ testTargetDirs ++ sourceRoots).foreach { dir =>
       if (!dir.exists()) {
-        log.warn(dir + " does not exist, creating")
+        log.warn("" + dir + " does not exist, creating")
         dir.mkdirs()
       }
     }
@@ -137,6 +136,6 @@ object EnsimeConfig {
 
   def parse(config: String): EnsimeConfig = {
     val raw = config.parseSexp.convertTo[EnsimeConfig]
-    raw.validated
+    raw.validated()
   }
 }

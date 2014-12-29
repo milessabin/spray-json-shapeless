@@ -90,7 +90,7 @@ trait RefactoringHandler { self: Analyzer =>
 
   val effects: mutable.HashMap[Int, RefactorEffect] = new mutable.HashMap
 
-  def handleRefactorPrepareRequest(req: RefactorPrepareReq) {
+  def handleRefactorPrepareRequest(req: RefactorPrepareReq): Unit = {
     val procedureId = req.procedureId
     val refactor = req.refactor
     val result = scalaCompiler.askPrepareRefactor(procedureId, refactor)
@@ -104,7 +104,7 @@ trait RefactoringHandler { self: Analyzer =>
     sender ! result
   }
 
-  def handleRefactorExec(req: RefactorExecReq) {
+  def handleRefactorExec(req: RefactorExecReq): Unit = {
     val procedureId = req.procedureId
     effects.get(procedureId) match {
       case Some(effect: RefactorEffect) =>
@@ -119,7 +119,7 @@ trait RefactoringHandler { self: Analyzer =>
     }
   }
 
-  def handleRefactorCancel(req: RefactorCancelReq) {
+  def handleRefactorCancel(req: RefactorCancelReq): Unit = {
     effects.remove(req.procedureId)
     sender ! VoidResponse
   }

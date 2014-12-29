@@ -6,20 +6,16 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.TestProbe
 import akka.testkit.TestActorRef
-import java.nio.charset.Charset
 
 import org.ensime.config.EnsimeConfig
 import org.ensime.indexer._
-import org.ensime.protocol.swank.SwankProtocol
 import org.ensime.server._
 import org.ensime.test.TestUtil
-import org.ensime.util.FileUtils
 import org.scalatest.exceptions.TestFailedException
 import org.slf4j.LoggerFactory
 import org.ensime.util.RichFile._
 
 import scala.reflect.internal.util.BatchSourceFile
-import scala.reflect.io.Path
 import scala.tools.nsc.Settings
 import scala.tools.nsc.{ Global => nscGlobal }
 import scala.tools.nsc.interactive.Global
@@ -109,11 +105,11 @@ object Helpers {
   }
 
   def readSrcFile(src: BatchSourceFile, encoding: String = "UTF-8"): String =
-    scala.tools.nsc.io.File(src.path)(encoding).slurp
+    scala.tools.nsc.io.File(src.path)(encoding).slurp()
 
   def contents(lines: String*) = lines.mkString("\n")
 
-  def expectFailure(msgLines: String*)(action: () => Unit) {
+  def expectFailure(msgLines: String*)(action: () => Unit): Unit = {
     try {
       action()
       throw new IllegalStateException("Expected failure! Should not have succeeded!")

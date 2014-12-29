@@ -163,7 +163,7 @@ trait ProjectRPCTarget extends RPCTarget { self: Project =>
     callVoidRPC(getAnalyzer, RemoveFileReq(file))
   }
 
-  override def rpcUnloadAll() {
+  override def rpcUnloadAll(): Unit = {
     callVoidRPC(getAnalyzer, UnloadAllReq)
   }
 

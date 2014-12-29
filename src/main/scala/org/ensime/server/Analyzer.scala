@@ -11,9 +11,8 @@ import org.ensime.protocol.ProtocolConst._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
 import scala.concurrent.Future
-import scala.reflect.internal.util.RangePosition
+import scala.reflect.internal.util.{ SourceFile, RangePosition, OffsetPosition }
 import scala.tools.nsc.Settings
-import scala.reflect.internal.util.OffsetPosition
 import scala.tools.nsc.interactive.Global
 
 case class CompilerFatalError(e: Throwable)
@@ -43,19 +42,19 @@ class Analyzer(
   log.info("Presentation Compiler settings:\n" + settings)
 
   private val reportHandler = new ReportHandler {
-    override def messageUser(str: String) {
+    override def messageUser(str: String): Unit = {
       project ! AsyncEvent(SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str)))
     }
-    override def clearAllScalaNotes() {
+    override def clearAllScalaNotes(): Unit = {
       project ! AsyncEvent(ClearAllScalaNotesEvent)
     }
-    override def clearAllJavaNotes() {
+    override def clearAllJavaNotes(): Unit = {
       project ! AsyncEvent(ClearAllJavaNotesEvent)
     }
-    override def reportScalaNotes(notes: List[Note]) {
+    override def reportScalaNotes(notes: List[Note]): Unit = {
       project ! AsyncEvent(NewScalaNotesEvent(NoteList(full = false, notes)))
     }
-    override def reportJavaNotes(notes: List[Note]) {
+    override def reportJavaNotes(notes: List[Note]): Unit = {
       project ! AsyncEvent(NewJavaNotesEvent(NoteList(full = false, notes)))
     }
   }
@@ -67,7 +66,7 @@ class Analyzer(
   private var awaitingInitialCompile = true
   private var allFilesLoaded = false
 
-  protected def bgMessage(msg: String) {
+  protected def bgMessage(msg: String): Unit = {
     project ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
   }
 
@@ -258,7 +257,7 @@ class Analyzer(
 
   def handleReloadFiles(files: List[SourceFileInfo]): Unit = {
     files foreach { file =>
-      require(file.file.exists, file + " does not exist")
+      require(file.file.exists, "" + file + " does not exist")
     }
 
     val (javas, scalas) = files.filter(_.file.exists).partition(
@@ -270,27 +269,27 @@ class Analyzer(
     }
   }
 
-  def pos(file: File, range: OffsetRange) = {
+  def pos(file: File, range: OffsetRange): OffsetPosition = {
     val f = scalaCompiler.createSourceFile(file.getCanonicalPath)
     if (range.from == range.to) new OffsetPosition(f, range.from)
     else new RangePosition(f, range.from, range.from, range.to)
   }
 
-  def pos(file: File, offset: Int) = {
+  def pos(file: File, offset: Int): OffsetPosition = {
     val f = scalaCompiler.createSourceFile(file.getCanonicalPath)
     new OffsetPosition(f, offset)
   }
 
-  def posNoRead(file: File, offset: Int) = {
+  def posNoRead(file: File, offset: Int): OffsetPosition = {
     val f = scalaCompiler.findSourceFile(file.getCanonicalPath).get
     new OffsetPosition(f, offset)
   }
 
-  def createSourceFile(file: File) = {
+  def createSourceFile(file: File): SourceFile = {
     scalaCompiler.createSourceFile(file.getCanonicalPath)
   }
 
-  def createSourceFile(file: SourceFileInfo) = {
+  def createSourceFile(file: SourceFileInfo): SourceFile = {
     scalaCompiler.createSourceFile(file)
   }
 

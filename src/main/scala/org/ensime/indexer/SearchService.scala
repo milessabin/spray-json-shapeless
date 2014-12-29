@@ -228,12 +228,12 @@ class SearchService(
   def classfileAdded(f: FileObject): Unit = classfileChanged(f)
 
   def classfileRemoved(f: FileObject): Unit = Future {
-    backlog.put(f, Nil)
+    backlog.put((f, Nil))
   }(worker.context)
 
   def classfileChanged(f: FileObject): Unit = Future {
-    val syms = extractSymbols(f, f)
-    backlog.put(f, syms)
+    val symbols = extractSymbols(f, f)
+    backlog.put((f, symbols))
   }(worker.context)
 
 }

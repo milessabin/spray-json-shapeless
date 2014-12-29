@@ -60,7 +60,7 @@ class Project(
 
   protected val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
 
-  def !(msg: AnyRef) {
+  def !(msg: AnyRef): Unit = {
     actor ! msg
   }
 
@@ -114,7 +114,7 @@ class Project(
     private var asyncEvents = Vector[ProtocolEvent]()
     private var asyncListeners: List[ProtocolEvent => Unit] = Nil
 
-    override def receive = waiting orElse ready
+    override def receive: Receive = waiting orElse ready
 
     private val ready: Receive = {
       case Retypecheck =>
@@ -151,7 +151,7 @@ class Project(
     }
   }
 
-  protected def addUndo(sum: String, changes: Iterable[FileEdit]) {
+  protected def addUndo(sum: String, changes: Iterable[FileEdit]): Unit = {
     undoCounter += 1
     undos(undoCounter) = Undo(undoCounter, sum, changes.toList)
   }
@@ -172,14 +172,14 @@ class Project(
     }
   }
 
-  def initProject() {
+  def initProject(): Unit = {
     startCompiler()
     shutdownDebugger()
     undos.clear()
     undoCounter = 0
   }
 
-  protected def startCompiler() {
+  protected def startCompiler(): Unit = {
     val newAnalyzer = actorSystem.actorOf(Props(
       new Analyzer(actor, indexer, search, config)), "analyzer")
     analyzer = Some(newAnalyzer)
@@ -195,12 +195,12 @@ class Project(
     }
   }
 
-  protected def shutdownDebugger() {
+  protected def shutdownDebugger(): Unit = {
     debugger.foreach(_ ! DebuggerShutdownEvent)
     debugger = None
   }
 
-  protected def shutdownServer() {
+  protected def shutdownServer(): Unit = {
     val t = new Thread() {
       override def run(): Unit = {
         log.info("Server is exiting...")
