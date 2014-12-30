@@ -1,11 +1,10 @@
-package org.ensime.test
+package org.ensime.protocol.swank
 
 import java.io.{ InputStreamReader, ByteArrayInputStream, ByteArrayOutputStream }
 import java.util.concurrent.{ TimeUnit, CountDownLatch }
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.ensime.model._
-import org.ensime.protocol.swank.{ SwankWireFormatCodec, SwankProtocol }
 import org.ensime.protocol.{ ConnectionInfo, RPCTarget }
 import org.ensime.server._
 import org.ensime.util._

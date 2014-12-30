@@ -1,8 +1,7 @@
-package org.ensime.test
+package org.ensime.protocol.swank
 
 import org.ensime.model._
 import org.ensime.protocol._
-import org.ensime.protocol.swank.{ SwankProtocolConversions, ReplConfig }
 import org.ensime.server._
 import org.scalatest.FunSpec
 import org.scalatest.Matchers

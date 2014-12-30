@@ -1,4 +1,4 @@
-package org.ensime.test.util
+package org.ensime.util
 
 import java.io.File
 
@@ -10,7 +10,7 @@ import akka.testkit.TestActorRef
 import org.ensime.config.EnsimeConfig
 import org.ensime.indexer._
 import org.ensime.server._
-import org.ensime.test.TestUtil
+import org.ensime.util.TestUtil._
 import org.scalatest.exceptions.TestFailedException
 import org.slf4j.LoggerFactory
 import org.ensime.util.RichFile._
@@ -23,7 +23,6 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.tools.nsc.reporters.ConsoleReporter
 
 import pimpathon.file._
-import TestUtil._
 
 object Helpers {
 
@@ -63,7 +62,7 @@ object Helpers {
       settings.YpresentationVerbose.value = presCompLog.isDebugEnabled
       settings.verbose.value = presCompLog.isDebugEnabled
       //settings.usejavacp.value = true
-      settings.bootclasspath.append(TestUtil.scalaLib.getAbsolutePath)
+      settings.bootclasspath.append(scalaLib.getAbsolutePath)
       settings.classpath.value = config.compileClasspath.mkString(File.pathSeparator)
 
       val reporter = new StoreReporter()

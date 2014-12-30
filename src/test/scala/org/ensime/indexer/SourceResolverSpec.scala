@@ -4,7 +4,7 @@ import java.io.File
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.config._
-import org.ensime.test.TestUtil._
+import org.ensime.util.TestUtil._
 import pimpathon.file._
 import pimpathon.any._
 import org.ensime.util.RichFile._

@@ -5,7 +5,7 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import akka.event.slf4j.SLF4JLogging
 import org.ensime.config._
-import org.ensime.test.TestUtil._
+import org.ensime.util.TestUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import pimpathon.file._

@@ -1,4 +1,4 @@
-package org.ensime.test
+package org.ensime.util
 
 import akka.actor.ActorSystem
 import org.apache.commons.io.FileUtils.copyDirectory

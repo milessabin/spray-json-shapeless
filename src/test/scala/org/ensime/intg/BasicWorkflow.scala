@@ -1,9 +1,8 @@
-package org.ensime.test.intg
+package org.ensime.intg
 
 import org.ensime.model._
 import org.ensime.protocol.{ FullTypeCheckCompleteEvent, ClearAllScalaNotesEvent }
 import org.ensime.server.{ RefactorResult, RefactorEffect, RenameRefactorDesc }
-import org.ensime.test.TestUtil
 import org.ensime.util._
 import org.scalatest.{ FunSpec, Matchers }
 import org.slf4j.LoggerFactory

@@ -1,4 +1,4 @@
-package org.ensime.test.intg
+package org.ensime.intg
 
 import org.ensime.model._
 import org.ensime.protocol.DebugBreakEvent

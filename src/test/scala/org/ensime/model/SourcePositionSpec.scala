@@ -1,11 +1,10 @@
 package org.ensime.model
 
 import org.ensime.indexer.DatabaseService.FqnSymbol
-import org.ensime.test.TestUtil
+import org.ensime.util.TestUtil._
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.apache.commons.vfs2._
-import TestUtil._
 
 import pimpathon.file._
 

@@ -1,11 +1,10 @@
-package org.ensime.test
+package org.ensime.server
 
 import java.io.File
 import org.ensime.model._
-import org.ensime.server.RichCompilerControl
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
-import org.ensime.test.util.Helpers
+import org.ensime.util.Helpers
 import scala.reflect.internal.util.RangePosition
 
 class SemanticHighlightingSpec extends FunSpec with Matchers {
