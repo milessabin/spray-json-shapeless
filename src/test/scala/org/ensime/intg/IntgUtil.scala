@@ -1,4 +1,4 @@
-package org.ensime.test.intg
+package org.ensime.intg
 
 import akka.event.slf4j.SLF4JLogging
 import java.io.{ File => JFile }
@@ -11,7 +11,6 @@ import org.apache.commons.io.{ FileUtils => IOFileUtils }
 import org.ensime.config.EnsimeConfig
 import org.ensime.protocol.{ FullTypeCheckCompleteEvent, AnalyzerReadyEvent, IndexerReadyEvent, ProtocolEvent }
 import org.ensime.server.{ Project, Server }
-import org.ensime.test.TestUtil
 import org.ensime.util._
 import org.scalatest.Assertions
 

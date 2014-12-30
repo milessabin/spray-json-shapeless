@@ -1,10 +1,10 @@
 package org.ensime.server
 
 import java.io.File
-import org.ensime.test.util.Helpers
+import org.ensime.util.Helpers
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
-import org.ensime.test.TestUtil._
+import org.ensime.util.TestUtil._
 
 class RefactoringHandlerSpec extends FunSpec with Matchers {
   describe("org.ensime.server.RefactoringHandler") {

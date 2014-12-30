@@ -1,9 +1,8 @@
-package org.ensime.test
+package org.ensime.protocol.swank
 
 import java.io.File
 
 import org.ensime.model._
-import org.ensime.protocol.swank.ReplConfig
 import org.ensime.server.{ RefactorResult, RefactorEffect, RefactorFailure }
 import org.ensime.util._
 import pimpathon.file._

@@ -1,4 +1,4 @@
-package org.ensime.test
+package org.ensime.server
 
 import akka.event.slf4j.SLF4JLogging
 import scala.concurrent.Await
@@ -8,8 +8,7 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 
 import org.ensime.model.OffsetSourcePosition
-import org.ensime.server.RichPresentationCompiler
-import org.ensime.test.util.Helpers
+import org.ensime.util.Helpers
 
 import pimpathon.file._
 
