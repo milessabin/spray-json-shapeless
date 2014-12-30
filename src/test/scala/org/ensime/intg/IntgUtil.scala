@@ -9,8 +9,9 @@ import akka.pattern.Patterns
 import org.apache.commons.io.filefilter.TrueFileFilter
 import org.apache.commons.io.{ FileUtils => IOFileUtils }
 import org.ensime.config.EnsimeConfig
-import org.ensime.protocol.{ FullTypeCheckCompleteEvent, AnalyzerReadyEvent, IndexerReadyEvent, ProtocolEvent }
-import org.ensime.server.{ Project, Server }
+import org.ensime.core.{ FullTypeCheckCompleteEvent, AnalyzerReadyEvent, IndexerReadyEvent, EnsimeEvent }
+import org.ensime.core.Project
+import org.ensime.server.Server
 import org.ensime.util._
 import org.scalatest.Assertions
 
@@ -28,13 +29,13 @@ import pimpathon.file._
 object IntgUtil extends Assertions with SLF4JLogging {
 
   class AsyncMsgHelper(actorSystem: ActorSystem) {
-    private case class AsyncSent(pe: ProtocolEvent)
-    private case class AsyncRequest(pe: ProtocolEvent)
+    private case class AsyncSent(pe: EnsimeEvent)
+    private case class AsyncRequest(pe: EnsimeEvent)
 
     private class AsyncMsgHelperActor extends Actor with ActorLogging {
-      private var asyncMsgs = Map[ProtocolEvent, Int]()
+      private var asyncMsgs = Map[EnsimeEvent, Int]()
 
-      private var outstandingAsyncs = Vector[(ProtocolEvent, ActorRef)]()
+      private var outstandingAsyncs = Vector[(EnsimeEvent, ActorRef)]()
 
       def processOutstandingRequests(): Unit = {
         outstandingAsyncs = outstandingAsyncs.filter {
@@ -63,11 +64,11 @@ object IntgUtil extends Assertions with SLF4JLogging {
       }
     }
 
-    def asyncReceived(event: ProtocolEvent): Unit = {
+    def asyncReceived(event: EnsimeEvent): Unit = {
       actor ! AsyncSent(event)
     }
 
-    def expectAsync(dur: FiniteDuration, expected: ProtocolEvent): Unit = {
+    def expectAsync(dur: FiniteDuration, expected: EnsimeEvent): Unit = {
 
       val askRes = Patterns.ask(actor, AsyncRequest(expected), dur)
       try {

@@ -1,8 +1,8 @@
 package org.ensime.intg
 
 import org.ensime.model._
-import org.ensime.protocol.DebugBreakEvent
-import org.ensime.server.DebugVmSuccess
+import org.ensime.core.DebugBreakEvent
+import org.ensime.core.DebugVmSuccess
 import org.scalatest.{ FunSpec, Matchers }
 import org.slf4j.LoggerFactory
 

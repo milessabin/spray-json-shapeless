@@ -2,8 +2,8 @@ package org.ensime.config
 
 import akka.event.slf4j.SLF4JLogging
 import java.io.File
-import org.ensime.sexp._
-import org.ensime.sexp.formats._
+import org.ensime.server.protocol.swank.sexp._
+import org.ensime.server.protocol.swank.sexp.formats._
 import org.ensime.util._
 import pimpathon.file._
 import scalariform.formatter.preferences.FormattingPreferences
@@ -124,6 +124,8 @@ case class EnsimeModule(
 }
 
 object EnsimeConfig {
+
+  // TODO This protocol code should move into server.protocol
   // we customise how some basic object types are handled
   object Protocol extends DefaultSexpProtocol
     with OptionAltFormat

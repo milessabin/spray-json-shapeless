@@ -113,9 +113,9 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
       )
 
       searches(
-        "org.ensime.server.RichPresentationCompiler",
+        "org.ensime.core.RichPresentationCompiler",
         "RichPres", "richpres",
-        "o e s Rich", "o.e.s.rich",
+        "o e c Rich", "o.e.c.rich",
         "RPC" // <= CamelCaseAwesomeNess
       )
     }

@@ -7,9 +7,11 @@ import java.net.{ InetAddress, ServerSocket, Socket }
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor._
+import org.ensime.EnsimeApi
 import org.ensime.config._
-import org.ensime.protocol._
-import org.ensime.protocol.swank.SwankProtocol
+import org.ensime.core.Project
+import org.ensime.server.protocol.swank.SwankProtocol
+import org.ensime.server.protocol.{ OutgoingMessageEvent, IncomingMessageEvent, Protocol }
 import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -48,7 +50,7 @@ object Server {
 class Server(config: EnsimeConfig,
     host: String,
     requestedPort: Int,
-    connectionCreator: (ActorSystem, ActorRef, RPCTarget) => Protocol) {
+    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol) {
 
   import org.ensime.server.Server.log
 
@@ -159,8 +161,8 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
  * @param connectionCreator Function to create protocol instance given actorSystem and the peer (this) ref
  */
 class SocketHandler(socket: Socket,
-    rpcTarget: RPCTarget,
-    connectionCreator: (ActorSystem, ActorRef, RPCTarget) => Protocol) extends Actor with ActorLogging {
+    rpcTarget: EnsimeApi,
+    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol) extends Actor with ActorLogging {
   val protocol = connectionCreator(context.system, self, rpcTarget)
 
   val reader = new SocketReader(socket, protocol, self)
