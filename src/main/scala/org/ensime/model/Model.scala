@@ -2,6 +2,7 @@ package org.ensime.model
 
 import java.io.File
 import org.apache.commons.vfs2.FileObject
+import org.ensime.core.RichPresentationCompiler
 import org.ensime.util.FileEdit
 import scala.collection.mutable
 import scala.reflect.internal.util.{ RangePosition, NoPosition, Position }

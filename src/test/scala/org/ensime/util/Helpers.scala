@@ -9,7 +9,7 @@ import akka.testkit.TestActorRef
 
 import org.ensime.config.EnsimeConfig
 import org.ensime.indexer._
-import org.ensime.server._
+import org.ensime.core._
 import org.ensime.util.TestUtil._
 import org.scalatest.exceptions.TestFailedException
 import org.slf4j.LoggerFactory
