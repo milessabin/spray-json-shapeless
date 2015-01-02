@@ -14,8 +14,6 @@ import scala.reflect.io.{ AbstractFile, ZipArchive }
 
 // legacy types
 case class TypeCompletionsReq(prefix: String, maxResults: Int) extends RPCRequest
-case class SourceFileCandidatesReq(enclosingPackage: String, classNamePrefix: String) extends RPCRequest
-case class AbstractFiles(files: Set[AbstractFile]) extends RPCRequest
 
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
 class Indexer(
@@ -53,11 +51,6 @@ class Indexer(
   }
 
   override def receive = {
-    case SourceFileCandidatesReq(enclosingPackage, classNamePrefix) =>
-      val classes = index.searchClasses(enclosingPackage + "." + classNamePrefix, 10)
-      val srcs = classes.flatMap(_.sourceFileObject).map(toAbstractFile).toSet
-      sender ! AbstractFiles(srcs)
-
     case TypeCompletionsReq(query: String, maxResults: Int) =>
       sender ! SymbolSearchResults(oldSearchTypes(query, maxResults))
 

@@ -113,16 +113,17 @@ class SearchService(
     }
 
     val indexed = indexing.flatMap { w => Future.sequence(w) }.map(_.size)
-    indexed onComplete { _ =>
+    val indexedAndCommitted = indexed map { count =>
       // delayed commits speedup initial indexing time
       log.debug("committing index to disk...")
       index.commit()
       log.debug("...done committing index")
+      count
     }
 
     for {
       r <- removed
-      i <- indexed
+      i <- indexedAndCommitted
     } yield (r, i)
   }
 

@@ -66,6 +66,33 @@ class BasicWorkflow extends FunSpec with Matchers {
         }
 
         //-----------------------------------------------------------------------------------------------
+        // public symbol search - java.io.File
+
+        val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 2)
+        javaSearchSymbol match {
+          case SymbolSearchResults(List(
+            TypeSearchResult("java.awt.image.ImageObserver", "ImageObserver", 'class,
+              Some(_)),
+            TypeSearchResult("java.io.File", "File", 'class,
+              Some(_)),
+            TypeSearchResult("org.ensime.util.FileUtilSpec", "FileUtilSpec", 'class, None))) =>
+
+          case _ =>
+            fail("Public symbol search does not match expectations, got: " + javaSearchSymbol)
+        }
+
+        //-----------------------------------------------------------------------------------------------
+        // public symbol search - scala.util.Random
+        val scalaSearchSymbol = project.rpcPublicSymbolSearch(List("scala", "util", "Random"), 2)
+        scalaSearchSymbol match {
+          case SymbolSearchResults(List(
+            TypeSearchResult("scala.util.Random", "Random", 'class, None),
+            TypeSearchResult("scala.util.Random$", "Random$", 'class, None))) =>
+          case _ =>
+            fail("Public symbol search does not match expectations, got: " + scalaSearchSymbol)
+        }
+
+        //-----------------------------------------------------------------------------------------------
         // type by id
 
         val typeByIdOpt: Option[TypeInfo] = project.rpcTypeById(intTypeId)
