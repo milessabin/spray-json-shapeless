@@ -90,67 +90,134 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
     }
 
     it("can get completions on member with no prefix") {
-      Helpers.withPresCompiler { (dir, cc) =>
-        val file = Helpers.srcFile(dir, "def.scala", Helpers.contents(
-          "package com.example",
-          "object A { def aMethod(a: Int) = a }",
-          "object B { val x = A. "
-        ))
-        cc.askReloadFile(file)
-        cc.askLoadedTyped(file)
-        val p = new OffsetPosition(file, 78)
-        val infoList = cc.completionsAt(p, 10, caseSens = false)
-        assert(infoList.completions.length > 1)
-        assert(infoList.completions.head.name == "aMethod")
-      }
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object A { def aMethod(a: Int) = a }",
+        "object B { val x = A.@@ ") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.length > 1)
+          assert(result.completions.head.name == "aMethod")
+        }
     }
 
     it("can get completions on a member with a prefix") {
-      Helpers.withPresCompiler { (dir, cc) =>
-        val file = Helpers.srcFile(dir, "abc.scala", Helpers.contents(
-          "package com.example",
-          "object A { def aMethod(a: Int) = a }",
-          "object B { val x = A.aMeth }"
-        ))
-        cc.askReloadFile(file)
-        cc.askLoadedTyped(file)
-        val p = new OffsetPosition(file, 83)
-        val infoList = cc.completionsAt(p, 10, caseSens = false)
-        assert(infoList.completions.length == 1)
-        assert(infoList.completions.head.name == "aMethod")
-      }
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object A { def aMethod(a: Int) = a }",
+        "object B { val x = A.aMeth@@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.length == 1)
+          assert(result.completions.head.name == "aMethod")
+        }
     }
 
     it("can get completions on an object name") {
-      Helpers.withPresCompiler { (dir, cc) =>
-        val file = Helpers.srcFile(dir, "abc.scala", Helpers.contents(
-          "package com.example",
-          "object Abc { def aMethod(a: Int) = a }",
-          "object B { val x = Ab }"
-        ))
-        cc.askReloadFile(file)
-        cc.askLoadedTyped(file)
-        val p = new OffsetPosition(file, 80)
-        val infoList = cc.completionsAt(p, 10, caseSens = false)
-        assert(infoList.completions.length > 1)
-        assert(infoList.completions.head.name == "Abc")
-      }
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object Abc { def aMethod(a: Int) = a }",
+        "object B { val x = Ab@@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.length > 1)
+          assert(result.completions.head.name == "Abc")
+        }
+    }
+
+    it("can get members for infix method call") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object Abc { def aMethod(a: Int) = a }",
+        "object B { val x = Abc aM@@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.head.name == "aMethod")
+        }
+    }
+
+    it("can get members for infix method call without prefix") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object Abc { def aMethod(a: Int) = a }",
+        "object B { val x = Abc @@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.head.name == "aMethod")
+        }
+    }
+
+    it("can complete multi-character infix operator") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object B { val l = Nil; val ll = l +@@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(_.name == "++"))
+        }
+    }
+
+    it("can complete top level import") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "import ja@@") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(_.name == "java"))
+        }
+    }
+
+    it("can complete sub-import") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "import java.ut@@") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(_.name == "util"))
+        }
+    }
+
+    it("can complete multi-import") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "import java.util.{ V@@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(_.name == "Vector"))
+        }
+    }
+
+    it("can complete new construction") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "import java.util.Vector",
+        "object A { def main { new V@@ } }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(m => m.name == "Vector" && m.isCallable))
+        }
+    }
+
+    it("can complete symbol in logical op") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object A { val apple = true; true || app@@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(_.name == "apple"))
+        }
+    }
+
+    it("can complete infix method of Set.") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object A { val t = Set[String](\"a\", \"b\"); t @@ }") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.exists(_.name == "seq"))
+          assert(result.completions.exists(_.name == "|"))
+          assert(result.completions.exists(_.name == "&"))
+        }
     }
 
     it("should show classes without visible members in the inspector") {
-      Helpers.withPresCompiler { (dir, cc) =>
-        val file = Helpers.srcFile(dir, "abc.scala", Helpers.contents(
-          "package com.example",
-          "trait bidon { }",
-          "case class pipo extends bidon { }"
-        ))
-        cc.askReloadFile(file)
-        cc.askLoadedTyped(file)
-        val info = cc.askInspectTypeAt(new OffsetPosition(file, 37))
-        val supers = info.map(_.supers).getOrElse(List())
-        val supersNames = supers.map(_.tpe.name).toList
-        assert(supersNames.toSet === Set("pipo", "bidon", "Object", "Product", "Serializable", "Any"))
-      }
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "trait bidon { }",
+        "case class pi@@po extends bidon { }") { (p, cc) =>
+          val info = cc.askInspectTypeAt(p)
+          val supers = info.map(_.supers).getOrElse(List())
+          val supersNames = supers.map(_.tpe.name).toList
+          assert(supersNames.toSet === Set("pipo", "bidon", "Object", "Product", "Serializable", "Any"))
+        }
     }
 
     it("should get symbol positions for compiled files") {
