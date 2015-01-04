@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 import org.ensime.util.RichFile._
 
 import scala.reflect.internal.util.BatchSourceFile
+import scala.reflect.internal.util.OffsetPosition
 import scala.tools.nsc.Settings
 import scala.tools.nsc.{ Global => nscGlobal }
 import scala.tools.nsc.interactive.Global
@@ -81,6 +82,17 @@ object Helpers {
         cc.askShutdown()
         actorSystem.shutdown()
       }
+    }
+
+  def withPosInCompiledSource(lines: String*)(action: (OffsetPosition, RichPresentationCompiler) => Any) =
+    Helpers.withPresCompiler { (dir, cc) =>
+      val contents = lines.mkString("\n")
+      val offset = contents.indexOf("@@")
+      val file = Helpers.srcFile(dir, "def.scala", contents.replaceAll("@@", ""))
+      cc.askReloadFile(file)
+      cc.askLoadedTyped(file)
+      val p = new OffsetPosition(file, offset)
+      action(p, cc)
     }
 
   def compileScala(paths: List[String], target: String, classPath: String): Unit = {
