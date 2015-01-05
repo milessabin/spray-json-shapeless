@@ -1,11 +1,14 @@
 package org.ensime.indexer
 
+import java.io.File
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.apache.commons.vfs2.impl._
 import org.ensime.config._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+import pimpathon.file._
 
 trait ClassfileListener {
   def classfileAdded(f: FileObject): Unit
@@ -31,17 +34,10 @@ class ClassfileWatcher(
     config: EnsimeConfig,
     listeners: Seq[ClassfileListener]) extends SLF4JLogging {
 
-  // WORKAROUND https://issues.apache.org/jira/browse/VFS-536
-  // def, not val, incase dirs are recreated
-  private def targets =
-    config.compileClasspath.filter(_.isDirectory).map(vfile).map(_.getName)
-
   private val fm = new DefaultFileMonitor(new FileListener {
     def watched(event: FileChangeEvent) = {
       val name = event.getFile.getName
-      ClassfileSelector.include(name.getExtension) && targets.exists {
-        target => name.isAncestor(target)
-      }
+      ClassfileSelector.include(name.getExtension)
     }
 
     def fileChanged(event: FileChangeEvent): Unit =
@@ -57,12 +53,54 @@ class ClassfileWatcher(
   fm.setRecursive(true)
   fm.start()
 
-  fm.addFile(config.root)
+  // WORKAROUND https://issues.apache.org/jira/browse/VFS-536
+  // We don't have a dedicated test for this because it is an upstream bug
+  private val workaround = new DefaultFileMonitor(new FileListener {
+    private def targets =
+      config.compileClasspath.filter(_.isDirectory).map(vfile).map(_.getName)
+    def watched(event: FileChangeEvent) = {
+      val dir = event.getFile
+      val name = dir.getName
+      targets.exists(name.isAncestor(_))
+    }
+    def fileChanged(event: FileChangeEvent): Unit =
+      if (watched(event)) reset()
+    def fileCreated(event: FileChangeEvent): Unit =
+      if (watched(event)) reset()
+    def fileDeleted(event: FileChangeEvent): Unit = {}
+  })
 
-  // config.modules.values.foreach { m =>
-  //   fm.addFile(m.target)
-  //   fm.addFile(m.testTarget)
-  // }
+  workaround.setRecursive(false)
+  workaround.start()
+
+  private def ancestors(f: File): List[File] = {
+    val parent = f.getParentFile()
+    if (parent == null) Nil
+    else parent :: ancestors(parent)
+  }
+
+  // If directories are recreated, triggering the VFS-536 bug, we end up
+  // calling reset() a lot of times. We should probably debounce it, but
+  // it seems to happen so quickly that no damage is done.
+  private def reset(): Unit = {
+    log.info("Setting up new file watchers")
+    // must remove then add to avoid leaks
+
+    for {
+      d <- config.targetClasspath
+      _ = fm.removeFile(d)
+      _ = fm.addFile(d)
+      ancestor <- ancestors(d)
+      if config.root.contains(ancestor)
+      _ = workaround.removeFile(ancestor)
+      _ = workaround.addFile(ancestor)
+    } workaround.removeFile(config.root)
+
+    workaround.addFile(config.root)
+  }
+
+  reset()
+
 }
 
 class SourceWatcher(
