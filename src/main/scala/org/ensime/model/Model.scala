@@ -8,7 +8,6 @@ import scala.collection.mutable
 import scala.reflect.internal.util.{ RangePosition, NoPosition, Position }
 
 import org.ensime.config._
-import org.ensime.server._
 import org.ensime.indexer.DatabaseService._
 
 import org.ensime.util.RichFile._
@@ -296,6 +295,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     typeCache.clear()
     typeCacheReverse.clear()
   }
+
   def typeById(id: Int): Option[Type] = {
     typeCache.get(id)
   }
@@ -575,9 +575,6 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         None)
     }
 
-    def nullInfo() = {
-      new CompletionInfo("NA", CompletionSignature(List.empty, ""), -1, false, 0, None)
-    }
   }
 
   object NamedTypeMemberInfo {

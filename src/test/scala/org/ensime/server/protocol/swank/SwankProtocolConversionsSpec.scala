@@ -21,13 +21,10 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(FullTypeCheckCompleteEvent).toWireString === "(:full-typecheck-finished)")
         assert(toWF(IndexerReadyEvent).toWireString === "(:indexer-ready)")
 
-        assert(toWF(NewJavaNotesEvent(NoteList(full = false,
-          List(new Note("foo.scala", "testMsg", 1, 50, 55, 77, 5))))).toWireString === """(:java-notes (:is-full nil :notes ((:severity warn :msg "testMsg" :beg 50 :end 55 :line 77 :col 5 :file "foo.scala"))))""")
         assert(toWF(NewScalaNotesEvent(NoteList(full = false,
           List(new Note("foo.scala", "testMsg", 1, 50, 55, 77, 5))))).toWireString === """(:scala-notes (:is-full nil :notes ((:severity warn :msg "testMsg" :beg 50 :end 55 :line 77 :col 5 :file "foo.scala"))))""")
 
         assert(toWF(ClearAllScalaNotesEvent).toWireString === "(:clear-all-scala-notes)")
-        assert(toWF(ClearAllJavaNotesEvent).toWireString === "(:clear-all-java-notes)")
 
         // toWF(evt: DebugEvent): WireFormat
         assert(toWF(DebugOutputEvent("XXX")).toWireString === """(:debug-event (:type output :body "XXX"))""")

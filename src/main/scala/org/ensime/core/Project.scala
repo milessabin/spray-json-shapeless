@@ -28,6 +28,7 @@ case object UnloadAllReq extends RPCRequest
 case class PatchSourceReq(file: File, edits: List[PatchOp]) extends RPCRequest
 case class RemoveFileReq(file: File) extends RPCRequest
 case class CompletionsReq(file: File, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean) extends RPCRequest
+case class TypeCompletionsReq(prefix: String, maxResults: Int) extends RPCRequest
 case class ImportSuggestionsReq(file: File, point: Int, names: List[String], maxResults: Int) extends RPCRequest
 case class PublicSymbolSearchReq(names: List[String], maxResults: Int) extends RPCRequest
 case class UsesOfSymAtPointReq(file: File, point: Int) extends RPCRequest

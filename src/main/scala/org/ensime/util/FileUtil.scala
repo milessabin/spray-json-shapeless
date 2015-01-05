@@ -77,8 +77,6 @@ object FileUtils {
       )
     )
 
-  implicit def toCanonFile(file: File): CanonFile = CanonFile(file)
-
   def isScalaSourceFile(f: File): Boolean = {
     f.exists && f.getName.endsWith(".scala")
   }
