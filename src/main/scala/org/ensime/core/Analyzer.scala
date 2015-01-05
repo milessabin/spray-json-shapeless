@@ -48,14 +48,8 @@ class Analyzer(
     override def clearAllScalaNotes(): Unit = {
       project ! AsyncEvent(ClearAllScalaNotesEvent)
     }
-    override def clearAllJavaNotes(): Unit = {
-      project ! AsyncEvent(ClearAllJavaNotesEvent)
-    }
     override def reportScalaNotes(notes: List[Note]): Unit = {
       project ! AsyncEvent(NewScalaNotesEvent(NoteList(full = false, notes)))
-    }
-    override def reportJavaNotes(notes: List[Note]): Unit = {
-      project ! AsyncEvent(NewJavaNotesEvent(NoteList(full = false, notes)))
     }
   }
 

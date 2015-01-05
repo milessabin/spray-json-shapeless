@@ -232,18 +232,7 @@ object SwankProtocolConversions {
        */
       case NewScalaNotesEvent(noteList) =>
         SExp(key(":scala-notes"), toWF(noteList))
-      /**
-       * Doc Event:
-       *   :java-notes
-       * Summary:
-       *   Notify client when Java compiler generates errors,warnings or other notes.
-       * Structure:
-       *   (:java-notes
-       *   notes //List of Note
-       *   )
-       */
-      case NewJavaNotesEvent(noteList) =>
-        SExp(key(":java-notes"), toWF(noteList))
+
       /**
        *  Doc Event:
        *   :clear-all-scala-notes
@@ -255,17 +244,6 @@ object SwankProtocolConversions {
        */
       case ClearAllScalaNotesEvent =>
         SExp(key(":clear-all-scala-notes"))
-      /**
-       * Doc Event:
-       *   :clear-all-java-notes
-       * Summary:
-       *   Notify client when Java notes have become invalidated. Editor should consider
-       *   all Java related notes to be stale at this point.
-       * Structure:
-       *   (:clear-all-java-notes)
-       */
-      case ClearAllJavaNotesEvent =>
-        SExp(key(":clear-all-java-notes"))
       /**
        * Doc Event:
        *   :background-message

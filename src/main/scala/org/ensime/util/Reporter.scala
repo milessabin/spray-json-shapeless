@@ -8,9 +8,7 @@ import scala.reflect.internal.util.Position
 trait ReportHandler {
   def messageUser(str: String): Unit
   def clearAllScalaNotes(): Unit
-  def clearAllJavaNotes(): Unit
   def reportScalaNotes(notes: List[Note]): Unit
-  def reportJavaNotes(notes: List[Note]): Unit
 }
 
 class PresentationReporter(handler: ReportHandler) extends Reporter {

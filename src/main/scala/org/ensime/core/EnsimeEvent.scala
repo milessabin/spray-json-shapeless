@@ -16,10 +16,8 @@ case object FullTypeCheckCompleteEvent extends GeneralSwankEvent
 case object IndexerReadyEvent extends GeneralSwankEvent
 case object CompilerRestartedEvent extends GeneralSwankEvent
 
-case object ClearAllJavaNotesEvent extends GeneralSwankEvent
 case object ClearAllScalaNotesEvent extends GeneralSwankEvent
 case class NewScalaNotesEvent(noteList: NoteList) extends GeneralSwankEvent
-case class NewJavaNotesEvent(noteList: NoteList) extends GeneralSwankEvent
 
 sealed trait DebugEvent extends EnsimeEvent
 case class DebugStepEvent(threadId: Long, threadName: String, pos: LineSourcePosition) extends DebugEvent
