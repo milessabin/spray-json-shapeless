@@ -6,8 +6,13 @@ import scala.concurrent.duration._
 import scala.reflect.internal.util.OffsetPosition
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
-
-import org.ensime.model.OffsetSourcePosition
+import org.ensime.model.{
+  ArrowTypeInfo,
+  BasicTypeInfo,
+  NamedTypeMemberInfo,
+  OffsetSourcePosition,
+  ParamSectionInfo
+}
 import org.ensime.util.Helpers
 
 import pimpathon.file._
@@ -208,6 +213,35 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         }
     }
 
+    it("should show all type arguments in the inspector.") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "class A { ",
+        "def banana(p: List[String]): List[String] = p",
+        "def pineapple: List[String] = List(\"spiky\")",
+        "}",
+        "object Main { def main { val my@@A = new A() }}") { (p, cc) =>
+          val info = cc.askInspectTypeAt(p).get
+          val sup = info.supers.find(sup => sup.tpe.name == "A").get;
+          {
+            val mem = sup.tpe.members.find(_.name == "banana").get.asInstanceOf[NamedTypeMemberInfo]
+            val tpe = mem.tpe.asInstanceOf[ArrowTypeInfo]
+            assert(tpe.resultType.name == "List")
+            assert(tpe.resultType.args.head.name == "String")
+            val (paramName, paramTpe) = tpe.paramSections.head.params.head
+            assert(paramName == "p")
+            assert(paramTpe.name == "List")
+            assert(paramTpe.args.head.name == "String")
+          }
+          {
+            val mem = sup.tpe.members.find(_.name == "pineapple").get.asInstanceOf[NamedTypeMemberInfo]
+            val tpe = mem.tpe.asInstanceOf[BasicTypeInfo]
+            assert(tpe.name == "List")
+            assert(tpe.args.head.name == "String")
+          }
+        }
+    }
+
     it("should show classes without visible members in the inspector") {
       Helpers.withPosInCompiledSource(
         "package com.example",
@@ -285,8 +319,7 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         Helpers.compileScala(
           List(defsFile.path),
           (dir / "target" / "classes").getPath,
-          cc.settings.classpath.value
-        )
+          cc.settings.classpath.value)
 
         cc.search.refreshResolver()
         Await.result(cc.search.refresh(), 180.seconds)

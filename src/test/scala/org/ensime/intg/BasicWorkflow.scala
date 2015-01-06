@@ -133,7 +133,7 @@ class BasicWorkflow extends FunSpec with Matchers {
         // loaded by the pres compiler
         val testMethodSymbolInfo = project.rpcSymbolAtPoint(fooFilePath, 276)
         testMethodSymbolInfo match {
-          case Some(SymbolInfo("testMethod", "testMethod", Some(OffsetSourcePosition(`fooFile`, 114)), ArrowTypeInfo("(i: Int, s: String)Int", 133, BasicTypeInfo("Int", 1, 'class, "scala.Int", List(), List(), None, None), List(ParamSectionInfo(List((i, BasicTypeInfo("Int", 1, 'class, "scala.Int", List(), List(), None, None)), (s, BasicTypeInfo("String", 39, 'class, "java.lang.String", List(), List(), None, None))), false))), true, Some(_))) =>
+          case Some(SymbolInfo("testMethod", "testMethod", Some(OffsetSourcePosition(`fooFile`, 114)), ArrowTypeInfo("(i: Int, s: String)Int", 126, BasicTypeInfo("Int", 1, 'class, "scala.Int", List(), List(), None, None), List(ParamSectionInfo(List((i, BasicTypeInfo("Int", 1, 'class, "scala.Int", List(), List(), None, None)), (s, BasicTypeInfo("String", 39, 'class, "java.lang.String", List(), List(), None, None))), false))), true, Some(_))) =>
           case _ =>
             fail("symbol at point (local test method), got: " + testMethodSymbolInfo)
         }

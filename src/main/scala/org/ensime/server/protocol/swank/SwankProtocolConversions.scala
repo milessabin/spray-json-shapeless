@@ -554,7 +554,6 @@ object SwankProtocolConversions {
       case value: PackageInfo => toWF(value)
       case value: TypeInfo => toWF(value)
       case value: NamedTypeMemberInfo => toWF(value)
-      case unknownValue => throw new IllegalStateException("Unknown EntityInfo: " + unknownValue)
     }
   }
 
@@ -567,7 +566,7 @@ object SwankProtocolConversions {
           (":arrow-type", true),
           (":result-type", toWF(value.resultType)),
           (":param-sections", SExp(value.paramSections.map(toWF))))
-      case value: TypeInfo =>
+      case value: BasicTypeInfo =>
         SExp.propList((":name", value.name),
           (":type-id", value.id),
           (":full-name", value.fullName),
@@ -576,7 +575,6 @@ object SwankProtocolConversions {
           (":members", SExp(value.members.map(toWF))),
           (":pos", value.pos.map(toWF).getOrElse('nil)),
           (":outer-type-id", value.outerTypeId.map(intToSExp).getOrElse('nil)))
-      case unknownValue => throw new IllegalStateException("Unknown TypeInfo: " + unknownValue)
     }
   }
 
