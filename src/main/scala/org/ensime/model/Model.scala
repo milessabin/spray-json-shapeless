@@ -13,7 +13,7 @@ import org.ensime.indexer.DatabaseService._
 import org.ensime.util.RichFile._
 import scala.tools.nsc.io.AbstractFile
 
-trait EntityInfo {
+sealed trait EntityInfo {
   val name: String
   val members: Iterable[EntityInfo]
 }
@@ -238,7 +238,7 @@ case class NamedTypeMemberInfo(
 
 class PackageMemberInfoLight(val name: String)
 
-trait TypeInfo extends EntityInfo {
+sealed trait TypeInfo extends EntityInfo {
   val name: String
   val id: Int
   val declaredAs: scala.Symbol
@@ -250,12 +250,12 @@ trait TypeInfo extends EntityInfo {
 }
 
 case class BasicTypeInfo(
-  override val name: String,
+  name: String,
   id: Int,
   declaredAs: scala.Symbol,
   fullName: String,
   args: Iterable[TypeInfo],
-  override val members: Iterable[EntityInfo],
+  members: Iterable[EntityInfo],
   pos: Option[SourcePosition],
   outerTypeId: Option[Int]) extends TypeInfo
 
@@ -467,25 +467,27 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         case et: ExistentialType => et.underlying
         case t => t
       }
+      def basicTypeInfo(tpe: Type): BasicTypeInfo = {
+        val typeSym = tpe.typeSymbol
+        val sym = if (typeSym.isModuleClass)
+          typeSym.sourceModule else typeSym
+        val symPos = locateSymbolPos(sym, needPos)
+        val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
+        new BasicTypeInfo(
+          typeShortName(tpe),
+          cacheType(tpe),
+          declaredAs(typeSym),
+          typeFullName(tpe),
+          tpe.typeArgs.map(TypeInfo(_)),
+          members,
+          symPos,
+          outerTypeId)
+      }
       tpe match {
         case tpe: MethodType => ArrowTypeInfo(tpe)
         case tpe: PolyType => ArrowTypeInfo(tpe)
-        case tpe: Type =>
-          val args = tpe.typeArgs.map(TypeInfo(_))
-          val typeSym = tpe.typeSymbol
-          val sym = if (typeSym.isModuleClass)
-            typeSym.sourceModule else typeSym
-          val symPos = locateSymbolPos(sym, needPos)
-          val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
-          new BasicTypeInfo(
-            typeShortName(tpe),
-            cacheType(tpe),
-            declaredAs(typeSym),
-            typeFullName(tpe),
-            args,
-            members,
-            symPos,
-            outerTypeId)
+        case tpe: NullaryMethodType => basicTypeInfo(tpe.resultType)
+        case tpe: Type => basicTypeInfo(tpe)
         case _ => nullInfo
       }
     }

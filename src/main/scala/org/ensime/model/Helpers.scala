@@ -76,9 +76,9 @@ trait Helpers { self: Global =>
   }
 
   def resultTypeName(tpe: Type): String = {
-    typeShortName(tpe) + (if (tpe.typeArgs.length > 0) {
+    typeShortName(tpe) + (if (tpe.typeArgs.size > 0) {
       "[" +
-        tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
+        tpe.typeArgs.map(typeShortNameWithArgs(_)).mkString(", ") +
         "]"
     } else { "" })
   }
