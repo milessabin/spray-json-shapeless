@@ -213,6 +213,26 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         }
     }
 
+    it("Should complete interpolated variables in strings") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object Abc { def aMethod(a: Int) = a }",
+        "object B { val x = s\"hello there, ${Abc.aMe@@}\"}") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.head.name == "aMethod")
+        }
+    }
+
+    it("Should not attempt to complete symbols in strings") {
+      Helpers.withPosInCompiledSource(
+        "package com.example",
+        "object Abc { def aMethod(a: Int) = a }",
+        "object B { val x = \"hello there Ab@@\"}") { (p, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(result.completions.isEmpty)
+        }
+    }
+
     it("should show all type arguments in the inspector.") {
       Helpers.withPosInCompiledSource(
         "package com.example",

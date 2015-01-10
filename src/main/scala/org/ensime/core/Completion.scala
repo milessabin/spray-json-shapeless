@@ -66,7 +66,7 @@ trait CompletionControl {
 
     val context = x.get match {
       case Left(tree) => {
-        logger.debug("Completing at tree:" + showRaw(tree))
+        logger.debug("Completing at tree:" + tree.summaryString)
         tree match {
           case Apply(fun, _) => {
             fun match {
@@ -83,6 +83,7 @@ trait CompletionControl {
               }
             }
           }
+          case Literal(Constant(_)) => None
           case New(name) => {
             Some(ScopeContext(src, name.pos.end, defaultPrefix, true))
           }
