@@ -1,6 +1,5 @@
 import sbt._
 import java.io._
-import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import ScoverageSbtPlugin.ScoverageKeys
 import scala.util.Try
 
@@ -135,8 +134,6 @@ unmanagedSourceDirectories in Test += baseDirectory.value / "src/example-simple"
 
 // full stacktraces in scalatest
 //testOptions in Test += Tests.Argument("-oF")
-
-graphSettings
 
 scalariformSettings
 
