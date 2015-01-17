@@ -2,7 +2,6 @@ import sbt._
 import java.io._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import ScoverageSbtPlugin.ScoverageKeys
-import org.scoverage.coveralls.CoverallsPlugin.coverallsSettings
 import scala.util.Try
 
 // NOTE: the following skips the slower tests
@@ -145,8 +144,6 @@ scalariformSettings
 ScoverageKeys.coverageMinimum := 75
 
 ScoverageKeys.coverageFailOnMinimum := true
-
-coverallsSettings
 
 licenses := Seq("BSD 3 Clause" -> url("http://opensource.org/licenses/BSD-3-Clause"))
 
