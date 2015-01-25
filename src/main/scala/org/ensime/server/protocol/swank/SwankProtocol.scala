@@ -22,9 +22,16 @@ class SwankProtocol(actorSystem: ActorSystem,
   implicit val rpcExecutionContext = actorSystem.dispatchers.lookup("akka.swank-dispatcher")
 
   /**
-   * Protocol Version: 0.8.10 (Must match version at ConnectionInfo.protocolVersion)
+   * Protocol Version: 0.8.11 (Must match version at ConnectionInfo.protocolVersion)
    *
    * Protocol Change Log:
+   *   0.8.11
+   *     Some calls now take (:file "filename" :contents "xxxx")
+   *       as a way to transmit source files:
+   *         - swank:typecheck-file
+   *         - swank:completions
+   *     Made the "reload" parameter of swank:completions optional
+   *     Added swank:format-one-source
    *   0.8.10
    *     Remove the config argument from init-project. Server loads
    *     configuration on its own.
@@ -130,6 +137,17 @@ class SwankProtocol(actorSystem: ActorSystem,
   ////////////////////
   // Datastructures //
   ////////////////////
+
+  /**
+   * Doc DataStructure:
+   *   SourceFileInfo
+   * Summary:
+   *   A source file to be analyzed by the presentation compiler.
+   *   (
+   *     :file    //String:A filename, absolute or relative to the project
+   *     :contents  //String, optional: if present, this string is loaded instead of the actual file's contents.
+   *   )
+   */
 
   /**
    * Doc DataStructure:
@@ -636,9 +654,10 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   swank:typecheck-file
        * Summary:
        *   Request immediate load and check the given source file.
+       *   The call returns after the file has been loaded.
        * Arguments:
-       *   String:A filename, absolute or relative to the project.
-       *   String(optional): if set, it is substituted for the file's contents
+       *   String or SourceFileInfo:A filename, absolute or relative to the project.
+       *   String(optional): if set, it is substituted for the file's contents. Deprecated: use the :content attribute of SourceFileInfo instead.
        * Return:
        *   None
        * Example call:
@@ -648,10 +667,10 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   (:return (:ok t) 42)
        */
       case ("swank:typecheck-file", StringAtom(file) :: StringAtom(contents) :: Nil) =>
-        rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(new File(file), Some(contents))))
+        rpcTarget.rpcTypecheckFiles(List(ContentsSourceFileInfo(new File(file), contents)), async = false)
         sendRPCReturn(wfTrue, callId)
-      case ("swank:typecheck-file", StringAtom(file) :: Nil) =>
-        rpcTarget.rpcTypecheckFiles(List(SourceFileInfo(file)))
+      case ("swank:typecheck-file", SourceFileInfoExtractor(fileInfo) :: Nil) =>
+        rpcTarget.rpcTypecheckFiles(List(fileInfo), async = false)
         sendRPCReturn(wfTrue, callId)
 
       /**
@@ -659,6 +678,7 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   swank:typecheck-files
        * Summary:
        *   Request immediate load and check the given source files.
+       *   The call may return before all files are loaded.
        * Arguments:
        *   List of String:Filenames, absolute or relative to the project.
        * Return:
@@ -669,7 +689,7 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   (:return (:ok t) 42)
        */
       case ("swank:typecheck-files", StringListExtractor(names) :: Nil) =>
-        rpcTarget.rpcTypecheckFiles(names.map(SourceFileInfo(_)))
+        rpcTarget.rpcTypecheckFiles(names.map(filename => FileSourceFileInfo(new File(filename))), async = true)
         sendRPCAckOK(callId)
       /**
        * Doc RPC:
@@ -695,7 +715,7 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   swank:unload-all
        * Summary:
        *   Remove all sources from the presentation compiler. Reset the project's symbols
-       *    to the ones defiled in .class files.
+       *    to the ones defined in .class files.
        * Arguments:
        *   None
        * Return:
@@ -747,6 +767,25 @@ class SwankProtocol(actorSystem: ActorSystem,
       case ("swank:format-source", StringListExtractor(filenames) :: Nil) =>
         rpcTarget.rpcFormatFiles(filenames)
         sendRPCAckOK(callId)
+
+      /**
+       * Doc RPC:
+       *   swank:format-one-source
+       * Summary:
+       *   Run the source formatter on the provided file and return the formatted source.
+       *   The file isn't modified.
+       * Arguments:
+       *   String or SourceFileinfo: a scala source file
+       * Return:
+       *   String: the formatted contents of the given source file
+       * Example call:
+       *   (:swank-rpc (swank:format-source (:file "example.scala" :contents "package com.example  \n  class   A {}")) 42)
+       * Example return:
+       *   (:return (:ok "package com.example\nclass A {}") 42)
+       */
+      case ("swank:format-one-source", SourceFileInfoExtractor(fileInfo) :: Nil) =>
+        val result = rpcTarget.rpcFormatFile(fileInfo)
+        sendRPCReturn(toWF(result), callId)
 
       /**
        * Doc RPC:
@@ -803,13 +842,13 @@ class SwankProtocol(actorSystem: ActorSystem,
        * Summary:
        *   Find viable completions at given point.
        * Arguments:
-       *   String:Source filename, absolute or relative to the project.
+       *   String or SourceFileInfo: source file in which to find completions
        *   Int:Character offset within that file.
        *   Int:Max number of completions to return. Value of zero denotes
        *     no limit.
        *   Bool:If non-nil, only return prefixes that match the case of the
        *     prefix.
-       *   Bool:If non-nil, reload source from disk before computing completions.
+       *   Bool, optional :Ignored. This parameter will be removed in a future version.
        * Return:
        *   CompletionInfoList: The list of completions
        * Example call:
@@ -822,9 +861,14 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   (:name "format" :type-sig "(String, <repeated>[Any]) => String"
        *   :type-id 11 :is-callable t))) 42))
        */
-      case ("swank:completions", StringAtom(file) :: IntAtom(point) :: IntAtom(maxResults) ::
+      case ("swank:completions", SourceFileInfoExtractor(fileInfo) :: IntAtom(point) :: IntAtom(maxResults) ::
         BooleanAtom(caseSens) :: BooleanAtom(reload) :: Nil) =>
-        val result = rpcTarget.rpcCompletionsAtPoint(file, point, maxResults, caseSens, reload)
+        val result = rpcTarget.rpcCompletionsAtPoint(fileInfo, point, maxResults, caseSens)
+        val resultWF = toWF(result)
+        sendRPCReturn(resultWF, callId)
+      case ("swank:completions", SourceFileInfoExtractor(fileInfo) :: IntAtom(point) :: IntAtom(maxResults) ::
+        BooleanAtom(caseSens) :: Nil) =>
+        val result = rpcTarget.rpcCompletionsAtPoint(fileInfo, point, maxResults, caseSens)
         val resultWF = toWF(result)
         sendRPCReturn(resultWF, callId)
 
@@ -1773,6 +1817,28 @@ object SwankProtocol {
           }
         case _ => None
       }
+    }
+  }
+
+  object SourceFileInfoExtractor {
+    def unapply(sexp: SExp): Option[SourceFileInfo] = sexp match {
+      case StringAtom(file) => Some(FileSourceFileInfo(new File(file)))
+      case sexp: SExpList => {
+        val m = sexp.toKeywordMap
+        val file = m.get(key(":file"))
+        val contents = m.get(key(":contents"))
+        val contentsIn = m.get(key(":contents-in"))
+        (file, contents, contentsIn) match {
+          case (Some(StringAtom(file)), None, None) =>
+            Some(FileSourceFileInfo(new File(file)))
+          case (Some(StringAtom(file)), Some(StringAtom(contents)), None) =>
+            Some(ContentsSourceFileInfo(new File(file), contents))
+          case (Some(StringAtom(file)), None, Some(StringAtom(contentsIn))) =>
+            Some(ContentsInSourceFileInfo(new File(file), new File(contentsIn)))
+          case _ => None
+        }
+      }
+      case _ => None
     }
   }
 

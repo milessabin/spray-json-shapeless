@@ -50,7 +50,6 @@ trait CompletionControl {
     }
 
     val constructing = ConstructingRegexp.findFirstMatchIn(preceding).isDefined
-    logger.debug("In constructing context: " + constructing)
 
     val (src, p, patched) = if (defaultPrefix.isEmpty) {
       // Add a fake prefix if none was provided by the user. Otherwise the

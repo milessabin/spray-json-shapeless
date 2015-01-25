@@ -157,8 +157,8 @@ class Analyzer(
                   restartCompiler(keepLoaded = false)
                 }
                 sender ! VoidResponse
-              case ReloadFilesReq(files) =>
-                handleReloadFiles(files)
+              case ReloadFilesReq(files: List[SourceFileInfo], async: Boolean) =>
+                handleReloadFiles(files, async)
                 sender ! VoidResponse
               case PatchSourceReq(file, edits) =>
                 if (!file.exists()) {
@@ -177,10 +177,11 @@ class Analyzer(
                 handleRefactorExec(req)
               case req: RefactorCancelReq =>
                 handleRefactorCancel(req)
-              case CompletionsReq(file: File, point: Int,
-                maxResults: Int, caseSens: Boolean, reload: Boolean) =>
-                val p = if (reload) pos(file, point) else posNoRead(file, point)
+              case CompletionsReq(fileInfo: SourceFileInfo, point: Int,
+                maxResults: Int, caseSens: Boolean) =>
+                val sourcefile = createSourceFile(fileInfo)
                 reporter.disable()
+                val p = new OffsetPosition(sourcefile, point)
                 val info = scalaCompiler.askCompletionsAt(p, maxResults, caseSens)
                 sender ! info
               case UsesOfSymAtPointReq(file: File, point: Int) =>
@@ -236,6 +237,8 @@ class Analyzer(
               case FormatFilesReq(filenames: List[String]) =>
                 handleFormatFiles(filenames)
                 sender ! VoidResponse
+              case FormatFileReq(fileInfo: SourceFileInfo) =>
+                sender ! handleFormatFile(fileInfo)
             }
           }
         } catch {
@@ -249,7 +252,7 @@ class Analyzer(
     }
   }
 
-  def handleReloadFiles(files: List[SourceFileInfo]): Unit = {
+  def handleReloadFiles(files: List[SourceFileInfo], async: Boolean): Unit = {
     files foreach { file =>
       require(file.file.exists, "" + file + " does not exist")
     }
@@ -258,8 +261,10 @@ class Analyzer(
       _.file.getName.endsWith(".java"))
 
     if (scalas.nonEmpty) {
-      scalaCompiler.askReloadFiles(scalas.map(createSourceFile))
+      val sourceFiles = scalas.map(createSourceFile)
+      scalaCompiler.askReloadFiles(sourceFiles)
       scalaCompiler.askNotifyWhenReady()
+      if (!async) sourceFiles.foreach(scalaCompiler.askLoadedTyped(_))
     }
   }
 
@@ -271,11 +276,6 @@ class Analyzer(
 
   def pos(file: File, offset: Int): OffsetPosition = {
     val f = scalaCompiler.createSourceFile(file.getCanonicalPath)
-    new OffsetPosition(f, offset)
-  }
-
-  def posNoRead(file: File, offset: Int): OffsetPosition = {
-    val f = scalaCompiler.findSourceFile(file.getCanonicalPath).get
     new OffsetPosition(f, offset)
   }
 

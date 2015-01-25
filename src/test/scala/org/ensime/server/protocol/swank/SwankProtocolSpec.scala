@@ -102,7 +102,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand connection-info request") {
       testWithResponse("(swank:connection-info)") { (t, m, id) =>
         (t.rpcConnectionInfo _).expects().returns(new ConnectionInfo())
-        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.10")) $id)""")
+        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.11")) $id)""")
       }
     }
 
@@ -130,26 +130,47 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:swank:typecheck-file") {
       testWithResponse("""(swank:typecheck-file "Analyzer.scala")""") { (t, m, id) =>
-        (t.rpcTypecheckFiles _).expects(List(SourceFileInfo(analyzerFile)))
+        (t.rpcTypecheckFiles _).expects(List(FileSourceFileInfo(analyzerFile)), false)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
-    it("should understand swank:swank:typecheck-file with content") {
+    it("should understand swank:swank:typecheck-file with FileSourceFileInfo") {
+      testWithResponse("""(swank:typecheck-file (:file "Analyzer.scala"))""") { (t, m, id) =>
+        (t.rpcTypecheckFiles _).expects(List(FileSourceFileInfo(analyzerFile)), false)
+        (m.send _).expects(s"""(:return (:ok t) $id)""")
+      }
+    }
+
+    it("should understand swank:swank:typecheck-file with ContentsSourceFileInfo") {
+      testWithResponse("""(swank:typecheck-file (:file "Analyzer.scala" :contents "abc"))""") { (t, m, id) =>
+        (t.rpcTypecheckFiles _).expects(List(ContentsSourceFileInfo(analyzerFile, "abc")), false)
+        (m.send _).expects(s"""(:return (:ok t) $id)""")
+      }
+    }
+
+    it("should understand swank:swank:typecheck-file with ContentsInSourceFileInfo") {
+      testWithResponse("""(swank:typecheck-file (:file "Analyzer.scala" :contents-in "Foo.scala"))""") { (t, m, id) =>
+        (t.rpcTypecheckFiles _).expects(List(ContentsInSourceFileInfo(analyzerFile, fooFile)), false)
+        (m.send _).expects(s"""(:return (:ok t) $id)""")
+      }
+    }
+
+    it("should understand swank:swank:typecheck-file with contents") {
       testWithResponse("""(swank:typecheck-file "Analyzer.scala" "contents\\n\\ncontents")""") { (t, m, id) =>
-        (t.rpcTypecheckFiles _).expects(List(SourceFileInfo(analyzerFile, Some("contents\\n\\ncontents"))))
+        (t.rpcTypecheckFiles _).expects(List(ContentsSourceFileInfo(analyzerFile, "contents\\n\\ncontents")), false)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:typecheck-files") {
       testWithResponse("""(swank:typecheck-files ("Analyzer.scala" "Foo.scala"))""") { (t, m, id) =>
-        (t.rpcTypecheckFiles _).expects(List(SourceFileInfo(analyzerFile), SourceFileInfo(fooFile)))
+        (t.rpcTypecheckFiles _).expects(List(FileSourceFileInfo(analyzerFile), FileSourceFileInfo(fooFile)), true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
-    it("should understand swank:atch-source") {
+    it("should understand swank:patch-source") {
       testWithResponse("""(swank:patch-source "Analyzer.scala" (("+" 6461 "Inc") ("-" 7127 7128) ("*" 7200 7300 "Bob")))""") { (t, m, id) =>
         (t.rpcPatchSource _).expects("Analyzer.scala", List(PatchInsert(6461, "Inc"), PatchDelete(7127, 7128), PatchReplace(7200, 7300, "Bob")))
         (m.send _).expects(s"""(:return (:ok t) $id)""")
@@ -179,6 +200,13 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     // TODO add test for exception handling in above
 
+    it("should understand swank:format-one-source") {
+      testWithResponse("""(swank:format-one-source (:file "Analyzer.scala"))""") { (t, m, id) =>
+        (t.rpcFormatFile _).expects(FileSourceFileInfo(analyzerFile)).returns("Some string")
+        (m.send _).expects(s"""(:return (:ok "Some string") $id)""")
+      }
+    }
+
     it("should understand swank:public-symbol-search") {
       testWithResponse("""(swank:public-symbol-search ("java" "io" "File") 50)""") { (t, m, id) =>
         (t.rpcPublicSymbolSearch _).expects(List("java", "io", "File"), 50).returns(symbolSearchResults)
@@ -194,13 +222,46 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       }
     }
 
-    it("should understand swank:completions") {
+    it("should understand swank:completions with filename as string") {
+      val filename = "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala"
+      val file = new java.io.File(filename)
       testWithResponse(
-        """(swank:completions
-              | "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala"
-              | 22626 0 t t)""".stripMargin) { (t, m, id) =>
+        s"""(swank:completions "$filename" 22626 0 t t)""") { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
-            "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala", 22626, 0, true, true).returns(completionInfoCList)
+            FileSourceFileInfo(file), 22626, 0, true).returns(completionInfoCList)
+          (m.send _).expects(s"""(:return (:ok $completionInfoCListStr) $id)""")
+        }
+    }
+
+    it("should understand swank:completions with FileSourceFileInfo") {
+      val filename = "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala"
+      val file = new java.io.File(filename)
+      testWithResponse(
+        s"""(swank:completions (:file "$filename") 22626 0 t t)""") { (t, m, id) =>
+          (t.rpcCompletionsAtPoint _).expects(
+            FileSourceFileInfo(file), 22626, 0, true).returns(completionInfoCList)
+          (m.send _).expects(s"""(:return (:ok $completionInfoCListStr) $id)""")
+        }
+    }
+
+    it("should understand swank:completions with ContentsSourceFileInfo") {
+      val filename = "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala"
+      val file = new java.io.File(filename)
+      testWithResponse(
+        s"""(swank:completions (:file "$filename" :contents "zz") 22626 0 t t)""") { (t, m, id) =>
+          (t.rpcCompletionsAtPoint _).expects(
+            ContentsSourceFileInfo(file, "zz"), 22626, 0, true).returns(completionInfoCList)
+          (m.send _).expects(s"""(:return (:ok $completionInfoCListStr) $id)""")
+        }
+    }
+
+    it("should understand swank:completions with ContentsInSourceFileInfo") {
+      val filename = "/ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala"
+      val file = new java.io.File(filename)
+      testWithResponse(
+        s"""(swank:completions (:file "$filename" :contents-in "Foo.scala") 22626 0 t t)""") { (t, m, id) =>
+          (t.rpcCompletionsAtPoint _).expects(
+            ContentsInSourceFileInfo(file, fooFile), 22626, 0, true).returns(completionInfoCList)
           (m.send _).expects(s"""(:return (:ok $completionInfoCListStr) $id)""")
         }
     }

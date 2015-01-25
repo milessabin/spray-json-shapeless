@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import org.ensime.config._
 import org.ensime.indexer.SearchService
 import org.ensime.model._
+import org.ensime.util.FileUtils
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
@@ -150,8 +151,14 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def createSourceFile(path: String) = getSourceFile(path)
   def createSourceFile(file: AbstractFile) = getSourceFile(file)
   def createSourceFile(file: SourceFileInfo) = file match {
-    case SourceFileInfo(f: File, None) => getSourceFile(f.getCanonicalPath)
-    case SourceFileInfo(f: File, Some(contents)) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
+    case FileSourceFileInfo(f: File) => getSourceFile(f.getCanonicalPath)
+    case ContentsSourceFileInfo(f: File, contents: String) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
+    case ContentsInSourceFileInfo(f: File, contentsIn: File) =>
+      val contents = FileUtils.readFile(contentsIn, charset) match {
+        case Right(contents) => contents
+        case Left(e) => throw e
+      }
+      new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
   }
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
     _.file.path == path)

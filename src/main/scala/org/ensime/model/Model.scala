@@ -53,11 +53,12 @@ case class EmptySourcePosition() extends SourcePosition
 case class OffsetSourcePosition(file: File, offset: Int) extends SourcePosition
 case class LineSourcePosition(file: File, line: Int) extends SourcePosition
 
-case class SourceFileInfo(file: File, contents: Option[String])
-object SourceFileInfo {
-  def apply(file: String) = new SourceFileInfo(new File(file), None)
-  def apply(file: File) = new SourceFileInfo(file, None)
+sealed trait SourceFileInfo {
+  def file: File
 }
+case class FileSourceFileInfo(file: File) extends SourceFileInfo
+case class ContentsSourceFileInfo(file: File, contents: String) extends SourceFileInfo
+case class ContentsInSourceFileInfo(file: File, contentsIn: File) extends SourceFileInfo
 
 case class PackageInfo(
     override val name: String,

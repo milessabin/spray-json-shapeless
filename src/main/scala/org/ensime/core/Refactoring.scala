@@ -3,6 +3,9 @@ package org.ensime.core
 import java.io.File
 
 import org.ensime.model.AddUndo
+import org.ensime.model.ContentsSourceFileInfo
+import org.ensime.model.ContentsInSourceFileInfo
+import org.ensime.model.FileSourceFileInfo
 import org.ensime.model.SourceFileInfo
 import org.ensime.model.Undo
 import org.ensime.model.UndoResult
@@ -128,7 +131,7 @@ trait RefactoringHandler { self: Analyzer =>
   def handleExecUndo(undo: Undo): Either[String, UndoResult] = {
     FileUtils.writeChanges(undo.changes, charset) match {
       case Right(touched) =>
-        handleReloadFiles(touched.toList.map { SourceFileInfo(_) })
+        handleReloadFiles(touched.toList.map(FileSourceFileInfo), async = true)
         val sortedTouched = touched.toList.sortBy(_.getCanonicalPath)
         Right(UndoResult(undo.id, sortedTouched))
       case Left(e) => Left(e.getMessage)
@@ -177,6 +180,13 @@ trait RefactoringHandler { self: Analyzer =>
         throw RPCError(ErrFormatFailed, "Cannot format broken syntax: " + e)
     }
   }
+
+  def handleFormatFile(fileInfo: SourceFileInfo): String = {
+    val sourceFile = createSourceFile(fileInfo)
+    val contents = sourceFile.content.mkString
+    ScalaFormatter.format(contents, config.formattingPrefs)
+  }
+
 }
 
 trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>

@@ -152,8 +152,8 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callVoidRPC(getAnalyzer, PatchSourceReq(file, edits))
   }
 
-  override def rpcTypecheckFiles(fs: List[SourceFileInfo]): Unit = {
-    callVoidRPC(getAnalyzer, ReloadFilesReq(fs))
+  override def rpcTypecheckFiles(fs: List[SourceFileInfo], async: Boolean): Unit = {
+    callVoidRPC(getAnalyzer, ReloadFilesReq(fs, async))
   }
 
   override def rpcRemoveFile(f: String): Unit = {
@@ -169,12 +169,10 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callVoidRPC(getAnalyzer, ReloadAllReq)
   }
 
-  override def rpcCompletionsAtPoint(f: String, point: Int, maxResults: Int,
-    caseSens: Boolean, reload: Boolean): CompletionInfoList = {
+  override def rpcCompletionsAtPoint(fileInfo: SourceFileInfo, point: Int, maxResults: Int,
+    caseSens: Boolean): CompletionInfoList = {
 
-    callRPC[CompletionInfoList](getAnalyzer,
-      CompletionsReq(new File(f), point, maxResults, caseSens, reload),
-      30.seconds)
+    callRPC[CompletionInfoList](getAnalyzer, CompletionsReq(fileInfo, point, maxResults, caseSens))
   }
 
   override def rpcPackageMemberCompletion(path: String, prefix: String): List[CompletionInfo] = {
@@ -255,6 +253,10 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
 
   override def rpcFormatFiles(filenames: List[String]): Unit = {
     callVoidRPC(getAnalyzer, FormatFilesReq(filenames))
+  }
+
+  override def rpcFormatFile(fileInfo: SourceFileInfo): String = {
+    callRPC[String](getAnalyzer, FormatFileReq(fileInfo))
   }
 
 }
