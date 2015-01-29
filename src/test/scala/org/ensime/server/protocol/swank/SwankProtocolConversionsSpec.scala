@@ -32,7 +32,6 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
           """(:debug-event (:type step :thread-id "207" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
         assert(toWF(DebugBreakEvent(209L, "threadNameStr", sourcePos1)).toWireString ===
           """(:debug-event (:type breakpoint :thread-id "209" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
-        assert(toWF(DebugVMDeathEvent()).toWireString === """(:debug-event (:type death))""")
         assert(toWF(DebugVMStartEvent()).toWireString === """(:debug-event (:type start))""")
         assert(toWF(DebugVMDisconnectEvent()).toWireString === """(:debug-event (:type disconnect))""")
 

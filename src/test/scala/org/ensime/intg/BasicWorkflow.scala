@@ -18,7 +18,7 @@ class BasicWorkflow extends FunSpec with Matchers {
   describe("Server") {
     it("should open the test project", SlowTest) {
 
-      IntgUtil.withTestProject("src/example-simple") { (config, project, asyncHelper) =>
+      IntgUtil.withTestProject("src/testprojects/example-simple") { (config, project, asyncHelper) =>
 
         val sourceRoot = config.modules.values.head.sourceRoots.head
         val fooFilePath = (sourceRoot / "org/example/Foo.scala").getCanonicalPath

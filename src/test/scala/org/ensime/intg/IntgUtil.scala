@@ -116,7 +116,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
    * @param path The directory containing the test project (will not be modified)
    * @param f The test function to run
    */
-  def withTestProject(path: String)(f: (EnsimeConfig, Project, AsyncMsgHelper) => Unit): Unit = {
+  def withTestProject[T](path: String)(f: (EnsimeConfig, Project, AsyncMsgHelper) => T): T = {
 
     withTempDirectory { base =>
       val projectBase = base.canon
@@ -152,9 +152,12 @@ object IntgUtil extends Assertions with SLF4JLogging {
       asyncHelper.expectAsync(60 seconds, FullTypeCheckCompleteEvent)
       asyncHelper.expectAsync(240 seconds, IndexerReadyEvent)
 
-      f(config, server.project, asyncHelper)
-
-      server.shutdown()
+      val res = try {
+        f(config, server.project, asyncHelper)
+      } finally {
+        server.shutdown()
+      }
+      res
     }
   }
 }

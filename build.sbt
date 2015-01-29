@@ -130,7 +130,9 @@ javaOptions in Test ++= Seq(
 )
 
 // adds our example projects to the test compile
-unmanagedSourceDirectories in Test += baseDirectory.value / "src/example-simple"
+unmanagedSourceDirectories in Test += baseDirectory.value / "src/testprojects/example-simple"
+
+unmanagedSourceDirectories in Test += baseDirectory.value / "src/testprojects/debug/src"
 
 // full stacktraces in scalatest
 //testOptions in Test += Tests.Argument("-oF")

@@ -22,7 +22,6 @@ case class NewScalaNotesEvent(noteList: NoteList) extends GeneralSwankEvent
 sealed trait DebugEvent extends EnsimeEvent
 case class DebugStepEvent(threadId: Long, threadName: String, pos: LineSourcePosition) extends DebugEvent
 case class DebugBreakEvent(threadId: Long, threadName: String, pos: LineSourcePosition) extends DebugEvent
-case class DebugVMDeathEvent() extends DebugEvent
 case class DebugVMStartEvent() extends DebugEvent
 case class DebugVMDisconnectEvent() extends DebugEvent
 case class DebugExceptionEvent(excId: Long, threadId: Long, threadName: String, pos: Option[LineSourcePosition]) extends DebugEvent

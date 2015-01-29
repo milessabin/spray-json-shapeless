@@ -325,20 +325,6 @@ object SwankProtocolConversions {
 
       /**
        * Doc Event:
-       *   :debug-event (:type death)
-       * Summary:
-       *   Signals that the debugged VM has exited.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: death
-       *   ))
-       */
-      case DebugVMDeathEvent() =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'death))
-
-      /**
-       * Doc Event:
        *   :debug-event (:type start)
        * Summary:
        *   Signals that the debugged VM has started.

@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable
 import scala.concurrent.duration._
 
-case class RPCError(code: Int, detail: String) extends RuntimeException()
+case class RPCError(code: Int, detail: String) extends RuntimeException("" + code + ": " + detail)
 case class AsyncEvent(evt: EnsimeEvent)
 
 case object AnalyzerShutdownEvent
