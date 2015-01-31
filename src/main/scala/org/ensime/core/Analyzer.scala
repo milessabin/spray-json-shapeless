@@ -49,7 +49,7 @@ class Analyzer(
       project ! AsyncEvent(ClearAllScalaNotesEvent)
     }
     override def reportScalaNotes(notes: List[Note]): Unit = {
-      project ! AsyncEvent(NewScalaNotesEvent(NoteList(full = false, notes)))
+      project ! AsyncEvent(NewScalaNotesEvent(isFull = false, notes))
     }
   }
 

@@ -1,6 +1,7 @@
 package org.ensime.sexp
 
 import collection.breakOut
+import scala.collection.immutable.ListMap
 
 /**
  * An S-Expression is either
@@ -92,12 +93,17 @@ object SexpData {
 
   def unapply(sexp: Sexp): Option[Map[SexpSymbol, Sexp]] = sexp match {
     case SexpList(values) =>
+      // order can be important in serialised forms
       val props = {
         values.grouped(2).collect {
           case List(SexpSymbol(key), value) if key.startsWith(":") =>
             (SexpSymbol(key), value)
         }
-      }.toMap
+      }.foldLeft(ListMap.empty[SexpSymbol, Sexp]) {
+        case (res, el) =>
+          // in elisp, first entry wins
+          if (res.contains(el._1)) res else res + el
+      }
       // props.size counts unique keys. We only create data when keys
       // are not duplicated or we could introduce losses
       if (values.isEmpty || 2 * props.size != values.size)

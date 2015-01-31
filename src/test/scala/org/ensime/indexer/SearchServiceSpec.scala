@@ -22,8 +22,8 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
 
     // to reduce test time
     val trimmed = module.copy(
-      `compile-deps` = Nil,
-      `test-deps` = module.testJars filter (_.getName.contains("scalatest_"))
+      compileDeps = Nil,
+      testDeps = module.testJars filter (_.getName.contains("scalatest_"))
     )
     config.copy(
       subprojects = List(trimmed)

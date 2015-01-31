@@ -54,7 +54,8 @@ class ProductFormatsSpec extends FormatSpec
       assertFormat(wibble, SexpData(
         SexpSymbol(":thing") -> SexpString("wibble"),
         SexpSymbol(":thong") -> SexpNumber(13),
-        SexpSymbol(":bling") -> SexpList(SexpString("fork"))))
+        SexpSymbol(":bling") -> SexpList(SexpString("fork"))
+      ))
 
       val wobble = Wibble("wibble", 13, None)
 
@@ -62,7 +63,8 @@ class ProductFormatsSpec extends FormatSpec
       assertFormat(wobble, SexpData(
         SexpSymbol(":thing") -> SexpString("wibble"),
         SexpSymbol(":thong") -> SexpNumber(13),
-        SexpSymbol(":bling") -> SexpNil))
+        SexpSymbol(":bling") -> SexpNil
+      ))
 
       // but tolerate missing entries
       assert(SexpData(
@@ -88,5 +90,21 @@ class ProductFormatsSpec extends FormatSpec
       assertFormat(foo, fooexpect)
     }
 
+  }
+}
+
+class CustomisedProductFormatsSpec extends FormatSpec
+    with BasicFormats with StandardFormats with ProductFormats
+    with CamelCaseToDashes {
+
+  case class Foo(AThingyMaBob: Int, HTML: String)
+
+  describe("ProductFormats with overloaded toWireName") {
+    it("should support custom field names") {
+      assertFormat(Foo(13, "foo"), SexpData(
+        SexpSymbol(":a-thingy-ma-bob") -> SexpNumber(13),
+        SexpSymbol(":h-t-m-l") -> SexpString("foo")
+      ))
+    }
   }
 }

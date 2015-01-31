@@ -14,32 +14,37 @@ import org.ensime.sexp._
  * Boilerplate blocked on https://github.com/milessabin/shapeless/issues/238
  */
 trait FamilyFormats {
-
-  // // unlike case classes, include the type hint in the serialised form
-  // // TODO: get this working as part of a family, rather than just standalone
-  // implicit def singletonFormat[T <: Singleton](
-  //   implicit w: Witness.Aux[T]) = new SexpFormat[T] {
-  //   // TODO: scala names https://github.com/milessabin/shapeless/issues/256
-  //   private val sexp = SexpSymbol(w.value.getClass.getName)
-  //   private val value = w.value
-  //   def write(t: T) = sexp
-  //   def read(v: Sexp) =
-  //     if (v == sexp) value
-  //     else deserializationError(v)
-  // }
-
   case class TypeHint[T](hint: SexpSymbol)
   implicit def typehint[T: TypeTag]: TypeHint[T] =
-    TypeHint(SexpSymbol(":" + typeOf[T].dealias.toString.split("(\\.|\\$)").last))
+    TypeHint(SexpSymbol(":" + typeOf[T].dealias.toString.replaceAll("\\.type$", "").split("(\\.|\\$)").last))
+
+  // always serialises to Nil, and is differentiated by the TraitFormat
+  //
+  // this is not implicit because of a stray println in shapeless that
+  // makes this extremely frustrating to use.
+  // https://github.com/milessabin/shapeless/pull/259
+  def singletonFormat[T <: Singleton](implicit w: Witness.Aux[T]) = new SexpFormat[T] {
+    // TODO: scala names https://github.com/milessabin/shapeless/issues/256
+    private val value = w.value
+    def write(t: T) = SexpNil
+    def read(v: Sexp) =
+      if (v == SexpNil) value
+      else deserializationError(v)
+  }
 
   abstract class TraitFormat[T] extends SexpFormat[T] {
-    protected def wrap[E](t: E)(implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp =
-      SexpData(th.hint -> t.toSexp)
+    protected def wrap[E](t: E)(implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp = {
+      val contents = t.toSexp
+      // special cases: empty case clases, and case objects (hopefully)
+      if (contents == SexpNil) SexpList(th.hint)
+      else SexpData(th.hint -> contents)
+    }
 
     // implement by matching on the implementations and passing off to wrap
     // def write(t: T): Sexp
 
     final def read(sexp: Sexp): T = sexp match {
+      case SexpList(List(hint @ SexpSymbol(_))) => read(hint, SexpNil)
       case SexpData(map) if map.size == 1 =>
         map.head match {
           case (hint, value) => read(hint, value)
@@ -51,5 +56,4 @@ trait FamilyFormats {
     // implement by matching on the hint and passing off to convertTo[Impl]
     protected def read(hint: SexpSymbol, value: Sexp): T
   }
-
 }

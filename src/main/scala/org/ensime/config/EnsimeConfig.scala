@@ -11,31 +11,31 @@ import RichFile._
 import FileUtils.jdkDir
 
 case class EnsimeConfig(
-    `root-dir`: File,
-    `cache-dir`: File,
+    rootDir: File,
+    cacheDir: File,
     name: String,
-    `scala-version`: String,
-    `compiler-args`: List[String],
-    `reference-source-roots`: List[File],
+    scalaVersion: String,
+    compilerArgs: List[String],
+    referenceSourceRoots: List[File],
     subprojects: List[EnsimeModule],
-    `formatting-prefs`: FormattingPreferences,
-    `source-mode`: Boolean,
-    `debug-args`: List[String]) extends SLF4JLogging {
-  (`root-dir` :: `cache-dir` :: referenceSourceJars).foreach { f =>
+    formattingPrefs: FormattingPreferences,
+    sourceMode: Boolean,
+    debugArgs: List[String]) extends SLF4JLogging {
+  (rootDir :: cacheDir :: referenceSourceRoots).foreach { f =>
     require(f.exists, "" + f + " is required but does not exist")
   }
 
-  // convertors between the "legacy" names and the preferred ones
-  // (with fallback defaults)
-  def root = `root-dir`
-  def cacheDir = `cache-dir`
-  def scalaVersion = `scala-version`
-  def compilerArgs = `compiler-args`
+  /*
+   Proposed alternatives to the legacy wire format field names:
+   */
+  def root = rootDir
+  def debugVMArgs = debugArgs
+  def referenceSourceJars = referenceSourceRoots
+
+  // some marshalling libs (e.g. spray-json) might not like extra vals
   val modules = subprojects.map { module => (module.name, module) }.toMap
-  def referenceSourceJars = `reference-source-roots`
-  val formattingPrefs = `formatting-prefs`
-  val sourceMode = `source-mode`
-  def debugVMArgs = `debug-args`
+  val javaLib = jdkDir / "jre/lib/rt.jar"
+  require(javaLib.exists, "The JRE does not exist at the expected location " + javaLib)
 
   private[config] def validated(): EnsimeConfig = {
     copy(subprojects = subprojects.map(_.validated()))
@@ -49,22 +49,19 @@ case class EnsimeConfig(
   } yield file
 
   def runtimeClasspath: Set[File] =
-    compileClasspath ++ modules.values.flatMap(_.debugJars) ++ targetClasspath
+    compileClasspath ++ modules.values.flatMap(_.runtimeDeps) ++ targetClasspath
 
   def compileClasspath: Set[File] = modules.values.toSet.flatMap {
-    m: EnsimeModule => m.compileJars ++ m.testJars
+    m: EnsimeModule => m.compileDeps ++ m.testDeps
   } ++ (if (sourceMode) List.empty else targetClasspath)
 
   def targetClasspath: Set[File] = modules.values.toSet.flatMap {
     m: EnsimeModule => m.targetDirs ++ m.testTargetDirs
   }
 
-  val javaLib = jdkDir / "jre/lib/rt.jar"
-  require(javaLib.exists, "The JRE does not exist at the expected location " + javaLib)
-
   def allJars: Set[File] = {
     modules.values.flatMap { m =>
-      m.compileJars ::: m.testJars
+      m.compileDeps ::: m.testDeps
     }.toSet
   } + javaLib
 }
@@ -73,31 +70,33 @@ case class EnsimeModule(
     name: String,
     target: Option[File],
     targets: List[File],
-    `test-target`: Option[File],
-    `test-targets`: List[File],
-    `depends-on-modules`: List[String],
-    `compile-deps`: List[File],
-    `runtime-deps`: List[File],
-    `test-deps`: List[File],
-    `source-roots`: List[File],
-    `reference-source-roots`: List[File]) extends SLF4JLogging {
+    testTarget: Option[File],
+    testTargets: List[File],
+    dependsOnModules: List[String],
+    compileDeps: List[File],
+    runtimeDeps: List[File],
+    testDeps: List[File],
+    sourceRoots: List[File],
+    referenceSourceRoots: List[File]) extends SLF4JLogging {
   // only check the files, not the directories, see below
-  (`compile-deps` ::: `runtime-deps` :::
-    `test-deps` ::: `reference-source-roots`).foreach { f =>
+  (compileDeps ::: runtimeDeps :::
+    testDeps ::: referenceSourceRoots).foreach { f =>
       require(f.exists, "" + f + " is required but does not exist")
     }
-  // the preferred accessors
+
+  /*
+   Proposed alternatives to the legacy wire format field names:
+   */
+  def compileJars = compileDeps
+  def testJars = testDeps
+  def referenceSourceJars = referenceSourceRoots
+
+  // prefer these to the raw target(s)
   val targetDirs = targets ++ target.toIterable
-  val testTargetDirs = `test-targets` ++ `test-target`.toIterable
-  def dependsOnNames = `depends-on-modules`
-  def compileJars = `compile-deps`
-  def debugJars = `runtime-deps` // yuck
-  def testJars = `test-deps`
-  def sourceRoots = `source-roots`
-  def referenceSourcesJars = `reference-source-roots`
+  val testTargetDirs = testTargets ++ testTarget.toIterable
 
   def dependencies(implicit config: EnsimeConfig): List[EnsimeModule] =
-    dependsOnNames.map(config.modules)
+    dependsOnModules.map(config.modules)
 
   /*
    We use the canonical form of files/directories to keep OS X happy
@@ -116,21 +115,19 @@ case class EnsimeModule(
     copy(
       target = None,
       targets = targetDirs.map(_.canon),
-      `test-target` = None,
-      `test-targets` = testTargetDirs.map(_.canon),
-      `source-roots` = sourceRoots.map(_.canon)
+      testTarget = None,
+      testTargets = testTargetDirs.map(_.canon),
+      sourceRoots = sourceRoots.map(_.canon)
     )
   }
 }
 
 object EnsimeConfig {
-
-  // TODO This protocol code should move into server.protocol
-  // we customise how some basic object types are handled
   object Protocol extends DefaultSexpProtocol
     with OptionAltFormat
     with CanonFileFormat
     with ScalariformFormat
+    with CamelCaseToDashes
   import Protocol._
 
   private implicit val moduleFormat = SexpFormat[EnsimeModule]

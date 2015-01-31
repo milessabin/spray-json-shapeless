@@ -35,9 +35,10 @@ trait BasicFormats {
     }
   }
 
-  implicit object SymbolFormat extends SexpFormat[Symbol] {
-    def write(x: Symbol) = SexpString(x.name)
-    def read(value: Sexp) = value match {
+  // val allows override
+  implicit val SymbolFormat = new SexpFormat[Symbol] {
+    def write(x: Symbol): Sexp = SexpString(x.name)
+    def read(value: Sexp): Symbol = value match {
       case SexpString(x) => Symbol(x)
       case x => deserializationError(x)
     }
@@ -84,4 +85,15 @@ trait BasicFormats {
   implicit val ShortFormat = SexpFormat[Short]
   implicit val BigIntFormat = SexpFormat[BigInt]
   implicit val BigDecimalFormat = SexpFormat[BigDecimal]
+}
+
+trait SymbolAltFormat {
+  this: BasicFormats =>
+  override implicit val SymbolFormat = new SexpFormat[Symbol] {
+    def write(x: Symbol): Sexp = SexpSymbol(x.name)
+    def read(value: Sexp): Symbol = value match {
+      case SexpSymbol(x) => Symbol(x)
+      case x => deserializationError(x)
+    }
+  }
 }

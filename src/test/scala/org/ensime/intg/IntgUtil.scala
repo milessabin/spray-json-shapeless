@@ -139,8 +139,7 @@ object IntgUtil extends Assertions with SLF4JLogging {
 
       val connInfo = project.rpcConnectionInfo()
       assert(connInfo.pid == None)
-      assert(connInfo.serverName == "ENSIME-ReferenceServer")
-      assert(connInfo.protocolVersion == "0.8.11")
+      assert(connInfo.implementation.name == "ENSIME")
 
       project.rpcNotifyClientReady()
 

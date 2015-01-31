@@ -18,13 +18,15 @@ trait FileEdit extends Ordered[FileEdit] {
 
 case class TextEdit(file: File, from: Int, to: Int, text: String) extends FileEdit
 
-case class NewFile(file: File, text: String) extends FileEdit {
-  def from: Int = 0
-  def to: Int = text.length - 1
+// the next case classes have weird fields because we need the values in the protocol
+case class NewFile(file: File, from: Int, to: Int, text: String) extends FileEdit
+object NewFile {
+  def apply(file: File, text: String): NewFile = new NewFile(file, 0, text.length - 1, text)
 }
-case class DeleteFile(file: File, text: String) extends FileEdit {
-  def from: Int = 0
-  def to: Int = text.length - 1
+
+case class DeleteFile(file: File, from: Int, to: Int, text: String) extends FileEdit
+object DeleteFile {
+  def apply(file: File, text: String): DeleteFile = new DeleteFile(file, 0, text.length - 1, text)
 }
 
 object FileEdit {

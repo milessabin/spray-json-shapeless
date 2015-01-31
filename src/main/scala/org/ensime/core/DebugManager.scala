@@ -21,15 +21,15 @@ case class DebugStartVMReq(commandLine: String) extends RPCRequest
 case class DebugAttachVMReq(hostname: String, port: String) extends RPCRequest
 case object DebugStopVMReq extends RPCRequest
 case object DebugRunReq extends RPCRequest
-case class DebugContinueReq(threadId: Long) extends RPCRequest
-case class DebugNextReq(threadId: Long) extends RPCRequest
-case class DebugStepReq(threadId: Long) extends RPCRequest
-case class DebugStepOutReq(threadId: Long) extends RPCRequest
-case class DebugLocateNameReq(threadId: Long, name: String) extends RPCRequest
+case class DebugContinueReq(threadId: String) extends RPCRequest
+case class DebugNextReq(threadId: String) extends RPCRequest
+case class DebugStepReq(threadId: String) extends RPCRequest
+case class DebugStepOutReq(threadId: String) extends RPCRequest
+case class DebugLocateNameReq(threadId: String, name: String) extends RPCRequest
 case class DebugValueReq(loc: DebugLocation) extends RPCRequest
-case class DebugToStringReq(threadId: Long, loc: DebugLocation) extends RPCRequest
+case class DebugToStringReq(threadId: String, loc: DebugLocation) extends RPCRequest
 case class DebugSetValueReq(loc: DebugLocation, newValue: String) extends RPCRequest
-case class DebugBacktraceReq(threadId: Long, index: Int, count: Int) extends RPCRequest
+case class DebugBacktraceReq(threadId: String, index: Int, count: Int) extends RPCRequest
 case object DebugActiveVMReq extends RPCRequest
 case class DebugSetBreakpointReq(file: String, line: Int) extends RPCRequest
 case class DebugClearBreakpointReq(file: String, line: Int) extends RPCRequest
@@ -38,8 +38,13 @@ case object DebugListBreakpointsReq extends RPCRequest
 
 abstract class DebugVmStatus
 
-case object DebugVmSuccess extends DebugVmStatus
-case class DebugVmError(code: Int, details: String) extends DebugVmStatus
+// must have redundant status: String to match legacy API
+case class DebugVmSuccess(
+  status: String = "success") extends DebugVmStatus
+case class DebugVmError(
+  errorCode: Int,
+  details: String,
+  status: String = "error") extends DebugVmStatus
 
 class DebugManager(
     project: ActorRef,
@@ -80,7 +85,7 @@ class DebugManager(
     for (breaks <- pendingBreaksBySourceName.get(sourceName)) {
       val toTry = mutable.HashSet() ++ breaks
       for (bp <- toTry) {
-        setBreakpoint(CanonFile(bp.pos.file), bp.pos.line)
+        setBreakpoint(CanonFile(bp.file), bp.line)
       }
     }
   }
@@ -89,16 +94,16 @@ class DebugManager(
     if ((for (vm <- maybeVM) yield {
       vm.setBreakpoint(file, line)
     }).getOrElse { false }) {
-      activeBreakpoints.add(Breakpoint(LineSourcePosition(file, line)))
+      activeBreakpoints.add(Breakpoint(file, line))
       true
     } else {
-      addPendingBreakpoint(Breakpoint(LineSourcePosition(file, line)))
+      addPendingBreakpoint(Breakpoint(file, line))
       false
     }
   }
 
   def clearBreakpoint(file: CanonFile, line: Int): Unit = {
-    val clearBp = Breakpoint(LineSourcePosition(file, line))
+    val clearBp = Breakpoint(file, line)
     for (bps <- pendingBreaksBySourceName.get(file.getName)) {
       bps.retain { _ != clearBp }
     }
@@ -125,7 +130,7 @@ class DebugManager(
   }
 
   def addPendingBreakpoint(bp: Breakpoint): Unit = {
-    val file = bp.pos.file
+    val file = bp.file
     val breaks = pendingBreaksBySourceName.getOrElse(file.getName, mutable.HashSet())
     breaks.add(bp)
     pendingBreaksBySourceName(file.getName) = breaks
@@ -146,7 +151,7 @@ class DebugManager(
     }
     moveActiveBreaksToPending()
     maybeVM = None
-    project ! AsyncEvent(DebugVMDisconnectEvent())
+    project ! AsyncEvent(DebugVMDisconnectEvent)
   }
 
   def vmOptions(): List[String] = List(
@@ -183,7 +188,7 @@ class DebugManager(
     }
   }
 
-  private def handleRPCWithVMAndThread(threadId: Long)(action: ((VM, ThreadReference) => Unit)) = {
+  private def handleRPCWithVMAndThread(threadId: String)(action: ((VM, ThreadReference) => Unit)) = {
     withVM { vm =>
       (for (thread <- vm.threadById(threadId)) yield {
         action(vm, thread)
@@ -227,32 +232,36 @@ class DebugManager(
               // by default we will attempt to start in suspended mode so we can attach breakpoints etc
               vm.resume()
             }
-            project ! AsyncEvent(DebugVMStartEvent())
+            project ! AsyncEvent(DebugVMStartEvent)
           case e: VMDeathEvent => disconnectDebugVM()
           case e: VMDisconnectEvent => disconnectDebugVM()
           case e: StepEvent =>
             (for (pos <- locToPos(e.location())) yield {
-              project ! AsyncEvent(DebugStepEvent(e.thread().uniqueID(), e.thread().name, pos))
+              project ! AsyncEvent(DebugStepEvent(e.thread().uniqueID().toString, e.thread().name, pos.file, pos.line))
             }) getOrElse {
               log.warning("Step position not found: " + e.location().sourceName() + " : " + e.location().lineNumber())
             }
           case e: BreakpointEvent =>
             (for (pos <- locToPos(e.location())) yield {
-              project ! AsyncEvent(DebugBreakEvent(e.thread().uniqueID(), e.thread().name, pos))
+              project ! AsyncEvent(DebugBreakEvent(e.thread().uniqueID().toString, e.thread().name, pos.file, pos.line))
             }) getOrElse {
               log.warning("Break position not found: " + e.location().sourceName() + " : " + e.location().lineNumber())
             }
           case e: ExceptionEvent =>
             withVM { vm => vm.remember(e.exception) }
+
+            val pos = if (e.catchLocation() != null) locToPos(e.catchLocation()) else None
             project ! AsyncEvent(DebugExceptionEvent(
               e.exception.uniqueID(),
-              e.thread().uniqueID(),
+              e.thread().uniqueID().toString,
               e.thread().name,
-              if (e.catchLocation() != null) locToPos(e.catchLocation()) else None))
+              pos.map(_.file),
+              pos.map(_.line)
+            ))
           case e: ThreadDeathEvent =>
-            project ! AsyncEvent(DebugThreadDeathEvent(e.thread().uniqueID()))
+            project ! AsyncEvent(DebugThreadDeathEvent(e.thread().uniqueID().toString))
           case e: ThreadStartEvent =>
-            project ! AsyncEvent(DebugThreadStartEvent(e.thread().uniqueID()))
+            project ! AsyncEvent(DebugThreadStartEvent(e.thread().uniqueID().toString))
           case e: AccessWatchpointEvent =>
           case e: ClassPrepareEvent =>
             withVM { vm =>
@@ -281,7 +290,7 @@ class DebugManager(
                 val vm = new VM(VmStart(commandLine))
                 maybeVM = Some(vm)
                 vm.start()
-                sender ! DebugVmSuccess
+                sender ! DebugVmSuccess()
               } catch {
                 case e: Exception =>
                   log.error(e, "Could not start VM")
@@ -295,7 +304,7 @@ class DebugManager(
                 val vm = new VM(VmAttach(hostname, port))
                 maybeVM = Some(vm)
                 vm.start()
-                sender ! DebugVmSuccess
+                sender ! DebugVmSuccess()
               } catch {
                 case e: Exception =>
                   log.error(e, "Could not attach VM")
@@ -342,7 +351,7 @@ class DebugManager(
               val breaks = BreakpointList(activeBreakpoints.toList, pendingBreakpoints)
               sender ! breaks
 
-            case DebugNextReq(threadId: Long) =>
+            case DebugNextReq(threadId: String) =>
               handleRPCWithVMAndThread(threadId) {
                 (vm, thread) =>
                   vm.newStepRequest(thread,
@@ -351,7 +360,7 @@ class DebugManager(
                   sender ! true
               }
 
-            case DebugStepReq(threadId: Long) =>
+            case DebugStepReq(threadId: String) =>
               handleRPCWithVMAndThread(threadId) {
                 (vm, thread) =>
                   vm.newStepRequest(thread,
@@ -360,7 +369,7 @@ class DebugManager(
                   sender ! true
               }
 
-            case DebugStepOutReq(threadId: Long) =>
+            case DebugStepOutReq(threadId: String) =>
               handleRPCWithVMAndThread(threadId) {
                 (vm, thread) =>
                   vm.newStepRequest(thread,
@@ -369,12 +378,12 @@ class DebugManager(
                   sender ! true
               }
 
-            case DebugLocateNameReq(threadId: Long, name: String) =>
+            case DebugLocateNameReq(threadId: String, name: String) =>
               handleRPCWithVMAndThread(threadId) {
                 (vm, thread) =>
                   sender ! vm.locationForName(thread, name)
               }
-            case DebugBacktraceReq(threadId: Long, index: Int, count: Int) =>
+            case DebugBacktraceReq(threadId: String, index: Int, count: Int) =>
               handleRPCWithVMAndThread(threadId) { (vm, thread) =>
                 val bt = vm.backtrace(thread, index, count)
                 sender ! bt
@@ -561,7 +570,7 @@ class DebugManager(
           req <- erm.breakpointRequests();
           pos <- locToPos(req.location())
         ) {
-          if (pos == bp.pos) {
+          if (pos.file == bp.file && pos.line == bp.line) {
             req.disable()
           }
         }
@@ -618,8 +627,8 @@ class DebugManager(
       buf.map(_.loc).toSet
     }
 
-    def threadById(id: Long): Option[ThreadReference] = {
-      vm.allThreads().find(t => t.uniqueID == id)
+    def threadById(id: String): Option[ThreadReference] = {
+      vm.allThreads().find(t => t.uniqueID.toString == id)
     }
 
     // Helper as Value.toString doesn't give
@@ -749,7 +758,7 @@ class DebugManager(
         Some(DebugObjectReference(remember(objRef).uniqueID))
       } else {
         stackSlotForName(thread, name).map({ slot =>
-          DebugStackSlot(thread.uniqueID, slot._1, slot._2)
+          DebugStackSlot(thread.uniqueID.toString, slot._1, slot._2)
         }).orElse(
           fieldByName(objRef, name).flatMap { f =>
             Some(DebugObjectField(objRef.uniqueID, f.name))
@@ -796,7 +805,7 @@ class DebugManager(
       }
     }
 
-    def debugValueAtLocationToString(threadId: Long, location: DebugLocation): Option[String] = {
+    def debugValueAtLocationToString(threadId: String, location: DebugLocation): Option[String] = {
       valueAtLocation(location) match {
         case Some(arr: ArrayReference) =>
           val quantifier = if (arr.length == 1) "element" else "elements" // TODO: replace with something less naive
@@ -872,8 +881,9 @@ class DebugManager(
       val locals = ignoreErr({
         frame.visibleVariables.zipWithIndex.map {
           case (v, i) =>
-            DebugStackLocal(i, v.name, v.typeName(),
-              valueSummary(frame.getValue(v)))
+            DebugStackLocal(i, v.name,
+              valueSummary(frame.getValue(v)),
+              v.typeName())
         }.toList
       }, List.empty)
 
@@ -897,7 +907,7 @@ class DebugManager(
         frames += makeStackFrame(i, stackFrame)
         i += 1
       }
-      DebugBacktrace(frames.toList, thread.uniqueID(), thread.name())
+      DebugBacktrace(frames.toList, thread.uniqueID().toString, thread.name())
     }
 
     private def mirrorFromString(tpe: Type, toMirror: String): Option[Value] = {

@@ -91,7 +91,7 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Boolean](acquireDebugger, DebugRunReq)
   }
 
-  override def rpcDebugContinue(threadId: Long): Boolean = {
+  override def rpcDebugContinue(threadId: String): Boolean = {
     callRPC[Boolean](acquireDebugger, DebugContinueReq(threadId))
   }
 
@@ -111,19 +111,19 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[BreakpointList](acquireDebugger, DebugListBreakpointsReq)
   }
 
-  override def rpcDebugNext(threadId: Long): Boolean = {
+  override def rpcDebugNext(threadId: String): Boolean = {
     callRPC[Boolean](acquireDebugger, DebugNextReq(threadId))
   }
 
-  override def rpcDebugStep(threadId: Long): Boolean = {
+  override def rpcDebugStep(threadId: String): Boolean = {
     callRPC[Boolean](acquireDebugger, DebugStepReq(threadId))
   }
 
-  override def rpcDebugStepOut(threadId: Long): Boolean = {
+  override def rpcDebugStepOut(threadId: String): Boolean = {
     callRPC[Boolean](acquireDebugger, DebugStepOutReq(threadId))
   }
 
-  override def rpcDebugLocateName(threadId: Long, name: String): Option[DebugLocation] = {
+  override def rpcDebugLocateName(threadId: String, name: String): Option[DebugLocation] = {
     callRPC[Option[DebugLocation]](acquireDebugger, DebugLocateNameReq(threadId, name))
   }
 
@@ -131,7 +131,7 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[DebugValue]](acquireDebugger, DebugValueReq(loc))
   }
 
-  override def rpcDebugToString(threadId: Long, loc: DebugLocation): Option[String] = {
+  override def rpcDebugToString(threadId: String, loc: DebugLocation): Option[String] = {
     callRPC[Option[String]](acquireDebugger, DebugToStringReq(threadId, loc))
   }
 
@@ -139,7 +139,7 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Boolean](acquireDebugger, DebugSetValueReq(loc, newValue))
   }
 
-  override def rpcDebugBacktrace(threadId: Long, index: Int, count: Int): DebugBacktrace = {
+  override def rpcDebugBacktrace(threadId: String, index: Int, count: Int): DebugBacktrace = {
     callRPC[DebugBacktrace](acquireDebugger, DebugBacktraceReq(threadId, index, count))
   }
 

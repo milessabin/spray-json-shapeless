@@ -5,11 +5,11 @@ import org.ensime.sexp._
 class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
 
   case object Bloo
-
   describe("FamilyFormats") {
-    // it("should support case objects") {
-    //   assertFormat(Bloo, SexpSymbol(Bloo.getClass.getName))
-    // }
+    it("should support case objects") {
+      implicit val BlooF = singletonFormat[Bloo.type]
+      assertFormat(Bloo, SexpNil)
+    }
 
     it("should support an example AST") {
       import DefaultSexpProtocol._
@@ -25,6 +25,9 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
       // implicit val InTermF = SexpFormat[InTerm]
       // implicit val LikeTermF = SexpFormat[LikeTerm]
       // implicit val QualifierTokenF = SexpFormat[QualifierToken]
+
+      // FIXME: upgrade shapeless and see if this is needed
+      implicit val SpecialTokenF = singletonFormat[SpecialToken.type]
 
       /////////////////// START OF BOILERPLATE /////////////////
       implicit object TokenTreeFormat extends TraitFormat[TokenTree] {
@@ -54,6 +57,7 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
           case o: OrCondition => wrap(o)
           case prefer: PreferToken => wrap(prefer)
           case q: QualifierToken => wrap(q)
+          case SpecialToken => wrap(SpecialToken)
         }
 
         def read(hint: SexpSymbol, value: Sexp): TokenTree = hint match {
@@ -68,11 +72,15 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
           case s if s == implicitly[TypeHint[OrCondition]].hint => value.convertTo[OrCondition]
           case s if s == implicitly[TypeHint[PreferToken]].hint => value.convertTo[PreferToken]
           case s if s == implicitly[TypeHint[QualifierToken]].hint => value.convertTo[QualifierToken]
+          case s if s == implicitly[TypeHint[SpecialToken.type]].hint => value.convertTo[SpecialToken.type]
           // SAD FACE --- compiler doesn't catch typos on matches or missing impls
           case _ => deserializationError(hint)
         }
       }
       /////////////////// END OF BOILERPLATE /////////////////
+
+      assertFormat(SpecialToken, SexpNil)
+      assertFormat(SpecialToken: TokenTree, SexpList(SexpSymbol(":SpecialToken")))
 
       val fieldTerm = FieldTerm("thing is ten", DatabaseField("THING"), "10")
       val expectField = SexpData(

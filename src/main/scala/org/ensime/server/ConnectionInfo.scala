@@ -1,9 +1,9 @@
 package org.ensime.server
 
-class ConnectionInfo {
-  val pid = None
-  val serverName: String = "ENSIME-ReferenceServer"
-
+case class EnsimeImplementation(
+  name: String)
+case class ConnectionInfo(
+  pid: Option[Int] = None,
+  implementation: EnsimeImplementation = EnsimeImplementation("ENSIME"),
   // Please also update changelog in SwankProtocol.scala
-  val protocolVersion: String = "0.8.11"
-}
+  version: String = "0.8.11")
