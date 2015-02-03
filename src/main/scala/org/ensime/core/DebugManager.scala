@@ -76,8 +76,8 @@ class DebugManager(
   }
   rebuildSourceMap()
 
-  def tryPendingBreaksForSourcename(sourcename: String): Unit = {
-    for (breaks <- pendingBreaksBySourceName.get(sourcename)) {
+  def tryPendingBreaksForSourcename(sourceName: String): Unit = {
+    for (breaks <- pendingBreaksBySourceName.get(sourceName)) {
       val toTry = mutable.HashSet() ++ breaks
       for (bp <- toTry) {
         setBreakpoint(CanonFile(bp.pos.file), bp.pos.line)
@@ -637,7 +637,11 @@ class DebugManager(
         case v: VoidValue => "void"
         case v: StringReference => "\"" + v.value() + "\""
         case v: ArrayReference =>
-          "Array[" + v.getValues.take(3).map(valueSummary).mkString(", ") + "]"
+          val length = v.length()
+          if (length > 3)
+            "Array[" + v.getValues(0, 3).map(valueSummary).mkString(", ") + ",...]"
+          else
+            "Array[" + v.getValues.map(valueSummary).mkString(", ") + "]"
         case v: ObjectReference =>
           val tpe = v.referenceType()
           if (tpe.name().matches("^scala\\.runtime\\.[A-Z][a-z]+Ref$")) {
