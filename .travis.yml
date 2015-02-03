@@ -22,7 +22,7 @@ install:
   - mv usr/lib/jvm/jdk-6-oracle-x64 $JAVA_HOME
   - java -version
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean compile && sbt ++$TRAVIS_SCALA_VERSION clean test && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION clean coverage test
+  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test && sbt ++$TRAVIS_SCALA_VERSION clean coverage test
 after_success:
   - sbt ++$TRAVIS_SCALA_VERSION coveralls
   - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
