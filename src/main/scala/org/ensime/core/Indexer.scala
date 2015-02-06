@@ -24,8 +24,8 @@ class Indexer(
       name => name.fqn.endsWith("$") || name.fqn.endsWith("$class")
     }.map(typeResult)
 
-  def oldSearchSymbols(query: String, max: Int) =
-    index.searchClassesFieldsMethods(query, max).flatMap {
+  def oldSearchSymbols(terms: List[String], max: Int) =
+    index.searchClassesFieldsMethods(terms, max).flatMap {
       case hit if hit.declAs == 'class => Some(typeResult(hit))
       case hit if hit.declAs == 'method => Some(MethodSearchResult(
         hit.fqn, hit.fqn.split("\\.").last, hit.declAs,
@@ -47,7 +47,7 @@ class Indexer(
             sender ! ImportSuggestions(suggestions)
 
           case PublicSymbolSearchReq(keywords, maxResults) =>
-            val suggestions = keywords.flatMap(oldSearchSymbols(_, maxResults))
+            val suggestions = oldSearchSymbols(keywords, maxResults)
             sender ! SymbolSearchResults(suggestions)
         }
       } catch {

@@ -9,12 +9,14 @@ import org.apache.lucene.document.TextField
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.PrefixQuery
 import org.apache.lucene.search.TermQuery
 import DatabaseService._
 import org.apache.lucene.search.BooleanClause.Occur
 import org.ensime.indexer.lucene._
 import pimpathon.list._
+import scala.collection.JavaConversions._
 
 object IndexService extends SLF4JLogging {
 
@@ -115,8 +117,16 @@ class IndexService(path: File) {
     lucene.search(q, max).map(_.toEntity[ClassIndex])
   }
 
-  def searchClassesFieldsMethods(query: String, max: Int): List[FqnIndex] = {
-    val q = new BooleanQuery {
+  def tieBreakerMultiplier = 0
+
+  def searchClassesFieldsMethods(terms: List[String], max: Int): List[FqnIndex] = {
+    val query = new DisjunctionMaxQuery(
+      terms.map(buildTermClassFieldMethodQuery(_)), tieBreakerMultiplier)
+    lucene.search(query, max).map(_.toEntity[ClassIndex])
+  }
+
+  def buildTermClassFieldMethodQuery(query: String): BooleanQuery = {
+    new BooleanQuery {
       add(new BoostedPrefixQuery(new Term("fqn", query)), Occur.MUST)
       add(new BooleanQuery {
         add(ClassIndexT, Occur.SHOULD)
@@ -124,7 +134,5 @@ class IndexService(path: File) {
         add(MethodIndexT, Occur.SHOULD)
       }, Occur.MUST)
     }
-    lucene.search(q, max).map(_.toEntity[FqnIndex])
   }
-
 }

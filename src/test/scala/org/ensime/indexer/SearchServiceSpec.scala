@@ -125,7 +125,7 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
     def search(expect: String, query: String) = {
       val max = 10
       val info = s"'$query' expected '$expect')"
-      service.searchClassesFieldsMethods(query, max) tap { results =>
+      service.searchClassesFieldsMethods(List(query), max) tap { results =>
         assert(results.size <= max, s"${results.size} $info")
         assert(results.nonEmpty, info)
         // when we improve the search quality, we could
