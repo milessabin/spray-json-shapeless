@@ -6,23 +6,20 @@ branches:
 language: scala
 jdk:
   - openjdk6
+  #- openjdk6
 scala:
   - 2.11.5
 sudo: false
 cache:
   directories:
     - $HOME/.ivy2/cache
-install:
-  # PATH and JAVA_HOME must be set here (not env:global:) or Travis overwrites
-  - export JAVA_HOME=$HOME/jdk-6-oracle-x64
-  - export PATH=$JAVA_HOME/bin:$PATH
-  - hash -r
-  - wget https://www.dropbox.com/s/uhbz9f712f2qhdw/oracle-java6-jdk_6u45_amd64.deb
-  - ar p oracle-java6-jdk_6u45_amd64.deb data.tar.xz | tar Jx
-  - mv usr/lib/jvm/jdk-6-oracle-x64 $JAVA_HOME
-  - java -version
+addons:
+  apt_packages:
+  # https://github.com/travis-ci/apt-package-whitelist
+  - openjdk-6-source
+  #- openjdk-7-source
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean compile && sbt ++$TRAVIS_SCALA_VERSION clean test && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION clean coverage test
+  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test && sbt ++$TRAVIS_SCALA_VERSION clean coverage test
 after_success:
   - sbt ++$TRAVIS_SCALA_VERSION coveralls
   - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
