@@ -71,9 +71,8 @@ class BasicWorkflow extends FunSpec with Matchers {
         val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 2)
         javaSearchSymbol match {
           case SymbolSearchResults(List(
-            TypeSearchResult("java.io.File", "File", 'class,
-              Some(_)))) =>
-
+            TypeSearchResult("java.io.File", "File", 'class, Some(_)),
+            TypeSearchResult("java.awt.image.ImageObserver", "ImageObserver", 'class, Some(_)))) =>
           case _ =>
             fail("Public symbol search does not match expectations, got: " + javaSearchSymbol)
         }

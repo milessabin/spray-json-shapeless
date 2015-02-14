@@ -25,7 +25,7 @@ class Indexer(
     }.map(typeResult)
 
   def oldSearchSymbols(terms: List[String], max: Int) =
-    index.searchClassesFieldsMethods(terms, max).flatMap {
+    index.searchClassesMethods(terms, max).flatMap {
       case hit if hit.declAs == 'class => Some(typeResult(hit))
       case hit if hit.declAs == 'method => Some(MethodSearchResult(
         hit.fqn, hit.fqn.split("\\.").last, hit.declAs,

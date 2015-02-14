@@ -174,9 +174,9 @@ class SearchService(
     db.find(fqns) take max
   }
 
-  /** free-form search for classes, fields and methods */
-  def searchClassesFieldsMethods(terms: List[String], max: Int): List[FqnSymbol] = {
-    val fqns = index.searchClassesFieldsMethods(terms, max)
+  /** free-form search for classes and methods */
+  def searchClassesMethods(terms: List[String], max: Int): List[FqnSymbol] = {
+    val fqns = index.searchClassesMethods(terms, max)
     db.find(fqns) take max
   }
 
