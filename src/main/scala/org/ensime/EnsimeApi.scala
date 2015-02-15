@@ -21,26 +21,27 @@ trait EnsimeApi {
   def rpcPeekUndo(): Either[String, Undo]
   def rpcExecUndo(undoId: Int): Either[String, UndoResult]
   def rpcReplConfig(): ReplConfig
+
+  /**
+   *   Request the semantic classes of symbols in the given range. These classes are intended to be used for
+   *   semantic highlighting.
+   * Arguments:
+   *   f source filename
+   *   start The character offset of the start of the input range.
+   *   End  The character offset of the end of the input range.
+   *   requestedTypes The semantic classes in which we are interested. (@see SourceSymbol)
+   * Return:
+   *   SymbolDesignations The given
+   */
   def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: Set[SourceSymbol]): SymbolDesignations
-  def rpcDebugStartVM(commandLine: String): DebugVmStatus
-  def rpcDebugAttachVM(hostname: String, port: String): DebugVmStatus
-  def rpcDebugStopVM(): Boolean
-  def rpcDebugRun(): Boolean
-  def rpcDebugContinue(threadId: Long): Boolean
-  def rpcDebugSetBreakpoint(file: String, line: Int): Unit
-  def rpcDebugClearBreakpoint(file: String, line: Int): Unit
-  def rpcDebugClearAllBreakpoints(): Unit
-  def rpcDebugListBreakpoints(): BreakpointList
-  def rpcDebugNext(threadId: Long): Boolean
-  def rpcDebugStep(threadId: Long): Boolean
-  def rpcDebugStepOut(threadId: Long): Boolean
-  def rpcDebugLocateName(threadId: Long, name: String): Option[DebugLocation]
-  def rpcDebugValue(loc: DebugLocation): Option[DebugValue]
-  def rpcDebugToString(threadId: Long, loc: DebugLocation): Option[String]
-  def rpcDebugSetValue(loc: DebugLocation, newValue: String): Boolean
-  def rpcDebugBacktrace(threadId: Long, index: Int, count: Int): DebugBacktrace
-  def rpcDebugActiveVM(): Boolean
+
+  /**
+   *   Patch the source with the given changes.
+   *   @param f The file to patch
+   *   @param edits The patches to apply to the file.
+   */
   def rpcPatchSource(f: String, edits: List[PatchOp]): Unit
+
   def rpcTypecheckFiles(fs: List[SourceFileInfo], async: Boolean): Unit
   def rpcRemoveFile(f: String): Unit
   def rpcUnloadAll(): Unit
@@ -67,5 +68,24 @@ trait EnsimeApi {
   def rpcExpandSelection(filename: String, start: Int, stop: Int): FileRange
   def rpcFormatFiles(filenames: List[String]): Unit
   def rpcFormatFile(fileInfo: SourceFileInfo): String
+
+  def rpcDebugStartVM(commandLine: String): DebugVmStatus
+  def rpcDebugAttachVM(hostname: String, port: String): DebugVmStatus
+  def rpcDebugStopVM(): Boolean
+  def rpcDebugRun(): Boolean
+  def rpcDebugContinue(threadId: Long): Boolean
+  def rpcDebugSetBreakpoint(file: String, line: Int): Unit
+  def rpcDebugClearBreakpoint(file: String, line: Int): Unit
+  def rpcDebugClearAllBreakpoints(): Unit
+  def rpcDebugListBreakpoints(): BreakpointList
+  def rpcDebugNext(threadId: Long): Boolean
+  def rpcDebugStep(threadId: Long): Boolean
+  def rpcDebugStepOut(threadId: Long): Boolean
+  def rpcDebugLocateName(threadId: Long, name: String): Option[DebugLocation]
+  def rpcDebugValue(loc: DebugLocation): Option[DebugValue]
+  def rpcDebugToString(threadId: Long, loc: DebugLocation): Option[String]
+  def rpcDebugSetValue(loc: DebugLocation, newValue: String): Boolean
+  def rpcDebugBacktrace(threadId: Long, index: Int, count: Int): DebugBacktrace
+  def rpcDebugActiveVM(): Boolean
 }
 

@@ -53,17 +53,6 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
       throw new IllegalStateException("Unexpected value for " + variableName + ": " + value)
   }
 
-  def inspectWithDebugVariables(variableName: String)(pf: PartialFunction[DebugValue, Unit]): Unit = {
-    val sourceRoot = config.modules.values.head.sourceRoots.head
-    withSrcFile(sourceRoot / "debug/Variables.scala") {
-      case (variablesPath, variablesFile) =>
-        withDebugSession(variablesPath, variablesFile, "debug.Variables", 30) {
-          inspectVar(1, variableName)(pf)
-        }
-    }
-
-  }
-
   def checkTopStackFrame(className: String, method: String, line: Int): Unit = {
     val trace = project.rpcDebugBacktrace(1, 0, 1)
     trace match {
@@ -213,78 +202,80 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
 
   describe("Debug Inspect variables") {
 
-    it("should inspect a boolean local - a") {
-      inspectWithDebugVariables("a") {
-        case DebugPrimitiveValue("true", "boolean") =>
-      }
-    }
+    // starting up a debug session for each variable is unneeded and wasteful of test time.
+    // this approach means that there is one test method, but it still explores all of the paths.
 
-    it("should inspect a char local - b") {
-      inspectWithDebugVariables("b") {
-        case DebugPrimitiveValue("'c'", "char") =>
-      }
-    }
+    it("should inspect variables") {
+      val sourceRoot = config.modules.values.head.sourceRoots.head
+      withSrcFile(sourceRoot / "debug/Variables.scala") {
+        case (variablesPath, variablesFile) =>
+          withDebugSession(variablesPath, variablesFile, "debug.Variables", 30) {
 
-    it("should inspect a short local - c") {
-      inspectWithDebugVariables("c") {
-        case DebugPrimitiveValue("3", "short") =>
-      }
-    }
+            // boolean local
+            inspectVar(1, "a") {
+              case DebugPrimitiveValue("true", "boolean") =>
+            }
 
-    it("should inspect a int local - d") {
-      inspectWithDebugVariables("d") {
-        case DebugPrimitiveValue("4", "int") =>
-      }
-    }
+            // char local
+            inspectVar(1, "b") {
+              case DebugPrimitiveValue("'c'", "char") =>
+            }
 
-    it("should inspect a long local - e") {
-      inspectWithDebugVariables("e") {
-        case DebugPrimitiveValue("5", "long") =>
-      }
-    }
+            // short local
+            inspectVar(1, "c") {
+              case DebugPrimitiveValue("3", "short") =>
+            }
 
-    it("should inspect a float local - f") {
-      inspectWithDebugVariables("f") {
-        case DebugPrimitiveValue("1.0", "float") =>
-      }
-    }
+            // int local
+            inspectVar(1, "d") {
+              case DebugPrimitiveValue("4", "int") =>
+            }
 
-    it("should inspect a double local - g") {
-      inspectWithDebugVariables("g") {
-        case DebugPrimitiveValue("2.0", "double") =>
-      }
-    }
+            // long local
+            inspectVar(1, "e") {
+              case DebugPrimitiveValue("5", "long") =>
+            }
 
-    it("should inspect a String local - h") {
-      inspectWithDebugVariables("h") {
-        case DebugStringInstance("\"test\"", debugFields, "java.lang.String", _) =>
-          require(debugFields.exists {
-            case DebugClassField(_, "value", "char[]", "Array['t', 'e', 's',...]") => true
-            case _ => false
-          })
-      }
-    }
+            // float local
+            inspectVar(1, "f") {
+              case DebugPrimitiveValue("1.0", "float") =>
+            }
 
-    it("should inspect an int array local - i") {
-      inspectWithDebugVariables("i") {
-        case DebugArrayInstance(3, "int[]", "int", _) =>
-      }
-    }
+            // double local
+            inspectVar(1, "g") {
+              case DebugPrimitiveValue("2.0", "double") =>
+            }
 
-    it("should inspect an object type local - j") {
-      inspectWithDebugVariables("j") {
-        case DebugObjectInstance("Instance of $colon$colon", debugFields,
-          "scala.collection.immutable.$colon$colon", _) =>
-          require(debugFields.exists {
-            case DebugClassField(_, "head", "java.lang.Object", "Instance of Integer") => true
-            case _ => false
-          })
-      }
-    }
+            // String local
+            inspectVar(1, "h") {
+              case DebugStringInstance("\"test\"", debugFields, "java.lang.String", _) =>
+                require(debugFields.exists {
+                  case DebugClassField(_, "value", "char[]", "Array['t', 'e', 's',...]") => true
+                  case _ => false
+                })
+            }
 
-    it("should inspect an object array local - k") {
-      inspectWithDebugVariables("k") {
-        case DebugArrayInstance(3, "java.lang.Object[]", "java.lang.Object", _) =>
+            // primitive array local
+            inspectVar(1, "i") {
+              case DebugArrayInstance(3, "int[]", "int", _) =>
+            }
+
+            // type local
+            inspectVar(1, "j") {
+              case DebugObjectInstance("Instance of $colon$colon", debugFields,
+                "scala.collection.immutable.$colon$colon", _) =>
+                require(debugFields.exists {
+                  case DebugClassField(_, "head", "java.lang.Object", "Instance of Integer") => true
+                  case _ => false
+                })
+            }
+
+            // object array local
+            inspectVar(1, "k") {
+              case DebugArrayInstance(3, "java.lang.Object[]", "java.lang.Object", _) =>
+            }
+
+          }
       }
     }
   }

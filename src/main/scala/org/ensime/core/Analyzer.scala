@@ -264,7 +264,8 @@ class Analyzer(
       val sourceFiles = scalas.map(createSourceFile)
       scalaCompiler.askReloadFiles(sourceFiles)
       scalaCompiler.askNotifyWhenReady()
-      if (!async) sourceFiles.foreach(scalaCompiler.askLoadedTyped(_))
+      if (!async)
+        sourceFiles.foreach(scalaCompiler.askLoadedTyped)
     }
   }
 
