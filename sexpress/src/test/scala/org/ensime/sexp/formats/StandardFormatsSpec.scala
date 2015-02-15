@@ -6,7 +6,6 @@ import java.util.Date
 import java.util.UUID
 
 import org.ensime.sexp._
-import org.ensime.util.RichFile._
 
 class StandardFormatsSpec extends FormatSpec with StandardFormats with BasicFormats {
   describe("StandardFormats") {
@@ -65,10 +64,10 @@ class AltStandardFormatsSpec extends FormatSpec
   describe("StandardFormats with CanonFileFormat") {
     it("should support canonicalised Files") {
       val file = new File("foo")
-      val canon = file.canon
+      val canonised = canonise(file)
       // non-canon files won't deserialise into exactly the same file
-      assert(file.toSexp === SexpString(canon.getPath))
-      assertFormat(canon, SexpString(canon.getPath))
+      assert(file.toSexp === SexpString(canonised.getPath))
+      assertFormat(canonised, SexpString(canonised.getPath))
     }
   }
 

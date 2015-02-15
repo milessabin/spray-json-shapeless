@@ -122,14 +122,19 @@ trait StandardFormats extends ThreadLocalSupport {
 trait CanonFileFormat {
   this: StandardFormats =>
 
-  import org.ensime.util.RichFile._
+  protected def canonise(file: File): File =
+    try file.getCanonicalFile
+    catch {
+      case e: Exception => file.getAbsoluteFile
+    }
 
   /**
    * Intentionally canonicalises, round trip will not always equal.
    */
   override implicit val FileFormat: SexpFormat[File] = viaString(new ViaString[File] {
-    def toSexpString(file: File) = file.canon.getPath
-    def fromSexpString(s: String) = new File(s).canon
+    import pimpathon.file._
+    def toSexpString(file: File) = canonise(file).getPath
+    def fromSexpString(s: String) = canonise(file(s))
   })
 }
 
