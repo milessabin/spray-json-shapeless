@@ -121,11 +121,11 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
     }
   }
 
-  describe("class, field and method searching") {
+  describe("class and method searching") {
     def search(expect: String, query: String) = {
       val max = 10
       val info = s"'$query' expected '$expect')"
-      service.searchClassesFieldsMethods(query, max) tap { results =>
+      service.searchClassesMethods(List(query), max) tap { results =>
         assert(results.size <= max, s"${results.size} $info")
         assert(results.nonEmpty, info)
         // when we improve the search quality, we could
@@ -134,6 +134,17 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
         assert(got contains expect, s"$info got '$got'")
       }
     }
+
+    def searchExpectEmpty(query: String) = {
+      val max = 1
+      service.searchClassesMethods(List(query), max) tap { results =>
+        assert(results.isEmpty, "expected empty results from %s".format(query))
+      }
+    }
+
+    def searchesEmpty(queries: String*) =
+      queries.toList.foreach(searchExpectEmpty(_))
+
     def searches(expect: String, queries: String*) =
       (expect :: queries.toList).foreach(search(expect, _))
 
@@ -146,16 +157,15 @@ class SearchServiceSpec extends FunSpec with Matchers with SLF4JLogging {
     }
 
     it("should return results from static fields", SlowTest) {
-      searches(
-        "java.util.regex.Pattern.CASE_INSENSITIVE",
+      searchesEmpty(
         "CASE_INSENSITIVE", "case_insensitive",
         "case_"
       )
 
     }
 
-    it("should return results from instance fields", SlowTest) {
-      searches(
+    it("should not return results from instance fields", SlowTest) {
+      searchesEmpty(
         "java.awt.Point.x"
       )
     }
