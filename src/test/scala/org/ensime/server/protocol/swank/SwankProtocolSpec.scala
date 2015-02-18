@@ -56,7 +56,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
         val prot = new SwankProtocol(actorSystem, null, t) {
           override def sendMessage(o: WireFormat): Unit = {
-            out.send(o.toString)
+            out.send(o.toWireString)
             latch.countDown()
           }
         }
@@ -69,8 +69,10 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
         prot.handleIncomingMessage(sexp)
 
-        if (!latch.await(1000, TimeUnit.MILLISECONDS))
+        if (!latch.await(1000, TimeUnit.MILLISECONDS)) {
+          // FIXME: can we get more info the failure here?
           fail("Waited too long for expectation")
+        }
       }
     }
 
@@ -80,7 +82,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
       testWithResponse("""(swank:peek-undo)""") { (t, m, id) =>
         (t.rpcPeekUndo _).expects().returns(Right(Undo(3, "Undoing stuff", List(TextEdit(file3, 5, 7, "aaa")))))
-        (m.send _).expects("""(:return (:ok (:id 3 :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7)) :summary "Undoing stuff")) """ + id + ")")
+        (m.send _).expects(s"""(:return (:ok (:id 3 :summary "Undoing stuff" :changes ((:type edit :file $file3_str :from 5 :to 7 :text "aaa")))) $id)""")
       }
     }
 
@@ -102,17 +104,9 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand connection-info request") {
       testWithResponse("(swank:connection-info)") { (t, m, id) =>
         (t.rpcConnectionInfo _).expects().returns(new ConnectionInfo())
-        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME-ReferenceServer") :version "0.8.11")) $id)""")
+        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME") :version "0.8.11")) $id)""")
       }
     }
-
-    //    it("should understand swank:init-project") {
-    //      val configFragment = """(:use-sbt t :compiler-args ("-Ywarn-dead-code" "-Ywarn-catches" "-Xstrict-warnings") :root-dir "/Users/aemon/projects/ensime/")"""
-    //      testWithResponse(s"""(swank:init-project $configFragment)""") { (t, id) =>
-    //        (t.rcpInitProject _).expects(SExpParser.read(configFragment)).returns(EnsimeConfig(...))
-    //        (m.send _).expects(s"""(:return (:ok $ensimeConfigStr) $id)""")
-    //      }
-    //    }
 
     it("should understand swank:repl-config") {
       testWithResponse("(swank:repl-config)") { (t, m, id) =>
@@ -409,7 +403,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
       val refactorEffect = new RefactorEffect(7, desc.refactorType, List(TextEdit(file3, 5, 7, "aaa")))
       val refactorResult = new RefactorResult(7, desc.refactorType, List(file3, file1))
-      val refactorResultStr = """(:procedure-id 7 :refactor-type """ + desc.refactorType.name + """ :status success :touched-files (""" + file3_str + " " + file1_str + """))"""
+      val refactorResultStr = s"""(:procedure-id 7 :refactor-type ${desc.refactorType.name} :touched-files ($file3_str $file1_str) :status success)"""
 
       testWithResponse("""(swank:prepare-refactor 7""" + msg + " nil)") { (t, m, id) =>
         (t.rpcPrepareRefactor _).expects(7, desc).returns(Right(refactorEffect))
@@ -510,29 +504,29 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-start - success") {
       testWithResponse("""(swank:debug-start "org.hello.HelloWorld arg")""") { (t, m, id) =>
-        (t.rpcDebugStartVM _).expects("org.hello.HelloWorld arg").returns(DebugVmSuccess)
-        (m.send _).expects(s"""(:return (:ok (:status "success")) $id)""")
+        (t.rpcDebugStartVM _).expects("org.hello.HelloWorld arg").returns(DebugVmSuccess())
+        (m.send _).expects(s"""(:return (:ok (:type success :status "success")) $id)""")
       }
     }
 
     it("should understand swank:debug-start - failure") {
       testWithResponse("""(swank:debug-start "org.hello.HelloWorld arg")""") { (t, m, id) =>
         (t.rpcDebugStartVM _).expects("org.hello.HelloWorld arg").returns(DebugVmError(303, "xxxx"))
-        (m.send _).expects(s"""(:return (:ok (:status "error" :error-code 303 :details "xxxx")) $id)""")
+        (m.send _).expects(s"""(:return (:ok (:type error :error-code 303 :details "xxxx" :status "error")) $id)""")
       }
     }
 
     it("should understand swank:debug-attach - success") {
       testWithResponse("""(swank:debug-attach "localhost" "9000")""") { (t, m, id) =>
-        (t.rpcDebugAttachVM _).expects("localhost", "9000").returns(DebugVmSuccess)
-        (m.send _).expects(s"""(:return (:ok (:status "success")) $id)""")
+        (t.rpcDebugAttachVM _).expects("localhost", "9000").returns(DebugVmSuccess())
+        (m.send _).expects(s"""(:return (:ok (:type success :status "success")) $id)""")
       }
     }
 
     it("should understand swank:debug-attach - failure") {
       testWithResponse("""(swank:debug-attach "localhost" "9000")""") { (t, m, id) =>
         (t.rpcDebugAttachVM _).expects("localhost", "9000").returns(DebugVmError(303, "xxxx"))
-        (m.send _).expects(s"""(:return (:ok (:status "error" :error-code 303 :details "xxxx")) $id)""")
+        (m.send _).expects(s"""(:return (:ok (:type error :error-code 303 :details "xxxx" :status "error")) $id)""")
       }
     }
 
@@ -587,35 +581,35 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-continue") {
       testWithResponse("""(swank:debug-continue "1")""") { (t, m, id) =>
-        (t.rpcDebugContinue _).expects(1L).returns(true)
+        (t.rpcDebugContinue _).expects("1").returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-step") {
       testWithResponse("""(swank:debug-step "982398123")""") { (t, m, id) =>
-        (t.rpcDebugStep _).expects(982398123L).returns(true)
+        (t.rpcDebugStep _).expects("982398123").returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-next") {
       testWithResponse("""(swank:debug-next "982398123")""") { (t, m, id) =>
-        (t.rpcDebugNext _).expects(982398123L).returns(true)
+        (t.rpcDebugNext _).expects("982398123").returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-step-out") {
       testWithResponse("""(swank:debug-step-out "982398123")""") { (t, m, id) =>
-        (t.rpcDebugStepOut _).expects(982398123L).returns(true)
+        (t.rpcDebugStepOut _).expects("982398123").returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-locate-name") {
       testWithResponse("""(swank:debug-locate-name "7" "apple")""") { (t, m, id) =>
-        (t.rpcDebugLocateName _).expects(7L, "apple").returns(Some(debugLocObjectRef))
+        (t.rpcDebugLocateName _).expects("7", "apple").returns(Some(debugLocObjectRef))
         (m.send _).expects("(:return (:ok " + debugLocObjectRefStr + ") " + id + ")")
       }
     }
@@ -643,14 +637,14 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-value - stack slot") {
       testWithResponse("""(swank:debug-value (:type slot :thread-id "23" :frame 7 :offset 25))""") { (t, m, id) =>
-        (t.rpcDebugValue _).expects(DebugStackSlot(23L, 7, 25)).returns(Some(debugStringValue))
+        (t.rpcDebugValue _).expects(DebugStackSlot("23", 7, 25)).returns(Some(debugStringValue))
         (m.send _).expects("(:return (:ok " + debugStringValueStr + ") " + id + ")")
       }
     }
 
     it("should understand swank:debug-to-string - array element") {
       testWithResponse("""(swank:debug-to-string "2" (:type element :object-id "23" :index 2))""") { (t, m, id) =>
-        (t.rpcDebugToString _).expects(2L, DebugArrayElement(23L, 2)).returns(Some("null"))
+        (t.rpcDebugToString _).expects("2", DebugArrayElement(23L, 2)).returns(Some("null"))
         (m.send _).expects("(:return (:ok \"null\") " + id + ")")
       }
     }
@@ -664,7 +658,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-backtrace") {
       testWithResponse("""(swank:debug-backtrace "23" 0 2)""") { (t, m, id) =>
-        (t.rpcDebugBacktrace _).expects(23L, 0, 2).returns(debugBacktrace)
+        (t.rpcDebugBacktrace _).expects("23", 0, 2).returns(debugBacktrace)
         (m.send _).expects("(:return (:ok " + debugBacktraceStr + ") " + id + ")")
       }
     }

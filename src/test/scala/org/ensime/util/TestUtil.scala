@@ -90,7 +90,7 @@ object TestUtil {
     EnsimeConfig(
       base.canon, cacheDir.canon, "simple", scalaVersion,
       compilerArgs, javaSource.toList, List(module),
-      FormattingPreferences(), `source-mode` = false, Nil
+      FormattingPreferences(), sourceMode = false, Nil
     )
   }
 

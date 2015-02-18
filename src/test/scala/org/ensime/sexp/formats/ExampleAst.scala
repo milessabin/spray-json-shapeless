@@ -5,7 +5,7 @@ package org.ensime.sexp.formats
  */
 object ExampleAst {
   sealed trait Token {
-    val text: String
+    def text: String
   }
 
   sealed trait RawToken extends Token
@@ -28,8 +28,13 @@ object ExampleAst {
   case class Ignored(text: String = "") extends TokenTree
   case class Unclear(text: String = "") extends TokenTree
 
+  object SpecialToken extends TokenTree {
+    // to test case object serialisation
+    def text = ""
+  }
+
   sealed trait Term extends TokenTree {
-    val field: DatabaseField
+    def field: DatabaseField
   }
 
   case class DatabaseField(column: String)

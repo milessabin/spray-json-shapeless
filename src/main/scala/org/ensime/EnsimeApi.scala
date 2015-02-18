@@ -73,19 +73,19 @@ trait EnsimeApi {
   def rpcDebugAttachVM(hostname: String, port: String): DebugVmStatus
   def rpcDebugStopVM(): Boolean
   def rpcDebugRun(): Boolean
-  def rpcDebugContinue(threadId: Long): Boolean
+  def rpcDebugContinue(threadId: String): Boolean
   def rpcDebugSetBreakpoint(file: String, line: Int): Unit
   def rpcDebugClearBreakpoint(file: String, line: Int): Unit
   def rpcDebugClearAllBreakpoints(): Unit
   def rpcDebugListBreakpoints(): BreakpointList
-  def rpcDebugNext(threadId: Long): Boolean
-  def rpcDebugStep(threadId: Long): Boolean
-  def rpcDebugStepOut(threadId: Long): Boolean
-  def rpcDebugLocateName(threadId: Long, name: String): Option[DebugLocation]
+  def rpcDebugNext(threadId: String): Boolean
+  def rpcDebugStep(threadId: String): Boolean
+  def rpcDebugStepOut(threadId: String): Boolean
+  def rpcDebugLocateName(threadId: String, name: String): Option[DebugLocation]
   def rpcDebugValue(loc: DebugLocation): Option[DebugValue]
-  def rpcDebugToString(threadId: Long, loc: DebugLocation): Option[String]
+  def rpcDebugToString(threadId: String, loc: DebugLocation): Option[String]
   def rpcDebugSetValue(loc: DebugLocation, newValue: String): Boolean
-  def rpcDebugBacktrace(threadId: Long, index: Int, count: Int): DebugBacktrace
+  def rpcDebugBacktrace(threadId: String, index: Int, count: Int): DebugBacktrace
   def rpcDebugActiveVM(): Boolean
 }
 

@@ -58,7 +58,7 @@ trait LowPriorityProductFormats {
     r: HListFormat[R]): SexpFormat[T] = new SexpFormat[T] {
 
     private val keys = k().toList[Symbol].map { sym =>
-      SexpSymbol(":" + sym.name)
+      SexpSymbol(":" + toWireName(sym.name))
     }
 
     def write(x: T): Sexp =
@@ -78,6 +78,9 @@ trait LowPriorityProductFormats {
         deserializationError(x)
     }
   }
+
+  // capable of overloading for legacy formats
+  def toWireName(field: String): String = field
 }
 
 trait ProductFormats extends LowPriorityProductFormats {
@@ -93,4 +96,15 @@ trait ProductFormats extends LowPriorityProductFormats {
       case x => deserializationError(x)
     }
   }
+}
+
+/**
+ * By default, S-Express uses the same field names in the wire format
+ * as the code. But some protocols may prefer dashes with Scala code
+ * that uses camel case. This mix-in provides that behaviour.
+ */
+trait CamelCaseToDashes {
+  this: LowPriorityProductFormats =>
+  override def toWireName(field: String): String =
+    field.replaceAll("([A-Z])", "-$1").toLowerCase.replaceAll("^-", "")
 }

@@ -24,23 +24,33 @@ import scalariform.parser.ScalaParserException
 import scalariform.astselect.AstSelector
 import scalariform.utils.Range
 
-case class RefactorFailure(procedureId: Int, message: String)
+case class RefactorFailure(
+  procedureId: Int,
+  reason: String,
+  status: scala.Symbol = 'failure // redundant field
+  )
 case class RefactorPrepareReq(procedureId: Int, refactor: RefactorDesc) extends RPCRequest
 case class RefactorExecReq(procedureId: Int, refactorType: Symbol) extends RPCRequest
 case class RefactorCancelReq(procedureId: Int) extends RPCRequest
 
 trait RefactorProcedure {
-  val procedureId: Int
-  val refactorType: scala.Symbol
+  def procedureId: Int
+  def refactorType: scala.Symbol
 }
 
-case class RefactorEffect(procedureId: Int,
+case class RefactorEffect(
+  procedureId: Int,
   refactorType: scala.Symbol,
-  changes: Seq[FileEdit]) extends RefactorProcedure
+  changes: Seq[FileEdit],
+  status: scala.Symbol = 'success // redundant field
+  ) extends RefactorProcedure
 
-case class RefactorResult(procedureId: Int,
+case class RefactorResult(
+  procedureId: Int,
   refactorType: scala.Symbol,
-  touched: Seq[File]) extends RefactorProcedure
+  touchedFiles: Seq[File],
+  status: scala.Symbol = 'success // redundant field
+  ) extends RefactorProcedure
 
 sealed abstract class RefactorDesc(val refactorType: Symbol)
 
@@ -206,7 +216,7 @@ trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
         case Right(result) =>
           // Reload all files touched by refactoring, so subsequent refactorings
           // will see consistent state.
-          askReloadFiles(result.touched.map(f => createSourceFile(f.getPath)))
+          askReloadFiles(result.touchedFiles.map(f => createSourceFile(f.getPath)))
           Right(result)
         case Left(failure) => Left(failure)
       }

@@ -6,12 +6,389 @@ import org.ensime.config._
 import org.ensime.core._
 import org.ensime.model._
 import org.ensime.server.ConnectionInfo
-import org.ensime.util.SExp._
 import org.ensime.util._
 
-object SwankProtocolConversions {
+import org.ensime.sexp._
+import org.ensime.sexp.formats._
 
-  val sourceSymbolMap = Map(
+object SwankProtocolConversions {
+  object Protocol extends DefaultSexpProtocol
+    with SymbolAltFormat
+    with OptionAltFormat
+    with CanonFileFormat
+    with FamilyFormats
+    with CamelCaseToDashes
+  import Protocol._
+
+  /**
+   * By default, S-Express uses the simple name of a class as the
+   * typehint when resolving implementations of a sealed trait.
+   * However, the ENSIME protocol uses custom typehints, which are
+   * defined here - in combination with trait-specific typehint rules.
+   */
+  implicit val DebugObjectReferenceHint = TypeHint[DebugObjectReference](SexpSymbol("reference"))
+  implicit val DebugArrayElementHint = TypeHint[DebugArrayElement](SexpSymbol("element"))
+  implicit val DebugObjectFieldHint = TypeHint[DebugObjectField](SexpSymbol("field"))
+  implicit val DebugStackSlotHint = TypeHint[DebugStackSlot](SexpSymbol("slot"))
+  implicit val DebugPrimitiveHint = TypeHint[DebugPrimitiveValue](SexpSymbol("prim"))
+  implicit val DebugObjectHint = TypeHint[DebugObjectInstance](SexpSymbol("obj"))
+  implicit val DebugArrayHint = TypeHint[DebugArrayInstance](SexpSymbol("arr"))
+  implicit val DebugStringHint = TypeHint[DebugStringInstance](SexpSymbol("str"))
+  implicit val DebugNullHint = TypeHint[DebugNullValue](SexpSymbol("null"))
+  implicit val NoteErrorHint = TypeHint[NoteError.type](SexpSymbol("error"))
+  implicit val NoteWarnHint = TypeHint[NoteWarn.type](SexpSymbol("warn"))
+  implicit val NoteInfoHint = TypeHint[NoteInfo.type](SexpSymbol("info"))
+  implicit val DebugStepHint = TypeHint[DebugStepEvent](SexpSymbol("step"))
+  implicit val DebugBreakHint = TypeHint[DebugBreakEvent](SexpSymbol("breakpoint"))
+  implicit val DebugVMStartHint = TypeHint[DebugVMStartEvent.type](SexpSymbol("start"))
+  implicit val DebugVMDisconnectHint = TypeHint[DebugVMDisconnectEvent.type](SexpSymbol("disconnect"))
+  implicit val DebugExceptionHint = TypeHint[DebugExceptionEvent](SexpSymbol("exception"))
+  implicit val DebugThreadStartHint = TypeHint[DebugThreadStartEvent](SexpSymbol("threadStart"))
+  implicit val DebugThreadDeathHint = TypeHint[DebugThreadDeathEvent](SexpSymbol("threadDeath"))
+  implicit val DebugOutputHint = TypeHint[DebugOutputEvent](SexpSymbol("output"))
+  implicit val AnalyzerReadyHint = TypeHint[AnalyzerReadyEvent.type](SexpSymbol(":compiler-ready"))
+  implicit val FullTypeCheckCompleteHint = TypeHint[FullTypeCheckCompleteEvent.type](SexpSymbol(":full-typecheck-finished"))
+  implicit val IndexerReadyHint = TypeHint[IndexerReadyEvent.type](SexpSymbol(":indexer-ready"))
+  implicit val CompilerRestartedHint = TypeHint[CompilerRestartedEvent.type](SexpSymbol(":compiler-restarted"))
+  implicit val NewScalaNotesHint = TypeHint[NewScalaNotesEvent](SexpSymbol(":scala-notes"))
+  implicit val ClearAllScalaNotesHint = TypeHint[ClearAllScalaNotesEvent.type](SexpSymbol(":clear-all-scala-notes"))
+  implicit val SendBackgroundMessageHint = TypeHint[SendBackgroundMessageEvent](SexpSymbol(":background-message"))
+  implicit val DebugHint = TypeHint[DebugEvent](SexpSymbol(":debug-event"))
+  implicit val NamedTypeMemberHint = TypeHint[NamedTypeMemberInfo](SexpSymbol("named"))
+  implicit val PackageHint = TypeHint[PackageInfo](SexpSymbol("package"))
+  implicit val TypeInfoHint = TypeHint[TypeInfo](SexpSymbol("type"))
+  implicit val ArrowTypeHint = TypeHint[ArrowTypeInfo](SexpSymbol("t"))
+  implicit val BasicTypeHint = TypeHint[BasicTypeInfo](SexpSymbol("nil"))
+  implicit val DebugVmSuccessHint = TypeHint[DebugVmSuccess](SexpSymbol("success"))
+  implicit val DebugVmErrorHint = TypeHint[DebugVmError](SexpSymbol("error"))
+  implicit val MethodSearchResultHint = TypeHint[MethodSearchResult](SexpSymbol("method"))
+  implicit val TypeSearchResultHint = TypeHint[TypeSearchResult](SexpSymbol("type"))
+
+  implicit val EmptySourcePositionHint = TypeHint[EmptySourcePosition](SexpSymbol("empty"))
+  implicit val LineSourcePositionHint = TypeHint[LineSourcePosition](SexpSymbol("line"))
+  implicit val OffsetSourcePositionHint = TypeHint[OffsetSourcePosition](SexpSymbol("offset"))
+  implicit val TextEditHint = TypeHint[TextEdit](SexpSymbol("edit"))
+  implicit val DeleteFileHint = TypeHint[DeleteFile](SexpSymbol("delete"))
+  implicit val NewFileHint = TypeHint[NewFile](SexpSymbol("new"))
+
+  /**
+   * Alternative form for family formats that serialises the typehint
+   * as a field value on the same level as the other parts (assumed to
+   * be a SexpData), i.e. to match our legacy format.
+   */
+  abstract class TraitFormatAlt[T] extends SexpFormat[T] {
+    val key = SexpSymbol(":type")
+    protected def wrap[E](t: E)(
+      implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp = t.toSexp match {
+      case SexpNil => SexpData(key -> th.hint)
+      case SexpData(data) if !data.contains(key) =>
+        SexpData(key -> th.hint :: data.toList)
+      case SexpList(Nil) =>
+        // special case: no param case classes
+        SexpData(key -> th.hint)
+      case other =>
+        serializationError(s"expected ${th.hint}'s wrap to be SexpData, was $other")
+    }
+    final def read(sexp: Sexp): T = sexp match {
+      case SexpData(map) if map.contains(key) =>
+        map(key) match {
+          case hint: SexpSymbol => read(hint, SexpData((map - key).toList))
+          case not => deserializationError(not)
+        }
+      case x => deserializationError(x)
+    }
+    protected def read(hint: SexpSymbol, value: Sexp): T
+  }
+
+  /**
+   * These implicits are required until shapeless stops println-ing when
+   * singletonFormat is made implicit.
+   */
+  implicit val AnalyzerReadyEventFormat = singletonFormat[AnalyzerReadyEvent.type]
+  implicit val FullTypeCheckCompleteEventFormat = singletonFormat[FullTypeCheckCompleteEvent.type]
+  implicit val IndexerReadyEventFormat = singletonFormat[IndexerReadyEvent.type]
+  implicit val CompilerRestartedEventFormat = singletonFormat[CompilerRestartedEvent.type]
+  implicit val ClearAllScalaNotesEventFormat = singletonFormat[ClearAllScalaNotesEvent.type]
+  implicit val DebugVMStartEventFormat = singletonFormat[DebugVMStartEvent.type]
+  implicit val DebugVMDisconnectEventFormat = singletonFormat[DebugVMDisconnectEvent.type]
+
+  /**
+   * These implicit vals are actually optional - S-Express doesn't
+   * *need* them - and exist only to help the compiler to resolve
+   * various implicits without recomputing them. Runtime performance
+   * is also improved by having these assigned to vals.
+   */
+  implicit val DebugObjectReferenceFormat = SexpFormat[DebugObjectReference]
+  implicit val DebugArrayElementFormat = SexpFormat[DebugArrayElement]
+  implicit val DebugObjectFieldFormat = SexpFormat[DebugObjectField]
+  implicit val DebugStackSlotFormat = SexpFormat[DebugStackSlot]
+  implicit val DebugPrimitiveValueFormat = SexpFormat[DebugPrimitiveValue]
+  implicit val DebugObjectInstanceFormat = SexpFormat[DebugObjectInstance]
+  implicit val DebugArrayInstanceFormat = SexpFormat[DebugArrayInstance]
+  implicit val DebugStringInstanceFormat = SexpFormat[DebugStringInstance]
+  implicit val DebugNullValueFormat = SexpFormat[DebugNullValue]
+  implicit val DebugClassFieldFormat = SexpFormat[DebugClassField]
+  implicit val DebugStackLocalFormat = SexpFormat[DebugStackLocal]
+  implicit val DebugStackFrameFormat = SexpFormat[DebugStackFrame]
+  implicit val DebugBacktraceFormat = SexpFormat[DebugBacktrace]
+  implicit val OffsetSourcePositionFormat = SexpFormat[OffsetSourcePosition]
+  implicit val LineSourcePositionFormat = SexpFormat[LineSourcePosition]
+  implicit val ConnectionInfoFormat = SexpFormat[ConnectionInfo]
+  implicit val SendBackgroundMessageEventFormat = SexpFormat[SendBackgroundMessageEvent]
+  implicit val BreakpointFormat = SexpFormat[Breakpoint]
+  implicit val BreakpointListFormat = SexpFormat[BreakpointList]
+  implicit val ReplConfigFormat = SexpFormat[ReplConfig]
+  implicit val PackageMemberInfoLightFormat = SexpFormat[PackageMemberInfoLight]
+  implicit val FileRangeFormat = SexpFormat[FileRange]
+  implicit val ERangePositionFormat = SexpFormat[ERangePosition]
+  implicit val RefactorFailureFormat = SexpFormat[RefactorFailure]
+  implicit val TextEditFormat = SexpFormat[TextEdit]
+  implicit val NewFileFormat = SexpFormat[NewFile]
+  implicit val DeleteFileFormat = SexpFormat[DeleteFile]
+  implicit val RefactorResultFormat = SexpFormat[RefactorResult]
+  implicit val DebugVmErrorFormat = SexpFormat[DebugVmError]
+  implicit val EmptySourcePositionFormat = SexpFormat[EmptySourcePosition]
+
+  implicit object DebugLocationFormat extends TraitFormatAlt[DebugLocation] {
+    def write(dl: DebugLocation): Sexp = dl match {
+      case dor: DebugObjectReference => wrap(dor)
+      case dae: DebugArrayElement => wrap(dae)
+      case dof: DebugObjectField => wrap(dof)
+      case dss: DebugStackSlot => wrap(dss)
+    }
+    def read(hint: SexpSymbol, value: Sexp): DebugLocation = hint match {
+      case s if s == DebugObjectReferenceHint.hint =>
+        value.convertTo[DebugObjectReference]
+      case s if s == DebugArrayElementHint.hint =>
+        value.convertTo[DebugArrayElement]
+      case s if s == DebugObjectFieldHint.hint =>
+        value.convertTo[DebugObjectField]
+      case s if s == DebugStackSlotHint.hint =>
+        value.convertTo[DebugStackSlot]
+      case _ => deserializationError(hint)
+    }
+  }
+
+  implicit object DebugValueFormat extends TraitFormatAlt[DebugValue] {
+    override val key = SexpSymbol(":val-type")
+    def write(dv: DebugValue): Sexp = dv match {
+      case dpv: DebugPrimitiveValue => wrap(dpv)
+      case doi: DebugObjectInstance => wrap(doi)
+      case dai: DebugArrayInstance => wrap(dai)
+      case dsi: DebugStringInstance => wrap(dsi)
+      case dnv: DebugNullValue => wrap(dnv)
+    }
+    def read(hint: SexpSymbol, value: Sexp): DebugValue = hint match {
+      case s if s == DebugPrimitiveHint.hint =>
+        value.convertTo[DebugPrimitiveValue]
+      case s if s == DebugObjectHint.hint =>
+        value.convertTo[DebugObjectInstance]
+      case s if s == DebugArrayHint.hint =>
+        value.convertTo[DebugArrayInstance]
+      case s if s == DebugStringHint.hint =>
+        value.convertTo[DebugStringInstance]
+      case s if s == DebugNullHint.hint =>
+        value.convertTo[DebugNullValue]
+      case _ => deserializationError(hint)
+    }
+  }
+
+  implicit object SourcePositionFormat extends TraitFormatAlt[SourcePosition] {
+    def write(dl: SourcePosition): Sexp = dl match {
+      case empty: EmptySourcePosition => wrap(empty)
+      case line: LineSourcePosition => wrap(line)
+      case offset: OffsetSourcePosition => wrap(offset)
+    }
+    def read(hint: SexpSymbol, value: Sexp): SourcePosition = hint match {
+      case s if s == implicitly[TypeHint[EmptySourcePosition]].hint =>
+        value.convertTo[EmptySourcePosition]
+      case s if s == implicitly[TypeHint[LineSourcePosition]].hint =>
+        value.convertTo[LineSourcePosition]
+      case s if s == implicitly[TypeHint[OffsetSourcePosition]].hint =>
+        value.convertTo[OffsetSourcePosition]
+      case _ => deserializationError(hint)
+    }
+  }
+
+  implicit object NoteSeverityFormat extends TraitFormat[NoteSeverity] {
+    def write(ns: NoteSeverity): Sexp = ns match {
+      case NoteError => NoteErrorHint.hint
+      case NoteWarn => NoteWarnHint.hint
+      case NoteInfo => NoteInfoHint.hint
+    }
+    def read(hint: SexpSymbol, value: Sexp): NoteSeverity = hint match {
+      case s if s == NoteErrorHint.hint => NoteError
+      case s if s == NoteWarnHint.hint => NoteWarn
+      case s if s == NoteInfoHint.hint => NoteInfo
+      case _ => deserializationError(hint)
+    }
+  }
+  // must be defined after NoteSeverity
+  implicit val NoteFormat = SexpFormat[Note]
+  implicit val NewScalaNotesEventFormat = SexpFormat[NewScalaNotesEvent]
+
+  implicit object DebugEventFormat extends TraitFormatAlt[DebugEvent] {
+    def write(ee: DebugEvent): Sexp = ee match {
+      case dse: DebugStepEvent => wrap(dse)
+      case dbe: DebugBreakEvent => wrap(dbe)
+      case DebugVMStartEvent => wrap(DebugVMStartEvent)
+      case DebugVMDisconnectEvent => wrap(DebugVMDisconnectEvent)
+      case dee: DebugExceptionEvent => wrap(dee)
+      case dts: DebugThreadStartEvent => wrap(dts)
+      case dtd: DebugThreadDeathEvent => wrap(dtd)
+      case doe: DebugOutputEvent => wrap(doe)
+    }
+    def read(hint: SexpSymbol, value: Sexp): DebugEvent = hint match {
+      case s if s == DebugStepHint.hint => value.convertTo[DebugStepEvent]
+      case s if s == DebugBreakHint.hint => value.convertTo[DebugBreakEvent]
+      case s if s == DebugVMStartHint.hint => DebugVMStartEvent
+      case s if s == DebugVMDisconnectHint.hint => DebugVMDisconnectEvent
+      case s if s == DebugExceptionHint.hint => value.convertTo[DebugExceptionEvent]
+      case s if s == DebugThreadStartHint.hint => value.convertTo[DebugThreadStartEvent]
+      case s if s == DebugThreadDeathHint.hint => value.convertTo[DebugThreadDeathEvent]
+      case s if s == DebugOutputHint.hint => value.convertTo[DebugOutputEvent]
+      case _ => deserializationError(hint)
+    }
+  }
+
+  /**
+   * This is a tricky one to retrofit:
+   *  1. GeneralSwankEvents use the TraitFormat with custom hints
+   *  2. DebugEvents use the TraitFormat with another TraitFormatAlt inside
+   */
+  implicit object EnsimeEventFormat extends TraitFormat[EnsimeEvent] {
+    def write(ee: EnsimeEvent): Sexp = ee match {
+      case e: AnalyzerReadyEvent.type => wrap(e)
+      case e: FullTypeCheckCompleteEvent.type => wrap(e)
+      case e: IndexerReadyEvent.type => wrap(e)
+      case e: CompilerRestartedEvent.type => wrap(e)
+      case nsc: NewScalaNotesEvent => wrap(nsc)
+      case e: ClearAllScalaNotesEvent.type => wrap(e)
+      case sbm: SendBackgroundMessageEvent => SexpList(
+        // the odd one out...
+        SendBackgroundMessageHint.hint,
+        SexpNumber(sbm.code),
+        sbm.detail.toSexp
+      )
+      case de: DebugEvent => wrap(de)
+    }
+    def read(hint: SexpSymbol, value: Sexp): EnsimeEvent = hint match {
+      case s if s == AnalyzerReadyHint.hint => AnalyzerReadyEvent
+      case s if s == FullTypeCheckCompleteHint.hint => FullTypeCheckCompleteEvent
+      case s if s == IndexerReadyHint.hint => IndexerReadyEvent
+      case s if s == CompilerRestartedHint.hint => CompilerRestartedEvent
+      case s if s == NewScalaNotesHint.hint => value.convertTo[NewScalaNotesEvent]
+      case s if s == ClearAllScalaNotesHint.hint => ClearAllScalaNotesEvent
+      case s if s == SendBackgroundMessageHint.hint => ??? // unsupported
+      case s if s == DebugHint.hint => value.convertTo[DebugEvent]
+      case _ => deserializationError(hint)
+    }
+  }
+
+  implicit object CompletionSignatureFormat extends SexpFormat[CompletionSignature] {
+    private implicit val Tuple2Format = SexpFormat[(String, String)]
+    def write(cs: CompletionSignature): Sexp =
+      SexpList(cs.sections.toSexp, cs.result.toSexp)
+    def read(sexp: Sexp): CompletionSignature = sexp match {
+      case SexpList(a :: b :: Nil) => CompletionSignature(
+        a.convertTo[List[List[(String, String)]]],
+        b.convertTo[String]
+      )
+      case _ => deserializationError(sexp)
+    }
+  }
+  // must be defined after CompletionSignatureFormat
+  implicit val CompletionInfoFormat = SexpFormat[CompletionInfo]
+  implicit val CompletionInfoListFormat = SexpFormat[CompletionInfoList]
+
+  // watch out for recursive references here...
+  implicit object EntityInfoFormat extends TraitFormatAlt[EntityInfo] {
+    override val key = SexpSymbol(":info-type")
+    def write(ti: EntityInfo): Sexp = ti match {
+      case named: NamedTypeMemberInfo => wrap(named)
+      case pack: PackageInfo => wrap(pack)
+      case tpe: TypeInfo => wrap(tpe)
+    }
+    def read(hint: SexpSymbol, value: Sexp): EntityInfo = hint match {
+      case s if s == NamedTypeMemberHint.hint => value.convertTo[NamedTypeMemberInfo]
+      case s if s == PackageHint.hint => value.convertTo[PackageInfo]
+      case s if s == TypeInfoHint.hint => value.convertTo[TypeInfo]
+      case _ => deserializationError(hint)
+    }
+  }
+  implicit object TypeInfoFormat extends TraitFormatAlt[TypeInfo] {
+    // a bit weird, but that's how we've been doing it
+    override val key = SexpSymbol(":arrow-type")
+    def write(ti: TypeInfo): Sexp = ti match {
+      case arrow: ArrowTypeInfo => wrap(arrow)
+      case basic: BasicTypeInfo => wrap(basic)
+    }
+    def read(hint: SexpSymbol, value: Sexp): TypeInfo = hint match {
+      case s if s == ArrowTypeHint.hint => value.convertTo[ArrowTypeInfo]
+      case s if s == BasicTypeHint.hint => value.convertTo[BasicTypeInfo]
+      case _ => deserializationError(hint)
+    }
+  }
+  implicit def NamedTypeMemberInfoFormat = SexpFormat[NamedTypeMemberInfo]
+  implicit def PackageInfoFormat = SexpFormat[PackageInfo]
+  implicit def ParamSectionInfoFormat = SexpFormat[ParamSectionInfo]
+  implicit def ArrowTypeInfoFormat = SexpFormat[ArrowTypeInfo]
+  implicit def BasicTypeInfoFormat = SexpFormat[BasicTypeInfo]
+  implicit def CallCompletionInfoFormat = SexpFormat[CallCompletionInfo]
+  implicit def SymbolInfoFormat = SexpFormat[SymbolInfo]
+  implicit def InterfaceInfoFormat = SexpFormat[InterfaceInfo]
+  implicit def TypeInspectInfoFormat = SexpFormat[TypeInspectInfo]
+
+  implicit object FileEditFormat extends TraitFormatAlt[FileEdit] {
+    def write(ti: FileEdit): Sexp = ti match {
+      case text: TextEdit => wrap(text)
+      case nf: NewFile => wrap(nf)
+      case df: DeleteFile => wrap(df)
+    }
+    def read(hint: SexpSymbol, value: Sexp): FileEdit = hint match {
+      case t if t == implicitly[TypeHint[TextEdit]].hint => value.convertTo[TextEdit]
+      case t if t == implicitly[TypeHint[NewFile]].hint => value.convertTo[NewFile]
+      case t if t == implicitly[TypeHint[DeleteFile]].hint => value.convertTo[DeleteFile]
+      case _ => deserializationError(hint)
+    }
+  }
+  // must be after FileEditFormat
+  implicit val RefactorEffectFormat = SexpFormat[RefactorEffect]
+
+  // must be after SourcePosition
+  implicit val TypeSearchResultFormat = SexpFormat[TypeSearchResult]
+  implicit val MethodSearchResultFormat = SexpFormat[MethodSearchResult]
+  implicit object SymbolSearchResultFormat extends TraitFormatAlt[SymbolSearchResult] {
+    def write(ti: SymbolSearchResult): Sexp = ti match {
+      case ts: TypeSearchResult => wrap(ts)
+      case ms: MethodSearchResult => wrap(ms)
+    }
+    def read(hint: SexpSymbol, value: Sexp): SymbolSearchResult = hint match {
+      case t if t == implicitly[TypeHint[TypeSearchResult]].hint => value.convertTo[TypeSearchResult]
+      case t if t == implicitly[TypeHint[MethodSearchResult]].hint => value.convertTo[MethodSearchResult]
+      case _ => deserializationError(hint)
+    }
+  }
+
+  implicit object SymbolSearchResultsFormat extends SexpFormat[SymbolSearchResults] {
+    def write(o: SymbolSearchResults): Sexp = o.syms.toSexp
+    def read(sexp: Sexp): SymbolSearchResults = SymbolSearchResults(
+      sexp.convertTo[List[SymbolSearchResult]]
+    )
+  }
+  implicit object ImportSuggestionsFormat extends SexpFormat[ImportSuggestions] {
+    def write(o: ImportSuggestions): Sexp = o.symLists.toSexp
+    def read(sexp: Sexp): ImportSuggestions = ImportSuggestions(
+      sexp.convertTo[List[List[SymbolSearchResult]]]
+    )
+  }
+
+  // must be after FileEdit
+  implicit val UndoFormat = SexpFormat[Undo]
+  implicit val UndoResultFormat = SexpFormat[UndoResult]
+
+  // TODO: don't use this lookup
+  private val sourceSymbolMap = Map(
     "object" -> ObjectSymbol,
     "class" -> ClassSymbol,
     "trait" -> TraitSymbol,
@@ -28,680 +405,98 @@ object SwankProtocolConversions {
     "functionCall" -> FunctionCallSymbol
   )
 
-  val reverseSourceSymbolMap: Map[SourceSymbol, String] = sourceSymbolMap.map { case (name, symbol) => symbol -> name }
+  private val reverseSourceSymbolMap: Map[SourceSymbol, String] = sourceSymbolMap.map { case (name, symbol) => symbol -> name }
 
   def symbolToSourceSymbol(stringRep: String): Option[SourceSymbol] = sourceSymbolMap.get(stringRep)
-  def sourceSymbolToSymbol(sym: SourceSymbol): String = reverseSourceSymbolMap.get(sym).get
+  private def sourceSymbolToSymbol(sym: SourceSymbol): String = reverseSourceSymbolMap.get(sym).get
 
-  def toWF(obj: DebugLocation): SExp = {
-    obj match {
-      case obj: DebugObjectReference => toWF(obj)
-      case obj: DebugArrayElement => toWF(obj)
-      case obj: DebugObjectField => toWF(obj)
-      case obj: DebugStackSlot => toWF(obj)
+  // must be after SourceSymbol
+  implicit object SymbolDesignationFormat extends SexpFormat[SymbolDesignation] {
+    def write(o: SymbolDesignation): Sexp =
+      SexpList(
+        SexpSymbol(sourceSymbolToSymbol(o.symType)),
+        o.start.toSexp,
+        o.end.toSexp
+      )
+    def read(sexp: Sexp): SymbolDesignation = ???
+  }
+  implicit val SymbolDesignationsFormat = SexpFormat[SymbolDesignations]
+
+  implicit object DebugVmStatusFormat extends TraitFormatAlt[DebugVmStatus] {
+    def write(ti: DebugVmStatus): Sexp = ti match {
+      case s: DebugVmSuccess => wrap(s)
+      case e: DebugVmError => wrap(e)
     }
-  }
-  def toWF(obj: DebugObjectReference): SExp = {
-    SExp(
-      key(":type"), 'reference,
-      key(":object-id"), obj.objectId.toString)
-  }
-  def toWF(obj: DebugArrayElement): SExp = {
-    SExp(
-      key(":type"), 'element,
-      key(":object-id"), obj.objectId.toString,
-      key(":index"), obj.index)
-  }
-  def toWF(obj: DebugObjectField): SExp = {
-    SExp(
-      key(":type"), 'field,
-      key(":object-id"), obj.objectId.toString,
-      key(":field"), obj.name)
-  }
-  def toWF(obj: DebugStackSlot): SExp = {
-    SExp(
-      key(":type"), 'slot,
-      key(":thread-id"), obj.threadId.toString,
-      key(":frame"), obj.frame,
-      key(":offset"), obj.offset)
-  }
-
-  def toWF(obj: DebugValue): SExp = {
-    obj match {
-      case obj: DebugPrimitiveValue => toWF(obj)
-      case obj: DebugObjectInstance => toWF(obj)
-      case obj: DebugArrayInstance => toWF(obj)
-      case obj: DebugStringInstance => toWF(obj)
-      case obj: DebugNullValue => toWF(obj)
+    def read(hint: SexpSymbol, value: Sexp): DebugVmStatus = hint match {
+      case t if t == DebugVmSuccessHint.hint => value.convertTo[DebugVmSuccess]
+      case t if t == DebugVmErrorHint.hint => value.convertTo[DebugVmError]
+      case _ => deserializationError(hint)
     }
   }
 
-  def toWF(obj: DebugNullValue): SExp = {
-    SExp(
-      key(":val-type"), 'null,
-      key(":type-name"), obj.typeName)
+  //////////////////////////////////////////////////////////////////////////
+  // Everything below this line is to implement the legacy toWF API
+  implicit class SExpressWireFormat(sexp: Sexp) extends WireFormat {
+    def toWireString: String = sexp.compactPrint
+    def withRpcReturn(callId: Int): WireFormat = new SExpressWireFormat(SexpList(
+      SexpSymbol(":return"),
+      SexpList(SexpSymbol(":ok"), sexp),
+      SexpNumber(callId)
+    ))
   }
+  def toWF(dl: DebugLocation): WireFormat = dl.toSexp
+  def toWF(dor: DebugObjectReference): WireFormat = dor.toSexp
+  def toWF(dae: DebugArrayElement): WireFormat = dae.toSexp
+  def toWF(dof: DebugObjectField): WireFormat = dof.toSexp
+  def toWF(dss: DebugStackSlot): WireFormat = dss.toSexp
+  def toWF(obj: DebugValue): WireFormat = obj.toSexp
+  def toWF(obj: DebugNullValue): WireFormat = obj.toSexp
+  def toWF(obj: DebugPrimitiveValue): WireFormat = obj.toSexp
+  def toWF(obj: DebugObjectInstance): WireFormat = obj.toSexp
+  def toWF(obj: DebugStringInstance): WireFormat = obj.toSexp
+  def toWF(obj: DebugArrayInstance): WireFormat = obj.toSexp
+  def toWF(obj: DebugClassField): WireFormat = obj.toSexp
+  def toWF(obj: DebugStackLocal): WireFormat = obj.toSexp
+  def toWF(obj: DebugStackFrame): WireFormat = obj.toSexp
+  def toWF(obj: DebugBacktrace): WireFormat = obj.toSexp
+  def toWF(pos: SourcePosition): WireFormat = pos.toSexp
+  def toWF(pos: LineSourcePosition): WireFormat = pos.toSexp
+  def toWF(pos: EmptySourcePosition): WireFormat = pos.toSexp
+  def toWF(pos: OffsetSourcePosition): WireFormat = pos.toSexp
+  def toWF(info: ConnectionInfo): WireFormat = info.toSexp
+  def toWF(evt: EnsimeEvent): WireFormat = evt.toSexp
+  def toWF(note: Note): WireFormat = note.toSexp
+  def toWF(bp: Breakpoint): WireFormat = bp.toSexp
+  def toWF(bps: BreakpointList): WireFormat = bps.toSexp
+  def toWF(config: ReplConfig): WireFormat = config.toSexp
+  def toWF(value: Boolean): WireFormat = value.toSexp
+  def toWF(value: String): WireFormat = value.toSexp
+  def toWF(cs: CompletionSignature): WireFormat = cs.toSexp
+  def toWF(value: CompletionInfo): WireFormat = value.toSexp
+  def toWF(value: CompletionInfoList): WireFormat = value.toSexp
+  def toWF(value: PackageMemberInfoLight): WireFormat = value.toSexp
+  def toWF(value: FileRange): WireFormat = value.toSexp
+  def toWF(value: NamedTypeMemberInfo): WireFormat = value.toSexp
+  def toWF(value: EntityInfo): WireFormat = value.toSexp
+  def toWF(value: TypeInfo): WireFormat = value.toSexp
+  def toWF(value: ParamSectionInfo): WireFormat = value.toSexp
+  def toWF(value: SymbolInfo): WireFormat = value.toSexp
+  def toWF(value: CallCompletionInfo): WireFormat = value.toSexp
+  def toWF(value: TypeInspectInfo): WireFormat = value.toSexp
+  def toWF(value: InterfaceInfo): WireFormat = value.toSexp
+  def toWF(p: ERangePosition): WireFormat = p.toSexp
+  def toWF(value: RefactorFailure): WireFormat = value.toSexp
+  def toWF(value: RefactorEffect): WireFormat = value.toSexp
+  def toWF(value: RefactorResult): WireFormat = value.toSexp
+  def toWF(value: SymbolSearchResult): WireFormat = value.toSexp
+  def toWF(value: SymbolSearchResults): WireFormat = value.toSexp
+  def toWF(value: ImportSuggestions): WireFormat = value.toSexp
+  def toWF(value: Undo): WireFormat = value.toSexp
+  def toWF(value: UndoResult): WireFormat = value.toSexp
+  def toWF(value: SymbolDesignations): WireFormat = value.toSexp
+  def toWF(v: DebugVmStatus): WireFormat = v.toSexp
 
-  def toWF(obj: DebugPrimitiveValue): SExp = {
-    SExp(
-      key(":val-type"), 'prim,
-      key(":summary"), obj.summary,
-      key(":type-name"), obj.typeName)
-  }
-
-  def toWF(obj: DebugClassField): SExp = {
-    SExp(
-      key(":index"), obj.index,
-      key(":name"), obj.name,
-      key(":summary"), obj.summary,
-      key(":type-name"), obj.typeName)
-  }
-
-  def toWF(obj: DebugObjectInstance): SExp = {
-    SExp(
-      key(":val-type"), 'obj,
-      key(":fields"), SExpList(obj.fields.map(toWF)),
-      key(":type-name"), obj.typeName,
-      key(":object-id"), obj.objectId.toString)
-  }
-
-  def toWF(obj: DebugStringInstance): SExp = {
-    SExp(
-      key(":val-type"), 'str,
-      key(":summary"), obj.summary,
-      key(":fields"), SExpList(obj.fields.map(toWF)),
-      key(":type-name"), obj.typeName,
-      key(":object-id"), obj.objectId.toString)
-  }
-
-  def toWF(obj: DebugArrayInstance): SExp = {
-    SExp(
-      key(":val-type"), 'arr,
-      key(":length"), obj.length,
-      key(":type-name"), obj.typeName,
-      key(":element-type-name"), obj.elementTypeName,
-      key(":object-id"), obj.objectId.toString)
-  }
-
-  def toWF(obj: DebugStackLocal): SExp = {
-    SExp(
-      key(":index"), obj.index,
-      key(":name"), obj.name,
-      key(":summary"), obj.summary,
-      key(":type-name"), obj.typeName)
-  }
-
-  def toWF(obj: DebugStackFrame): SExp = {
-    SExp(
-      key(":index"), obj.index,
-      key(":locals"), SExpList(obj.locals.map(toWF)),
-      key(":num-args"), obj.numArguments,
-      key(":class-name"), obj.className,
-      key(":method-name"), obj.methodName,
-      key(":pc-location"), toWF(obj.pcLocation),
-      key(":this-object-id"), obj.thisObjectId.toString)
-  }
-
-  def toWF(obj: DebugBacktrace): SExp = {
-    SExp(
-      key(":frames"), SExpList(obj.frames.map(toWF)),
-      key(":thread-id"), obj.threadId.toString,
-      key(":thread-name"), obj.threadName)
-  }
-
-  def toWF(pos: SourcePosition): SExp = pos match {
-    case e: EmptySourcePosition => TruthAtom
-    case l: LineSourcePosition => SExp(
-      key(":file"), l.file.getAbsolutePath,
-      key(":line"), l.line)
-    case o: OffsetSourcePosition => SExp(
-      key(":file"), o.file.getAbsolutePath,
-      key(":offset"), o.offset)
-  }
-
-  def toWF(info: ConnectionInfo): SExp = {
-    SExp(
-      key(":pid"), 'nil,
-      key(":implementation"),
-      SExp(key(":name"), info.serverName),
-      key(":version"), info.protocolVersion)
-  }
-
-  def toWF(evt: EnsimeEvent): SExp = {
-    evt match {
-      case g: GeneralSwankEvent =>
-        toWF(g)
-      case d: DebugEvent =>
-        toWF(d)
-    }
-  }
-
-  def toWF(evt: GeneralSwankEvent): SExp = {
-    evt match {
-      /**
-       * Doc Event:
-       *   :compiler-ready
-       * Summary:
-       *   Signal that the compiler has finished its initial compilation and the server
-       *   is ready to accept RPC calls.
-       * Structure:
-       *   (:compiler-ready)
-       */
-      case AnalyzerReadyEvent =>
-        SExp(key(":compiler-ready"))
-      /**
-       * Doc Event:
-       *   :full-typecheck-finished
-       * Summary:
-       *   Signal that the compiler has finished compilation of the entire project.
-       * Structure:
-       *   (:full-typecheck-finished)
-       */
-      case FullTypeCheckCompleteEvent =>
-        SExp(key(":full-typecheck-finished"))
-      /**
-       * * Doc Event:
-       *   :indexer-ready
-       * Summary:
-       *   Signal that the indexer has finished indexing the classpath.
-       * Structure:
-       *   (:indexer-ready)
-       */
-      case IndexerReadyEvent =>
-        SExp(key(":indexer-ready"))
-      /**
-       * Doc Event:
-       *   :compiler-restarted
-       * Summary:
-       *   Signal that the compiler was restarted. :type-id values received earlier
-       *    are now invalid.
-       * Structure:
-       *   (:compiler-restarted)
-       */
-      case CompilerRestartedEvent =>
-        SExp(key(":compiler-restarted"))
-      /**
-       * Doc Event:
-       *   :scala-notes
-       * Summary:
-       *   Notify client when Scala compiler generates errors,warnings or other notes.
-       * Structure:
-       *   (:scala-notes
-       *   notes //List of Note
-       *   )
-       */
-      case NewScalaNotesEvent(noteList) =>
-        SExp(key(":scala-notes"), toWF(noteList))
-
-      /**
-       *  Doc Event:
-       *   :clear-all-scala-notes
-       * Summary:
-       *   Notify client when Scala notes have become invalidated. Editor should consider
-       *   all Scala related notes to be stale at this point.
-       * Structure:
-       *   (:clear-all-scala-notes)
-       */
-      case ClearAllScalaNotesEvent =>
-        SExp(key(":clear-all-scala-notes"))
-      /**
-       * Doc Event:
-       *   :background-message
-       * Summary:
-       *   A background notification from the server for the client.
-       * Structure:
-       *   (:background-message
-       *      code // Int
-       *      message // String message or nil
-       *   )
-       */
-      case SendBackgroundMessageEvent(code, detail) =>
-        SExp(key(":background-message"), code, detail.map(strToSExp).getOrElse(NilAtom))
-    }
-  }
-
-  def toWF(evt: DebugEvent): SExp = {
-    evt match {
-      /**
-       * Doc Event:
-       *   :debug-event (:type output)
-       * Summary:
-       *   Communicates stdout/stderr of debugged VM to client.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: output
-       *      :body //String: A chunk of output text
-       *   ))
-       */
-      case DebugOutputEvent(out: String) =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'output,
-            key(":body"), out))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type step)
-       * Summary:
-       *   Signals that the debugged VM has stepped to a new location and is now
-       *     paused awaiting control.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: step
-       *      :thread-id //String: The unique thread id of the paused thread.
-       *      :thread-name //String: The informal name of the paused thread.
-       *      :file //String: The source file the VM stepped into.
-       *      :line //Int: The source line the VM stepped to.
-       *   ))
-       */
-      case DebugStepEvent(threadId, threadName, pos) =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'step,
-            key(":thread-id"), threadId.toString,
-            key(":thread-name"), threadName,
-            key(":file"), pos.file.getAbsolutePath,
-            key(":line"), pos.line))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type breakpoint)
-       * Summary:
-       *   Signals that the debugged VM has stopped at a breakpoint.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: breakpoint
-       *      :thread-id //String: The unique thread id of the paused thread.
-       *      :thread-name //String: The informal name of the paused thread.
-       *      :file //String: The source file the VM stepped into.
-       *      :line //Int: The source line the VM stepped to.
-       *   ))
-       */
-      case DebugBreakEvent(threadId, threadName, pos) =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'breakpoint,
-            key(":thread-id"), threadId.toString,
-            key(":thread-name"), threadName,
-            key(":file"), pos.file.getAbsolutePath,
-            key(":line"), pos.line))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type start)
-       * Summary:
-       *   Signals that the debugged VM has started.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: start
-       *   ))
-       */
-      case DebugVMStartEvent() =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'start))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type disconnect)
-       * Summary:
-       *   Signals that the debugger has disconnected form the debugged VM.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: disconnect
-       *   ))
-       */
-      case DebugVMDisconnectEvent() =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'disconnect))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type exception)
-       * Summary:
-       *   Signals that the debugged VM has thrown an exception and is now paused
-       *     waiting for control.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: exception
-       *      :exception //String: The unique object id of the exception.
-       *      :thread-id //String: The unique thread id of the paused thread.
-       *      :thread-name //String: The informal name of the paused thread.
-       *      :file //String: The source file where the exception was caught,
-       *         or nil if no location is known.
-       *      :line //Int: The source line where the exception was thrown,
-       *         or nil if no location is known.
-       *   ))
-       */
-      case DebugExceptionEvent(excId, threadId, threadName, maybePos) =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'exception,
-            key(":exception"), excId.toString,
-            key(":thread-id"), threadId.toString,
-            key(":thread-name"), threadName,
-            key(":file"), maybePos.map { p =>
-              StringAtom(p.file.getAbsolutePath)
-            }.getOrElse('nil),
-            key(":line"), maybePos.map { p =>
-              IntAtom(p.line)
-            }.getOrElse('nil)))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type threadStart)
-       * Summary:
-       *   Signals that a new thread has started.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: threadStart
-       *      :thread-id //String: The unique thread id of the new thread.
-       *   ))
-       */
-      case DebugThreadStartEvent(threadId: Long) =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'threadStart,
-            key(":thread-id"), threadId.toString))
-
-      /**
-       * Doc Event:
-       *   :debug-event (:type threadDeath)
-       * Summary:
-       *   Signals that a new thread has died.
-       * Structure:
-       *   (:debug-event
-       *     (:type //Symbol: threadDeath
-       *      :thread-id //String: The unique thread id of the new thread.
-       *   ))
-       */
-      case DebugThreadDeathEvent(threadId: Long) =>
-        SExp(key(":debug-event"),
-          SExp(key(":type"), 'threadDeath,
-            key(":thread-id"), threadId.toString))
-    }
-  }
-
-  def toWF(bp: Breakpoint): SExp = {
-    SExp(
-      key(":file"), bp.pos.file.getAbsolutePath,
-      key(":line"), bp.pos.line)
-  }
-
-  def toWF(bps: BreakpointList): SExp = {
-    SExp(
-      key(":active"), SExpList(bps.active.map { toWF }),
-      key(":pending"), SExpList(bps.pending.map { toWF }))
-  }
-
-  def toWF(config: EnsimeConfig): SExp = SExp(
-    key(":project-name"), StringAtom(config.name),
-    key(":source-roots"), SExp(
-      config.modules.values.flatMap {
-        _.sourceRoots.map { r => StringAtom(r.getAbsolutePath) }
-      }
-    )
-  )
-
-  def toWF(config: ReplConfig): SExp = {
-    SExp.propList((":classpath", strToSExp(config.classpath.mkString(File.pathSeparator))))
-  }
-
-  def toWF(value: Boolean): SExp = {
-    if (value) TruthAtom
-    else NilAtom
-  }
-
-  val wfNull: SExp = NilAtom
-
-  val wfTrue: SExp = TruthAtom
-
-  val wfFalse: SExp = NilAtom
-
-  def toWF(value: String): SExp = {
-    StringAtom(value)
-  }
-
-  def toWF(note: Note): SExp = {
-    SExp(
-      key(":severity"), note.friendlySeverity,
-      key(":msg"), note.msg,
-      key(":beg"), note.beg,
-      key(":end"), note.end,
-      key(":line"), note.line,
-      key(":col"), note.col,
-      key(":file"), note.file)
-  }
-
-  def toWF(notelist: NoteList): SExp = {
-    val NoteList(isFull, notes) = notelist
-    SExp(
-      key(":is-full"),
-      toWF(isFull),
-      key(":notes"),
-      SExpList(notes.map(toWF).toList))
-  }
-
-  def toWF(values: Iterable[WireFormat]): SExp = {
-    SExpList(values.map(ea => ea.asInstanceOf[SExp]).toList)
-  }
-
-  def toWF(value: CompletionSignature): SExp = {
-    SExp(
-      SExp(value.sections.map { section =>
-        SExpList(section.map { param =>
-          SExp(param._1, param._2)
-        })
-      }),
-      value.result)
-  }
-
-  def toWF(value: CompletionInfo): SExp = {
-    SExp.propList(
-      (":name", value.name),
-      (":type-sig", toWF(value.tpeSig)),
-      (":type-id", value.tpeId),
-      (":is-callable", value.isCallable),
-      (":to-insert", value.toInsert.map(strToSExp).getOrElse('nil)))
-  }
-
-  def toWF(value: CompletionInfoList): SExp = {
-    SExp.propList(
-      (":prefix", value.prefix),
-      (":completions", SExpList(value.completions.map(toWF))))
-  }
-
-  def toWF(value: PackageMemberInfoLight): SExp = {
-    SExp(key(":name"), value.name)
-  }
-
-  def toWF(value: SymbolInfo): SExp = {
-    SExp.propList(
-      (":name", value.name),
-      (":local-name", value.localName),
-      (":type", toWF(value.tpe)),
-      // not entirely clear why "decl-pos" instead of "pos"
-      (":decl-pos", value.declPos.map(toWF).getOrElse('nil)),
-      (":is-callable", value.isCallable),
-      (":owner-type-id", value.ownerTypeId.map(intToSExp).getOrElse('nil)))
-  }
-
-  def toWF(value: FileRange): SExp = {
-    SExp.propList(
-      (":file", value.file),
-      (":start", value.start),
-      (":end", value.end))
-  }
-
-  def toWF(value: NamedTypeMemberInfo): SExp = {
-    SExp.propList(
-      (":name", value.name),
-      (":type", toWF(value.tpe)),
-      (":pos", value.pos.map(toWF).getOrElse('nil)),
-      (":decl-as", value.declaredAs))
-  }
-
-  def toWF(value: EntityInfo): SExp = {
-    value match {
-      case value: PackageInfo => toWF(value)
-      case value: TypeInfo => toWF(value)
-      case value: NamedTypeMemberInfo => toWF(value)
-    }
-  }
-
-  def toWF(value: TypeInfo): SExp = {
-    value match {
-      case value: ArrowTypeInfo =>
-        SExp.propList(
-          (":name", value.name),
-          (":type-id", value.id),
-          (":arrow-type", true),
-          (":result-type", toWF(value.resultType)),
-          (":param-sections", SExp(value.paramSections.map(toWF))))
-      case value: BasicTypeInfo =>
-        SExp.propList((":name", value.name),
-          (":type-id", value.id),
-          (":full-name", value.fullName),
-          (":decl-as", value.declaredAs),
-          (":type-args", SExp(value.args.map(toWF))),
-          (":members", SExp(value.members.map(toWF))),
-          (":pos", value.pos.map(toWF).getOrElse('nil)),
-          (":outer-type-id", value.outerTypeId.map(intToSExp).getOrElse('nil)))
-    }
-  }
-
-  def toWF(value: PackageInfo): SExp = {
-    SExp.propList((":name", value.name),
-      (":info-type", 'package),
-      (":full-name", value.fullName),
-      (":members", SExpList(value.members.map(toWF).toList)))
-  }
-
-  def toWF(value: CallCompletionInfo): SExp = {
-    SExp.propList(
-      (":result-type", toWF(value.resultType)),
-      (":param-sections", SExp(value.paramSections.map(toWF))))
-  }
-
-  def toWF(value: ParamSectionInfo): SExp = {
-    SExp.propList(
-      (":params", SExp(value.params.map {
-        case (nm, tp) => SExp(nm, toWF(tp))
-      })),
-      (":is-implicit", value.isImplicit))
-
-  }
-
-  def toWF(value: InterfaceInfo): SExp = {
-    SExp.propList(
-      (":type", toWF(value.tpe)),
-      (":via-view", value.viaView.map(strToSExp).getOrElse('nil)))
-  }
-
-  def toWF(value: TypeInspectInfo): SExp = {
-    SExp.propList(
-      (":type", toWF(value.tpe)),
-      (":info-type", 'typeInspect),
-      (":companion-id", value.companionId match {
-        case Some(id) => id
-        case None => 'nil
-      }),
-      (":interfaces", SExp(value.supers.map(toWF))))
-  }
-
-  def toWF(value: RefactorFailure): SExp = {
-    SExp.propList(
-      (":procedure-id", value.procedureId),
-      (":status", 'failure),
-      (":reason", value.message))
-  }
-
-  def toWF(value: RefactorEffect): SExp = {
-    SExp.propList(
-      (":procedure-id", value.procedureId),
-      (":refactor-type", value.refactorType),
-      (":status", 'success),
-      (":changes", SExpList(value.changes.map(changeToWF).toList)))
-  }
-
-  def toWF(value: RefactorResult): SExp = {
-    SExp.propList(
-      (":procedure-id", value.procedureId),
-      (":refactor-type", value.refactorType),
-      (":status", 'success),
-      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)).toList)))
-  }
-
-  def toWF(value: SymbolSearchResults): SExp = {
-    SExpList(value.syms.map(toWF).toList)
-  }
-
-  def toWF(value: ImportSuggestions): SExp = {
-    SExpList(value.symLists.map { l => SExpList(l.map(toWF).toList) }.toList)
-  }
-
-  // FIXME: client expects offset, but we typically have line
-  //        infer for now and look at changing the protocol
-  def toWF(value: SymbolSearchResult): SExp = {
-    value match {
-      case value: TypeSearchResult =>
-        SExp.propList(
-          (":name", value.name),
-          (":local-name", value.localName),
-          (":decl-as", value.declaredAs),
-          (":pos", value.pos.map(toWF).getOrElse('nil)))
-      case value: MethodSearchResult =>
-        SExp.propList(
-          (":name", value.name),
-          (":local-name", value.localName),
-          (":decl-as", value.declaredAs),
-          (":pos", value.pos.map(toWF).getOrElse('nil)),
-          (":owner-name", value.owner))
-    }
-  }
-
-  def toWF(p: ERangePosition): SExp = {
-    // assumes a real file. see discussion around SourcePosition
-    SExp.propList(
-      (":file", p.file),
-      (":offset", p.offset),
-      (":start", p.start),
-      (":end", p.end))
-  }
-
-  def toWF(value: Undo): SExp = {
-    SExp.propList(
-      (":id", value.id),
-      (":changes", SExpList(value.changes.map(changeToWF))),
-      (":summary", value.summary))
-  }
-
-  def toWF(value: UndoResult): SExp = {
-    SExp.propList(
-      (":id", value.id),
-      (":touched-files", SExpList(value.touched.map(f => strToSExp(f.getAbsolutePath)).toList)))
-  }
-
-  def toWF(value: SymbolDesignations): SExp = {
-    SExp.propList(
-      (":file", value.file),
-      (":syms",
-        SExpList(value.syms.map { s =>
-          SExpList(List(SymbolAtom(sourceSymbolToSymbol(s.symType)), s.start, s.end))
-        })))
-  }
-
-  def toWF(vmStatus: DebugVmStatus): SExp = {
-    vmStatus match {
-      case DebugVmSuccess => SExp(
-        key(":status"), "success")
-      case DebugVmError(code, details) => SExp(
-        key(":status"), "error",
-        key(":error-code"), code,
-        key(":details"), details)
-    }
-  }
-
-  private def changeToWF(ch: FileEdit): SExp = {
-    SExp.propList(
-      (":file", ch.file.getCanonicalPath),
-      (":text", ch.text),
-      (":from", ch.from),
-      (":to", ch.to))
-  }
-
+  // don't always work as expected by the legacy API
+  def toWF[T: SexpFormat](els: Iterable[T]): WireFormat = els.toSexp
+  def toWF[T: SexpFormat](els: Option[T]): WireFormat = els.toSexp
 }

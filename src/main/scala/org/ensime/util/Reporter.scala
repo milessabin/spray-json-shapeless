@@ -38,7 +38,7 @@ class PresentationReporter(handler: ReportHandler) extends Reporter {
             val note = new Note(
               f,
               formatMessage(msg),
-              severity.id,
+              NoteSeverity(severity.id),
               pos.start,
               pos.end,
               pos.line,

@@ -105,7 +105,7 @@ class BasicWorkflow extends FunSpec with Matchers {
         val inspectByIdOpt: Option[TypeInspectInfo] = project.rpcInspectTypeById(intTypeId)
 
         inspectByIdOpt match {
-          case Some(TypeInspectInfo(`intTypeInspectInfo`, Some(intCompanionId), supers)) =>
+          case Some(TypeInspectInfo(`intTypeInspectInfo`, Some(intCompanionId), supers, _)) =>
           case _ =>
             fail("inspect by id does not match expectations, got: " + inspectByIdOpt)
         }
@@ -179,14 +179,14 @@ class BasicWorkflow extends FunSpec with Matchers {
           case Right(RefactorEffect(1234, 'rename, List(
             TextEdit(`fooFile`, 214, 217, "bar"),
             TextEdit(`fooFile`, 252, 255, "bar"),
-            TextEdit(`fooFile`, 269, 272, "bar")))) =>
+            TextEdit(`fooFile`, 269, 272, "bar")), _)) =>
           case _ =>
             fail("Prepare refactor result does not match, got: " + prepareRefactorRes)
         }
 
         val execRefactorRes = project.rpcExecRefactor(1234, Symbols.Rename)
         execRefactorRes match {
-          case Right(RefactorResult(1234, 'rename, List(`fooFile`))) =>
+          case Right(RefactorResult(1234, 'rename, List(`fooFile`), _)) =>
           case _ =>
             fail("exec refactor does not match expectation: " + execRefactorRes)
         }

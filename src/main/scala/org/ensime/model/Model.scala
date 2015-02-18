@@ -14,8 +14,8 @@ import org.ensime.util.RichFile._
 import scala.tools.nsc.io.AbstractFile
 
 sealed trait EntityInfo {
-  val name: String
-  val members: Iterable[EntityInfo]
+  def name: String
+  def members: Iterable[EntityInfo]
 }
 
 object SourceSymbol {
@@ -61,37 +61,36 @@ case class ContentsSourceFileInfo(file: File, contents: String) extends SourceFi
 case class ContentsInSourceFileInfo(file: File, contentsIn: File) extends SourceFileInfo
 
 case class PackageInfo(
-    override val name: String,
+    name: String,
     fullName: String,
-
     // n.b. members should be sorted by name for consistency
-    override val members: Seq[EntityInfo]) extends EntityInfo {
-
+    members: Seq[EntityInfo]) extends EntityInfo {
   require(members == members.sortBy(_.name), "members should be sorted by name")
 }
 
 trait SymbolSearchResult {
-  val name: String
-  val localName: String
-  val declaredAs: scala.Symbol
-  val pos: Option[SourcePosition]
+  def name: String
+  def localName: String
+  def declAs: scala.Symbol
+  def pos: Option[SourcePosition]
 }
 
 case class TypeSearchResult(
   name: String,
   localName: String,
-  declaredAs: scala.Symbol,
+  declAs: scala.Symbol,
   pos: Option[SourcePosition]) extends SymbolSearchResult
 
 case class MethodSearchResult(
   name: String,
   localName: String,
-  declaredAs: scala.Symbol,
+  declAs: scala.Symbol,
   pos: Option[SourcePosition],
-  owner: String) extends SymbolSearchResult
+  ownerName: String) extends SymbolSearchResult
 
-case class ImportSuggestions(symLists: Iterable[Iterable[SymbolSearchResult]])
-case class SymbolSearchResults(syms: Iterable[SymbolSearchResult])
+// what is the point of these types?
+case class ImportSuggestions(symLists: List[List[SymbolSearchResult]])
+case class SymbolSearchResults(syms: List[SymbolSearchResult])
 
 case class SymbolDesignations(
   file: String,
@@ -103,12 +102,14 @@ case class SymbolDesignation(
   symType: SourceSymbol)
 
 case class SymbolInfo(
-  name: String,
-  localName: String,
-  declPos: Option[SourcePosition],
-  tpe: TypeInfo,
-  isCallable: Boolean,
-  ownerTypeId: Option[Int])
+    name: String,
+    localName: String,
+    declPos: Option[SourcePosition],
+    `type`: TypeInfo,
+    isCallable: Boolean,
+    ownerTypeId: Option[Int]) {
+  def tpe = `type`
+}
 
 case class Op(
   op: String,
@@ -128,8 +129,8 @@ case class CompletionSignature(
 
 case class CompletionInfo(
   name: String,
-  tpeSig: CompletionSignature,
-  tpeId: Int,
+  typeSig: CompletionSignature,
+  typeId: Int,
   isCallable: Boolean,
   relevance: Int,
   toInsert: Option[String])
@@ -139,7 +140,7 @@ case class CompletionInfoList(
   completions: List[CompletionInfo])
 
 sealed trait PatchOp {
-  val start: Int
+  def start: Int
 }
 
 case class PatchInsert(
@@ -155,7 +156,7 @@ case class PatchReplace(
   end: Int,
   text: String) extends PatchOp
 
-case class Breakpoint(pos: LineSourcePosition)
+case class Breakpoint(file: File, line: Int)
 case class BreakpointList(active: List[Breakpoint], pending: List[Breakpoint])
 
 case class OffsetRange(from: Int, to: Int)
@@ -168,11 +169,11 @@ sealed trait DebugLocation
 
 case class DebugObjectReference(objectId: Long) extends DebugLocation
 
-case class DebugStackSlot(threadId: Long, frame: Int, offset: Int) extends DebugLocation
+case class DebugStackSlot(threadId: String, frame: Int, offset: Int) extends DebugLocation
 
 case class DebugArrayElement(objectId: Long, index: Int) extends DebugLocation
 
-case class DebugObjectField(objectId: Long, name: String) extends DebugLocation
+case class DebugObjectField(objectId: Long, field: String) extends DebugLocation
 
 sealed trait DebugValue {
   def typeName: String
@@ -184,12 +185,6 @@ case class DebugNullValue(
 case class DebugPrimitiveValue(
   summary: String,
   typeName: String) extends DebugValue
-
-case class DebugClassField(
-  index: Int,
-  name: String,
-  typeName: String,
-  summary: String)
 
 case class DebugObjectInstance(
   summary: String,
@@ -209,16 +204,22 @@ case class DebugArrayInstance(
   elementTypeName: String,
   objectId: Long) extends DebugValue
 
-case class DebugStackLocal(
+case class DebugClassField(
   index: Int,
   name: String,
   typeName: String,
   summary: String)
 
+case class DebugStackLocal(
+  index: Int,
+  name: String,
+  summary: String,
+  typeName: String)
+
 case class DebugStackFrame(
   index: Int,
   locals: List[DebugStackLocal],
-  numArguments: Int,
+  numArgs: Int,
   className: String,
   methodName: String,
   pcLocation: LineSourcePosition,
@@ -226,51 +227,55 @@ case class DebugStackFrame(
 
 case class DebugBacktrace(
   frames: List[DebugStackFrame],
-  threadId: Long,
+  threadId: String,
   threadName: String)
 
 case class NamedTypeMemberInfo(
     name: String,
-    tpe: TypeInfo,
+    `type`: TypeInfo,
     pos: Option[SourcePosition],
-    declaredAs: scala.Symbol) extends EntityInfo {
-  override val members = List.empty
+    declAs: scala.Symbol) extends EntityInfo {
+  override def members = List.empty
+  def tpe = `type`
 }
 
-class PackageMemberInfoLight(val name: String)
+case class PackageMemberInfoLight(name: String)
 
 sealed trait TypeInfo extends EntityInfo {
-  val name: String
-  val id: Int
-  val declaredAs: scala.Symbol
-  val fullName: String
-  val args: Iterable[TypeInfo]
-  val members: Iterable[EntityInfo]
-  val pos: Option[SourcePosition]
-  val outerTypeId: Option[Int]
+  def name: String
+  def typeId: Int
+  def declAs: scala.Symbol
+  def fullName: String
+  def typeArgs: Iterable[TypeInfo]
+  def members: Iterable[EntityInfo]
+  def pos: Option[SourcePosition]
+  def outerTypeId: Option[Int]
+
+  final def declaredAs = declAs
+  final def args = typeArgs
 }
 
 case class BasicTypeInfo(
   name: String,
-  id: Int,
-  declaredAs: scala.Symbol,
+  typeId: Int,
+  declAs: scala.Symbol,
   fullName: String,
-  args: Iterable[TypeInfo],
+  typeArgs: Iterable[TypeInfo],
   members: Iterable[EntityInfo],
   pos: Option[SourcePosition],
   outerTypeId: Option[Int]) extends TypeInfo
 
 case class ArrowTypeInfo(
-    override val name: String,
-    override val id: Int,
+    name: String,
+    typeId: Int,
     resultType: TypeInfo,
     paramSections: Iterable[ParamSectionInfo]) extends TypeInfo {
-  val declaredAs = 'nil
-  val fullName = name
-  val args = List.empty
-  val members = List.empty
-  val pos = None
-  val outerTypeId = None
+  def declAs = 'nil
+  def fullName = name
+  def typeArgs = List.empty
+  def members = List.empty
+  def pos = None
+  def outerTypeId = None
 }
 
 case class CallCompletionInfo(
@@ -281,9 +286,20 @@ case class ParamSectionInfo(
   params: Iterable[(String, TypeInfo)],
   isImplicit: Boolean)
 
-case class InterfaceInfo(tpe: TypeInfo, viaView: Option[String])
+case class InterfaceInfo(
+    `type`: TypeInfo,
+    viaView: Option[String]) {
+  def tpe = `type`
+}
 
-case class TypeInspectInfo(tpe: TypeInfo, companionId: Option[Int], supers: Iterable[InterfaceInfo])
+case class TypeInspectInfo(
+    `type`: TypeInfo,
+    companionId: Option[Int],
+    interfaces: Iterable[InterfaceInfo],
+    infoType: scala.Symbol = 'typeInspect // redundant field in protocol
+    ) {
+  def supers = interfaces
+}
 
 trait ModelBuilders { self: RichPresentationCompiler =>
 
@@ -382,7 +398,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
 
         for (tm <- sortedMembers) {
           val info = NamedTypeMemberInfo(tm)
-          val decl = info.declaredAs
+          val decl = info.declAs
           if (decl == 'method) {
             if (info.name == "this") {
               constructors += info
@@ -658,11 +674,10 @@ object OffsetSourcePosition {
 
 case class AddUndo(summary: String, changes: List[FileEdit])
 case class Undo(id: Int, summary: String, changes: List[FileEdit])
-case class UndoResult(id: Int, touched: List[File])
+case class UndoResult(id: Int, touchedFiles: List[File])
 
 /** ERangePosition is a mirror of scala compiler internal RangePosition as a case class to */
 case class ERangePosition(file: String, offset: Int, start: Int, end: Int)
 object ERangePosition {
   def apply(rp: RangePosition): ERangePosition = new ERangePosition(rp.source.path, rp.point, rp.start, rp.end)
 }
-

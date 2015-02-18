@@ -3,7 +3,11 @@ package org.ensime.util
 import scala.collection.immutable.Map
 
 sealed trait SExp extends WireFormat {
-  override def toWireString: String = toString
+  def toWireString: String = toString
+
+  import SExp._
+  def withRpcReturn(callId: Int) = SExp(key(":return"), SExp(key(":ok"), this), callId)
+
   def toScala: Any = toString
 }
 

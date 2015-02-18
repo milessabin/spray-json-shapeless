@@ -3,7 +3,7 @@ package org.ensime.sexp
 import annotation.implicitNotFound
 
 /** Provides the S-Exp deserialization for type T. */
-@implicitNotFound(msg = "Cannot find SexpReader or SexpFormat type class for ${T}")
+@implicitNotFound(msg = "Cannot find SexpReader or SexpFormat for ${T}")
 trait SexpReader[T] {
   def read(value: Sexp): T
 }
@@ -15,7 +15,7 @@ object SexpReader {
 }
 
 /** Provides the S-Exp serialization for type T. */
-@implicitNotFound(msg = "Cannot find SexpWriter or SexpFormat type class for ${T}")
+@implicitNotFound(msg = "Cannot find SexpWriter or SexpFormat for ${T}")
 trait SexpWriter[T] {
   def write(obj: T): Sexp
 }
@@ -27,6 +27,7 @@ object SexpWriter {
 }
 
 /** Provides the S-Exp deserialization and serialization for type T. */
+@implicitNotFound(msg = "Cannot find SexpFormat for ${T}")
 trait SexpFormat[T] extends SexpReader[T] with SexpWriter[T]
 
 object SexpFormat {

@@ -43,7 +43,7 @@ class SourceResolver(config: EnsimeConfig) extends SourceListener with SLF4JLogg
     val srcJars = config.referenceSourceJars.toSet ++ {
       for {
         (_, module) <- config.modules
-        srcArchive <- module.referenceSourcesJars
+        srcArchive <- module.referenceSourceJars
       } yield srcArchive
     }
     for {

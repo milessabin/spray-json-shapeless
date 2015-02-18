@@ -23,9 +23,9 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
     project.rpcDebugSetBreakpoint(mainPath, breakLine)
 
     val startStatus = project.rpcDebugStartVM(className)
-    assert(startStatus == DebugVmSuccess)
+    assert(startStatus == DebugVmSuccess())
 
-    asyncHelper.expectAsync(30.seconds, DebugBreakEvent(1, "main", LineSourcePosition(mainFile, breakLine)))
+    asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", mainFile, breakLine))
     project.rpcDebugClearBreakpoint(mainPath, breakLine)
     try {
       f
@@ -34,7 +34,7 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
     }
   }
 
-  def getVariableValue(threadId: Int, variableName: String): DebugValue = {
+  def getVariableValue(threadId: String, variableName: String): DebugValue = {
     val vLocOpt = project.rpcDebugLocateName(threadId, variableName)
     val vLoc = vLocOpt.getOrElse(throw new IllegalStateException("unable to locate variable " + variableName +
       " on thread " + threadId))
@@ -44,7 +44,7 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
     vValue
   }
 
-  def inspectVar(threadId: Int, variableName: String)(pf: PartialFunction[DebugValue, Unit]) {
+  def inspectVar(threadId: String, variableName: String)(pf: PartialFunction[DebugValue, Unit]) {
     //    def inspectVar[T](threadId: Int, variableName: String)(pf: PartialFunction[DebugValue, T]) = {
     val value = getVariableValue(threadId, variableName)
     if (pf.isDefinedAt(value)) {
@@ -54,9 +54,9 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
   }
 
   def checkTopStackFrame(className: String, method: String, line: Int): Unit = {
-    val trace = project.rpcDebugBacktrace(1, 0, 1)
+    val trace = project.rpcDebugBacktrace("1", 0, 1)
     trace match {
-      case DebugBacktrace(List(DebugStackFrame(0, _, 1, `className`, `method`, LineSourcePosition(_, `line`), _)), 1, "main") =>
+      case DebugBacktrace(List(DebugStackFrame(0, _, 1, `className`, `method`, LineSourcePosition(_, `line`), _)), "1", "main") =>
       case _ =>
         fail("Unexpected backtrace, expected " + className + "," + method + "," + line + " got: " + trace)
     }
@@ -71,7 +71,7 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
           // break in main
           withDebugSession(steppingPath, steppingFile, "stepping.ForComprehensionListString", 9) {
             checkTopStackFrame("stepping.ForComprehensionListString$", "main", 9)
-            project.rpcDebugNext(1)
+            project.rpcDebugNext("1")
             checkTopStackFrame("stepping.ForComprehensionListString$$anonfun$main$1", "apply", 10)
 
           }
@@ -88,12 +88,12 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
           // break in main
           withDebugSession(breakpointsPath, breakpointsFile, "breakpoints.Breakpoints", 32) {
 
-            val backtraceRes = project.rpcDebugBacktrace(1, 0, 3)
+            val backtraceRes = project.rpcDebugBacktrace("1", 0, 3)
             backtraceRes match {
               case DebugBacktrace(List(
                 DebugStackFrame(0, List(), 0, "breakpoints.Breakpoints", "mainTest", LineSourcePosition(`breakpointsFile`, 32), _),
-                DebugStackFrame(1, List(DebugStackLocal(0, "args", "java.lang.String[]", "Array[]")), 1, "breakpoints.Breakpoints$", "main", LineSourcePosition(`breakpointsFile`, 41), _),
-                DebugStackFrame(2, List(), 1, "breakpoints.Breakpoints", "main", LineSourcePosition(`breakpointsFile`, _), _)), 1, "main") =>
+                DebugStackFrame(1, List(DebugStackLocal(0, "args", "Array[]", "java.lang.String[]")), 1, "breakpoints.Breakpoints$", "main", LineSourcePosition(`breakpointsFile`, 41), _),
+                DebugStackFrame(2, List(), 1, "breakpoints.Breakpoints", "main", LineSourcePosition(`breakpointsFile`, _), _)), "1", "main") =>
               case _ => fail("Unexpected result for backtrace: " + backtraceRes)
             }
 
@@ -107,23 +107,23 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
               //              session.resumetoSuspension()
               //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
 
-              project.rpcDebugContinue(1)
-              asyncHelper.expectAsync(30.seconds, DebugBreakEvent(1, "main", LineSourcePosition(breakpointsFile, 11)))
+              project.rpcDebugContinue("1")
+              asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
 
               //              session.resumetoSuspension()
               //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
 
-              project.rpcDebugContinue(1)
-              asyncHelper.expectAsync(30.seconds, DebugBreakEvent(1, "main", LineSourcePosition(breakpointsFile, 13)))
+              project.rpcDebugContinue("1")
+              asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
 
               //              bp11.setEnabled(false)
               project.rpcDebugClearBreakpoint(breakpointsPath, 11)
               //              session.waitForBreakpointsToBeDisabled(bp11)
               //
               //              session.resumetoSuspension()
-              project.rpcDebugContinue(1)
+              project.rpcDebugContinue("1")
               //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
-              asyncHelper.expectAsync(30.seconds, DebugBreakEvent(1, "main", LineSourcePosition(breakpointsFile, 13)))
+              asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
               //
               //              bp11.setEnabled(true); bp13.setEnabled(false)
               project.rpcDebugSetBreakpoint(breakpointsPath, 11)
@@ -134,16 +134,16 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
               //
               //              session.resumetoSuspension()
               //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
-              project.rpcDebugContinue(1)
-              asyncHelper.expectAsync(30.seconds, DebugBreakEvent(1, "main", LineSourcePosition(breakpointsFile, 11)))
+              project.rpcDebugContinue("1")
+              asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
               //
               //              session.resumetoSuspension()
               //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
-              project.rpcDebugContinue(1)
-              asyncHelper.expectAsync(30.seconds, DebugBreakEvent(1, "main", LineSourcePosition(breakpointsFile, 11)))
+              project.rpcDebugContinue("1")
+              asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
               //
-              project.rpcDebugContinue(1)
-              asyncHelper.expectAsync(30.seconds, DebugVMDisconnectEvent())
+              project.rpcDebugContinue("1")
+              asyncHelper.expectAsync(30.seconds, DebugVMDisconnectEvent)
               //              session.resumeToCompletion()
             } finally {
               //              bp11.delete()
@@ -165,7 +165,7 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
           project.rpcDebugSetBreakpoint(breakpointsPath, 11)
           project.rpcDebugSetBreakpoint(breakpointsPath, 13)
 
-          val breakpointsSet = Set(Breakpoint(LineSourcePosition(breakpointsFile, 11)), Breakpoint(LineSourcePosition(breakpointsFile, 13)))
+          val breakpointsSet = Set(Breakpoint(breakpointsFile, 11), Breakpoint(breakpointsFile, 13))
 
           project.rpcDebugListBreakpoints() match {
             case BreakpointList(Nil, pending) =>
@@ -212,42 +212,42 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
           withDebugSession(variablesPath, variablesFile, "debug.Variables", 30) {
 
             // boolean local
-            inspectVar(1, "a") {
+            inspectVar("1", "a") {
               case DebugPrimitiveValue("true", "boolean") =>
             }
 
             // char local
-            inspectVar(1, "b") {
+            inspectVar("1", "b") {
               case DebugPrimitiveValue("'c'", "char") =>
             }
 
             // short local
-            inspectVar(1, "c") {
+            inspectVar("1", "c") {
               case DebugPrimitiveValue("3", "short") =>
             }
 
             // int local
-            inspectVar(1, "d") {
+            inspectVar("1", "d") {
               case DebugPrimitiveValue("4", "int") =>
             }
 
             // long local
-            inspectVar(1, "e") {
+            inspectVar("1", "e") {
               case DebugPrimitiveValue("5", "long") =>
             }
 
             // float local
-            inspectVar(1, "f") {
+            inspectVar("1", "f") {
               case DebugPrimitiveValue("1.0", "float") =>
             }
 
             // double local
-            inspectVar(1, "g") {
+            inspectVar("1", "g") {
               case DebugPrimitiveValue("2.0", "double") =>
             }
 
             // String local
-            inspectVar(1, "h") {
+            inspectVar("1", "h") {
               case DebugStringInstance("\"test\"", debugFields, "java.lang.String", _) =>
                 require(debugFields.exists {
                   case DebugClassField(_, "value", "char[]", "Array['t', 'e', 's',...]") => true
@@ -256,12 +256,12 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
             }
 
             // primitive array local
-            inspectVar(1, "i") {
+            inspectVar("1", "i") {
               case DebugArrayInstance(3, "int[]", "int", _) =>
             }
 
             // type local
-            inspectVar(1, "j") {
+            inspectVar("1", "j") {
               case DebugObjectInstance("Instance of $colon$colon", debugFields,
                 "scala.collection.immutable.$colon$colon", _) =>
                 require(debugFields.exists {
@@ -271,7 +271,7 @@ class DebugTest extends FunSpec with AbstractWorkflowTest {
             }
 
             // object array local
-            inspectVar(1, "k") {
+            inspectVar("1", "k") {
               case DebugArrayInstance(3, "java.lang.Object[]", "java.lang.Object", _) =>
             }
 

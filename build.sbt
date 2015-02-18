@@ -10,7 +10,7 @@ organization := "org.ensime"
 
 name := "ensime"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.5"
 
 version := "0.9.10-SNAPSHOT"
 
@@ -74,6 +74,8 @@ internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) }
 internalDependencyClasspath in Test += { Attributed.blank(JavaTools) }
 
 scalacOptions in Compile ++= Seq(
+  // uncomment this to debug implicit resolution compilation problems
+  //"-Xlog-implicits",
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", "-deprecation",
   "-Xfatal-warnings",
   "-language:postfixOps", "-language:implicitConversions"

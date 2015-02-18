@@ -16,7 +16,7 @@ class SourcePositionSpec extends FunSpec with Matchers {
   val f = module.sourceRoots.head / "blah.scala"
   f.writeLines(Nil)
   val r = vfs.toFileObject(f)
-  val scalatest = module.referenceSourcesJars.find(_.getName.contains("scalatest_")).get.getAbsoluteFile
+  val scalatest = module.referenceSourceJars.find(_.getName.contains("scalatest_")).get.getAbsoluteFile
   val jarentry = "jar:" + scalatest + "!/org/scalatest/FunSpec.scala"
 
   private def lookup(uri: String, line: Option[Int] = None) = {

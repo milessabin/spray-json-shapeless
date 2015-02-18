@@ -1,11 +1,22 @@
 package org.ensime.util
 
-case class NoteList(full: Boolean, notes: Iterable[Note])
-
-case class Note(file: String, msg: String, severity: Int, beg: Int, end: Int, line: Int, col: Int) {
-  def friendlySeverity = severity match {
-    case 2 => 'error
-    case 1 => 'warn
-    case 0 => 'info
+sealed trait NoteSeverity
+case object NoteError extends NoteSeverity
+case object NoteWarn extends NoteSeverity
+case object NoteInfo extends NoteSeverity
+object NoteSeverity {
+  def apply(severity: Int) = severity match {
+    case 2 => NoteError
+    case 1 => NoteWarn
+    case 0 => NoteInfo
   }
 }
+
+case class Note(
+  file: String,
+  msg: String,
+  severity: NoteSeverity,
+  beg: Int,
+  end: Int,
+  line: Int,
+  col: Int)
