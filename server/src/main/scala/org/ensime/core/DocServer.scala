@@ -52,7 +52,9 @@ class DocServer(
     // On startup, do a fast scan (< 1s for 50 jars) to determine
     // the package contents of each jar, and whether it's a javadoc or
     // scaladoc.
-    for (jarFile <- allDocJars) {
+    for (
+      jarFile <- allDocJars if jarFile.exists()
+    ) {
       try {
         val jar = new JarFile(jarFile)
         jarNameToJar(jarFile.getName()) = jarFile
