@@ -1,6 +1,5 @@
 package org.ensime.config
 
-import org.ensime.util.TestUtil
 import org.scalatest.{ Matchers, FunSpec }
 
 import pimpathon.file._
@@ -8,33 +7,31 @@ import pimpathon.file._
 import java.io.{ PrintWriter, File }
 import org.ensime.util.RichFile._
 
+import org.ensime.util.UnitTestUtils._
+import scala.util.Properties
+
 class EnsimeConfigSpec extends FunSpec with Matchers {
 
-  def writeToFile(contents: String, file: File): Unit = {
-    val out = new PrintWriter(file, "UTF-8")
-    try {
-      out.print(contents)
-    } finally { out.close() }
-  }
-
   def test(dir: File, contents: String, testFn: (EnsimeConfig) => Unit): Unit = {
-    testFn(EnsimeConfig.parse(contents))
+    testFn(EnsimeConfigProtocol.parse(contents))
   }
 
   describe("ProjectConfigSpec") {
 
     it("should parse a simple config") {
-      withTempDirectory { dirRaw =>
-        val dir = dirRaw.canon
+      withCanonTempDir { dir =>
         (dir / ".ensime_cache").mkdirs()
         (dir / "abc").mkdirs()
 
-        val dirStr = TestUtil.fileToWireString(dir)
-        val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
+        val dirStr = fileToWireString(dir)
+        val abc = fileToWireString(dir / "abc")
+        val cacheStr = fileToWireString(dir / ".ensime_cache")
+        val javaHome = fileToWireString(file(Properties.javaHome))
 
         test(dir, s"""
 (:name "project"
  :scala-version "2.10.4"
+ :java-home $javaHome
  :root-dir $dirStr
  :cache-dir $cacheStr
  :reference-source-roots ()
@@ -42,8 +39,8 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
                 :depends-on-modules ()
-                :target "abc"
-                :test-target "abc"
+                :target $abc
+                :test-target $abc
                 :source-roots ()
                 :reference-source-roots ()
                 :compiler-args ()
@@ -62,22 +59,24 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
     }
 
     it("should parse a minimal config for a binary only project") {
-      withTempDirectory { dirRaw =>
-        val dir = dirRaw.canon
+      withCanonTempDir { dir =>
         (dir / ".ensime_cache").mkdirs()
         (dir / "abc").mkdirs()
 
-        val dirStr = TestUtil.fileToWireString(dir)
-        val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
+        val dirStr = fileToWireString(dir)
+        val abc = fileToWireString(dir / "abc")
+        val cacheStr = fileToWireString(dir / ".ensime_cache")
+        val javaHome = fileToWireString(file(Properties.javaHome))
 
         test(dir, s"""
 (:name "project"
  :scala-version "2.10.4"
+ :java-home $javaHome
  :root-dir $dirStr
  :cache-dir $cacheStr
  :subprojects ((:name "module1"
                 :scala-version "2.10.4"
-                :targets ("abc"))))""", { implicit config =>
+                :targets ($abc))))""", { implicit config =>
 
           assert(config.name == "project")
           assert(config.scalaVersion == "2.10.4")
@@ -91,18 +90,19 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
 
     it("should base class paths on source-mode value") {
       List(true, false) foreach { (sourceMode: Boolean) =>
-        withTempDirectory { dirRaw =>
-          val dir = dirRaw.canon
+        withCanonTempDir { dir =>
           (dir / ".ensime_cache").mkdirs()
           (dir / "abc").mkdirs()
 
-          val dirStr = TestUtil.fileToWireString(dir)
-          val cacheStr = TestUtil.fileToWireString(dir / ".ensime_cache")
-          val abcDirStr = TestUtil.fileToWireString(dir / "abc")
+          val dirStr = fileToWireString(dir)
+          val cacheStr = fileToWireString(dir / ".ensime_cache")
+          val abcDirStr = fileToWireString(dir / "abc")
+          val javaHome = fileToWireString(file(Properties.javaHome))
 
           test(dir, s"""
 (:name "project"
  :scala-version "2.10.4"
+ :java-home $javaHome
  :root-dir $dirStr
  :cache-dir $cacheStr
  :source-mode ${if (sourceMode) "t" else "nil"}

@@ -16,6 +16,8 @@ import org.slf4j.{ LoggerFactory, Logger }
 import scala.reflect.io.ZipArchive
 import scala.tools.nsc.io._
 
+import UnitTestUtils._
+
 class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
 
   import SwankTestData._
@@ -26,7 +28,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
   describe("SwankProtocol") {
     it("can encode and decode sexp to wire") {
-      TestUtil.withActorSystem { actorSystem =>
+      withActorSystem { actorSystem =>
         val msg = SExpParser.read("""(:XXXX "abc") """)
         val protocol = new SwankWireFormatCodec {
           override val log: Logger = LoggerFactory.getLogger(this.getClass)
@@ -48,7 +50,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     val nextId = new AtomicInteger(1)
     def testWithResponse(msg: String)(expectation: (EnsimeApi, MsgHandler, Int) => Unit): Unit = {
-      TestUtil.withActorSystem { actorSystem =>
+      withActorSystem { actorSystem =>
         val t = mock[EnsimeApi]
         val out = mock[MsgHandler]
 
@@ -78,7 +80,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:peek-undo - success") {
       val file3 = CanonFile("/foo/abc")
-      val file3_str = TestUtil.fileToWireString(file3)
+      val file3_str = fileToWireString(file3)
 
       testWithResponse("""(swank:peek-undo)""") { (t, m, id) =>
         (t.rpcPeekUndo _).expects().returns(Right(Undo(3, "Undoing stuff", List(TextEdit(file3, 5, 7, "aaa")))))

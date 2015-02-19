@@ -40,7 +40,7 @@ sublime*
 
 .ensime*
 TAGS
-.javahome
+.sbtopts
 
 src/main/scala/org/ensime/server/Test.scala
 

@@ -7,6 +7,7 @@ import org.apache.commons.vfs2.FileObject
 import scala.collection.mutable
 import scala.util.Try
 import scala.sys.process._
+import scala.util.control.NonFatal
 
 /** A wrapper around file, allowing iteration either on direct children or on directory tree */
 class RichFile(file: File) {
@@ -59,49 +60,18 @@ object CanonFile {
 
 object FileUtils {
 
-  // WORKAROUND: https://github.com/typelevel/scala/issues/75
-  val jdkDir: File = List(
-    // manual
-    sys.env.get("JDK_HOME"),
-    sys.env.get("JAVA_HOME"),
-    // osx
-    Try("/usr/libexec/java_home".!!.trim).toOption,
-    // fallback
-    sys.props.get("java.home").map(new File(_).getParent),
-    sys.props.get("java.home")
-  ).flatten.find(n =>
-      new File(n + "/lib/tools.jar").exists).map(new File(_)).getOrElse(
-      throw new FileNotFoundException(
-        """Could not automatically find the JDK/lib/tools.jar.
-      |You must explicitly set JDK_HOME or JAVA_HOME.""".stripMargin
-      )
-    )
-
   def isScalaSourceFile(f: File): Boolean = {
     f.exists && f.getName.endsWith(".scala")
   }
 
-  def readFile(file: File, cs: Charset): Either[IOException, String] = {
-    try {
-      val stream = new FileInputStream(file)
-      try {
-        val reader = new BufferedReader(new InputStreamReader(stream, cs))
-        val builder = new StringBuilder()
-        val buffer = new Array[Char](8192)
-        var read = reader.read(buffer, 0, buffer.length)
-        while (read > 0) {
-          builder.appendAll(buffer, 0, read)
-          read = reader.read(buffer, 0, buffer.length)
-        }
-        Right(builder.toString())
-      } catch {
-        case e: IOException => Left(e)
-      } finally {
-        stream.close()
-      }
-    } catch {
-      case e: FileNotFoundException => Left(e)
-    }
+  def readFile(f: File, cs: Charset): Either[IOException, String] = try {
+    // impl will be replaced by https://github.com/stacycurl/pimpathon/issues/201
+    val ram = new RandomAccessFile(f, "r")
+    val bytes = Array.ofDim[Byte](f.length.intValue())
+    ram.read(bytes)
+    Right(new String(bytes, cs))
+  } catch {
+    case e: IOException => Left(e)
   }
 
   def replaceFileContents(file: File, newContents: String, cs: Charset): Either[Exception, Unit] = {
@@ -161,7 +131,7 @@ object FileUtils {
           case (file, fileChanges) =>
             readFile(file, cs) match {
               case Right(contents) =>
-                val newContents = FileEdit.applyEdits(fileChanges.toList, contents)
+                val newContents = FileEditHelper.applyEdits(fileChanges.toList, contents)
                 (file, newContents)
               case Left(e) => throw e
             }

@@ -7,6 +7,8 @@ import org.ensime.core._
 import org.ensime.util._
 import pimpathon.file._
 
+import UnitTestUtils._
+
 object SwankTestData {
 
   val typeInfo = new BasicTypeInfo("type1", 7, 'type1, "FOO.type1", List(), List(), None, Some(8))
@@ -29,7 +31,7 @@ object SwankTestData {
   val symbolInfoStr = """(:name "name" :local-name "localName" :decl-pos nil :type """ + typeInfoStr + """ :is-callable nil :owner-type-id 2)"""
 
   val batchSourceFile = "/abc"
-  val batchSourceFile_str = TestUtil.stringToWireString(batchSourceFile)
+  val batchSourceFile_str = stringToWireString(batchSourceFile)
 
   val rangePos1 = new ERangePosition(batchSourceFile, 75, 70, 90)
   val rangePos1Str = """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)"""
@@ -53,15 +55,15 @@ object SwankTestData {
   val refactorFailureStr = """(:procedure-id 7 :reason "message" :status failure)"""
 
   val file1 = CanonFile("/abc/def")
-  val file1_str = TestUtil.fileToWireString(file1)
+  val file1_str = fileToWireString(file1)
   val file2 = CanonFile("/test/test/")
-  val file2_str = TestUtil.fileToWireString(file2)
+  val file2_str = fileToWireString(file2)
   val file3 = CanonFile("/foo/abc")
-  val file3_str = TestUtil.fileToWireString(file3)
+  val file3_str = fileToWireString(file3)
   val file4 = CanonFile("/foo/def")
-  val file4_str = TestUtil.fileToWireString(file4)
+  val file4_str = fileToWireString(file4)
   val file5 = CanonFile("/foo/hij")
-  val file5_str = TestUtil.fileToWireString(file5)
+  val file5_str = fileToWireString(file5)
 
   val refactorEffect = new RefactorEffect(9, 'add, List(TextEdit(file3, 5, 7, "aaa")))
   val refactorEffectStr = """(:procedure-id 9 :refactor-type add :status success :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7)))"""
@@ -98,7 +100,7 @@ object SwankTestData {
   val fooFile = new File("Foo.scala")
 
   val abd = CanonFile("abd")
-  val abd_str = TestUtil.fileToWireString(abd)
+  val abd_str = fileToWireString(abd)
 
   val methodSearchRes = MethodSearchResult("abc", "a", 'abcd, Some(LineSourcePosition(file("abd"), 10)), "ownerStr")
   val typeSearchRes = TypeSearchResult("abc", "a", 'abcd, Some(LineSourcePosition(file("abd"), 10)))

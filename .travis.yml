@@ -18,8 +18,10 @@ addons:
   # https://github.com/travis-ci/apt-package-whitelist
   - openjdk-6-source
   #- openjdk-7-source
+install:
+  - sbt ++$TRAVIS_SCALA_VERSION gen-ensime && mkdir .ensime_cache
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test && sbt ++$TRAVIS_SCALA_VERSION clean coverage test
+  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile it:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test it:test && sbt ++$TRAVIS_SCALA_VERSION clean coverage test it:test
 after_success:
   - sbt ++$TRAVIS_SCALA_VERSION coveralls
   - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)

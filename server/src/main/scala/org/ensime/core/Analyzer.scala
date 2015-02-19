@@ -186,7 +186,7 @@ class Analyzer(
                 sender ! info
               case UsesOfSymAtPointReq(file: File, point: Int) =>
                 val p = pos(file, point)
-                sender ! scalaCompiler.askUsesOfSymAtPoint(p).map(ERangePosition.apply)
+                sender ! scalaCompiler.askUsesOfSymAtPoint(p).map(ERangePositionHelper.fromRangePosition)
               case PackageMemberCompletionReq(path: String, prefix: String) =>
                 val members = scalaCompiler.askCompletePackageMember(path, prefix)
                 sender ! members

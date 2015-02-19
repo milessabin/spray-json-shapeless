@@ -6,12 +6,14 @@ import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.util._
 
+import UnitTestUtils._
+
 class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
   import SwankTestData._
 
   describe("SwankProtocolConversionsSpec") {
-    TestUtil.withActorSystem { as =>
+    withActorSystem { as =>
 
       import SwankProtocolConversions._
       it("should encode all message types correctly") {

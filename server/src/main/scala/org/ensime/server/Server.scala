@@ -33,7 +33,7 @@ object Server {
     if (!ensimeFile.exists() || !ensimeFile.isFile)
       throw new RuntimeException(s".ensime file ($ensimeFile) not found")
 
-    val config = EnsimeConfig.parse(Files.toString(ensimeFile, Charsets.UTF_8))
+    val config = EnsimeConfigProtocol.parse(Files.toString(ensimeFile, Charsets.UTF_8))
 
     initialiseServer(config)
   }
@@ -110,7 +110,6 @@ class Server(config: EnsimeConfig,
   private def writePort(cacheDir: File, port: Int): Unit = {
     val portfile = new File(cacheDir, "port")
     if (!portfile.exists()) {
-      log.info("Creating portfile " + portfile)
       log.info("creating portfile " + portfile)
       portfile.createNewFile()
     } else if (portfile.length > 0)

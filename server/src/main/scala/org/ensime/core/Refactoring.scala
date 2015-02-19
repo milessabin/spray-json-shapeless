@@ -87,7 +87,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
           case Right(prepare) =>
             refactoring.perform(selection, prepare, parameters) match {
               case Right(modifications) =>
-                val edits = modifications.map(FileEdit.fromChange).sorted
+                val edits = modifications.map(FileEditHelper.fromChange).sorted
                 Right(new RefactorEffect(procId, tpe, edits))
               case Left(error) => Left(RefactorFailure(procId, error.cause))
             }
@@ -286,7 +286,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     }
     val af = AbstractFile.getFile(file.getPath)
     val modifications = refactoring.addImport(af, qualName)
-    Right(new RefactorEffect(procId, tpe, modifications.map(FileEdit.fromChange)))
+    Right(new RefactorEffect(procId, tpe, modifications.map(FileEditHelper.fromChange)))
   }
 
   protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.createSourceFile(f.getPath)))

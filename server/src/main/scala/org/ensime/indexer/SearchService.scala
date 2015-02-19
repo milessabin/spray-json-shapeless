@@ -91,7 +91,7 @@ class SearchService(
           m.targetDirs.flatMap { d => scan(d) } ::: m.testTargetDirs.flatMap { d => scan(d) } :::
             m.compileJars.map(vfile) ::: m.testJars.map(vfile)
       }
-    }.toSet + vfile(config.javaLib)
+    }.toSet ++ config.javaLibs.map(vfile)
 
     // start indexing after all deletes have completed (not pretty)
     val indexing = removed.map { _ =>

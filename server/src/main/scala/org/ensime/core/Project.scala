@@ -92,7 +92,7 @@ class Project(
     new Indexer(config, search)), "indexer")
 
   protected val docServer: ActorRef = actorSystem.actorOf(Props(
-    new DocServer(config, actorSystem, true)), "docServer")
+    new DocServer(config, true)), "docServer")
 
   protected var debugger: Option[ActorRef] = None
 

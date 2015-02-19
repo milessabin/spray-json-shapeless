@@ -122,7 +122,7 @@ trait StandardFormats extends ThreadLocalSupport {
 trait CanonFileFormat {
   this: StandardFormats =>
 
-  protected def canonise(file: File): File =
+  def canonise(file: File): File =
     try file.getCanonicalFile
     catch {
       case e: Exception => file.getAbsoluteFile
