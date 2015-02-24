@@ -122,6 +122,11 @@ class SearchServiceSpec extends WordSpec with Matchers
     }
   }
 
+  "exact searches" should {
+    "find type aliases" in withSearchService { implicit service =>
+      assert(service.findUnique("org.scalatest.fixture.ConfigMapFixture$FixtureParam").isDefined)
+    }
+  }
 }
 
 trait SearchServiceTestUtils {

@@ -118,6 +118,10 @@ case class RawSource(
   filename: Option[String],
   line: Option[Int])
 
+case class RawType(
+  fqn: String,
+  access: Access)
+
 case class RawField(
   name: MemberName,
   clazz: ClassName,

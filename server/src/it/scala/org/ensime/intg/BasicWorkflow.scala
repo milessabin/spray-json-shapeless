@@ -71,14 +71,11 @@ class BasicWorkflow extends WordSpec with Matchers
       //-----------------------------------------------------------------------------------------------
       // public symbol search - java.io.File
 
-      val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 2)
-      javaSearchSymbol match {
-        case SymbolSearchResults(List(
-          TypeSearchResult("java.io.File", "File", 'class, Some(_)),
-          TypeSearchResult("java.awt.image.ImageObserver", "ImageObserver", 'class, Some(_)))) =>
-        case _ =>
-          fail("Public symbol search does not match expectations, got: " + javaSearchSymbol)
-      }
+      val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 30)
+      assert(javaSearchSymbol.syms.exists( sr => sr match {
+        case TypeSearchResult("java.io.File", "File", 'class, Some(_)) => true
+        case _ => false
+      }))
 
       //-----------------------------------------------------------------------------------------------
       // public symbol search - scala.util.Random
