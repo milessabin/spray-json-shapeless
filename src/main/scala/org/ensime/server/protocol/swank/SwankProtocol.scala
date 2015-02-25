@@ -1,3 +1,4 @@
+
 package org.ensime.server.protocol.swank
 
 import java.io._
@@ -22,10 +23,11 @@ class SwankProtocol(actorSystem: ActorSystem,
   implicit val rpcExecutionContext = actorSystem.dispatchers.lookup("akka.swank-dispatcher")
 
   /**
-   * Protocol Version: 0.8.11 (Must match version at ConnectionInfo.protocolVersion)
+   * Protocol Version: 0.8.12 (Must match version at ConnectionInfo.protocolVersion)
    *
    * Protocol Change Log:
-   *
+   *   0.8.12
+   *     Added swank:doc-uri-at-point
    *   0.8.11
    *     Some calls now take (:file "filename" :contents "xxxx")
    *       as a way to transmit source files:
@@ -836,6 +838,30 @@ class SwankProtocol(actorSystem: ActorSystem,
       case ("swank:import-suggestions", StringAtom(file) :: IntAtom(point) :: StringListExtractor(names) :: IntAtom(maxResults) :: Nil) =>
         val result = rpcTarget.rpcImportSuggestions(file, point, names, maxResults)
         sendRPCReturn(toWF(result), callId)
+
+      /**
+       * Doc RPC:
+       *   swank:doc-uri-at-point
+       * Summary:
+       *   Returns a java/scaladoc url for the thing at point, or nil if no
+       *   such document exists.
+       * Arguments:
+       *   String:Source filename, absolute or relative to the project.
+       *   Int:Character offset within that file.
+       * Return:
+       *   A String: A uri that can be plugged directly into a web browser.
+       * Example call:
+       *   (:swank-rpc (swank:doc-uri-at-point
+       *   "/ensime/src/main/scala/org/ensime/server/Analyzer.scala" 2300) 42)
+       * Example return:
+       *   (:return (:ok "http://localhost:8080/java/util/Vector.html") 42)
+       */
+      case ("swank:doc-uri-at-point", StringAtom(file) :: OffsetRangeExtractor(point) :: Nil) =>
+        val result = rpcTarget.rpcDocUriAtPoint(file, point)
+        result match {
+          case Some(value) => sendRPCReturn(toWF(value), callId)
+          case None => sendRPCReturn(toWF(false), callId)
+        }
 
       /**
        * Doc RPC:

@@ -14,6 +14,7 @@ import org.ensime.util.TestUtil._
 import org.scalatest.exceptions.TestFailedException
 import org.slf4j.LoggerFactory
 import org.ensime.util.RichFile._
+import scala.collection.mutable.ArrayBuffer
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.internal.util.OffsetPosition
@@ -55,7 +56,7 @@ object Helpers {
       require(tmp.isDirectory)
       implicit val actorSystem = ActorSystem.create()
 
-      val config = basicConfig(tmp, jars = false)
+      val config = basicConfig(tmp)
 
       val presCompLog = LoggerFactory.getLogger(classOf[Global])
       val settings = new Settings(presCompLog.error)
@@ -66,7 +67,7 @@ object Helpers {
       settings.bootclasspath.append(scalaLib.getAbsolutePath)
       settings.classpath.value = config.compileClasspath.mkString(File.pathSeparator)
 
-      val reporter = new StoreReporter()
+      val reporter = new ConsoleReporter(settings)
       val indexer = TestProbe()
       val parent = TestProbe()
 
@@ -84,15 +85,23 @@ object Helpers {
       }
     }
 
-  def withPosInCompiledSource(lines: String*)(action: (OffsetPosition, RichPresentationCompiler) => Any) =
+  def forPosInCompiledSource(lines: String*)(action: (OffsetPosition, String, RichPresentationCompiler) => Any) =
     Helpers.withPresCompiler { (dir, cc) =>
       val contents = lines.mkString("\n")
-      val offset = contents.indexOf("@@")
-      val file = Helpers.srcFile(dir, "def.scala", contents.replaceAll("@@", ""))
+      var offset = 0
+      var points = ArrayBuffer[(Int, String)]()
+      val re = """@([a-z0-9\.]*)@"""
+      val starts = re.r.findAllMatchIn(contents).foreach { m =>
+        points.append((m.start - offset, m.group(1)))
+        offset += (m.end - m.start)
+      }
+      val file = Helpers.srcFile(dir, "def.scala", contents.replaceAll(re, ""))
       cc.askReloadFile(file)
       cc.askLoadedTyped(file)
-      val p = new OffsetPosition(file, offset)
-      action(p, cc)
+      assert(points.length > 0)
+      for (pt <- points) {
+        action(new OffsetPosition(file, pt._1), pt._2, cc)
+      }
     }
 
   def compileScala(paths: List[String], target: String, classPath: String): Unit = {

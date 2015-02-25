@@ -200,6 +200,9 @@ class Analyzer(
               case SymbolAtPointReq(file: File, point: Int) =>
                 val p = pos(file, point)
                 sender ! scalaCompiler.askSymbolInfoAt(p)
+              case DocSignatureAtPointReq(file: File, range: OffsetRange) =>
+                val p = pos(file, range)
+                sender ! scalaCompiler.askDocSignatureAtPoint(p)
               case InspectPackageByPathReq(path: String) =>
                 sender ! scalaCompiler.askPackageByPath(path)
               case TypeAtPointReq(file: File, range: OffsetRange) =>

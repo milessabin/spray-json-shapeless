@@ -211,12 +211,20 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[TypeInfo]](getAnalyzer, TypeByNameAtPointReq(name, new File(f), range))
   }
 
-  override def rpcCallCompletion(id: Int): Option[CallCompletionInfo] = {
-    callRPC[Option[CallCompletionInfo]](getAnalyzer, CallCompletionReq(id))
+  override def rpcCallCompletion(typeId: Int): Option[CallCompletionInfo] = {
+    callRPC[Option[CallCompletionInfo]](getAnalyzer, CallCompletionReq(typeId))
   }
 
   override def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int): ImportSuggestions = {
     callRPC[ImportSuggestions](indexer, ImportSuggestionsReq(new File(f), point, names, maxResults))
+  }
+
+  override def rpcDocSignatureAtPoint(f: String, range: OffsetRange): Option[DocSigPair] = {
+    callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureAtPointReq(new File(f), range))
+  }
+
+  override def rpcDocUriAtPoint(f: String, range: OffsetRange): Option[String] = {
+    rpcDocSignatureAtPoint(f, range).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
   }
 
   override def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults = {

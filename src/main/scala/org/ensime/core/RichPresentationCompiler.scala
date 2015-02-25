@@ -18,7 +18,7 @@ import scala.reflect.internal.util.{ RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.refactoring.analysis.GlobalIndexes
 
-trait RichCompilerControl extends CompilerControl with RefactoringControl with CompletionControl {
+trait RichCompilerControl extends CompilerControl with RefactoringControl with CompletionControl with DocFinding {
   self: RichPresentationCompiler =>
 
   def charset: Charset = Charset.forName(settings.encoding.value)
@@ -41,6 +41,9 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
         logger.error("Error during askOption", e)
         None
     }
+
+  def askDocSignatureAtPoint(p: Position): Option[DocSigPair] =
+    askOption(docSignatureAt(p)).getOrElse(None)
 
   def askSymbolInfoAt(p: Position): Option[SymbolInfo] =
     askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
@@ -379,12 +382,25 @@ class RichPresentationCompiler(
         case Annotated(atp, _) =>
           List(atp.symbol)
         case st: SymTree =>
+          logger.debug("using symbol of " + tree.getClass + " tree")
           List(tree.symbol)
         case _ =>
           logger.warn("symbolAt for " + tree.getClass + ": " + tree)
           Nil
       }
     wannabes.find(_.exists)
+  }
+
+  protected def specificOwnerOfsymbolAt(pos: Position): Option[Symbol] = {
+    val tree = wrapTypedTreeAt(pos)
+    tree match {
+      case tree @ Select(qualifier, name) =>
+        qualifier match {
+          case t: ApplyImplicitView => t.args.headOption.map(_.tpe.typeSymbol)
+          case _ => Some(qualifier.tpe.typeSymbol)
+        }
+      case _ => None
+    }
   }
 
   protected def linkPos(sym: Symbol, source: SourceFile): Position = {

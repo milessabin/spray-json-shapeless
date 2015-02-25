@@ -77,6 +77,7 @@ case class EnsimeModule(
     runtimeDeps: List[File],
     testDeps: List[File],
     sourceRoots: List[File],
+    docJars: List[File],
     referenceSourceRoots: List[File]) extends SLF4JLogging {
   // only check the files, not the directories, see below
   (compileDeps ::: runtimeDeps :::

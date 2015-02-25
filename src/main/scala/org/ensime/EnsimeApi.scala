@@ -58,6 +58,8 @@ trait EnsimeApi {
   def rpcTypeByNameAtPoint(name: String, f: String, range: OffsetRange): Option[TypeInfo]
   def rpcCallCompletion(id: Int): Option[CallCompletionInfo]
   def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int): ImportSuggestions
+  def rpcDocSignatureAtPoint(f: String, point: OffsetRange): Option[DocSigPair]
+  def rpcDocUriAtPoint(f: String, point: OffsetRange): Option[String]
   def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults
   def rpcUsesOfSymAtPoint(f: String, point: Int): List[ERangePosition]
   def rpcTypeAtPoint(f: String, range: OffsetRange): Option[TypeInfo]

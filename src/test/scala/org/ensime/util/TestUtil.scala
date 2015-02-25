@@ -28,6 +28,7 @@ object TestUtil {
   val testClassDirs = parseTestProp("ensime.test.classDirs").head
   val scalaVersion = propOrEmpty("scala.version")
   val sourceJars = parseTestProp("ensime.jars.sources").toList
+  val docJars = parseTestProp("ensime.jars.docs").toList
   val javaSource = {
     val f = jdkDir / "src.zip"
     if (f.exists) Some(f)
@@ -75,6 +76,7 @@ object TestUtil {
         if (jars) compileJars else List(scalaLib), Nil,
         if (jars) testJars else Nil,
         mainSourcesDir :: testSourcesDir :: Nil,
+        List(),
         if (jars) sourceJars else Nil
       )
     }
