@@ -15,6 +15,7 @@ scalaVersion := "2.11.5"
 version := "0.9.10-SNAPSHOT"
 
 //resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers += "spray repo" at "http://repo.spray.io"
 
 libraryDependencies ++= Seq(
   "com.chuusai"                %% "shapeless"            % "2.0.0",
@@ -25,6 +26,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.slick"         %% "slick"                % "2.1.0",
   "com.jolbox"                 %  "bonecp"               % "0.8.0.RELEASE",
   "org.apache.commons"         %  "commons-vfs2"         % "2.0" intransitive(),
+  "commons-lang"               %  "commons-lang"         % "2.6",
+  "com.google.guava"           %  "guava"                % "15.0" % "test",
   // lucene 4.8+ needs Java 7: http://www.gossamer-threads.com/lists/lucene/general/225300
   "org.apache.lucene"          %  "lucene-core"          % "4.7.2",
   "org.apache.lucene"          %  "lucene-analyzers-common" % "4.7.2",
@@ -44,7 +47,8 @@ libraryDependencies ++= Seq(
   "ch.qos.logback"             %  "logback-classic"      % "1.1.2",
   "org.slf4j"                  %  "jul-to-slf4j"         % "1.7.9",
   "org.slf4j"                  %  "jcl-over-slf4j"       % "1.7.9",
-  "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2"
+  "org.scala-refactoring"      %% "org.scala-refactoring.library" % "0.6.2",
+  "io.spray"                   %%  "spray-can"            % "1.3.2"
 )
 
 // WORKAROUND: https://github.com/typelevel/scala/issues/75
@@ -128,6 +132,9 @@ javaOptions in Test ++= Seq(
   // sorry! this puts a source/javadoc dependency on running our tests
   "-Densime.jars.sources=" + (updateClassifiers in Test).value.select(
     artifact = artifactFilter(classifier = "sources")
+  ).mkString(","),
+  "-Densime.jars.docs=" + (updateClassifiers in Test).value.select(
+    artifact = artifactFilter(classifier = "javadoc")
   ).mkString(",")
 )
 

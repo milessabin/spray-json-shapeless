@@ -49,6 +49,8 @@ case class ExecUndoReq(undo: Undo) extends RPCRequest
 case class FormatFilesReq(filenames: List[String]) extends RPCRequest
 case class FormatFileReq(fileInfo: SourceFileInfo) extends RPCRequest
 case class ExpandSelectionReq(filename: String, start: Int, stop: Int) extends RPCRequest
+case class DocUriReq(sig: DocSigPair) extends RPCRequest
+case class DocSignatureAtPointReq(file: File, range: OffsetRange) extends RPCRequest
 
 case class SubscribeAsync(handler: EnsimeEvent => Unit) extends RPCRequest
 
@@ -87,7 +89,10 @@ class Project(
   }
 
   protected val indexer: ActorRef = actorSystem.actorOf(Props(
-    new Indexer(config, search, this)), "indexer")
+    new Indexer(config, search)), "indexer")
+
+  protected val docServer: ActorRef = actorSystem.actorOf(Props(
+    new DocServer(config, actorSystem, true)), "docServer")
 
   protected var debugger: Option[ActorRef] = None
 

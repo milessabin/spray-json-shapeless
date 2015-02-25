@@ -60,6 +60,15 @@ case class FileSourceFileInfo(file: File) extends SourceFileInfo
 case class ContentsSourceFileInfo(file: File, contents: String) extends SourceFileInfo
 case class ContentsInSourceFileInfo(file: File, contentsIn: File) extends SourceFileInfo
 
+// Information necessary to create a javadoc or scaladoc URI for a
+// particular type or type member.
+case class DocSig(fqn: String, member: Option[String])
+
+// We generate DocSigs for java and scala at the same time, since we
+// don't know a priori whether the docs will be in scaladoc or javadoc
+// format.
+case class DocSigPair(scala: DocSig, java: DocSig)
+
 case class PackageInfo(
     name: String,
     fullName: String,
