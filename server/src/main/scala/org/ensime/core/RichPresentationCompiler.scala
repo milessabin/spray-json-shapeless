@@ -43,7 +43,20 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     }
 
   def askDocSignatureAtPoint(p: Position): Option[DocSigPair] =
-    askOption(docSignatureAt(p)).getOrElse(None)
+    askOption {
+      symbolAt(p).orElse(typeAt(p).map(_.typeSymbol)).flatMap(docSignature(_, Some(p)))
+    }.getOrElse(None)
+
+  def askDocSignatureForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[DocSigPair] =
+    askOption {
+      symbolByName(typeFullName).flatMap { owner =>
+        memberName.flatMap { nm =>
+          val candidates = owner.tpe.members.filter(_.nameString == nm)
+          val exact = memberTypeId.flatMap(typeById).flatMap { tpe => candidates.find(_.tpe == tpe) }
+          exact.orElse(candidates.headOption)
+        }.orElse(Some(owner))
+      }.flatMap(docSignature(_, None))
+    }.getOrElse(None)
 
   def askSymbolInfoAt(p: Position): Option[SymbolInfo] =
     askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
@@ -391,7 +404,7 @@ class RichPresentationCompiler(
     wannabes.find(_.exists)
   }
 
-  protected def specificOwnerOfsymbolAt(pos: Position): Option[Symbol] = {
+  protected def specificOwnerOfSymbolAt(pos: Position): Option[Symbol] = {
     val tree = wrapTypedTreeAt(pos)
     tree match {
       case tree @ Select(qualifier, name) =>

@@ -168,12 +168,12 @@ class BasicWorkflow extends WordSpec with Matchers
       val insPacByPathResOpt = project.rpcInspectPackageByPath("org.example")
       insPacByPathResOpt match {
         case Some(PackageInfo("example", "org.example", List(
-          BasicTypeInfo("Bloo", 136, 'class, "org.example.Bloo", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Bloo$", 135, 'object, "org.example.Bloo$", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("CaseClassWithCamelCaseName", 138, 'class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("CaseClassWithCamelCaseName$", 137, 'object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Foo", 3, 'class, "org.example.Foo", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Foo$", 4, 'object, "org.example.Foo$", List(), List(), Some(EmptySourcePosition()), None)))) =>
+          BasicTypeInfo("Bloo", _: Int, 'class, "org.example.Bloo", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("Bloo$", _: Int, 'object, "org.example.Bloo$", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("CaseClassWithCamelCaseName", _: Int, 'class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("CaseClassWithCamelCaseName$", _: Int, 'object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("Foo", _: Int, 'class, "org.example.Foo", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("Foo$", _: Int, 'object, "org.example.Foo$", List(), List(), Some(EmptySourcePosition()), None)))) =>
         case _ =>
           fail("inspect package by path failed, got: " + insPacByPathResOpt)
       }

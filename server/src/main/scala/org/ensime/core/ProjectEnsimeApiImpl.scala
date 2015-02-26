@@ -223,8 +223,16 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureAtPointReq(new File(f), range))
   }
 
+  override def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[DocSigPair] = {
+    callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureForSymbolReq(typeFullName, memberName, memberTypeId))
+  }
+
   override def rpcDocUriAtPoint(f: String, range: OffsetRange): Option[String] = {
     rpcDocSignatureAtPoint(f, range).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
+  }
+
+  override def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[String] = {
+    rpcDocSignatureForSymbol(typeFullName, memberName, memberTypeId).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
   }
 
   override def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults = {

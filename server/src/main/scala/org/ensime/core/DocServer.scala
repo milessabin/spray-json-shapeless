@@ -7,6 +7,7 @@ import java.io.{ File, IOException, InputStream }
 import java.net.URLEncoder
 import java.util.jar.JarFile
 import org.ensime.config._
+import org.ensime.model.DocFqn
 import org.ensime.model.DocSig
 import org.ensime.model.DocSigPair
 import org.ensime.server.protocol.ProtocolConst
@@ -83,8 +84,7 @@ class DocServer(
           }
         }
       } catch {
-        case e: IOException =>
-          log.error(e, "Failed to open doc jar: " + jarFile.getName())
+        case e: IOException => log.error("Failed to process doc jar: " + jarFile.getName())
       }
     }
     log.debug(s"Spent ${(System.currentTimeMillis - t0)}ms scanning ${allDocJars.length} doc jars.")
@@ -93,19 +93,18 @@ class DocServer(
     }
   }
 
-  private def javaFqnToPath(fqn: String): String = {
-    if (fqn.endsWith(".package")) {
-      fqn.stripSuffix(".package").replace(".", "/") + "/package-summary.html"
+  private def javaFqnToPath(fqn: DocFqn): String = {
+    if (fqn.typeName == "package") {
+      fqn.pack.replace(".", "/") + "/package-summary.html"
     } else {
-      val (lower, upper) = fqn.split("\\.").partition { s => s.toLowerCase == s }
-      lower.mkString("/") + "/" + upper.mkString(".") + ".html"
+      fqn.pack.replace(".", "/") + "/" + fqn.typeName + ".html"
     }
   }
 
-  protected def scalaFqnToPath(fqn: String): String = {
-    if (fqn.endsWith(".package")) {
-      fqn.stripSuffix(".package").replace(".", "/") + "/package.html"
-    } else fqn.replace(".", "/") + ".html"
+  protected def scalaFqnToPath(fqn: DocFqn): String = {
+    if (fqn.typeName == "package") {
+      fqn.pack.replace(".", "/") + "/package.html"
+    } else fqn.pack.replace(".", "/") + "/" + fqn.typeName + ".html"
   }
 
   private def makeLocalUri(jar: File, sig: DocSigPair): String = {
@@ -120,7 +119,9 @@ class DocServer(
       s"http://localhost:${port.getOrElse(0)}/${jarName}/$path$anchor"
     } else {
       val scalaSig = maybeReplaceWithUsecase(jar, sig.scala)
-      val anchor = sig.scala.fqn + scalaSig.member.map { "@" + URLEncoder.encode(_, "UTF-8") }.getOrElse("")
+      val anchor = (
+        scalaSig.fqn.mkString +
+        scalaSig.member.map { "@" + URLEncoder.encode(_, "UTF-8") }.getOrElse(""))
       s"http://localhost:${port.getOrElse(0)}/${jarName}/index.html#${anchor}"
     }
   }
@@ -166,7 +167,7 @@ class DocServer(
   }
 
   private def resolveWellKnownUri(sig: DocSigPair): Option[String] = {
-    if (sig.java.fqn.startsWith("java.")) {
+    if (sig.java.fqn.javaStdLib) {
       val path = javaFqnToPath(sig.java.fqn)
       val rawVersion = forceJavaVersion.getOrElse(scala.util.Properties.javaVersion)
       val version =

@@ -51,6 +51,7 @@ case class FormatFileReq(fileInfo: SourceFileInfo) extends RPCRequest
 case class ExpandSelectionReq(filename: String, start: Int, stop: Int) extends RPCRequest
 case class DocUriReq(sig: DocSigPair) extends RPCRequest
 case class DocSignatureAtPointReq(file: File, range: OffsetRange) extends RPCRequest
+case class DocSignatureForSymbolReq(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]) extends RPCRequest
 
 case class SubscribeAsync(handler: EnsimeEvent => Unit) extends RPCRequest
 

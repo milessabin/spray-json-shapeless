@@ -175,6 +175,9 @@ object EnsimeBuild extends Build with JdkResolver {
       "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
       "commons-lang" % "commons-lang" % "2.6",
       "io.spray" %% "spray-can" % "1.3.2",
+      // Included for testing purposes, as an example of javadoc 1.8 output.
+      "com.github.dvdme" %  "ForecastIOLib" % "1.5.1"  % "test,it",
+      "com.google.guava" % "guava" % "18.0" % "test,it",
       "commons-io" % "commons-io" % "2.4" % "test,it"
     ) ++ testLibs(scalaVersion.value, "it,test")
   )
