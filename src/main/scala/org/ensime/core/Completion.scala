@@ -222,7 +222,9 @@ trait CompletionControl {
       for (m <- filtered) {
         m match {
           case m @ ScopeMember(sym, tpe, accessible, viaView) =>
-            if (!sym.isConstructor) {
+            val p = sym.pos
+            val inSymbol = p.isRange && (context.offset >= p.start && context.offset <= p.end)
+            if (!sym.isConstructor && !inSymbol) {
               buff ++= toCompletionInfo(context, sym, tpe, inherited = false, NoSymbol)
             }
           case m @ TypeMember(sym, tpe, accessible, inherited, viaView) =>

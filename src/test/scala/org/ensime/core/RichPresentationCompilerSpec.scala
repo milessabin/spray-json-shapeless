@@ -116,8 +116,17 @@ class RichPresentationCompilerSpec extends FunSpec with Matchers with SLF4JLoggi
         "object Abc { def aMethod(a: Int) = a }",
         "object B { val x = Ab@@ }") { (p, _, cc) =>
           val result = cc.completionsAt(p, 10, caseSens = false)
-          assert(result.completions.length > 1)
+          assert(result.completions.length > 0)
           assert(result.completions.head.name == "Abc")
+        }
+    }
+
+    it("won't try to complete the declaration containing point") {
+      Helpers.forPosInCompiledSource(
+        "package com.example",
+        "object Ab@@c {}") { (p, _, cc) =>
+          val result = cc.completionsAt(p, 10, caseSens = false)
+          assert(!result.completions.exists(_.name == "Abc"))
         }
     }
 
