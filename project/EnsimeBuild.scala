@@ -77,6 +77,8 @@ object EnsimeBuild extends Build with JdkResolver {
       if file.isFile & file.getName.endsWith(".jar")
     } yield file.getAbsolutePath
   }.mkString(",")
+
+  val isTravis = sys.env.get("TRAVIS_SCALA_VERSION").isDefined
   ////////////////////////////////////////////////
 
   ////////////////////////////////////////////////
@@ -137,8 +139,10 @@ object EnsimeBuild extends Build with JdkResolver {
     settings(inConfig(IntegrationTest)(Defaults.testSettings): _*).settings(
       scalariformSettingsWithIt: _*
     ).settings (
-    parallelExecution in Test := true,
-    parallelExecution in IntegrationTest := true,
+    parallelExecution in Test := !isTravis,
+    parallelExecution in IntegrationTest := !isTravis,
+    testForkedParallel in Test := !isTravis,
+    testForkedParallel in IntegrationTest := !isTravis,
     ScoverageKeys.coverageMinimum in Test := 33,
     ScoverageKeys.coverageMinimum in IntegrationTest := 70,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },

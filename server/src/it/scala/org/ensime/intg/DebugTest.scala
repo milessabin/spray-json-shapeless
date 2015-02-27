@@ -74,13 +74,13 @@ class DebugTest extends WordSpec with Matchers with Inside
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
 
           project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
 
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
 
           project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
 
           //              bp11.setEnabled(false)
           project.rpcDebugClearBreakpoint(breakpointsPath, 11)
@@ -89,7 +89,7 @@ class DebugTest extends WordSpec with Matchers with Inside
           //              session.resumetoSuspension()
           project.rpcDebugContinue("1")
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
-          asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
           //
           //              bp11.setEnabled(true); bp13.setEnabled(false)
           project.rpcDebugSetBreakpoint(breakpointsPath, 11)
@@ -101,15 +101,15 @@ class DebugTest extends WordSpec with Matchers with Inside
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
           project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
           //
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
           project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
           //
           project.rpcDebugContinue("1")
-          //asyncHelper.expectAsync(30.seconds, DebugVMDisconnectEvent)
+          //asyncHelper.expectAsync(60 seconds, DebugVMDisconnectEvent)
           //              session.resumeToCompletion()
         } finally {
           //              bp11.delete()
@@ -251,7 +251,7 @@ trait DebugTestUtils {
     val startStatus = project.rpcDebugStartVM(className)
     assert(startStatus == DebugVmSuccess())
 
-    asyncHelper.expectAsync(30.seconds, DebugBreakEvent("1", "main", resolvedFile, breakLine))
+    asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", resolvedFile, breakLine))
     project.rpcDebugClearBreakpoint(fileName, breakLine)
 
     try {
