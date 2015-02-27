@@ -131,7 +131,10 @@ object EnsimeBuild extends Build with JdkResolver {
     publishArtifact := false
   )
 
-  lazy val server = Project("server", file("server")).dependsOn(
+  // module must be called "ensime" for the client. once we upgrade
+  // all the branches, we can change this and update the client to
+  // request "server" instead.
+  lazy val server = Project("ensime", file("server")).dependsOn(
     api, swank,
     sexpress % "test->test",
     testingEmpty % "it", testingSimple % "it", testingDebug % "it"
