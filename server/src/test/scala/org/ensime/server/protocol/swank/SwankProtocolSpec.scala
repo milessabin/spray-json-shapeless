@@ -17,6 +17,7 @@ import scala.reflect.io.ZipArchive
 import scala.tools.nsc.io._
 
 import UnitTestUtils._
+import scala.util.control.NonFatal
 
 class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
 
@@ -48,34 +49,40 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       def send(s: String)
     }
 
+    // allows us to backtrack from a TimedOutException and show failed expectations
+    // https://github.com/paulbutcher/ScalaMock/issues/98
+    autoVerify = false
+
     val nextId = new AtomicInteger(1)
     def testWithResponse(msg: String)(expectation: (EnsimeApi, MsgHandler, Int) => Unit): Unit = {
-      withActorSystem { actorSystem =>
-        val t = mock[EnsimeApi]
-        val out = mock[MsgHandler]
+      var timedOut = false
+      withExpectations {
+        withActorSystem { actorSystem =>
+          val t = mock[EnsimeApi]
+          val out = mock[MsgHandler]
 
-        val latch = new CountDownLatch(1)
+          val latch = new CountDownLatch(1)
 
-        val prot = new SwankProtocol(actorSystem, null, t) {
-          override def sendMessage(o: WireFormat): Unit = {
-            out.send(o.toWireString)
-            latch.countDown()
+          val prot = new SwankProtocol(actorSystem, null, t) {
+            override def sendMessage(o: WireFormat): Unit = {
+              out.send(o.toWireString)
+              latch.countDown()
+            }
           }
-        }
 
-        val rpcId = nextId.getAndIncrement
-        expectation(t, out, rpcId)
+          val rpcId = nextId.getAndIncrement
+          expectation(t, out, rpcId)
 
-        val sexp = SExpParser.read("(:swank-rpc " + msg + " " + rpcId + ")")
-        assert(sexp != NilAtom)
+          val sexp = SExpParser.read("(:swank-rpc " + msg + " " + rpcId + ")")
+          assert(sexp != NilAtom)
 
-        prot.handleIncomingMessage(sexp)
+          prot.handleIncomingMessage(sexp)
 
-        if (!latch.await(1000, TimeUnit.MILLISECONDS)) {
-          // FIXME: can we get more info the failure here?
-          fail("Waited too long for expectation")
+          if (!latch.await(1000, TimeUnit.MILLISECONDS))
+            timedOut = true
         }
       }
+      if (timedOut) fail("timed out waiting for responses")
     }
 
     it("should understand swank:peek-undo - success") {
