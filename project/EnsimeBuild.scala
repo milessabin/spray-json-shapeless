@@ -126,10 +126,7 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings)
                           //.settings (publishArtifact := false)
 
-  // module must be called "ensime" for the client. once we upgrade
-  // all the branches, we can change this and update the client to
-  // request "server" instead.
-  lazy val server = Project("ensime", file("server")).dependsOn(
+  lazy val server = Project("server", file("server")).dependsOn(
     api, swank,
     sexpress % "test->test",
     // must depend on these in "test" as well or they are added to the main dep list by sbt!
@@ -172,12 +169,9 @@ object EnsimeBuild extends Build with JdkResolver {
     ) ++ testLibs(scalaVersion.value, "it,test")
   )
 
-  // would be nice not to have to define the 'root'
-  lazy val root = Project(id = "parent", base = file("."), settings = commonSettings) aggregate (
+  lazy val root = Project(id = "ensime", base = file("."), settings = commonSettings) aggregate (
     api, sexpress, swank, server
-  ) dependsOn (server) settings (
-    publishArtifact := false
-  )
+  ) dependsOn (server)
 }
 
 trait JdkResolver {
