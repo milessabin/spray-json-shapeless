@@ -18,7 +18,9 @@ object EnsimeBuild extends Build with JdkResolver {
     scalaVersion := "2.11.5",
     version := "0.9.10-SNAPSHOT"
   )
-  val isTravis = sys.env.get("SONATYPE_USERNAME").isDefined
+  val isTravis = sys.env.get("TRAVIS").isDefined
+  val isEmacs = sys.env.get("TERM") == Some("dumb")
+
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
       // uncomment this to debug implicit resolution compilation problems
@@ -38,6 +40,7 @@ object EnsimeBuild extends Build with JdkResolver {
     testForkedParallel in Test := !isTravis,
     javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC"),
     javaOptions in Test += "-Dlogback.configurationFile=../logback-test.xml",
+    testOptions in Test ++= noColorIfEmacs,
     // 0.13.7 introduced awesomely fast resolution caching which is
     // broken for integration testing:
     // https://github.com/sbt/sbt/issues/1868
@@ -77,6 +80,9 @@ object EnsimeBuild extends Build with JdkResolver {
       if file.isFile & file.getName.endsWith(".jar")
     } yield file.getAbsolutePath
   }.mkString(",")
+
+  // WORKAROUND: https://github.com/scalatest/scalatest/issues/511
+  def noColorIfEmacs = if (isEmacs) Seq(Tests.Argument("-oW")) else Nil
   ////////////////////////////////////////////////
 
   ////////////////////////////////////////////////
@@ -135,6 +141,7 @@ object EnsimeBuild extends Build with JdkResolver {
     ).settings (
     parallelExecution in IntegrationTest := !isTravis,
     testForkedParallel in IntegrationTest := !isTravis,
+    testOptions in IntegrationTest ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in IntegrationTest += { Attributed.blank(JavaTools) },
