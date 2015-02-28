@@ -6,7 +6,7 @@ branches:
 language: scala
 jdk:
   - openjdk6
-  #- openjdk6
+  #- openjdk7
 scala:
   - 2.11.5
 sudo: false
@@ -18,15 +18,26 @@ addons:
   # https://github.com/travis-ci/apt-package-whitelist
   - openjdk-6-source
   #- openjdk-7-source
+  # Travis doen't allow ppa's on its docker infrastructure but by
+  # installing emacs23-gtk we get most of the dependencies we need to
+  # run our own build of emacs-24.4.
+  - emacs23-gtk
 install:
+  - curl -L https://www.dropbox.com/s/y3bhjrchxrm9reh/emacs-24.4-bin.tar.bz2 | tar xjf - -C $HOME
+  - git clone --depth 1 https://github.com/fommil/ensime-emacs.git $HOME/ensime-emacs
   - sbt ++$TRAVIS_SCALA_VERSION gen-ensime && mkdir .ensime_cache
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile it:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test it:test && sbt ++$TRAVIS_SCALA_VERSION clean coverage test it:test
+  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile it:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test it:test
+  - sbt ++$TRAVIS_SCALA_VERSION publishLocal && cd $HOME/ensime-emacs && test/run_emacs_tests.sh 2>&1 | tee stdout | grep "Starting test"
+after_failure:
+  - cat $HOME/ensime-emacs/stdout
 after_success:
-  - sbt ++$TRAVIS_SCALA_VERSION coveralls
-  - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
+  - sbt ++$TRAVIS_SCALA_VERSION $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
+  - sbt ++$TRAVIS_SCALA_VERSION clean coverage test it:test coveralls
 env:
   global:
+    - ENSIME_TEST_SERVER_VERSION=$TRAVIS_SCALA_VERSION
+    - EMACS=$HOME/emacs-24.4-bin/bin/emacs-24.4
     # travis encrypt -r ensime/ensime-server SONATYPE_USERNAME=<USERNAME>
     # travis encrypt -r ensime/ensime-server SONATYPE_PASSWORD=<PASSWORD>
     - secure: "IqDHZwYDAdif+BAJ0u57Ci7UEp4k0y8D+uDh51g6FqAIybD1HZ6TINojwj79675mjFaA9szXARkGAEuPfQ57tpC8Bevaj0zKX64TBE3HEdzuQL3i7dxi13DFEmCsUFeS7zqSMsqFcz5a6yASRujttDt2x0GCakOp82TvgI4NANM="
