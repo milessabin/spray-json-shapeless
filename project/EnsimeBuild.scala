@@ -138,9 +138,11 @@ object EnsimeBuild extends Build with JdkResolver {
   ).configs(IntegrationTest).settings(commonSettings: _*).
     settings(inConfig(IntegrationTest)(Defaults.testSettings): _*).settings(
       scalariformSettingsWithIt: _*
-    ).settings (
+  ).settings (
     parallelExecution in IntegrationTest := !isTravis,
-    testForkedParallel in IntegrationTest := !isTravis,
+    // parallel forks are causing weird failures
+    // https://github.com/sbt/sbt/issues/1890
+    testForkedParallel in IntegrationTest := false,
     testOptions in IntegrationTest ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
