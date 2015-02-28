@@ -4,14 +4,17 @@ import sbt._
 import Keys._
 import Package.ManifestAttributes
 import com.typesafe.sbt.SbtScalariform._
-import scoverage.ScoverageSbtPlugin._
-import scoverage.ScoverageSbtPlugin.ScoverageKeys
 //import sbtrelease.ReleasePlugin._
 //import ReleaseKeys._
 //import com.typesafe.sbt.pgp.PgpKeys
 //import PgpKeys._
 
 object EnsimeBuild extends Build with JdkResolver {
+  /*
+   WARNING: When running `server/it:test` be aware that the tests may
+   fail, but sbt will report success. This is a bug in sbt
+   https://github.com/sbt/sbt/issues/1890
+   */
 
   ////////////////////////////////////////////////
   // common
@@ -20,6 +23,12 @@ object EnsimeBuild extends Build with JdkResolver {
     scalaVersion := "2.11.5",
     version := "0.9.10-SNAPSHOT"
   )
+  val isTravis = sys.env.get("TRAVIS") == Some("true")
+  val isEmacs = sys.env.get("TERM") == Some("dumb")
+
+  if (isTravis) println("SBT detected Travis")
+  if (isEmacs) println("SBT detected Emacs")
+
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
       // uncomment this to debug implicit resolution compilation problems
@@ -35,15 +44,17 @@ object EnsimeBuild extends Build with JdkResolver {
     javacOptions in doc ++= Seq("-source", "1.6"),
     maxErrors := 1,
     fork := true,
+    parallelExecution in Test := !isTravis,
+    testForkedParallel in Test := !isTravis,
     javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC"),
     javaOptions in Test += "-Dlogback.configurationFile=../logback-test.xml",
+    testOptions in Test ++= noColorIfEmacs,
     // 0.13.7 introduced awesomely fast resolution caching which is
     // broken for integration testing:
     // https://github.com/sbt/sbt/issues/1868
     // and without integration testing, prefer 0.13.7-RC3
     // https://github.com/sbt/sbt/issues/1776
     //updateOptions := updateOptions.value.withCachedResolution(true),
-    ScoverageKeys.coverageFailOnMinimum := true,
     licenses := Seq("BSD 3 Clause" -> url("http://opensource.org/licenses/BSD-3-Clause")),
     homepage := Some(url("http://github.com/ensime/ensime-server")),
     publishTo <<= version { v: String =>
@@ -78,13 +89,13 @@ object EnsimeBuild extends Build with JdkResolver {
     } yield file.getAbsolutePath
   }.mkString(",")
 
-  val isTravis = sys.env.get("TRAVIS_SCALA_VERSION").isDefined
+  // WORKAROUND: https://github.com/scalatest/scalatest/issues/511
+  def noColorIfEmacs = if (isEmacs) Seq(Tests.Argument("-oW")) else Nil
   ////////////////////////////////////////////////
 
   ////////////////////////////////////////////////
   // modules
   lazy val sexpress = Project("sexpress", file("sexpress"), settings = commonSettings) settings (
-    ScoverageKeys.coverageMinimum := 89,
     licenses := Seq("LGPL 3.0" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt")),
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -135,13 +146,12 @@ object EnsimeBuild extends Build with JdkResolver {
   ).configs(IntegrationTest).settings(commonSettings: _*).
     settings(inConfig(IntegrationTest)(Defaults.testSettings): _*).settings(
       scalariformSettingsWithIt: _*
-    ).settings (
-    parallelExecution in Test := !isTravis,
+  ).settings (
     parallelExecution in IntegrationTest := !isTravis,
-    testForkedParallel in Test := !isTravis,
-    testForkedParallel in IntegrationTest := !isTravis,
-    ScoverageKeys.coverageMinimum in Test := 33,
-    ScoverageKeys.coverageMinimum in IntegrationTest := 70,
+    // parallel forks are causing weird failures
+    // https://github.com/sbt/sbt/issues/1890
+    testForkedParallel in IntegrationTest := false,
+    testOptions in IntegrationTest ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in IntegrationTest += { Attributed.blank(JavaTools) },
