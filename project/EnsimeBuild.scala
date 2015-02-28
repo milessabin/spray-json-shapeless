@@ -10,6 +10,11 @@ import com.typesafe.sbt.SbtScalariform._
 //import PgpKeys._
 
 object EnsimeBuild extends Build with JdkResolver {
+  /*
+   WARNING: When running `server/it:test` be aware that the tests may
+   fail, but sbt will report success. This is a bug in sbt
+   https://github.com/sbt/sbt/issues/1890
+   */
 
   ////////////////////////////////////////////////
   // common
