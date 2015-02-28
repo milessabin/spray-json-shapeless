@@ -23,8 +23,11 @@ object EnsimeBuild extends Build with JdkResolver {
     scalaVersion := "2.11.5",
     version := "0.9.10-SNAPSHOT"
   )
-  val isTravis = sys.env.get("TRAVIS").isDefined
+  val isTravis = sys.env.get("TRAVIS") == Some("true")
   val isEmacs = sys.env.get("TERM") == Some("dumb")
+
+  if (isTravis) println("SBT detected Travis")
+  if (isEmacs) println("SBT detected Emacs")
 
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
