@@ -13,14 +13,14 @@ import scoverage.ScoverageSbtPlugin.ScoverageKeys
 
 object EnsimeBuild extends Build with JdkResolver {
 
-  val scalaV = "2.11.5"
-
   ////////////////////////////////////////////////
   // common
-  lazy val commonSettings = scalariformSettings ++ Seq(
+  lazy val basicSettings = Seq(
     organization := "org.ensime",
-    scalaVersion := scalaV,
-    version := "0.9.10-SNAPSHOT",
+    scalaVersion := "2.11.5",
+    version := "0.9.10-SNAPSHOT"
+  )
+  lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
       // uncomment this to debug implicit resolution compilation problems
       //"-Xlog-implicits",
@@ -60,14 +60,14 @@ object EnsimeBuild extends Build with JdkResolver {
 
   ////////////////////////////////////////////////
   // utils
-  def testLibs(config: String = "test") = Seq(
+  def testLibs(scalaV: String, config: String = "test") = Seq(
     "org.scalatest" %% "scalatest" % "2.2.4" % config,
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % config,
     "org.scalacheck" %% "scalacheck" % "1.12.1" % config,
     "com.typesafe.akka" %% "akka-testkit" % "2.3.9" % config,
     // workaround old deps coming from scalatest
-    "org.scala-lang" % "scala-reflect" % scalaV,
-    "org.scala-lang.modules" %% "scala-xml" % "1.0.3"
+    "org.scala-lang" % "scala-reflect" % scalaV % config,
+    "org.scala-lang.modules" %% "scala-xml" % "1.0.3" % config
   )
 
   def jars(cp: Classpath): String = {
@@ -94,14 +94,14 @@ object EnsimeBuild extends Build with JdkResolver {
       // minimising deps and move to server only
       "com.github.stacycurl" %% "pimpathon-core" % "1.2.0",
       "com.google.guava" % "guava" % "18.0" % "test"
-    ) ++ testLibs()
+    ) ++ testLibs(scalaVersion.value)
   )
 
   lazy val api = Project("api", file("api"), settings = commonSettings) settings (
     libraryDependencies ++= Seq(
       "com.github.stacycurl" %% "pimpathon-core" % "1.2.0",
       "com.danieltrinh" %% "scalariform" % "0.1.5"
-    ) ++ testLibs()
+    ) ++ testLibs(scalaVersion.value)
   )
 
   lazy val swank = Project("swank", file("swank"), settings = commonSettings) dependsOn (
@@ -112,24 +112,19 @@ object EnsimeBuild extends Build with JdkResolver {
       "ch.qos.logback" % "logback-classic" % "1.1.2",
       "org.slf4j" % "jul-to-slf4j" % "1.7.10",
       "org.slf4j" % "jcl-over-slf4j" % "1.7.10"
-    ) ++ testLibs()
+    ) ++ testLibs(scalaVersion.value)
   )
 
-  lazy val testingEmpty = Project("testingEmpty", file("testing/empty")) settings (
-    scalaVersion := scalaV,
-    publishArtifact := false
+  lazy val testingEmpty = Project("testingEmpty", file("testing/empty"), settings = basicSettings)
+                          //.settings (publishArtifact := false)
+
+  lazy val testingSimple = Project("testingSimple", file("testing/simple"), settings = basicSettings) settings (
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive()
+    //publishArtifact := false
   )
 
-  lazy val testingSimple = Project("testingSimple", file("testing/simple")) settings (
-    scalaVersion := scalaV,
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive(),
-    publishArtifact := false
-  )
-
-  lazy val testingDebug = Project("testingDebug", file("testing/debug")) settings (
-    scalaVersion := scalaV,
-    publishArtifact := false
-  )
+  lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings)
+                          //.settings (publishArtifact := false)
 
   // module must be called "ensime" for the client. once we upgrade
   // all the branches, we can change this and update the client to
@@ -137,7 +132,9 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val server = Project("ensime", file("server")).dependsOn(
     api, swank,
     sexpress % "test->test",
-    testingEmpty % "it", testingSimple % "it", testingDebug % "it"
+    // must depend on these in "test" as well or they are added to the main dep list by sbt!
+    // https://github.com/sbt/sbt/issues/1888
+    testingEmpty % "test,it", testingSimple % "test,it", testingDebug % "test,it"
   ).configs(IntegrationTest).settings(commonSettings: _*).
     settings(inConfig(IntegrationTest)(Defaults.testSettings): _*).settings(
       scalariformSettingsWithIt: _*
@@ -171,9 +168,8 @@ object EnsimeBuild extends Build with JdkResolver {
       "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
       "commons-lang" % "commons-lang" % "2.6",
       "io.spray" %% "spray-can" % "1.3.2",
-      //"com.google.guava" % "guava" % "18.0" % "test,it",
       "commons-io" % "commons-io" % "2.4" % "test,it"
-    ) ++ testLibs("it,test")
+    ) ++ testLibs(scalaVersion.value, "it,test")
   )
 
   // would be nice not to have to define the 'root'
