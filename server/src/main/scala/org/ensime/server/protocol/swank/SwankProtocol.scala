@@ -23,9 +23,11 @@ class SwankProtocol(actorSystem: ActorSystem,
   implicit val rpcExecutionContext = actorSystem.dispatchers.lookup("akka.swank-dispatcher")
 
   /**
-   * Protocol Version: 0.8.12 (Must match version at ConnectionInfo.protocolVersion)
+   * Protocol Version: 0.8.13 (Must match version at ConnectionInfo.protocolVersion)
    *
    * Protocol Change Log:
+   *   0.8.13
+   *     Added swank:doc-uri-for-symbol
    *   0.8.12
    *     Added swank:doc-uri-at-point
    *   0.8.11
@@ -859,6 +861,29 @@ class SwankProtocol(actorSystem: ActorSystem,
       case ("swank:doc-uri-at-point", StringAtom(file) :: OffsetRangeExtractor(point) :: Nil) =>
         val result = rpcTarget.rpcDocUriAtPoint(file, point)
         result match {
+          case Some(value) => sendRPCReturn(toWF(value), callId)
+          case None => sendRPCReturn(toWF(false), callId)
+        }
+
+      /**
+       * Doc RPC:
+       *   swank:doc-uri-for-symbol
+       * Summary:
+       *   Returns a java/scaladoc url for the given, fully qualified symbol.
+       * Arguments:
+       *   String:The fully qualified name of a type.
+       *   String:If non-nil, The name of a member of the above type.
+       *   Int:If non-nil, the type id of a member of the above type.
+       * Return:
+       *   A String: A uri that can be plugged directly into a web browser.
+       * Example call:
+       *   (:swank-rpc (swank:doc-uri-for-symbol "java.util.Vector" 232) 42)
+       * Example return:
+       *   (:return (:ok "http://localhost:8080/java/util/Vector.html") 42)
+       */
+      case ("swank:doc-uri-for-symbol", StringAtom(typeFullName) ::
+        OptionalStringExtractor(memberName) :: OptionalIntExtractor(memberTypeId) :: Nil) =>
+        rpcTarget.rpcDocUriForSymbol(typeFullName, memberName, memberTypeId) match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
           case None => sendRPCReturn(toWF(false), callId)
         }
@@ -1748,6 +1773,22 @@ class SwankProtocol(actorSystem: ActorSystem,
 }
 
 object SwankProtocol {
+
+  object OptionalIntExtractor {
+    def unapply(sexp: SExp): Option[Option[Int]] = sexp match {
+      case IntAtom(a) => Some(Some(a))
+      case NilAtom => Some(None)
+      case _ => None
+    }
+  }
+
+  object OptionalStringExtractor {
+    def unapply(sexp: SExp): Option[Option[String]] = sexp match {
+      case StringAtom(a) => Some(Some(a))
+      case NilAtom => Some(None)
+      case _ => None
+    }
+  }
 
   object OffsetRangeExtractor {
     def unapply(sexp: SExp): Option[OffsetRange] = sexp match {

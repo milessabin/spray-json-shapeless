@@ -305,7 +305,13 @@ case class ERangePosition(file: String, offset: Int, start: Int, end: Int)
  * Information necessary to create a javadoc or scaladoc URI for a
  * particular type or type member.
  */
-case class DocSig(fqn: String, member: Option[String])
+case class DocFqn(pack: String, typeName: String) {
+  def mkString: String = if (pack.isEmpty) typeName else pack + "." + typeName
+  def inPackage(prefix: String): Boolean = pack == prefix || pack.startsWith(prefix + ".")
+  def javaStdLib: Boolean = inPackage("java") || inPackage("javax")
+  def scalaStdLib: Boolean = inPackage("scala")
+}
+case class DocSig(fqn: DocFqn, member: Option[String])
 
 /**
  * We generate DocSigs for java and scala at the same time, since we

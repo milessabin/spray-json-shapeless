@@ -113,7 +113,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand connection-info request") {
       testWithResponse("(swank:connection-info)") { (t, m, id) =>
         (t.rpcConnectionInfo _).expects().returns(new ConnectionInfo())
-        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME") :version "0.8.12")) $id)""")
+        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME") :version "0.8.13")) $id)""")
       }
     }
 

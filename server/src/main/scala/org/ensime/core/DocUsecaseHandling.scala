@@ -22,7 +22,7 @@ trait DocUsecaseHandling { self: DocServer =>
 
   val PrefixRegexp = """^([A-Za-z:_\+-]+).*""".r
   protected def maybeReplaceWithUsecase(jar: File, sig: DocSig): DocSig = {
-    if (sig.fqn.startsWith("scala.")) {
+    if (sig.fqn.scalaStdLib) {
       sig.member match {
         case Some(PrefixRegexp(prefix)) if UseCasePrefixes.contains(prefix) => {
           try {
