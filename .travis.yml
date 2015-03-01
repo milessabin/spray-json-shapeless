@@ -32,7 +32,7 @@ script:
 after_failure:
   - cat $HOME/ensime-emacs/stdout
 after_success:
-  - sbt ++$TRAVIS_SCALA_VERSION $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
+  - cd $HOME/ensime-server && sbt ++$TRAVIS_SCALA_VERSION $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
   - sbt ++$TRAVIS_SCALA_VERSION clean coverage test it:test coveralls
 env:
   global:
