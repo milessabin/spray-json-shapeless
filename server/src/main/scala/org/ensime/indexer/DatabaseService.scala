@@ -1,12 +1,14 @@
 package org.ensime.indexer
 
-import akka.event.slf4j.SLF4JLogging
 import java.io.File
 import java.sql.Timestamp
-import org.apache.commons.vfs2.FileObject
-import scala.slick.driver.H2Driver.simple._
+
+import akka.event.slf4j.SLF4JLogging
 import com.jolbox.bonecp.BoneCPDataSource
-import DatabaseService._
+import org.apache.commons.vfs2.FileObject
+import org.ensime.indexer.DatabaseService._
+
+import scala.slick.driver.H2Driver.simple._
 
 class DatabaseService(dir: File) extends SLF4JLogging {
   lazy val db = {
@@ -83,7 +85,7 @@ class DatabaseService(dir: File) extends SLF4JLogging {
     findCompiled(fqn).firstOption
   }
 
-  import IndexService._
+  import org.ensime.indexer.IndexService._
   def find(fqns: List[FqnIndex]): List[FqnSymbol] = {
     db.withSession { implicit s =>
       val restrict = fqns.map(_.fqn)

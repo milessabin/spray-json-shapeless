@@ -4,7 +4,6 @@ import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.ensime.config._
 import pimpathon.list._
-import pimpathon.map._
 import pimpathon.multiMap._
 
 // mutable: lookup of user's source files are atomically updated

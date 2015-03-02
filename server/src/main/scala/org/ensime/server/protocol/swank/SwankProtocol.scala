@@ -94,7 +94,7 @@ class SwankProtocol(actorSystem: ActorSystem,
 
   val log = LoggerFactory.getLogger(this.getClass)
 
-  import SwankProtocolConversions._
+  import org.ensime.server.protocol.swank.SwankProtocolConversions._
 
   def handleIncomingMessage(msg: Any): Unit = synchronized {
     msg match {
@@ -673,10 +673,10 @@ class SwankProtocol(actorSystem: ActorSystem,
        */
       case ("swank:typecheck-file", StringAtom(file) :: StringAtom(contents) :: Nil) =>
         rpcTarget.rpcTypecheckFiles(List(ContentsSourceFileInfo(new File(file), contents)), async = false)
-        sendRPCReturn(toWF(true), callId)
+        sendRPCReturn(toWF(value = true), callId)
       case ("swank:typecheck-file", SourceFileInfoExtractor(fileInfo) :: Nil) =>
         rpcTarget.rpcTypecheckFiles(List(fileInfo), async = false)
-        sendRPCReturn(toWF(true), callId)
+        sendRPCReturn(toWF(value = true), callId)
 
       /**
        * Doc RPC:
@@ -862,7 +862,7 @@ class SwankProtocol(actorSystem: ActorSystem,
         val result = rpcTarget.rpcDocUriAtPoint(file, point)
         result match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
-          case None => sendRPCReturn(toWF(false), callId)
+          case None => sendRPCReturn(toWF(value = false), callId)
         }
 
       /**
@@ -885,7 +885,7 @@ class SwankProtocol(actorSystem: ActorSystem,
         OptionalStringExtractor(memberName) :: OptionalIntExtractor(memberTypeId) :: Nil) =>
         rpcTarget.rpcDocUriForSymbol(typeFullName, memberName, memberTypeId) match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
-          case None => sendRPCReturn(toWF(false), callId)
+          case None => sendRPCReturn(toWF(value = false), callId)
         }
 
       /**
@@ -1610,7 +1610,7 @@ class SwankProtocol(actorSystem: ActorSystem,
           case Some(loc) =>
             sendRPCReturn(toWF(loc), callId)
           case None =>
-            sendRPCReturn(toWF(false), callId)
+            sendRPCReturn(toWF(value = false), callId)
         }
 
       /**
@@ -1633,7 +1633,7 @@ class SwankProtocol(actorSystem: ActorSystem,
         val result = rpcTarget.rpcDebugValue(loc)
         result match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
-          case None => sendRPCReturn(toWF(false), callId)
+          case None => sendRPCReturn(toWF(value = false), callId)
         }
 
       /**
@@ -1657,7 +1657,7 @@ class SwankProtocol(actorSystem: ActorSystem,
         val result = rpcTarget.rpcDebugToString(threadId, loc)
         result match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
-          case None => sendRPCReturn(toWF(false), callId)
+          case None => sendRPCReturn(toWF(value = false), callId)
         }
       /**
        * Doc RPC:
@@ -1867,7 +1867,7 @@ object SwankProtocol {
   object SourceFileInfoExtractor {
     def unapply(sexp: SExp): Option[SourceFileInfo] = sexp match {
       case StringAtom(file) => Some(FileSourceFileInfo(new File(file)))
-      case sexp: SExpList => {
+      case sexp: SExpList =>
         val m = sexp.toKeywordMap
         val file = m.get(key(":file"))
         val contents = m.get(key(":contents"))
@@ -1881,7 +1881,6 @@ object SwankProtocol {
             Some(ContentsInSourceFileInfo(new File(file), new File(contentsIn)))
           case _ => None
         }
-      }
       case _ => None
     }
   }

@@ -78,7 +78,7 @@ trait Helpers { self: Global =>
   def resultTypeName(tpe: Type): String = {
     typeShortName(tpe) + (if (tpe.typeArgs.size > 0) {
       "[" +
-        tpe.typeArgs.map(typeShortNameWithArgs(_)).mkString(", ") +
+        tpe.typeArgs.map(typeShortNameWithArgs).mkString(", ") +
         "]"
     } else { "" })
   }
@@ -213,6 +213,11 @@ trait Helpers { self: Global =>
     } else None
   }
 
+  /**
+   * Return a Symbol representing a package if it exists given the package path (com.foo.bar)
+   * @param path The full package path (com.foo.bar)
+   * @return Some(packageSymbol) if `path` represents a valid package or None
+   */
   def packageSymFromPath(path: String): Option[Symbol] = {
     val candidates = symsAtQualifiedPath(path, RootPackage)
     candidates.find { s => s.hasPackageFlag }
@@ -226,12 +231,13 @@ trait Helpers { self: Global =>
         s.nameString == name && s != EmptyPackage && s != RootPackage
       }
     }
-    if (path == "") List(rootSym)
+    if (path == "")
+      List(rootSym)
     else {
-      val pathSegs = path.split("\\.")
-      pathSegs.foldLeft(List(rootSym)) { (baseSyms, seg) =>
+      val pathSegments = path.split("\\.")
+      pathSegments.foldLeft(List(rootSym)) { (baseSyms, segment) =>
         baseSyms.flatMap { s =>
-          memberSymsNamed(s, seg)
+          memberSymsNamed(s, segment)
         }
       }
     }

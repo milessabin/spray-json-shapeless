@@ -1,13 +1,11 @@
 package org.ensime.config
 
-import org.scalatest.{ Matchers, FunSpec }
-
-import pimpathon.file._
-
-import java.io.{ PrintWriter, File }
-import org.ensime.util.RichFile._
+import java.io.File
 
 import org.ensime.util.UnitTestUtils._
+import org.scalatest.{ FunSpec, Matchers }
+import pimpathon.file._
+
 import scala.util.Properties
 
 class EnsimeConfigSpec extends FunSpec with Matchers {

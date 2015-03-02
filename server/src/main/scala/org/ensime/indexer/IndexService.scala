@@ -1,21 +1,18 @@
 package org.ensime.indexer
 
+import java.io.{ File, FileNotFoundException }
+
 import akka.event.slf4j.SLF4JLogging
-import java.io.File
-import java.io.FileNotFoundException
 import org.apache.commons.vfs2.FileObject
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.TextField
 import org.apache.lucene.document.Field.Store
+import org.apache.lucene.document.{ Document, TextField }
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.DisjunctionMaxQuery
-import org.apache.lucene.search.PrefixQuery
-import org.apache.lucene.search.TermQuery
-import DatabaseService._
 import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search.{ BooleanQuery, DisjunctionMaxQuery, PrefixQuery, TermQuery }
+import org.ensime.indexer.DatabaseService._
 import org.ensime.indexer.lucene._
 import pimpathon.list._
+
 import scala.collection.JavaConversions._
 
 object IndexService extends SLF4JLogging {
@@ -77,7 +74,7 @@ object IndexService extends SLF4JLogging {
 }
 
 class IndexService(path: File) {
-  import IndexService._
+  import org.ensime.indexer.IndexService._
 
   private val analyzers = Map("fqn" -> new FqnAnalyzer)
 
@@ -119,7 +116,7 @@ class IndexService(path: File) {
 
   def searchClassesMethods(terms: List[String], max: Int): List[FqnIndex] = {
     val query = new DisjunctionMaxQuery(
-      terms.map(buildTermClassMethodQuery(_)), 0f)
+      terms.map(buildTermClassMethodQuery), 0f)
     lucene.search(query, max).map(_.toEntity[ClassIndex])
   }
 

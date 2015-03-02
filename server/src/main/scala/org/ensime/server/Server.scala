@@ -1,17 +1,17 @@
 package org.ensime.server
 
-import com.google.common.base.Charsets
-import com.google.common.io.Files
 import java.io._
 import java.net.{ InetAddress, ServerSocket, Socket }
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor._
+import com.google.common.base.Charsets
+import com.google.common.io.Files
 import org.ensime.EnsimeApi
 import org.ensime.config._
 import org.ensime.core.Project
 import org.ensime.server.protocol.swank.SwankProtocol
-import org.ensime.server.protocol.{ OutgoingMessageEvent, IncomingMessageEvent, Protocol }
+import org.ensime.server.protocol.{ IncomingMessageEvent, OutgoingMessageEvent, Protocol }
 import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler

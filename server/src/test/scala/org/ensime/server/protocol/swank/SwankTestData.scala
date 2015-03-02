@@ -88,7 +88,7 @@ object SwankTestData {
   val debugStackFrame = DebugStackFrame(7, List(debugStackLocal1, debugStackLocal2), 4, "class1", "method1", sourcePos1, 7)
 
   val debugBacktrace = DebugBacktrace(List(debugStackFrame), "17", "thread1")
-  val debugBacktraceStr = s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file ${file1_str} :line 57) :this-object-id 7)) :thread-id "17" :thread-name "thread1")"""
+  val debugBacktraceStr = s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id 7)) :thread-id "17" :thread-name "thread1")"""
 
   val undoResult = UndoResult(7, List(file3, file4))
   val undoResultStr = """(:id 7 :touched-files (""" + file3_str + """ """ + file4_str + """))"""
@@ -136,14 +136,14 @@ object SwankTestData {
   val debugClassFieldStr = """(:index 19 :name "nameStr" :type-name "typeNameStr" :summary "summaryStr")"""
 
   val debugStringValue = DebugStringInstance("summaryStr", List(debugClassField), "typeNameStr", 5L)
-  val debugStringValueStr = s"""(:val-type str :summary "summaryStr" :fields (${debugClassFieldStr}) :type-name "typeNameStr" :object-id 5)"""
+  val debugStringValueStr = s"""(:val-type str :summary "summaryStr" :fields ($debugClassFieldStr) :type-name "typeNameStr" :object-id 5)"""
 
   val note1 = new Note("file1", "note1", NoteError, 23, 33, 19, 8)
   val note1Str = """(:file "file1" :msg "note1" :severity error :beg 23 :end 33 :line 19 :col 8)"""
   val note2 = new Note("file1", "note2", NoteWarn, 23, 33, 19, 8)
   val note2Str = """( :file "file1" :msg "note2" :severity warn :beg 23 :end 33 :line 19 :col 8)"""
 
-  val noteList = NewScalaNotesEvent(true, List(note1, note2))
+  val noteList = NewScalaNotesEvent(isFull = true, List(note1, note2))
   val noteListStr = "(:is-full t :notes (" + note1Str + " " + note2Str + "))"
 
   val entityInfo: TypeInfo = new ArrowTypeInfo("Arrow1", 8, typeInfo, List(paramSectionInfo))

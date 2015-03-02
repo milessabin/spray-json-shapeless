@@ -1,13 +1,11 @@
 package org.ensime.core
 
-import java.io.File
+import org.ensime.config.EnsimeConfig
+import org.ensime.fixture._
 import org.ensime.model._
 import org.scalatest._
-import scala.reflect.internal.util.RangePosition
-import org.ensime.config.EnsimeConfig
 
-import org.ensime.fixture._
-import RichPresentationCompilerFixture._
+import scala.reflect.internal.util.RangePosition
 
 class SemanticHighlightingSpec extends WordSpec with Matchers
     with IsolatedRichPresentationCompilerFixture

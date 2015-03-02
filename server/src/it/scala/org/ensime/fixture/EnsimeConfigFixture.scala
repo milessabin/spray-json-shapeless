@@ -1,6 +1,5 @@
 package org.ensime.fixture
 
-import akka.event.slf4j.SLF4JLogging
 import java.io.File
 import org.scalatest._
 

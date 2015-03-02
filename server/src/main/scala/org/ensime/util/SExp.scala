@@ -5,7 +5,7 @@ import scala.collection.immutable.Map
 sealed trait SExp extends WireFormat {
   def toWireString: String = toString
 
-  import SExp._
+  import org.ensime.util.SExp._
   def withRpcReturn(callId: Int) = SExp(key(":return"), SExp(key(":ok"), this), callId)
 
   def toScala: Any = toString

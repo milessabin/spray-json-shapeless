@@ -1,6 +1,5 @@
 package org.ensime.model
 
-import org.ensime.util.PatchSource
 import org.scalatest.{ FunSpec, Matchers }
 
 class PatchSourceSpec extends FunSpec with Matchers {

@@ -22,10 +22,6 @@
 package org.ensime.indexer
 
 import org.apache.lucene.document._
-import org.apache.lucene.index.Term
-import org.apache.lucene.search._
-import org.apache.lucene.search.BooleanClause.Occur.MUST
-import Field._
 
 package object lucene {
   implicit class RichEntity[T <: Entity](e: T) {

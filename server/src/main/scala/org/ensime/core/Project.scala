@@ -1,15 +1,18 @@
 package org.ensime.core
 
 import java.io.File
-import akka.actor.{ Actor, ActorRef, Props, ActorSystem, Cancellable }
+
+import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
 import org.ensime.indexer._
 import org.ensime.model._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.concurrent.{ Future, Promise }
 
 case class RPCError(code: Int, detail: String) extends RuntimeException("" + code + ": " + detail)
 case class AsyncEvent(evt: EnsimeEvent)
@@ -68,6 +71,8 @@ class Project(
     actor ! msg
   }
 
+  private val readyPromise = Promise[Unit]()
+
   protected var analyzer: Option[ActorRef] = None
 
   private val resolver = new SourceResolver(config)
@@ -82,7 +87,7 @@ class Project(
   }
   private val classfileWatcher = new ClassfileWatcher(config, search :: reTypecheck :: Nil)
 
-  import concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.ExecutionContext.Implicits.global
   search.refresh().onSuccess {
     case (deletes, inserts) =>
       actor ! AsyncEvent(IndexerReadyEvent)
@@ -179,11 +184,12 @@ class Project(
     }
   }
 
-  def initProject(): Unit = {
+  def initProject(): Future[Unit] = {
     startCompiler()
     shutdownDebugger()
     undos.clear()
     undoCounter = 0
+    readyPromise.future
   }
 
   protected def startCompiler(): Unit = {

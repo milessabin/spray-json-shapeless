@@ -1,23 +1,17 @@
 package org.ensime.fixture
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import akka.testkit.TestProbe
 import java.io.File
-import org.ensime.indexer.SearchService
-import org.scalatest._
 
+import akka.actor.ActorSystem
+import akka.testkit.TestProbe
 import org.ensime.config._
 import org.ensime.core._
+import org.ensime.indexer.SearchService
 import org.slf4j.LoggerFactory
-import scala.reflect.internal.util.BatchSourceFile
-import scala.reflect.internal.util.OffsetPosition
+
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.reporters.ConsoleReporter
 import scala.tools.nsc.reporters.StoreReporter
-
-import pimpathon.file._
 
 trait RichPresentationCompilerFixture {
   def withRichPresentationCompiler(
@@ -57,7 +51,7 @@ trait IsolatedRichPresentationCompilerFixture
   override def withRichPresentationCompiler(
     testCode: (TestKitFix, EnsimeConfig, RichPresentationCompiler) => Any): Any = withSearchService { (config, search) =>
     withTestKit { testkit =>
-      import RichPresentationCompilerFixture._
+      import org.ensime.fixture.RichPresentationCompilerFixture._
       testCode(testkit, config, create(config, search)(testkit.system))
     }
   }
@@ -73,7 +67,7 @@ trait SharedRichPresentationCompilerFixture
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    import RichPresentationCompilerFixture._
+    import org.ensime.fixture.RichPresentationCompilerFixture._
     pc = create(_config, _search)(_testkit.system)
   }
 

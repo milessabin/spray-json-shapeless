@@ -1,11 +1,13 @@
 package org.ensime.core
 
-import org.ensime.model.DocSig
+import java.io.{ File, IOException }
 import java.util.jar.JarFile
 import java.util.regex.Pattern
-import scala.io.Source
-import java.io.{ File, IOException }
+
 import org.apache.commons.lang.StringEscapeUtils
+import org.ensime.model.DocSig
+
+import scala.io.Source
 
 // Scaladoc uses @usecase comment annotations to substitute kid-safe signatures
 // in the docs.
@@ -24,7 +26,7 @@ trait DocUsecaseHandling { self: DocServer =>
   protected def maybeReplaceWithUsecase(jar: File, sig: DocSig): DocSig = {
     if (sig.fqn.scalaStdLib) {
       sig.member match {
-        case Some(PrefixRegexp(prefix)) if UseCasePrefixes.contains(prefix) => {
+        case Some(PrefixRegexp(prefix)) if UseCasePrefixes.contains(prefix) =>
           try {
             val jarFile = new JarFile(jar)
             val is = jarFile.getInputStream(jarFile.getEntry(scalaFqnToPath(sig.fqn)))
@@ -34,7 +36,6 @@ trait DocUsecaseHandling { self: DocServer =>
               m => sig.copy(member = Some(StringEscapeUtils.unescapeHtml(m.group(1))))
             }.getOrElse(sig)
           } catch { case e: IOException => sig }
-        }
         case _ => sig
       }
     } else sig

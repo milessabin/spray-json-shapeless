@@ -1,17 +1,17 @@
 package org.ensime.indexer
 
-import java.util
-
-import DatabaseService._
-import akka.event.slf4j.SLF4JLogging
 import java.sql.SQLException
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
+import java.util
+import java.util.concurrent.{ Executors, LinkedBlockingQueue }
+
+import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.ensime.config.EnsimeConfig
+import org.ensime.indexer.DatabaseService._
 import pimpathon.file._
-import scala.concurrent.Future
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 /**
  * Provides methods to perform ENSIME-specific indexing tasks,

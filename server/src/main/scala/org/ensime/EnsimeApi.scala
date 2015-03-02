@@ -48,10 +48,31 @@ trait EnsimeApi {
   def rpcTypecheckAll(): Unit
   def rpcCompletionsAtPoint(fileInfo: SourceFileInfo, point: Int, maxResults: Int, caseSens: Boolean): CompletionInfoList
   def rpcPackageMemberCompletion(path: String, prefix: String): List[CompletionInfo]
-  def rpcInspectTypeAtPoint(f: String, range: OffsetRange): Option[TypeInspectInfo]
-  def rpcInspectTypeById(id: Int): Option[TypeInspectInfo]
-  def rpcInspectTypeByName(name: String): Option[TypeInspectInfo]
-  def rpcSymbolAtPoint(f: String, point: Int): Option[SymbolInfo]
+
+  /**
+   * Return detailed type information about the item at the given file position.
+   * @param fileName The source filename
+   * @param range The range in the file to inspect.
+   * @return Some(TypeInspectInfo) if the range represents a valid type, None otherwise
+   */
+  def rpcInspectTypeAtPoint(fileName: String, range: OffsetRange): Option[TypeInspectInfo]
+
+  /**
+   * Lookup detailed type description by typeId
+   * @param typeId The id of the type to inspect (returned by other calls)
+   * @return Some(TypeInspectInfo) if the typeId represents a valid type, None otherwise
+   */
+  def rpcInspectTypeById(typeId: Int): Option[TypeInspectInfo]
+
+  /**
+   * Lookup detailed type description by fully qualified class name
+   * @param typeFQN The fully qualified type name to inspect
+   * @return Some(TypeInspectInfo) if typeFQN represents a valid type, None otherwise
+   */
+  def rpcInspectTypeByName(typeFQN: String): Option[TypeInspectInfo]
+
+  def rpcSymbolAtPoint(fileName: String, point: Int): Option[SymbolInfo]
+
   def rpcMemberByName(typeFullName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo]
   def rpcTypeById(id: Int): Option[TypeInfo]
   def rpcTypeByName(name: String): Option[TypeInfo]

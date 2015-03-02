@@ -2,12 +2,7 @@ import java.io._
 import scala.util.Try
 import sbt._
 import Keys._
-import Package.ManifestAttributes
 import com.typesafe.sbt.SbtScalariform._
-//import sbtrelease.ReleasePlugin._
-//import ReleaseKeys._
-//import com.typesafe.sbt.pgp.PgpKeys
-//import PgpKeys._
 
 object EnsimeBuild extends Build with JdkResolver {
   /*
@@ -64,8 +59,8 @@ object EnsimeBuild extends Build with JdkResolver {
     },
     credentials += Credentials(
       "Sonatype Nexus Repository Manager", "oss.sonatype.org",
-      sys.env.get("SONATYPE_USERNAME").getOrElse(""),
-      sys.env.get("SONATYPE_PASSWORD").getOrElse("")
+      sys.env.getOrElse("SONATYPE_USERNAME", ""),
+      sys.env.getOrElse("SONATYPE_PASSWORD", "")
     )
   )
 

@@ -7,8 +7,6 @@ import org.ensime.model.FileSourceFileInfo
 import org.scalatest._
 import org.ensime.fixture._
 
-import RichPresentationCompilerFixture._
-
 class RefactoringHandlerSpec extends WordSpec with Matchers
     with IsolatedAnalyzerFixture with RichPresentationCompilerTestUtils {
 

@@ -1,30 +1,21 @@
 package org.ensime.core
 
-import org.scalatest._
+import java.net.URLDecoder
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.actor.{ ActorRef, Props }
 import akka.event.slf4j.SLF4JLogging
 import akka.pattern.Patterns
 import akka.util.Timeout
-import java.io.File
 import org.apache.commons.lang.StringEscapeUtils
-import org.apache.commons.vfs2._
 import org.ensime.config._
+import org.ensime.fixture._
 import org.ensime.model._
-import pimpathon.file._
+import org.scalatest._
+import spray.http.HttpMethods._
+import spray.http._
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.reflect.internal.util.OffsetPosition
-import scalariform.formatter.preferences.FormattingPreferences
-import spray.http._
-import spray.http.HttpMethods._
-import java.net.URLDecoder
-
-import org.ensime.fixture._
-
-import pimpathon.java.io.inputStream._
-import pimpathon.java.io.outputStream._
-import com.google.common.io.Files
 
 class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
     with IsolatedRichPresentationCompilerFixture {
@@ -64,7 +55,7 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
             "scala-library-",
             "ForecastIOLib", // Javadoc 1.8
             "guava-"
-          ).exists(f.getName.startsWith(_))
+          ).exists(f.getName.startsWith)
         }
 
         def getUri(serv: ActorRef, sig: DocSig): Option[String] = {
@@ -78,12 +69,12 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
         }
 
         def contentPath(uri: Uri): Uri = {
-          if (uri.path.toString.endsWith("index.html")) {
-            val path = uri.path.toString.replace(
+          if (uri.path.toString().endsWith("index.html")) {
+            val path = uri.path.toString().replace(
               "index", uri.fragment.flatMap { s => s.split("@").headOption }.getOrElse("").replace(".", "/"))
             Uri(path = Uri.Path(path))
           } else {
-            uri.path.toString
+            uri.path.toString()
           }
         }
 
@@ -101,13 +92,13 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
             val path = contentPath(uri)
             val response = getReponse(serv, path)
             if (response.status != StatusCode.int2StatusCode(200)) {
-              throw new IllegalStateException(s"GET ${path} failed with status: ${response.status}")
+              throw new IllegalStateException(s"GET $path failed with status: ${response.status}")
             } else {
               val html = response.entity.data.asString
               if (sig.member.isDefined) {
                 val attr = if (java) "name" else "id"
                 val link = StringEscapeUtils.escapeHtml(anchor(uri, java))
-                html.contains(s"""$attr="${link}"""")
+                html.contains(s"""$attr="$link"""")
               } else {
                 html.contains("<html")
               }
@@ -117,17 +108,17 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
 
         def checkScala(sig: DocSigPair, expectedSig: DocSig) {
           assert(sig.scala == expectedSig)
-          assert(findsContentFor(serv, expectedSig, false))
+          assert(findsContentFor(serv, expectedSig, java = false))
         }
 
         def checkJava(sig: DocSigPair, expectedSig: DocSig) {
           assert(sig.java == expectedSig)
           if (!sig.java.fqn.javaStdLib) {
-            assert(findsContentFor(serv, expectedSig, true))
+            assert(findsContentFor(serv, expectedSig, java = true))
           }
         }
 
-        import ReallyRichPresentationCompilerFixture._
+        import org.ensime.core.ReallyRichPresentationCompilerFixture._
         runForPositionInCompiledSource(config, cc,
           "package com.example",
           "import com.google.common.io.Files",

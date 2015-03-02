@@ -1,6 +1,6 @@
 package org.ensime.config
 
-import java.net.{ URL, JarURLConnection }
+import java.net.{ JarURLConnection, URL }
 
 object Environment {
   def info: String = """

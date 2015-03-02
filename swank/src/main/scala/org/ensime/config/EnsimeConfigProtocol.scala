@@ -1,13 +1,11 @@
 package org.ensime.config
 
-import akka.event.slf4j.SLF4JLogging
 import java.io.File
+
+import akka.event.slf4j.Logger
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
-import org.ensime.util._
 import pimpathon.file._
-import scalariform.formatter.preferences.FormattingPreferences
-import akka.event.slf4j.Logger
 
 object EnsimeConfigProtocol {
   object Protocol extends DefaultSexpProtocol
@@ -15,7 +13,7 @@ object EnsimeConfigProtocol {
     with CanonFileFormat
     with ScalariformFormat
     with CamelCaseToDashes
-  import Protocol._
+  import org.ensime.config.EnsimeConfigProtocol.Protocol._
 
   private val log = Logger(this.getClass.getName)
 
@@ -33,7 +31,7 @@ object EnsimeConfigProtocol {
     javaHome.tree.filter(_.getName == "rt.jar").toList
 
   def validated(c: EnsimeConfig): EnsimeConfig = c.copy(
-    subprojects = c.subprojects.map(validated(_))
+    subprojects = c.subprojects.map(validated)
   )
 
   /*
@@ -52,10 +50,10 @@ object EnsimeConfigProtocol {
     }
     m.copy(
       target = None,
-      targets = m.targetDirs.map(canonise(_)),
+      targets = m.targetDirs.map(canonise),
       testTarget = None,
-      testTargets = m.testTargetDirs.map(canonise(_)),
-      sourceRoots = m.sourceRoots.map(canonise(_))
+      testTargets = m.testTargetDirs.map(canonise),
+      sourceRoots = m.sourceRoots.map(canonise)
     )
   }
 }

@@ -1,22 +1,20 @@
 package org.ensime.core
 
-import akka.actor._
-import akka.event.slf4j.SLF4JLogging
 import java.io.File
+
+import akka.event.slf4j.SLF4JLogging
 import org.ensime.config._
-import org.ensime.core._
 import org.ensime.fixture._
-import org.ensime.indexer.{ SearchService, SourceResolver }
 import org.ensime.model._
 import org.scalatest._
 import pimpathon.file._
+
 import scala.collection.immutable.Queue
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.reflect.internal.util.{ BatchSourceFile, OffsetPosition }
 import scala.tools.nsc.Settings
-import scala.tools.nsc.interactive.Global
-import scala.tools.nsc.reporters.{ ConsoleReporter, StoreReporter }
+import scala.tools.nsc.reporters.ConsoleReporter
 
 class RichPresentationCompilerSpec extends WordSpec with Matchers
     with IsolatedRichPresentationCompilerFixture
@@ -394,7 +392,6 @@ trait ReallyRichPresentationCompilerFixture {
 object ReallyRichPresentationCompilerFixture
     extends RichPresentationCompilerTestUtils {
   def runForPositionInCompiledSource(config: EnsimeConfig, cc: RichPresentationCompiler, lines: String*)(testCode: (OffsetPosition, String, RichPresentationCompiler) => Any): Any = {
-    import RichPresentationCompilerFixture._
     val contents = lines.mkString("\n")
     var offset = 0
     var points = Queue.empty[(Int, String)]

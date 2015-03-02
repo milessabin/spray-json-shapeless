@@ -6,8 +6,7 @@ import org.ensime.core.{ FullTypeCheckCompleteEvent, ClearAllScalaNotesEvent }
 import org.ensime.core.{ RefactorResult, RefactorEffect, RenameRefactorDesc }
 import org.ensime.util._
 import org.scalatest.WordSpec
-import org.scalatest.{ FunSpec, Matchers }
-import org.slf4j.LoggerFactory
+import org.scalatest.Matchers
 
 import scala.concurrent.duration._
 import pimpathon.file._
@@ -25,7 +24,7 @@ class BasicWorkflow extends WordSpec with Matchers
       val project = server.project
       val config = project.config
       val sourceRoot = config.subprojects.head.sourceRoots.head
-      val fooFile = (sourceRoot / "org/example/Foo.scala")
+      val fooFile = sourceRoot / "org/example/Foo.scala"
       val fooFilePath = fooFile.getAbsolutePath
 
       // trigger typeCheck

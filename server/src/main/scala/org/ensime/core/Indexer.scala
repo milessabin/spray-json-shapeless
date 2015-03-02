@@ -6,7 +6,7 @@ import org.ensime.indexer.DatabaseService.FqnSymbol
 import org.ensime.indexer.SearchService
 import org.ensime.model._
 import org.ensime.server.protocol.ProtocolConst
-import ProtocolConst._
+import org.ensime.server.protocol.ProtocolConst._
 
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
 class Indexer(

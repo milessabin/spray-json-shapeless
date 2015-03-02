@@ -1,12 +1,7 @@
 package org.ensime.fixture
 
-import java.io.File
 import org.ensime.config._
-import org.ensime.fixture._
 import org.ensime.indexer.SourceResolver
-import org.scalatest._
-import pimpathon.any._
-import pimpathon.file._
 
 trait SourceResolverFixture {
   def withSourceResolver(testCode: SourceResolver => Any): Any

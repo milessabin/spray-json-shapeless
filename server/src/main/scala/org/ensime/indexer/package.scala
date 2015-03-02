@@ -1,6 +1,7 @@
 package org.ensime
 
 import java.io.File
+
 import org.apache.commons.vfs2._
 
 package object indexer {

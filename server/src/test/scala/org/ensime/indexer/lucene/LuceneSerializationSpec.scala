@@ -1,19 +1,8 @@
 package org.ensime.indexer.lucene
 
-import java.io.File
-import org.apache.lucene.document.StringField
-import org.scalatest.FunSpec
-import org.scalatest.Matchers
+import org.apache.lucene.document.Field._
 import org.apache.lucene.document._
-import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.BooleanClause.Occur.MUST
-import Field._
-import org.ensime.model._
-
-import pimpathon.file._
+import org.scalatest.{ FunSpec, Matchers }
 
 class LuceneSerializationSpec extends FunSpec with Matchers {
 

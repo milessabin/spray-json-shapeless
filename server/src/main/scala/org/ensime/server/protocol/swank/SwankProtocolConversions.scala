@@ -1,15 +1,11 @@
 package org.ensime.server.protocol.swank
 
-import java.io.File
-
-import org.ensime.config._
 import org.ensime.core._
 import org.ensime.model._
 import org.ensime.server.ConnectionInfo
-import org.ensime.util._
-
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
+import org.ensime.util._
 
 object SwankProtocolConversions {
   object Protocol extends DefaultSexpProtocol
@@ -18,7 +14,7 @@ object SwankProtocolConversions {
     with CanonFileFormat
     with FamilyFormats
     with CamelCaseToDashes
-  import Protocol._
+  import org.ensime.server.protocol.swank.SwankProtocolConversions.Protocol._
 
   /**
    * By default, S-Express uses the simple name of a class as the

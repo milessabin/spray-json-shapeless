@@ -1,17 +1,19 @@
 package org.ensime.indexer.lucene
 
-import akka.event.slf4j.SLF4JLogging
-import collection.JavaConverters._
-import collection.mutable
 import java.io._
+
+import akka.event.slf4j.SLF4JLogging
+import org.apache.lucene.analysis._
+import org.apache.lucene.analysis.core._
+import org.apache.lucene.analysis.miscellaneous._
 import org.apache.lucene.document._
 import org.apache.lucene.index._
 import org.apache.lucene.search._
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.util._
-import org.apache.lucene.analysis._
-import org.apache.lucene.analysis.core._
-import org.apache.lucene.analysis.miscellaneous._
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object SimpleLucene {
   private val LuceneVersion = Version.LUCENE_47
@@ -36,7 +38,7 @@ object SimpleLucene {
  * filtering rules based on tags.
  */
 class SimpleLucene(path: File, analyzers: Map[String, Analyzer]) extends SLF4JLogging {
-  import SimpleLucene._
+  import org.ensime.indexer.lucene.SimpleLucene._
 
   path.mkdirs()
 
