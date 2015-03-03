@@ -26,8 +26,8 @@ object EnsimeBuild extends Build with JdkResolver {
   val isTravis = sys.env.get("TRAVIS") == Some("true")
   val isEmacs = sys.env.get("TERM") == Some("dumb")
 
-  if (isTravis) println("SBT detected Travis")
-  if (isEmacs) println("SBT detected Emacs")
+  if (isTravis)
+    concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
