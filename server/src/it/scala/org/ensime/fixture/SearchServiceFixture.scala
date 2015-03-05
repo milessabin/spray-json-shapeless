@@ -1,14 +1,7 @@
 package org.ensime.fixture
 
-import org.ensime.indexer.SearchService
-import org.scalatest._
-import org.ensime.fixture._
-
 import org.ensime.config._
-import scala.concurrent._
-import scala.concurrent.duration._
-import pimpathon.file._
-import pimpathon.any._
+import org.ensime.indexer.SearchService
 
 trait SearchServiceFixture {
   def withSearchService(

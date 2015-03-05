@@ -1,16 +1,13 @@
 package org.ensime.fixture
 
-import akka.event.LoggingReceive
-import akka.pattern.Patterns
-import java.util.concurrent.TimeoutException
-import org.scalatest._
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 import akka.actor._
+import akka.pattern.Patterns
 import org.ensime.config._
 import org.ensime.core._
 import org.ensime.server._
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 trait ServerFixture {
   def withServer(testCode: (Server, AsyncMsgHelper) => Any): Any

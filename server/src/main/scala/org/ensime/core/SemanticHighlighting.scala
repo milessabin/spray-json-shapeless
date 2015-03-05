@@ -2,12 +2,12 @@ package org.ensime.core
 
 import org.ensime.model._
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ListBuffer
-import scala.reflect.io.AbstractFile
 import scala.reflect.internal.util.RangePosition
+import scala.reflect.io.AbstractFile
 import scala.tools.nsc.symtab.Flags._
-import scala.tools.refactoring.common.PimpedTrees
-import scala.tools.refactoring.common.CompilerAccess
+import scala.tools.refactoring.common.{ CompilerAccess, PimpedTrees }
 
 class SemanticHighlighting(val global: RichPresentationCompiler) extends CompilerAccess with PimpedTrees {
 

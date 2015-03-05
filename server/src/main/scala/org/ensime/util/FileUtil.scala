@@ -3,11 +3,10 @@ package org.ensime.util
 import java.io._
 import java.net.URI
 import java.nio.charset.Charset
+
 import org.apache.commons.vfs2.FileObject
+
 import scala.collection.mutable
-import scala.util.Try
-import scala.sys.process._
-import scala.util.control.NonFatal
 
 /** A wrapper around file, allowing iteration either on direct children or on directory tree */
 class RichFile(file: File) {

@@ -1,7 +1,8 @@
 package org.ensime.indexer
 
 import org.objectweb.asm.Opcodes._
-import collection.immutable.Queue
+
+import scala.collection.immutable.Queue
 
 sealed trait Access
 case object Public extends Access

@@ -2,8 +2,8 @@ package org.ensime.util
 
 import org.slf4j.LoggerFactory
 
-import scala.tools.nsc.reporters.Reporter
 import scala.reflect.internal.util.Position
+import scala.tools.nsc.reporters.Reporter
 
 trait ReportHandler {
   def messageUser(str: String): Unit

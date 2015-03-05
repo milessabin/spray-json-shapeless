@@ -1,18 +1,19 @@
 package org.ensime.core
 
 import java.io.File
+
 import akka.actor.ActorRef
+import akka.pattern.ask
 import org.ensime.EnsimeApi
 import org.ensime.model._
 import org.ensime.server.ConnectionInfo
 import org.ensime.server.protocol.ProtocolConst
 import org.ensime.util._
+import shapeless.Typeable
+import shapeless.syntax.typeable._
 
 import scala.concurrent.Await
-import akka.pattern.ask
 import scala.concurrent.duration._
-import shapeless.syntax.typeable._
-import shapeless.Typeable
 
 trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
 
@@ -187,20 +188,20 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[TypeInspectInfo]](getAnalyzer, InspectTypeByIdReq(id))
   }
 
-  override def rpcInspectTypeByName(name: String): Option[TypeInspectInfo] = {
-    callRPC[Option[TypeInspectInfo]](getAnalyzer, InspectTypeByNameReq(name))
+  override def rpcInspectTypeByName(typeFQN: String): Option[TypeInspectInfo] = {
+    callRPC[Option[TypeInspectInfo]](getAnalyzer, InspectTypeByNameReq(typeFQN))
   }
 
-  override def rpcSymbolAtPoint(f: String, point: Int): Option[SymbolInfo] = {
-    callRPC[Option[SymbolInfo]](getAnalyzer, SymbolAtPointReq(new File(f), point))
+  override def rpcSymbolAtPoint(fileName: String, point: Int): Option[SymbolInfo] = {
+    callRPC[Option[SymbolInfo]](getAnalyzer, SymbolAtPointReq(new File(fileName), point))
   }
 
   override def rpcMemberByName(typeFullName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo] = {
     callRPC[Option[SymbolInfo]](getAnalyzer, MemberByNameReq(typeFullName, memberName, memberIsType))
   }
 
-  override def rpcTypeById(id: Int): Option[TypeInfo] = {
-    callRPC[Option[TypeInfo]](getAnalyzer, TypeByIdReq(id))
+  override def rpcTypeById(typeId: Int): Option[TypeInfo] = {
+    callRPC[Option[TypeInfo]](getAnalyzer, TypeByIdReq(typeId))
   }
 
   override def rpcTypeByName(name: String): Option[TypeInfo] = {

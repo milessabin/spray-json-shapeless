@@ -1,14 +1,15 @@
 package org.ensime.indexer
 
 import java.io.File
+
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.apache.commons.vfs2.impl._
 import org.ensime.config._
+import pimpathon.file._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
-import pimpathon.file._
 
 trait ClassfileListener {
   def classfileAdded(f: FileObject): Unit
@@ -61,7 +62,7 @@ class ClassfileWatcher(
     def watched(event: FileChangeEvent) = {
       val dir = event.getFile
       val name = dir.getName
-      targets.exists(name.isAncestor(_))
+      targets.exists(name.isAncestor)
     }
     def fileChanged(event: FileChangeEvent): Unit =
       if (watched(event)) reset()
@@ -74,7 +75,7 @@ class ClassfileWatcher(
   workaround.start()
 
   private def ancestors(f: File): List[File] = {
-    val parent = f.getParentFile()
+    val parent = f.getParentFile
     if (parent == null) Nil
     else parent :: ancestors(parent)
   }

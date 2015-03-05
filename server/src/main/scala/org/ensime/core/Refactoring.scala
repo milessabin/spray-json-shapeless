@@ -2,15 +2,9 @@ package org.ensime.core
 
 import java.io.File
 
-import org.ensime.model.AddUndo
-import org.ensime.model.ContentsSourceFileInfo
-import org.ensime.model.ContentsInSourceFileInfo
-import org.ensime.model.FileSourceFileInfo
-import org.ensime.model.SourceFileInfo
-import org.ensime.model.Undo
-import org.ensime.model.UndoResult
+import org.ensime.model.{ AddUndo, FileSourceFileInfo, SourceFileInfo, Undo, UndoResult }
 import org.ensime.server.protocol.ProtocolConst
-import ProtocolConst._
+import org.ensime.server.protocol.ProtocolConst._
 import org.ensime.util._
 
 import scala.collection.mutable
@@ -19,9 +13,9 @@ import scala.tools.refactoring._
 import scala.tools.refactoring.analysis.GlobalIndexes
 import scala.tools.refactoring.common.CompilerAccess
 import scala.tools.refactoring.implementations._
+import scalariform.astselect.AstSelector
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
-import scalariform.astselect.AstSelector
 import scalariform.utils.Range
 
 case class RefactorFailure(

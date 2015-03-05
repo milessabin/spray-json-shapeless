@@ -2,6 +2,7 @@ package org.ensime.indexer
 
 import com.google.common.io.ByteStreams
 import org.apache.commons.vfs2.FileObject
+
 import scala.tools.scalap.scalax.rules.scalasig._
 
 trait ClassfileDepickler {

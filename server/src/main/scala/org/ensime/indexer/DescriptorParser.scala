@@ -1,10 +1,9 @@
 package org.ensime.indexer
 
+import org.ensime.indexer.ClassName._
 import org.ensime.util.ParboiledParser
-import org.parboiled.errors.ErrorUtils
-import org.parboiled.errors.ParsingException
+import org.parboiled.errors.{ ErrorUtils, ParsingException }
 import org.parboiled.scala._
-import ClassName._
 
 /**
  * Parser for Java Descriptors as defined in Section 4.3 of

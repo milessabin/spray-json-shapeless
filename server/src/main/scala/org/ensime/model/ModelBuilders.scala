@@ -1,16 +1,15 @@
 package org.ensime.model
 
 import java.io.File
+
 import org.apache.commons.vfs2.FileObject
-import org.ensime.core.RichPresentationCompiler
-import org.ensime.util.FileEdit
-import scala.collection.mutable
-import scala.reflect.internal.util.{ RangePosition, NoPosition, Position }
-
 import org.ensime.config._
+import org.ensime.core.RichPresentationCompiler
 import org.ensime.indexer.DatabaseService._
-
 import org.ensime.util.RichFile._
+
+import scala.collection.mutable
+import scala.reflect.internal.util.{ NoPosition, Position, RangePosition }
 import scala.tools.nsc.io.AbstractFile
 
 trait ModelBuilders { self: RichPresentationCompiler =>
@@ -142,25 +141,19 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       }
     }
 
-    def nullInfo = {
-      new PackageInfo("NA", "NA", List.empty)
-    }
+    // TODO THIS SHOULD NOT EXIST
+    val nullInfo = new PackageInfo("NA", "NA", List.empty)
 
     private def sortedMembers(items: Iterable[EntityInfo]) = {
       items.toList.sortBy(_.name)
     }
 
     def fromSymbol(sym: Symbol): PackageInfo = {
+      val members = sortedMembers(packageMembers(sym).flatMap(packageMemberInfoFromSym))
       if (sym.isRoot || sym.isRootPackage) {
-        new PackageInfo(
-          "root",
-          "_root_",
-          sortedMembers(packageMembers(sym).flatMap(packageMemberInfoFromSym)))
+        new PackageInfo("root", "_root_", members)
       } else {
-        new PackageInfo(
-          sym.name.toString,
-          sym.fullName,
-          sortedMembers(packageMembers(sym).flatMap(packageMemberInfoFromSym)))
+        new PackageInfo(sym.name.toString, sym.fullName, members)
       }
     }
 
@@ -346,9 +339,9 @@ object LineSourcePositionHelper {
   //       so we extract to the cache and report that as the source
   //       see the hack in the RichPresentationCompiler
   import org.ensime.util.RichFileObject._
-  import pimpathon.java.io.outputStream._
   import pimpathon.any._
   import pimpathon.file._
+  import pimpathon.java.io.outputStream._
 
   private def possiblyExtractFile(fo: FileObject)(implicit config: EnsimeConfig): File =
     fo.pathWithinArchive match {

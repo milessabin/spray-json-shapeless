@@ -1,16 +1,14 @@
 package org.ensime.indexer.lucene
 
 import java.io.Reader
-import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
-import org.apache.lucene.analysis.TokenFilter
-import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.core.KeywordTokenizer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.util.AttributeSource.State
 
-import DynamicSynonymFilter._
+import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
+import org.apache.lucene.analysis.{ Analyzer, TokenFilter, TokenStream }
+import org.apache.lucene.analysis.core.KeywordTokenizer
+import org.apache.lucene.analysis.tokenattributes.{ CharTermAttribute, PositionIncrementAttribute }
+import org.apache.lucene.util.AttributeSource.State
+import org.ensime.indexer.lucene.DynamicSynonymFilter._
+
 import scala.collection.mutable
 
 /**

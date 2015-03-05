@@ -85,10 +85,10 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(debugStackLocal1).toWireString === """(:index 3 :name "name1" :summary "summary1" :type-name "type1")""")
 
         // toWF(evt: DebugStackFrame)
-        assert(toWF(debugStackFrame).toWireString === s"""(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file ${file1_str} :line 57) :this-object-id 7)""")
+        assert(toWF(debugStackFrame).toWireString === s"""(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id 7)""")
 
         // toWF(evt: DebugBacktrace)
-        assert(toWF(DebugBacktrace(List(debugStackFrame), "17", "thread1")).toWireString === s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file ${file1_str} :line 57) :this-object-id 7)) :thread-id "17" :thread-name "thread1")""")
+        assert(toWF(DebugBacktrace(List(debugStackFrame), "17", "thread1")).toWireString === s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id 7)) :thread-id "17" :thread-name "thread1")""")
 
         // toWF(pos: LineSourcePosition)
         assert(toWF(sourcePos1).toWireString === s"""(:file $file1_str :line 57)""")

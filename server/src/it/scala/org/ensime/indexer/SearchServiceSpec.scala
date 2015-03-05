@@ -165,7 +165,7 @@ trait SearchServiceTestUtils {
   }
 
   def searchesEmpty(queries: String*)(implicit service: SearchService) =
-    queries.toList.foreach(searchExpectEmpty(_))
+    queries.toList.foreach(searchExpectEmpty)
 
   def searchesClassesAndMethods(expect: String, queries: String*)(implicit service: SearchService) =
     (expect :: queries.toList).foreach(searchClassesAndMethods(expect, _))

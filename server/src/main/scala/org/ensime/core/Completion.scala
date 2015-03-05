@@ -2,14 +2,13 @@ package org.ensime.core
 
 import akka.pattern.Patterns
 import akka.util.Timeout
-import org.ensime.model.CompletionInfoList
-import scala.collection.mutable
-import scala.concurrent.{ Future, Await }
-import scala.reflect.internal.util.{ SourceFile, BatchSourceFile }
-import scala.reflect.runtime.universe.{ showRaw }
+import org.ensime.model.{ CompletionInfo, CompletionInfoList, CompletionSignature, SymbolSearchResults }
 import org.ensime.util.Arrays
-import org.ensime.model.{ CompletionInfo, CompletionSignature, SymbolSearchResults }
+
+import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
+import scala.reflect.internal.util.{ BatchSourceFile, SourceFile }
 
 trait CompletionControl {
   self: RichPresentationCompiler =>
@@ -63,52 +62,42 @@ trait CompletionControl {
     val x = new Response[Tree]
     askTypeAt(p, x)
 
-    val context = x.get match {
-      case Left(tree) => {
+    val contextOpt = x.get match {
+      case Left(tree) =>
         logger.debug("Completing at tree:" + tree.summaryString)
         tree match {
-          case Apply(fun, _) => {
+          case Apply(fun, _) =>
             fun match {
-              case Select(qual: New, name) => {
-                Some(ScopeContext(src, qual.pos.end, defaultPrefix, true))
-              }
-              case Select(qual, name) if qual.pos.isDefined && qual.pos.isRange => {
+              case Select(qualifier: New, name) =>
+                Some(ScopeContext(src, qualifier.pos.end, defaultPrefix, constructing = true))
+              case Select(qual, name) if qual.pos.isDefined && qual.pos.isRange =>
                 val prefix = if (patched) "" else name.decoded
                 Some(MemberContext(src, qual.pos.end, prefix, constructing))
-              }
-              case _ => {
+              case _ =>
                 val prefix = if (patched) "" else src.content.slice(fun.pos.start, fun.pos.end).mkString
                 Some(ScopeContext(src, fun.pos.end, prefix, constructing))
-              }
             }
-          }
           case Literal(Constant(_)) => None
-          case New(name) => {
-            Some(ScopeContext(src, name.pos.end, defaultPrefix, true))
-          }
-          case Select(qual, name) if qual.pos.isDefined && qual.pos.isRange => {
-            Some(MemberContext(src, qual.pos.end, defaultPrefix, constructing))
-          }
-          case Import(expr, _) => {
+          case New(name) =>
+            Some(ScopeContext(src, name.pos.end, defaultPrefix, constructing = true))
+          case Select(qualifier, name) if qualifier.pos.isDefined && qualifier.pos.isRange =>
+            Some(MemberContext(src, qualifier.pos.end, defaultPrefix, constructing))
+          case Import(expr, _) =>
             val topLevel = ImportTopLevelRegexp.findFirstMatchIn(preceding).isDefined
             if (topLevel) {
-              Some(ScopeContext(src, expr.pos.end, defaultPrefix, false))
+              Some(ScopeContext(src, expr.pos.end, defaultPrefix, constructing = false))
             } else {
-              Some(MemberContext(src, expr.pos.end, defaultPrefix, false))
+              Some(MemberContext(src, expr.pos.end, defaultPrefix, constructing = false))
             }
-          }
-          case x => {
+          case other =>
             Some(ScopeContext(src, p.point, defaultPrefix, constructing))
-          }
         }
-      }
-      case _ => {
+      case _ =>
         logger.error("Unrecognized completion context.")
         None
-      }
     }
-    context match {
-      case Some(context) => {
+    contextOpt match {
+      case Some(context) =>
         CompletionInfoList(
           context.prefix,
           makeAll(context, maxResults, caseSens).sortWith({ (c1, c2) =>
@@ -116,7 +105,6 @@ trait CompletionControl {
               (c1.relevance == c2.relevance &&
                 c1.name.length < c2.name.length)
           }).take(maxResults))
-      }
       case _ => CompletionInfoList("", Nil)
     }
   }
@@ -131,19 +119,16 @@ trait CompletionControl {
     val req = TypeCompletionsReq(prefix, maxResults)
     import scala.concurrent.ExecutionContext.Implicits.{ global => exe }
     val askRes = Patterns.ask(indexer, req, Timeout(1000.milliseconds))
-    askRes.map { result =>
-      result match {
-        case s: SymbolSearchResults =>
-          s.syms.map { s =>
-            CompletionInfo(
-              s.localName, CompletionSignature(List.empty, s.name),
-              -1, isCallable = false, 40, Some(s.name))
-          }.toList
-        case unknown => {
-          throw new IllegalStateException("Unexpected response type from request:" + unknown)
-          List.empty
-        }
-      }
+    askRes.map {
+      case s: SymbolSearchResults =>
+        s.syms.map { s =>
+          CompletionInfo(
+            s.localName, CompletionSignature(List.empty, s.name),
+            -1, isCallable = false, 40, Some(s.name))
+        }.toList
+      case unknown =>
+        throw new IllegalStateException("Unexpected response type from request:" + unknown)
+        List.empty
     }.map(Some(_)).recover { case _ => None }
   }
 
@@ -189,11 +174,10 @@ trait CompletionControl {
     // Do this before the lookups below, so the two can
     // proceed concurrently.
     val typeSearch = context match {
-      case ScopeContext(_, _, prefix, _) => {
+      case ScopeContext(_, _, prefix, _) =>
         if (TypeNameRegex.findFirstMatchIn(prefix).isDefined) {
           Some(fetchTypeSearchCompletions(prefix, maxResults))
         } else None
-      }
       case _ => None
     }
 

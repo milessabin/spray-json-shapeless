@@ -1,7 +1,5 @@
 package org.ensime.core
-import scala.tools.nsc.util._
 import org.ensime.model._
-import org.ensime.util.Symbols
 
 // Transform symbols to scaladoc URI paths, with anchors to select specific
 // members of a container type.
@@ -13,11 +11,11 @@ trait DocFinding { self: RichPresentationCompiler =>
   private def isRoot(s: Symbol) = (s eq NoSymbol) || s.isRootSymbol || s.isEmptyPackage || s.isEmptyPackageClass
 
   private def fullPackage(sym: Symbol): String =
-    sym.ownerChain.reverse.filterNot(isRoot(_))
+    sym.ownerChain.reverse.filterNot(isRoot)
       .takeWhile(_.hasPackageFlag).map(_.nameString).mkString(".")
 
   private def fullTypeName(sym: Symbol, nestedTypeSep: String, nameString: (Symbol => String)): String =
-    sym.ownerChain.takeWhile(!_.hasPackageFlag).reverse.map(nameString(_)).mkString(nestedTypeSep)
+    sym.ownerChain.takeWhile(!_.hasPackageFlag).reverse.map(nameString).mkString(nestedTypeSep)
 
   private val ScalaPrim = """^(Boolean|Byte|Char|Double|Float|Int|Long|Short)$""".r
   private val ScalaAny = """^(Any|AnyVal|AnyRef)$""".r
@@ -30,14 +28,13 @@ trait DocFinding { self: RichPresentationCompiler =>
       DocFqn(fullPackage(sym), fullTypeName(sym, ".", nameString))
     }
     s match {
-      case DocFqn("scala", ScalaPrim(datatype)) => DocFqn("", datatype.toLowerCase())
+      case DocFqn("scala", ScalaPrim(datatype)) => DocFqn("", datatype.toLowerCase)
       case DocFqn("scala", ScalaAny(datatype)) => DocFqn("java.lang", "Object")
-      case DocFqn("scala", "Array") => {
+      case DocFqn("scala", "Array") =>
         tpe.typeArgs.headOption.map { tpe =>
           val fqn = javaFqn(tpe)
           fqn.copy(typeName = fqn.typeName + "[]")
         }.getOrElse(s)
-      }
       case _ => s
     }
   }
@@ -72,12 +69,12 @@ trait DocFinding { self: RichPresentationCompiler =>
       } else if (sym.isClass || sym.isModule || sym.isTrait || sym.hasPackageFlag)
         DocSig(linkName(sym, java), None)
       else if (owner.isClass || owner.isModule || owner.isTrait || owner.hasPackageFlag) {
-        val ownerAtSite = pos.flatMap(specificOwnerOfSymbolAt(_)).getOrElse(owner)
+        val ownerAtSite = pos.flatMap(specificOwnerOfSymbolAt).getOrElse(owner)
         DocSig(linkName(ownerAtSite, java), Some(signatureString(sym, java)))
       } else
         DocSig(linkName(sym.tpe.typeSymbol, java), None)
     }
-    Some(DocSigPair(docSig(false), docSig(true)))
+    Some(DocSigPair(docSig(java = false), docSig(java = true)))
   }
 
 }

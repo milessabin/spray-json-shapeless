@@ -2,9 +2,10 @@ package org.ensime.indexer
 
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2.FileObject
-import org.objectweb.asm._
 import org.objectweb.asm.Opcodes._
-import collection.immutable.Queue
+import org.objectweb.asm._
+
+import scala.collection.immutable.Queue
 
 trait ClassfileIndexer {
   this: SLF4JLogging =>

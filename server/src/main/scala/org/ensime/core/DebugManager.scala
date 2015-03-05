@@ -1,19 +1,19 @@
 package org.ensime.core
 
-import akka.actor.{ ActorLogging, Actor, ActorRef }
-import com.sun.jdi.request.{ EventRequestManager, EventRequest, StepRequest }
-import java.io.File
-import java.io.InputStream
-import java.io.InputStreamReader
+import java.io.{ File, InputStream, InputStreamReader }
+
+import akka.actor.{ Actor, ActorLogging, ActorRef }
+import com.sun.jdi._
+import com.sun.jdi.event._
+import com.sun.jdi.request.{ EventRequest, EventRequestManager, StepRequest }
 import org.ensime.config._
 import org.ensime.model._
 import org.ensime.server.protocol.ProtocolConst
-import ProtocolConst._
+import org.ensime.server.protocol.ProtocolConst._
 import org.ensime.util._
+
 import scala.collection.mutable.ListBuffer
-import scala.collection.{ mutable, Iterable }
-import com.sun.jdi._
-import com.sun.jdi.event._
+import scala.collection.{ Iterable, mutable }
 
 case object DebuggerShutdownEvent
 

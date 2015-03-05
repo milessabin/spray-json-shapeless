@@ -1,17 +1,19 @@
 package org.ensime.core
 
 import java.io.File
-import akka.actor.{ ActorLogging, Actor, ActorRef }
 import java.nio.charset.Charset
+
+import akka.actor.{ Actor, ActorLogging, ActorRef }
 import org.ensime.config._
 import org.ensime.indexer.SearchService
 import org.ensime.model._
 import org.ensime.server.protocol.ProtocolConst
-import ProtocolConst._
+import org.ensime.server.protocol.ProtocolConst._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
+
 import scala.concurrent.Future
-import scala.reflect.internal.util.{ SourceFile, RangePosition, OffsetPosition }
+import scala.reflect.internal.util.{ OffsetPosition, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 

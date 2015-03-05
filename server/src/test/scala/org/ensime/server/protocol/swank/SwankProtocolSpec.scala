@@ -1,27 +1,25 @@
 package org.ensime.server.protocol.swank
 
-import java.io.{ InputStreamReader, ByteArrayInputStream, ByteArrayOutputStream }
-import java.util.concurrent.{ TimeUnit, CountDownLatch }
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, InputStreamReader }
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.{ CountDownLatch, TimeUnit }
 
 import org.ensime.EnsimeApi
 import org.ensime.core._
 import org.ensime.model._
 import org.ensime.server._
+import org.ensime.util.UnitTestUtils._
 import org.ensime.util._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
-import org.slf4j.{ LoggerFactory, Logger }
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.reflect.io.ZipArchive
 import scala.tools.nsc.io._
 
-import UnitTestUtils._
-import scala.util.control.NonFatal
-
 class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
 
-  import SwankTestData._
+  import org.ensime.server.protocol.swank.SwankTestData._
 
   class MockZipEntry(entry: String, archive: ZipArchive) extends VirtualFile(entry, entry) {
     override def underlyingSource: Option[ZipArchive] = Some(archive)

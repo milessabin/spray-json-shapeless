@@ -1,10 +1,8 @@
 package org.ensime.util
 
-import scala.reflect.internal.util.{ SourceFile, BatchSourceFile }
-import org.ensime.model.PatchOp
-import org.ensime.model.PatchInsert
-import org.ensime.model.PatchDelete
-import org.ensime.model.PatchReplace
+import org.ensime.model.{ PatchDelete, PatchInsert, PatchOp, PatchReplace }
+
+import scala.reflect.internal.util.{ BatchSourceFile, SourceFile }
 
 object PatchSource {
 

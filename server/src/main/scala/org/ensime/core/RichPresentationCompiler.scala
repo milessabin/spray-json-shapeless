@@ -2,21 +2,23 @@ package org.ensime.core
 
 import java.io.File
 import java.nio.charset.Charset
+
 import akka.actor.ActorRef
 import org.ensime.config._
 import org.ensime.indexer.SearchService
 import org.ensime.model._
 import org.ensime.util.FileUtils
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable
+import scala.reflect.internal.util.{ RangePosition, SourceFile, _ }
+import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
-import scala.tools.nsc.util._
-import scala.reflect.internal.util._
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
-import scala.reflect.internal.util.{ RangePosition, SourceFile }
-import scala.tools.nsc.Settings
+import scala.tools.nsc.util._
 import scala.tools.refactoring.analysis.GlobalIndexes
+import scala.reflect.internal.util.BatchSourceFile
 
 trait RichCompilerControl extends CompilerControl with RefactoringControl with CompletionControl with DocFinding {
   self: RichPresentationCompiler =>
@@ -171,7 +173,7 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     case ContentsSourceFileInfo(f: File, contents: String) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
     case ContentsInSourceFileInfo(f: File, contentsIn: File) =>
       val contents = FileUtils.readFile(contentsIn, charset) match {
-        case Right(contents) => contents
+        case Right(contentStr) => contentStr
         case Left(e) => throw e
       }
       new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
