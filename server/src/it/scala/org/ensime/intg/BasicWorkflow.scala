@@ -208,7 +208,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
       val peekUndoRes = project.rpcPeekUndo()
       val undoId = peekUndoRes match {
-        case Right(Undo(undoIdVal, "Refactoring of type: 'rename", List(TextEdit(`fooFile`, 214, 217, "foo"), TextEdit(`fooFile`, 252, 255, "foo"), TextEdit(`fooFile`, 269, 272, "foo")))) =>
+        case Some(Undo(undoIdVal, "Refactoring of type: 'rename", List(TextEdit(`fooFile`, 214, 217, "foo"), TextEdit(`fooFile`, 252, 255, "foo"), TextEdit(`fooFile`, 269, 272, "foo")))) =>
           undoIdVal
         case _ =>
           fail("unexpected peek undo result: " + peekUndoRes)

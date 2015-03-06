@@ -2,6 +2,7 @@ package org.ensime.core
 
 import java.io.File
 
+import org.ensime.model.DebugThreadId$
 import org.ensime.util.Note
 
 /** Asynchronous swank protocol event */
@@ -34,14 +35,14 @@ case class NewScalaNotesEvent(
 
 /** The debugged VM has stepped to a new location and is now paused awaiting control. */
 case class DebugStepEvent(
-  threadId: String,
+  threadId: DebugThreadId,
   threadName: String,
   file: File,
   line: Int) extends DebugEvent
 
 /** The debugged VM has stopped at a breakpoint. */
 case class DebugBreakEvent(
-  threadId: String,
+  threadId: DebugThreadId,
   threadName: String,
   file: File,
   line: Int) extends DebugEvent

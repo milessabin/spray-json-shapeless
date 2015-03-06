@@ -2,9 +2,6 @@ package org.ensime.model
 
 import java.io.File
 import org.ensime.util.FileEdit
-import scala.collection.mutable
-
-import org.ensime.config._
 
 sealed trait EntityInfo {
   def name: String
@@ -162,7 +159,23 @@ sealed trait DebugLocation
 
 case class DebugObjectReference(objectId: Long) extends DebugLocation
 
-case class DebugStackSlot(threadId: String, frame: Int, offset: Int) extends DebugLocation
+/**
+ * A debugger thread id.
+ */
+case class DebugThreadId(id: Long)
+
+object DebugThreadId {
+  /**
+   * Create a ThreadId from a String representation
+   * @param s A Long encoded as a string
+   * @return A ThreadId
+   */
+  def apply(s: String): DebugThreadId = {
+    new DebugThreadId(s.toLong)
+  }
+}
+
+case class DebugStackSlot(threadId: DebugThreadId, frame: Int, offset: Int) extends DebugLocation
 
 case class DebugArrayElement(objectId: Long, index: Int) extends DebugLocation
 

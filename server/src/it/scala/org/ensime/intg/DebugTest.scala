@@ -33,7 +33,7 @@ class DebugTest extends WordSpec with Matchers with Inside
     ) { (server, _, _) =>
         implicit val s = server
         checkTopStackFrame("stepping.ForComprehensionListString$", "main", 9)
-        server.project.rpcDebugNext("1")
+        server.project.rpcDebugNext(DebugThreadId(1))
         checkTopStackFrame("stepping.ForComprehensionListString$$anonfun$main$1", "apply", 10)
       }
   }
@@ -48,7 +48,7 @@ class DebugTest extends WordSpec with Matchers with Inside
         val project = server.project
         val breakpointsPath = breakpointsFile.getAbsolutePath
 
-        project.rpcDebugBacktrace("1", 0, 3) should matchPattern {
+        project.rpcDebugBacktrace(DebugThreadId(1), 0, 3) should matchPattern {
           case DebugBacktrace(List(
             DebugStackFrame(0, List(), 0, "breakpoints.Breakpoints", "mainTest",
               LineSourcePosition(`breakpointsFile`, 32), _),
@@ -71,23 +71,23 @@ class DebugTest extends WordSpec with Matchers with Inside
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
 
-          project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
+          project.rpcDebugContinue(DebugThreadId(1))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
 
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
 
-          project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
+          project.rpcDebugContinue(DebugThreadId(1))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 13))
 
           //              bp11.setEnabled(false)
           project.rpcDebugClearBreakpoint(breakpointsPath, 11)
           //              session.waitForBreakpointsToBeDisabled(bp11)
           //
           //              session.resumetoSuspension()
-          project.rpcDebugContinue("1")
+          project.rpcDebugContinue(DebugThreadId(1))
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
-          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 13))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 13))
           //
           //              bp11.setEnabled(true); bp13.setEnabled(false)
           project.rpcDebugSetBreakpoint(breakpointsPath, 11)
@@ -98,15 +98,15 @@ class DebugTest extends WordSpec with Matchers with Inside
           //
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
-          project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
+          project.rpcDebugContinue(DebugThreadId(1))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
           //
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
-          project.rpcDebugContinue("1")
-          asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", breakpointsFile, 11))
+          project.rpcDebugContinue(DebugThreadId(1))
+          asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
           //
-          project.rpcDebugContinue("1")
+          project.rpcDebugContinue(DebugThreadId(1))
           //asyncHelper.expectAsync(60 seconds, DebugVMDisconnectEvent)
           //              session.resumeToCompletion()
         } finally {
@@ -164,42 +164,42 @@ class DebugTest extends WordSpec with Matchers with Inside
         (server, asyncHelper, variablesFile) =>
           implicit val s = server
           // boolean local
-          getVariableValue("1", "a") should matchPattern {
+          getVariableValue(DebugThreadId(1), "a") should matchPattern {
             case DebugPrimitiveValue("true", "boolean") =>
           }
 
           // char local
-          getVariableValue("1", "b") should matchPattern {
+          getVariableValue(DebugThreadId(1), "b") should matchPattern {
             case DebugPrimitiveValue("'c'", "char") =>
           }
 
           // short local
-          getVariableValue("1", "c") should matchPattern {
+          getVariableValue(DebugThreadId(1), "c") should matchPattern {
             case DebugPrimitiveValue("3", "short") =>
           }
 
           // int local
-          getVariableValue("1", "d") should matchPattern {
+          getVariableValue(DebugThreadId(1), "d") should matchPattern {
             case DebugPrimitiveValue("4", "int") =>
           }
 
           // long local
-          getVariableValue("1", "e") should matchPattern {
+          getVariableValue(DebugThreadId(1), "e") should matchPattern {
             case DebugPrimitiveValue("5", "long") =>
           }
 
           // float local
-          getVariableValue("1", "f") should matchPattern {
+          getVariableValue(DebugThreadId(1), "f") should matchPattern {
             case DebugPrimitiveValue("1.0", "float") =>
           }
 
           // double local
-          getVariableValue("1", "g") should matchPattern {
+          getVariableValue(DebugThreadId(1), "g") should matchPattern {
             case DebugPrimitiveValue("2.0", "double") =>
           }
 
           // String local
-          inside(getVariableValue("1", "h")) {
+          inside(getVariableValue(DebugThreadId(1), "h")) {
             case DebugStringInstance("\"test\"", debugFields, "java.lang.String", _) =>
               exactly(1, debugFields) should matchPattern {
                 case DebugClassField(_, "value", "char[]", "Array['t', 'e', 's',...]") =>
@@ -207,12 +207,12 @@ class DebugTest extends WordSpec with Matchers with Inside
           }
 
           // primitive array local
-          getVariableValue("1", "i") should matchPattern {
+          getVariableValue(DebugThreadId(1), "i") should matchPattern {
             case DebugArrayInstance(3, "int[]", "int", _) =>
           }
 
           // type local
-          inside(getVariableValue("1", "j")) {
+          inside(getVariableValue(DebugThreadId(1), "j")) {
             case DebugObjectInstance("Instance of $colon$colon", debugFields, "scala.collection.immutable.$colon$colon", _) =>
               exactly(1, debugFields) should matchPattern {
                 case DebugClassField(_, "head", "java.lang.Object", "Instance of Integer") =>
@@ -220,7 +220,7 @@ class DebugTest extends WordSpec with Matchers with Inside
           }
 
           // object array local
-          getVariableValue("1", "k") should matchPattern {
+          getVariableValue(DebugThreadId(1), "k") should matchPattern {
             case DebugArrayInstance(3, "java.lang.Object[]", "java.lang.Object", _) =>
           }
       }
@@ -249,7 +249,7 @@ trait DebugTestUtils {
     val startStatus = project.rpcDebugStartVM(className)
     assert(startStatus == DebugVmSuccess())
 
-    val expect = DebugBreakEvent("1", "main", resolvedFile, breakLine)
+    val expect = DebugBreakEvent(DebugThreadId(1), "main", resolvedFile, breakLine)
     asyncHelper.expectAsync(10 seconds, expect)
     project.rpcDebugClearBreakpoint(fileName, breakLine)
 
@@ -260,14 +260,14 @@ trait DebugTestUtils {
 
       // no way to await the stopped condition so we let the app run
       // its course on the main thread
-      project.rpcDebugContinue("1")
+      project.rpcDebugContinue(DebugThreadId(1))
       project.rpcDebugStopVM()
 
       //asyncHelper.expectAsync(30 seconds, DebugVMDisconnectEvent)
     }
   }
 
-  def getVariableValue(threadId: String, variableName: String)(implicit server: Server): DebugValue = {
+  def getVariableValue(threadId: DebugThreadId, variableName: String)(implicit server: Server): DebugValue = {
     val project = server.project
     val vLocOpt = project.rpcDebugLocateName(threadId, variableName)
     val vLoc = vLocOpt.getOrThrow(
@@ -280,7 +280,7 @@ trait DebugTestUtils {
   }
 
   def checkTopStackFrame(className: String, method: String, line: Int)(implicit server: Server): Unit = {
-    server.project.rpcDebugBacktrace("1", 0, 1) should matchPattern {
+    server.project.rpcDebugBacktrace(DebugThreadId(1), 0, 1) should matchPattern {
       case DebugBacktrace(List(DebugStackFrame(0, _, 1, `className`, `method`,
         LineSourcePosition(_, `line`), _)),
         "1", "main") =>

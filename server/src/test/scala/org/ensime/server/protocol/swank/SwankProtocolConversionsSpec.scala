@@ -30,9 +30,9 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
         // toWF(evt: DebugEvent): WireFormat
         assert(toWF(DebugOutputEvent("XXX")).toWireString === """(:debug-event (:type output :body "XXX"))""")
-        assert(toWF(DebugStepEvent("207", "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
+        assert(toWF(DebugStepEvent(DebugThreadId(207), "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
           s"""(:debug-event (:type step :thread-id "207" :thread-name "threadNameStr" :file $file1_str :line 57))""")
-        assert(toWF(DebugBreakEvent("209", "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
+        assert(toWF(DebugBreakEvent(DebugThreadId(209), "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
           s"""(:debug-event (:type breakpoint :thread-id "209" :thread-name "threadNameStr" :file $file1_str :line 57))""")
         assert(toWF(DebugVMStartEvent).toWireString === """(:debug-event (:type start))""")
         assert(toWF(DebugVMDisconnectEvent).toWireString === """(:debug-event (:type disconnect))""")
@@ -53,7 +53,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
           """(:type element :object-id 58 :index 2)""")
         assert(toWF(DebugObjectField(58L, "fieldName").asInstanceOf[DebugLocation]).toWireString ===
           """(:type field :object-id 58 :field "fieldName")""")
-        assert(toWF(DebugStackSlot("27", 12, 23).asInstanceOf[DebugLocation]).toWireString ===
+        assert(toWF(DebugStackSlot(DebugThreadId(27), 12, 23).asInstanceOf[DebugLocation]).toWireString ===
           """(:type slot :thread-id "27" :frame 12 :offset 23)""")
 
         // toWF(obj: DebugValue)
@@ -114,8 +114,8 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(new ReplConfig(Set(file1))).toWireString === s"""(:classpath ($file1_str))""")
 
         // toWF(value: Boolean)
-        assert(toWF(true).toWireString === """t""")
-        assert(toWF(false).toWireString === """nil""")
+        assert(toWF(value = true).toWireString === """t""")
+        assert(toWF(value = false).toWireString === """nil""")
 
         // toWF(value: String)
         assert(toWF("ABC").toWireString === """"ABC"""")

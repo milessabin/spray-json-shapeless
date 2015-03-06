@@ -9,7 +9,6 @@ trait EnsimeApi {
 
   def rpcConnectionInfo(): ConnectionInfo
   def rpcShutdownServer(): Unit
-  def rpcNotifyClientReady(): Unit
 
   /**
    * Subscribe to async events from the project, replaying previously seen events if requested.
@@ -18,8 +17,15 @@ trait EnsimeApi {
    * @return True if caller is first subscriber, False otherwise
    */
   def rpcSubscribeAsync(handler: EnsimeEvent => Unit): Boolean
-  def rpcPeekUndo(): Either[String, Undo]
+
+  /**
+   * Return the details of the latest Undo operation on the undo stack.
+   * @return The latest Undo information (if it exists) or None
+   */
+  def rpcPeekUndo(): Option[Undo]
+
   def rpcExecUndo(undoId: Int): Either[String, UndoResult]
+
   def rpcReplConfig(): ReplConfig
 
   /**
@@ -93,9 +99,11 @@ trait EnsimeApi {
   def rpcUsesOfSymAtPoint(f: String, point: Int): List[ERangePosition]
   def rpcTypeAtPoint(f: String, range: OffsetRange): Option[TypeInfo]
   def rpcInspectPackageByPath(path: String): Option[PackageInfo]
+
   def rpcPrepareRefactor(procId: Int, refactorDesc: RefactorDesc): Either[RefactorFailure, RefactorEffect]
   def rpcExecRefactor(procId: Int, refactorType: Symbol): Either[RefactorFailure, RefactorResult]
   def rpcCancelRefactor(procId: Int): Unit
+
   def rpcExpandSelection(filename: String, start: Int, stop: Int): FileRange
   def rpcFormatFiles(filenames: List[String]): Unit
   def rpcFormatFile(fileInfo: SourceFileInfo): String
@@ -104,19 +112,19 @@ trait EnsimeApi {
   def rpcDebugAttachVM(hostname: String, port: String): DebugVmStatus
   def rpcDebugStopVM(): Boolean
   def rpcDebugRun(): Boolean
-  def rpcDebugContinue(threadId: String): Boolean
+  def rpcDebugContinue(threadId: DebugThreadId): Boolean
   def rpcDebugSetBreakpoint(file: String, line: Int): Unit
   def rpcDebugClearBreakpoint(file: String, line: Int): Unit
   def rpcDebugClearAllBreakpoints(): Unit
   def rpcDebugListBreakpoints(): BreakpointList
-  def rpcDebugNext(threadId: String): Boolean
-  def rpcDebugStep(threadId: String): Boolean
-  def rpcDebugStepOut(threadId: String): Boolean
-  def rpcDebugLocateName(threadId: String, name: String): Option[DebugLocation]
+  def rpcDebugNext(threadId: DebugThreadId): Boolean
+  def rpcDebugStep(threadId: DebugThreadId): Boolean
+  def rpcDebugStepOut(threadId: DebugThreadId): Boolean
+  def rpcDebugLocateName(threadId: DebugThreadId, name: String): Option[DebugLocation]
   def rpcDebugValue(loc: DebugLocation): Option[DebugValue]
-  def rpcDebugToString(threadId: String, loc: DebugLocation): Option[String]
+  def rpcDebugToString(threadId: DebugThreadId, loc: DebugLocation): Option[String]
   def rpcDebugSetValue(loc: DebugLocation, newValue: String): Boolean
-  def rpcDebugBacktrace(threadId: String, index: Int, count: Int): DebugBacktrace
+  def rpcDebugBacktrace(threadId: DebugThreadId, index: Int, count: Int): DebugBacktrace
   def rpcDebugActiveVM(): Boolean
 }
 

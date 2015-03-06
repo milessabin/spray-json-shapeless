@@ -29,14 +29,14 @@ class SexpSpec extends FunSpec with Matchers {
     it("should match lists") {
       SexpCons(foosym, SexpNil) match {
         case SexpList(els) if els == List(foosym) =>
-        case _ => fail
+        case _ => fail()
       }
       SexpCons(foosym, SexpCons(barsym, SexpNil)) match {
         case SexpList(els) if els == List(foosym, barsym) =>
-        case _ => fail
+        case _ => fail()
       }
       SexpNil match {
-        case SexpList(_) => fail
+        case SexpList(_) => fail()
         case _ =>
       }
     }
@@ -71,11 +71,11 @@ class SexpSpec extends FunSpec with Matchers {
             barkey, SexpCons(
               foosym, SexpNil)))) match {
           case SexpData(kvs) if kvs.size == 2 =>
-          case _ => fail
+          case _ => fail()
         }
 
       SexpNil match {
-        case SexpData(_) => fail
+        case SexpData(_) => fail()
         case _ =>
       }
     }

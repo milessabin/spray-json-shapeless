@@ -58,8 +58,6 @@ case class SymbolByNameReq(typeFullName: String, memberName: Option[String], sig
 
 case class SubscribeAsync(handler: EnsimeEvent => Unit) extends RPCRequest
 
-case object ClientReadyEvent
-
 class Project(
     val config: EnsimeConfig,
     actorSystem: ActorSystem) extends ProjectEnsimeApiImpl {
@@ -151,7 +149,6 @@ class Project(
     }
 
     private val waiting: Receive = {
-      case ClientReadyEvent =>
       case SubscribeAsync(handler) =>
         asyncListeners ::= handler
         asyncEvents.foreach { event => handler(event) }
@@ -168,11 +165,8 @@ class Project(
     undos(undoCounter) = Undo(undoCounter, sum, changes.toList)
   }
 
-  protected def peekUndo(): Either[String, Undo] = {
-    undos.lastOption match {
-      case Some(u) => Right(u._2)
-      case _ => Left("No such undo.")
-    }
+  protected def peekUndo(): Option[Undo] = {
+    undos.lastOption.map(_._2)
   }
 
   protected def execUndo(undoId: Int): Either[String, UndoResult] = {
