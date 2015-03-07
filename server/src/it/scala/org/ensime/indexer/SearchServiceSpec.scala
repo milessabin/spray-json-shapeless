@@ -83,6 +83,14 @@ class SearchServiceSpec extends WordSpec with Matchers
         "CCWC" // <= CamelCaseAwesomeNess
       )
     }
+
+    "return results from package objects" in withSearchService { implicit service =>
+      searchClasses(
+        "org.example.Blip",
+        "Blip"
+      )
+
+    }
   }
 
   "class and method searching" should {

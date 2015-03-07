@@ -172,7 +172,9 @@ class BasicWorkflow extends WordSpec with Matchers
           BasicTypeInfo("CaseClassWithCamelCaseName", _: Int, 'class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(EmptySourcePosition()), None),
           BasicTypeInfo("CaseClassWithCamelCaseName$", _: Int, 'object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(EmptySourcePosition()), None),
           BasicTypeInfo("Foo", _: Int, 'class, "org.example.Foo", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Foo$", _: Int, 'object, "org.example.Foo$", List(), List(), Some(EmptySourcePosition()), None)))) =>
+          BasicTypeInfo("Foo$", _: Int, 'object, "org.example.Foo$", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), Some(EmptySourcePosition()), None),
+          BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), Some(EmptySourcePosition()), None)))) =>
         case _ =>
           fail("inspect package by path failed, got: " + insPacByPathResOpt)
       }
