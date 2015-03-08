@@ -92,5 +92,10 @@ class SexpParserSpec extends FunSpec with Matchers {
     it("should parse cons") {
       assert(parse("(foo . bar)") === SexpCons(foosym, barsym))
     }
+
+    it("should parse symbols with dots in their name") {
+      assert(parse("foo.bar") === SexpSymbol("foo.bar"))
+      assert(parse(":foo.bar") === SexpSymbol(":foo.bar"))
+    }
   }
 }

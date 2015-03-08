@@ -48,7 +48,7 @@ object SexpParser extends ParboiledParser[Sexp] {
 
   private lazy val SexpSymbolP: Rule1[SexpSymbol] = rule("Symbol") {
     // ? allowed at the end of symbol names
-    oneOrMore(Alpha | Digit | SymbolSpecial) ~ optional("?")
+    oneOrMore(Alpha | Digit | SymbolSpecial) ~ zeroOrMore(Alpha | Digit | SymbolSpecial | ".") ~ optional("?")
   } ~> SexpSymbol.apply
 
   private lazy val SexpListP: Rule1[Sexp] = rule("List") {
