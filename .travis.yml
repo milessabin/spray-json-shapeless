@@ -13,6 +13,7 @@ sudo: false
 cache:
   directories:
     - $HOME/.ivy2/cache
+    - $HOME/.sbt
 addons:
   apt_packages:
   # https://github.com/travis-ci/apt-package-whitelist
