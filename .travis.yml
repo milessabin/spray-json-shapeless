@@ -8,7 +8,7 @@ jdk:
   - openjdk6
   #- openjdk7
 scala:
-  - 2.11.5
+  - 2.11.6
 sudo: false
 cache:
   directories:
@@ -23,12 +23,19 @@ addons:
   # run our own build of emacs-24.4.
   - emacs23-gtk
 install:
-  - curl -L $EMACS_URL | tar xjf - -C $HOME && export EMACS=$HOME/emacs-${EMACS_VERSION}-bin/bin/emacs-${EMACS_VERSION} && $EMACS --version
+  - curl -L $EMACS_URL | tar xjf - -C $HOME &&
+    export EMACS=$HOME/emacs-${EMACS_VERSION}-bin/bin/emacs-${EMACS_VERSION} &&
+    $EMACS --version
   - git clone --depth 1 https://github.com/ensime/ensime-emacs.git ../ensime-emacs
-  - sbt ++$TRAVIS_SCALA_VERSION gen-ensime && mkdir .ensime_cache
+  - sbt ++$TRAVIS_SCALA_VERSION gen-ensime &&
+    mkdir .ensime_cache
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile it:compile doc && ./.check-diff.sh && sbt ++$TRAVIS_SCALA_VERSION test it:test
-  - sbt ++$TRAVIS_SCALA_VERSION publishLocal && cd ../ensime-emacs && test/run_emacs_tests.sh #2>&1 | tee stdout | grep "Starting test"
+  - sbt ++$TRAVIS_SCALA_VERSION clean test:compile it:compile doc &&
+    ./.check-diff.sh &&
+    sbt ++$TRAVIS_SCALA_VERSION test it:test
+  - sbt ++$TRAVIS_SCALA_VERSION publishLocal &&
+    cd ../ensime-emacs &&
+    test/run_emacs_tests.sh #2>&1 | tee stdout | grep "Starting test"
 #after_failure:
 #  - cat ../ensime-emacs/stdout
 after_success:
