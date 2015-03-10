@@ -33,7 +33,13 @@ object Server {
     if (!ensimeFile.exists() || !ensimeFile.isFile)
       throw new RuntimeException(s".ensime file ($ensimeFile) not found")
 
-    val config = EnsimeConfigProtocol.parse(Files.toString(ensimeFile, Charsets.UTF_8))
+    val config = try {
+      EnsimeConfigProtocol.parse(Files.toString(ensimeFile, Charsets.UTF_8))
+    } catch {
+      case e: Throwable =>
+        log.error(s"There was a problem parsing $ensimeFile", e)
+        throw e
+    }
 
     initialiseServer(config)
   }
