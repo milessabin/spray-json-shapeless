@@ -3,6 +3,7 @@ import scala.util.Try
 import sbt._
 import Keys._
 import com.typesafe.sbt.SbtScalariform._
+import scoverage.ScoverageSbtPlugin.ScoverageKeys
 
 object EnsimeBuild extends Build with JdkResolver {
   /*
@@ -121,15 +122,20 @@ object EnsimeBuild extends Build with JdkResolver {
     ) ++ testLibs(scalaVersion.value)
   )
 
-  lazy val testingEmpty = Project("testingEmpty", file("testing/empty"), settings = basicSettings)
+  lazy val testingEmpty = Project("testingEmpty", file("testing/empty"), settings = basicSettings).settings(
+    ScoverageKeys.coverageExcludedPackages := ".*"
+  )
                           //.settings (publishArtifact := false)
 
   lazy val testingSimple = Project("testingSimple", file("testing/simple"), settings = basicSettings) settings (
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive()
-    //publishArtifact := false
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive(),
+    //publishArtifact := false,
+    ScoverageKeys.coverageExcludedPackages := ".*"
   )
 
-  lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings)
+  lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings).settings(
+    ScoverageKeys.coverageExcludedPackages := ".*"
+  )
                           //.settings (publishArtifact := false)
 
   lazy val server = Project("server", file("server")).dependsOn(
