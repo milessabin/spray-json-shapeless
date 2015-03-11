@@ -40,7 +40,16 @@ case class ClassName(pack: PackageName, name: String) extends FullyQualifiedName
     case MemberName(cn, _) => contains(cn)
     case _ => false
   }
-  def fqnString = if (pack.path.isEmpty) name else pack.fqnString + "." + name
+
+  def fqnString =
+    if (pack.path.isEmpty) name
+    else {
+      // remove "package" string from fqn in package objects
+      val nameParts = name.split("\\$")
+      pack.fqnString + "." +
+        (if (nameParts.size == 2 && nameParts(0) == "package") nameParts(1) else name)
+    }
+
   def internalString =
     "L" + (if (pack.path.isEmpty) name else pack.path.mkString("/") + "/" + name) + ";"
 }
