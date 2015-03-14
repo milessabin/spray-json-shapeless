@@ -6,6 +6,7 @@ import akka.event.slf4j.Logger
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
 import pimpathon.file._
+import scala.util.Properties
 
 object EnsimeConfigProtocol {
   object Protocol extends DefaultSexpProtocol
@@ -28,7 +29,10 @@ object EnsimeConfigProtocol {
   // there are lots of JRE libs, but most people only care about
   // rt.jar --- this could be parameterised.
   private def inferJavaLibs(javaHome: File): List[File] =
-    javaHome.tree.filter(_.getName == "rt.jar").toList
+    // WORKAROUND https://github.com/ensime/ensime-server/issues/886
+    // speeds up the emacs integration tests significantly,
+    if (Properties.envOrNone("ENSIME_SKIP_JRE_INDEX").isDefined) Nil
+    else javaHome.tree.filter(_.getName == "rt.jar").toList
 
   def validated(c: EnsimeConfig): EnsimeConfig = c.copy(
     subprojects = c.subprojects.map(validated)
