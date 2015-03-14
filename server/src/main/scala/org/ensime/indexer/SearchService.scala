@@ -149,7 +149,7 @@ class SearchService(
         val path = f.getName.getURI
         val (clazz, refs) = indexClassfile(f)
 
-        // TODO: cross reference with the depickler
+        val depickler = new ClassfileDepickler(f)
 
         val source = resolver.resolve(clazz.name.pack, clazz.source)
         val sourceUri = source.map(_.getName.getURI)
@@ -163,7 +163,10 @@ class SearchService(
           } ::: clazz.fields.toList.filter(_.access == Public).map { field =>
             val internal = field.clazz.internalString
             FqnSymbol(None, name, path, field.name.fqnString, None, Some(internal), sourceUri, clazz.source.line)
+          } ::: depickler.getTypeAliases.toList.filter(_.access == Public).map { rawType =>
+            FqnSymbol(None, name, path, rawType.fqn, None, None, sourceUri, None)
           }
+
     }
   }.filterNot(sym => ignore.exists(sym.fqn.contains))
 
