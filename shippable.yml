@@ -1,0 +1,57 @@
+# BLOCKED https://github.com/Shippable/support/issues/1170
+build_image:
+  - ensime/ensime:shippable-1.0
+
+# WORKAROUND: https://github.com/Shippable/support/issues/1166
+before_install:
+  - git clean -xfd
+
+install:
+  - sbt ++$SCALA_VERSION updateClassifiers
+
+before_script:
+  - sbt ++$SCALA_VERSION gen-ensime &&
+    mkdir .ensime_cache
+  - git clone --depth 1 https://github.com/ensime/ensime-emacs.git ensime-emacs
+
+script:
+  - sbt ++$SCALA_VERSION clean test:compile it:compile doc &&
+    if [ $(git diff | wc -l) -ge 1 ] ; then
+      echo "Code formatting does not meet the project's standards:" ;
+      git --no-pager diff ;
+      exit 1 ;
+    fi &&
+    sbt ++$SCALA_VERSION test it:test &&
+    sbt ++$SCALA_VERSION publishLocal &&
+    ensime-emacs/test/run_emacs_tests.sh &&
+    if [ "$PULL_REQUEST" = "false" ] ; then
+      sbt ++$SCALA_VERSION publish ;
+    fi
+
+# PERFORMANCE: https://github.com/Shippable/support/issues/1165
+# BLOCKED https://github.com/scoverage/sbt-coveralls/pull/41
+#- sbt ++$SCALA_VERSION clean coverage test it:test &&
+#  sbt coverageAggregate coveralls
+after_success:
+  - git clean -xfd
+
+after_failure:
+  - git clean -xfd
+
+# WORKAROUND https://github.com/Shippable/support/issues/1171
+# after_script must be written into after_success and after_failure.
+# The caching is a little too eager, so we have to clean up manually
+#after_script:
+#  - git clean -xfd
+
+env:
+  global:
+    - SCALA_VERSION=2.11.6
+    - EMACS=/opt/emacs-24.1/bin/emacs
+    # WORKAROUND https://github.com/Shippable/support/issues/1198
+    - COVERALLS_REPO_TOKEN=ZvySxEAk6j3KcqFbOqYnpgFL5payQgVUM
+    # make sure to set the following encrypted variables:
+    #   SONATYPE_USERNAME
+    #   SONATYPE_PASSWORD
+    - secure: h70qzhKRJ/VHJp//y0a2O3QoGUvL6BfczBLuwdo23l4rvEb1GjlL2qmDPzfPGUbLO7ztVOn4v6zFfXeT7IpuOXwA8kwVmbK0P/0by/O+m2Cp+EB2PcPSlpJrseYvJIqfdkwrQnN0WLSV4joXC/BV4UabiMv/l2aIqu1ZM/5X+OesNvjo5Wp+h/WmhhVumZCS86lJEQg5FzKd2AXOkzsGDs0uJ0XW03SqjK2t7jE/iWBk8ahUO49+3m2jvHLrexhsMCEfq7KVOzs6kIoD+m2DzFmwCrSeBYJSaOihYRMYuDCownz3wfUqWrBPvH0soXUY/9L1IWt4KBZ4ovzxQ71Nxw==
+

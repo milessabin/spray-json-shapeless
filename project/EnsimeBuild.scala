@@ -19,7 +19,7 @@ object EnsimeBuild extends Build with JdkResolver {
     scalaVersion := "2.11.6",
     version := "0.9.10-SNAPSHOT"
   )
-  val isTravis = sys.env.get("TRAVIS") == Some("true")
+  val isTravis = sys.env.get("TRAVIS") == Some("true") && sys.env.get("SHIPPABLE") == None
   val isEmacs = sys.env.get("TERM") == Some("dumb")
 
   if (isTravis)
