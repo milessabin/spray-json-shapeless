@@ -152,6 +152,7 @@ object EnsimeBuild extends Build with JdkResolver {
     // parallel forks are causing weird failures
     // https://github.com/sbt/sbt/issues/1890
     testForkedParallel in IntegrationTest := false,
+    javaOptions in IntegrationTest += "-Dfile.encoding=UTF8", // for file cloning
     testOptions in IntegrationTest ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
