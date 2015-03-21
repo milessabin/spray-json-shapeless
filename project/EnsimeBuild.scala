@@ -19,7 +19,7 @@ object EnsimeBuild extends Build with JdkResolver {
     scalaVersion := "2.11.6",
     version := "0.9.10-SNAPSHOT"
   )
-  val isTravis = sys.env.get("TRAVIS") == Some("true")
+  val isTravis = sys.env.get("TRAVIS") == Some("true") && sys.env.get("SHIPPABLE") == None
   val isEmacs = sys.env.get("TERM") == Some("dumb")
 
   if (isTravis)
@@ -152,6 +152,7 @@ object EnsimeBuild extends Build with JdkResolver {
     // parallel forks are causing weird failures
     // https://github.com/sbt/sbt/issues/1890
     testForkedParallel in IntegrationTest := false,
+    javaOptions in IntegrationTest += "-Dfile.encoding=UTF8", // for file cloning
     testOptions in IntegrationTest ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
