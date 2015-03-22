@@ -53,7 +53,8 @@ object Server {
   }
 }
 
-class Server(config: EnsimeConfig,
+class Server(
+    val config: EnsimeConfig,
     host: String,
     requestedPort: Int,
     connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol) {

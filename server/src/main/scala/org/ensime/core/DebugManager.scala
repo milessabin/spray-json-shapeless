@@ -61,7 +61,7 @@ class DebugManager(
         if (set.size > 1) {
           log.warning("Warning, ambiguous source name: " + loc.sourceName())
         }
-        set.headOption.map(f => LineSourcePosition(f, loc.lineNumber))
+        set.headOption.map(f => LineSourcePosition(f.file, loc.lineNumber))
       }).getOrElse(None)
     } catch {
       case e: AbsentInformationException => None
@@ -94,17 +94,17 @@ class DebugManager(
     if ((for (vm <- maybeVM) yield {
       vm.setBreakpoint(file, line)
     }).getOrElse { false }) {
-      activeBreakpoints.add(Breakpoint(file, line))
+      activeBreakpoints.add(Breakpoint(file.file, line))
       true
     } else {
-      addPendingBreakpoint(Breakpoint(file, line))
+      addPendingBreakpoint(Breakpoint(file.file, line))
       false
     }
   }
 
   def clearBreakpoint(file: CanonFile, line: Int): Unit = {
-    val clearBp = Breakpoint(file, line)
-    for (bps <- pendingBreaksBySourceName.get(file.getName)) {
+    val clearBp = Breakpoint(file.file, line)
+    for (bps <- pendingBreaksBySourceName.get(file.file.getName)) {
       bps.retain { _ != clearBp }
     }
     val toRemove = activeBreakpoints.filter { _ == clearBp }
@@ -611,7 +611,7 @@ class DebugManager(
       }
 
       val buf = mutable.HashSet[LocationClass]()
-      val key = file.getName
+      val key = file.file.getName
       for (types <- fileToUnits.get(key)) {
         for (t <- types) {
           for (m <- t.methods()) {
@@ -892,8 +892,7 @@ class DebugManager(
       val className = ignoreErr(frame.location.declaringType().name(), "Class")
       val pcLocation = locToPos(frame.location).getOrElse(
         LineSourcePosition(
-          CanonFile(
-            frame.location.sourcePath()),
+          CanonFile(frame.location.sourcePath()).file,
           frame.location.lineNumber))
       val thisObjId = ignoreErr(remember(frame.thisObject()).uniqueID, -1L)
       DebugStackFrame(index, locals, numArgs, className, methodName, pcLocation, thisObjId)

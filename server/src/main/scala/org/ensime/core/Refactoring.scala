@@ -223,7 +223,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
   import org.ensime.util.FileUtils._
 
   protected def doRename(procId: Int, tpe: scala.Symbol, name: String, file: CanonFile, start: Int, end: Int) =
-    new RefactoringEnvironment(file.getPath, start, end) {
+    new RefactoringEnvironment(file.file.getPath, start, end) {
       val refactoring = new Rename with GlobalIndexes {
         val global = RefactoringImpl.this
         val invalidSet = toBeRemoved.synchronized { toBeRemoved.toSet }
@@ -235,7 +235,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
 
   protected def doExtractMethod(procId: Int, tpe: scala.Symbol,
     name: String, file: CanonFile, start: Int, end: Int) =
-    new RefactoringEnvironment(file.getPath, start, end) {
+    new RefactoringEnvironment(file.file.getPath, start, end) {
       val refactoring = new ExtractMethod with GlobalIndexes {
         val global = RefactoringImpl.this
         val cuIndexes = this.global.activeUnits().map { u => CompilationUnitIndex(u.body) }
@@ -246,7 +246,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
 
   protected def doExtractLocal(procId: Int, tpe: scala.Symbol,
     name: String, file: CanonFile, start: Int, end: Int) =
-    new RefactoringEnvironment(file.getPath, start, end) {
+    new RefactoringEnvironment(file.file.getPath, start, end) {
       val refactoring = new ExtractLocal with GlobalIndexes {
         val global = RefactoringImpl.this
         val cuIndexes = this.global.activeUnits().map { u => CompilationUnitIndex(u.body) }
@@ -257,7 +257,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
 
   protected def doInlineLocal(procId: Int, tpe: scala.Symbol, file: CanonFile,
     start: Int, end: Int) =
-    new RefactoringEnvironment(file.getPath, start, end) {
+    new RefactoringEnvironment(file.file.getPath, start, end) {
       val refactoring = new InlineLocal with GlobalIndexes {
         val global = RefactoringImpl.this
         val cuIndexes = this.global.activeUnits().map { u => CompilationUnitIndex(u.body) }
@@ -267,7 +267,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     }.result
 
   protected def doOrganizeImports(procId: Int, tpe: scala.Symbol, file: CanonFile) =
-    new RefactoringEnvironment(file.getPath, 0, 0) {
+    new RefactoringEnvironment(file.file.getPath, 0, 0) {
       val refactoring = new OrganizeImports {
         val global = RefactoringImpl.this
       }
@@ -278,12 +278,12 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
     val refactoring = new AddImportStatement {
       val global = RefactoringImpl.this
     }
-    val af = AbstractFile.getFile(file.getPath)
+    val af = AbstractFile.getFile(file.file.getPath)
     val modifications = refactoring.addImport(af, qualName)
     Right(new RefactorEffect(procId, tpe, modifications.map(FileEditHelper.fromChange)))
   }
 
-  protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.createSourceFile(f.getPath)))
+  protected def reloadAndType(f: CanonFile) = reloadAndTypeFiles(List(this.createSourceFile(f.file.getPath)))
 
   protected def prepareRefactor(procId: Int, refactor: RefactorDesc): Either[RefactorFailure, RefactorEffect] = {
 

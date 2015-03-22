@@ -84,7 +84,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     }
 
     it("should understand swank:peek-undo - success") {
-      val file3 = CanonFile("/foo/abc")
+      val file3 = CanonFile("/foo/abc").file
       val file3_str = fileToWireString(file3)
 
       testWithResponse("""(swank:peek-undo)""") { (t, m, id) =>

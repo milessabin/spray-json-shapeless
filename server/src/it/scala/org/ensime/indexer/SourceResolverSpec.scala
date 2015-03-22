@@ -26,14 +26,14 @@ class SourceResolverSpec extends WordSpec with Matchers with SharedSourceResolve
       implicit val config = c
       implicit val resolver = r
       find("org.example.Foo", "Foo.scala") shouldBe
-        Some((main / "org/example/Foo.scala").getAbsolutePath)
+        Some((scalaMain / "org/example/Foo.scala").getAbsolutePath)
     }
 
     "should resolve files in parent directories in the project" in withSourceResolver { (c, r) =>
       implicit val config = c
       implicit val resolver = r
       find("org.example", "bad-convention.scala") shouldBe
-        Some((main / "bad-convention.scala").getAbsolutePath)
+        Some((scalaMain / "bad-convention.scala").getAbsolutePath)
     }
   }
 }
@@ -48,6 +48,4 @@ trait SourceResolverTestUtils {
         case _ => fo.getName.getPath
       })
   }
-
-  def main(implicit config: EnsimeConfig) = config.subprojects.head.sourceRoots.head
 }
