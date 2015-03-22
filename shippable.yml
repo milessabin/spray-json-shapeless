@@ -1,13 +1,6 @@
 # BLOCKED https://github.com/Shippable/support/issues/1170
 build_image:
-  - ensime/ensime:shippable-1.0
-
-# WORKAROUND: https://github.com/Shippable/support/issues/1166
-before_install:
-  - git clean -xfd
-
-install:
-  - sbt ++$SCALA_VERSION updateClassifiers
+  - ensime/ensime:latest
 
 before_script:
   - sbt ++$SCALA_VERSION gen-ensime &&
@@ -28,21 +21,9 @@ script:
       sbt ++$SCALA_VERSION publish ;
     fi
 
-# PERFORMANCE: https://github.com/Shippable/support/issues/1165
 # BLOCKED https://github.com/scoverage/sbt-coveralls/pull/41
 #- sbt ++$SCALA_VERSION clean coverage test it:test &&
 #  sbt coverageAggregate coveralls
-after_success:
-  - git clean -xfd
-
-after_failure:
-  - git clean -xfd
-
-# WORKAROUND https://github.com/Shippable/support/issues/1171
-# after_script must be written into after_success and after_failure.
-# The caching is a little too eager, so we have to clean up manually
-#after_script:
-#  - git clean -xfd
 
 env:
   global:
