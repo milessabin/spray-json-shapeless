@@ -6,6 +6,8 @@ import org.ensime.core.{ DebugBreakEvent, DebugVmSuccess }
 import org.ensime.fixture._
 import org.ensime.model._
 import org.ensime.server.Server
+import org.ensime.util.CanonFile
+import org.ensime.util.RichFile
 import org.scalatest._
 import pimpathon.file._
 import pimpathon.option._
@@ -226,7 +228,7 @@ class DebugTest extends WordSpec with Matchers with Inside
 }
 
 trait DebugTestUtils {
-  this: ServerFixture with Matchers =>
+  this: ServerFixture with EnsimeConfigFixture with Matchers =>
 
   /**
    * @param fileName to place the breakpoint
@@ -240,14 +242,15 @@ trait DebugTestUtils {
       f: (Server, AsyncMsgHelper, File) => Any): Any = withServer { (server, asyncHelper) =>
     val project = server.project
     val config = project.config
-    val resolvedFile = config.subprojects.head.sourceRoots.head / fileName
+    val resolvedFile = scalaMain(server.config) / fileName
 
     project.rpcDebugSetBreakpoint(fileName, breakLine)
 
     val startStatus = project.rpcDebugStartVM(className)
     assert(startStatus == DebugVmSuccess())
 
-    asyncHelper.expectAsync(60 seconds, DebugBreakEvent("1", "main", resolvedFile, breakLine))
+    val expect = DebugBreakEvent("1", "main", resolvedFile, breakLine)
+    asyncHelper.expectAsync(10 seconds, expect)
     project.rpcDebugClearBreakpoint(fileName, breakLine)
 
     try {

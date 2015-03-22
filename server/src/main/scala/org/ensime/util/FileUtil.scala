@@ -43,7 +43,9 @@ object RichFileObject {
   implicit def toRichFileObject(fo: FileObject): RichFileObject = new RichFileObject(fo)
 }
 
-class CanonFile private (path: String) extends File(path)
+class CanonFile private (path: String) {
+  val file = new File(path)
+}
 
 object CanonFile {
   def apply(file: File): CanonFile = {

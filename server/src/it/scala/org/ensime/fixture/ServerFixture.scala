@@ -1,10 +1,13 @@
 package org.ensime.fixture
 
 import akka.actor._
+import akka.pattern.AskTimeoutException
 import akka.pattern.Patterns
 import org.ensime.config._
 import org.ensime.core._
 import org.ensime.server._
+import scala.collection.immutable.ListMap
+import scala.collection.immutable.TreeMap
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -73,9 +76,11 @@ trait SharedServerFixture extends ServerFixture
 class AsyncMsgHelper(actorSystem: ActorSystem) {
   private case class AsyncSent(pe: EnsimeEvent)
   private case class AsyncRequest(pe: EnsimeEvent)
+  private case class DumpState(pe: EnsimeEvent)
 
   private class AsyncMsgHelperActor extends Actor with ActorLogging {
-    private var asyncMsgs = Map[EnsimeEvent, Int]() withDefaultValue (0)
+    // ListMap instead of HashMap to avoid hashCode nonsense
+    private var asyncMsgs = ListMap[EnsimeEvent, Int]() withDefaultValue (0)
 
     private var outstandingAsyncs = Vector[(EnsimeEvent, ActorRef)]()
 
@@ -97,10 +102,13 @@ class AsyncMsgHelper(actorSystem: ActorSystem) {
         outstandingAsyncs = outstandingAsyncs :+ (req, sender())
         processOutstandingRequests()
       case AsyncSent(event) =>
-        log.debug("received handled message: " + event)
         val newCount = asyncMsgs(event) + 1
         asyncMsgs = asyncMsgs + (event -> newCount)
         processOutstandingRequests()
+      case DumpState(event) =>
+        val msg = s"waiting for $event, unclaimed messages were: $outstandingAsyncs"
+        log.warning(msg)
+        println(msg) // should always be something we care about when this fails
     }
   }
 
@@ -108,9 +116,13 @@ class AsyncMsgHelper(actorSystem: ActorSystem) {
     actor ! AsyncSent(event)
   }
 
-  def expectAsync(dur: FiniteDuration, expected: EnsimeEvent): Unit = {
+  def expectAsync(dur: FiniteDuration, expected: EnsimeEvent): Unit = try {
     val askRes = Patterns.ask(actor, AsyncRequest(expected), dur)
     Await.result(askRes, Duration.Inf)
+  } catch {
+    case e: AskTimeoutException =>
+      actor ! DumpState(expected)
+      throw e
   }
 
   private val actor = actorSystem.actorOf(Props(new AsyncMsgHelperActor()))

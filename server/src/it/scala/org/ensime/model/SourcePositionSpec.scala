@@ -43,7 +43,7 @@ class SourcePositionSpec extends WordSpec with Matchers
   }
 
   def knownFile(implicit config: EnsimeConfig): String = {
-    val f = config.subprojects.head.sourceRoots.head / "org/example/Foo.scala"
+    val f = scalaMain / "org/example/Foo.scala"
     "file://" + f
   }
 

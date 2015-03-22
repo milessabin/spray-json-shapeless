@@ -23,7 +23,7 @@ class BasicWorkflow extends WordSpec with Matchers
     "open the test project" in withServer { (server, asyncHelper) =>
       val project = server.project
       val config = project.config
-      val sourceRoot = config.subprojects.head.sourceRoots.head
+      val sourceRoot = scalaMain(server.config)
       val fooFile = sourceRoot / "org/example/Foo.scala"
       val fooFilePath = fooFile.getAbsolutePath
 

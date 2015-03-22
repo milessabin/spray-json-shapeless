@@ -20,6 +20,13 @@ trait EnsimeConfigFixture {
   def original: EnsimeConfig
 
   def withEnsimeConfig(testCode: EnsimeConfig => Any): Any
+
+  // convenience method
+  def scalaMain(implicit config: EnsimeConfig): File =
+    config.subprojects.head.sourceRoots.filter { dir =>
+      val sep = File.separator
+      dir.getPath().endsWith(s"${sep}main${sep}scala")
+    }.head
 }
 
 object EnsimeConfigFixture {

@@ -19,11 +19,7 @@ object EnsimeBuild extends Build with JdkResolver {
     scalaVersion := "2.11.6",
     version := "0.9.10-SNAPSHOT"
   )
-  val isTravis = sys.env.get("TRAVIS") == Some("true") && sys.env.get("SHIPPABLE") == None
   val isEmacs = sys.env.get("TERM") == Some("dumb")
-
-  if (isTravis)
-    concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
@@ -40,17 +36,12 @@ object EnsimeBuild extends Build with JdkResolver {
     javacOptions in doc ++= Seq("-source", "1.6"),
     maxErrors := 1,
     fork := true,
-    parallelExecution in Test := !isTravis,
-    testForkedParallel in Test := !isTravis,
+    parallelExecution in Test := true,
+    testForkedParallel in Test := true,
     javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC"),
     javaOptions in Test += "-Dlogback.configurationFile=../logback-test.xml",
     testOptions in Test ++= noColorIfEmacs,
-    // 0.13.7 introduced awesomely fast resolution caching which is
-    // broken for integration testing:
-    // https://github.com/sbt/sbt/issues/1868
-    // and without integration testing, prefer 0.13.7-RC3
-    // https://github.com/sbt/sbt/issues/1776
-    //updateOptions := updateOptions.value.withCachedResolution(true),
+    updateOptions := updateOptions.value.withCachedResolution(true),
     licenses := Seq("BSD 3 Clause" -> url("http://opensource.org/licenses/BSD-3-Clause")),
     homepage := Some(url("http://github.com/ensime/ensime-server")),
     publishTo <<= version { v: String =>
@@ -86,7 +77,7 @@ object EnsimeBuild extends Build with JdkResolver {
   }.mkString(",")
 
   // WORKAROUND: https://github.com/scalatest/scalatest/issues/511
-  def noColorIfEmacs = if (isEmacs) Seq(Tests.Argument("-oW")) else Nil
+  def noColorIfEmacs = if (isEmacs) Seq(Tests.Argument("-oWF")) else Seq(Tests.Argument("-oF"))
   ////////////////////////////////////////////////
 
   ////////////////////////////////////////////////
@@ -144,13 +135,16 @@ object EnsimeBuild extends Build with JdkResolver {
     // must depend on these in "test" as well or they are added to the main dep list by sbt!
     // https://github.com/sbt/sbt/issues/1888
     testingEmpty % "test,it", testingSimple % "test,it", testingDebug % "test,it"
-  ).configs(IntegrationTest).settings(commonSettings: _*).
-    settings(inConfig(IntegrationTest)(Defaults.testSettings): _*).settings(
-      scalariformSettingsWithIt: _*
+  ).configs(IntegrationTest).settings (
+    commonSettings
   ).settings (
-    parallelExecution in IntegrationTest := !isTravis,
-    // parallel forks are causing weird failures
+    inConfig(IntegrationTest)(Defaults.testSettings)
+  ).settings (
+    scalariformSettingsWithIt
+  ).settings (
+    // careful: parallel forks are causing weird failures
     // https://github.com/sbt/sbt/issues/1890
+    parallelExecution in IntegrationTest := false,
     testForkedParallel in IntegrationTest := false,
     javaOptions in IntegrationTest += "-Dfile.encoding=UTF8", // for file cloning
     testOptions in IntegrationTest ++= noColorIfEmacs,
