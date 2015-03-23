@@ -137,7 +137,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))).toWireString === """(:name "name" :local-name "localName" :decl-pos nil :type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :is-callable nil :owner-type-id 2)""")
 
         // toWF(value: NamedTypeMemberInfo)
-        assert(toWF(new NamedTypeMemberInfo("typeX", typeInfo, None, 'abcd)).toWireString === """(:name "typeX" :type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :pos nil :decl-as abcd)""")
+        assert(toWF(new NamedTypeMemberInfo("typeX", typeInfo, None, None, 'abcd)).toWireString === """(:name "typeX" :type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :pos nil :signature-string nil :decl-as abcd)""")
 
         // toWF(value: EntityInfo)
         assert(toWF(entityInfo).toWireString === entityInfoStr)

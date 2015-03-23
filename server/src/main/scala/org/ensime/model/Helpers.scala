@@ -100,7 +100,7 @@ trait Helpers { self: Global =>
 
     if (sym.isType) {
       typeIndexerName(sym)
-    } else if (sym.isModule || sym.isModuleClass) {
+    } else if (sym.isModule) {
       typeIndexerName(sym) + "$"
     } else {
       symbolIndexerName(sym.owner) + "." + sym.nameString
@@ -132,14 +132,14 @@ trait Helpers { self: Global =>
   }
 
   def typeShortName(sym: Symbol): String = {
-    if (sym.isModule || sym.isModuleClass) sym.nameString + "$"
-    else sym.nameString
+    val s = sym.nameString
+    if ((sym.isModule || sym.isModuleClass) && !s.endsWith("$")) s + "$" else s
   }
 
   /**
-   * The reverse of typeFullName: convert a full-path string to a symbol
+   * Returns the type, object, or package symbol uniquely identified by name.
    */
-  protected def symbolFromString(name: String): Symbol = {
+  protected def symbolByName(name: String, rootSymbol: Symbol = RootClass): Option[Symbol] = {
     def segments(name: String): List[Name] = {
       val len = name.length
       if (len == 0) {
@@ -176,10 +176,20 @@ trait Helpers { self: Global =>
         }
       }
     }
-
+    // Special convenience handling for the case where name is a top-level
+    // package, e.g., 'java'.
     val s = segments(name)
-    s.foldLeft[Symbol](RootClass) { (sym, name) =>
+    val sym = s.foldLeft[Symbol](rootSymbol) { (sym, name) =>
       sym.info.member(name)
+    }
+    try {
+      sym match {
+        case NoSymbol => None
+        case sym: Symbol => Some(sym)
+        case _ => None
+      }
+    } catch {
+      case e: Throwable => None
     }
   }
 
@@ -219,28 +229,8 @@ trait Helpers { self: Global =>
    * @return Some(packageSymbol) if `path` represents a valid package or None
    */
   def packageSymFromPath(path: String): Option[Symbol] = {
-    val candidates = symsAtQualifiedPath(path, RootPackage)
-    candidates.find { s => s.hasPackageFlag }
-  }
-
-  // Where path is the qualified name of a symbol that is a direct or
-  // indirect member of rootSym, without containing the name of rootSym.
-  def symsAtQualifiedPath(path: String, rootSym: Symbol): List[Symbol] = {
-    def memberSymsNamed(sym: Symbol, name: String) = {
-      (sym.info.members ++ sym.info.decls).filter { s =>
-        s.nameString == name && s != EmptyPackage && s != RootPackage
-      }
-    }
-    if (path == "")
-      List(rootSym)
-    else {
-      val pathSegments = path.split("\\.")
-      pathSegments.foldLeft(List(rootSym)) { (baseSyms, segment) =>
-        baseSyms.flatMap { s =>
-          memberSymsNamed(s, segment)
-        }
-      }
-    }
+    symbolByName(if (path.endsWith("$")) path else path + "$",
+      RootPackage).find { s => s.hasPackageFlag }
   }
 
   /*

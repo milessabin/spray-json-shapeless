@@ -42,7 +42,6 @@ case class InspectTypeByIdReq(id: Int) extends RPCRequest
 case class InspectTypeByNameReq(name: String) extends RPCRequest
 case class InspectPackageByPathReq(path: String) extends RPCRequest
 case class TypeByIdReq(id: Int) extends RPCRequest
-case class MemberByNameReq(typeFullName: String, memberName: String, memberIsType: Boolean) extends RPCRequest
 case class TypeByNameReq(name: String) extends RPCRequest
 case class TypeByNameAtPointReq(name: String, file: File, range: OffsetRange) extends RPCRequest
 case class CallCompletionReq(id: Int) extends RPCRequest
@@ -54,7 +53,8 @@ case class FormatFileReq(fileInfo: SourceFileInfo) extends RPCRequest
 case class ExpandSelectionReq(filename: String, start: Int, stop: Int) extends RPCRequest
 case class DocUriReq(sig: DocSigPair) extends RPCRequest
 case class DocSignatureAtPointReq(file: File, range: OffsetRange) extends RPCRequest
-case class DocSignatureForSymbolReq(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]) extends RPCRequest
+case class DocSignatureForSymbolReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) extends RPCRequest
+case class SymbolByNameReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) extends RPCRequest
 
 case class SubscribeAsync(handler: EnsimeEvent => Unit) extends RPCRequest
 

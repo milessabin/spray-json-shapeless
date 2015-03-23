@@ -227,6 +227,7 @@ case class NamedTypeMemberInfo(
     name: String,
     `type`: TypeInfo,
     pos: Option[SourcePosition],
+    signatureString: Option[String],
     declAs: scala.Symbol) extends EntityInfo {
   override def members = List.empty
   def tpe = `type`

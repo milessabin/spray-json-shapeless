@@ -146,6 +146,7 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
       while (true) {
         val msg: WireFormat = protocol.readMessage(reader)
         handler ! IncomingMessageEvent(msg)
+
       }
     } catch {
       case e: IOException =>

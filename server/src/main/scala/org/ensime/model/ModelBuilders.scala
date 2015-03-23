@@ -191,9 +191,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       }
       def basicTypeInfo(tpe: Type): BasicTypeInfo = {
         val typeSym = tpe.typeSymbol
-        val sym = if (typeSym.isModuleClass)
-          typeSym.sourceModule else typeSym
-        val symPos = locateSymbolPos(sym, needPos)
+        val symPos = locateSymbolPos(
+          if (typeSym.isModuleClass) typeSym.sourceModule else typeSym, needPos)
         val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
         new BasicTypeInfo(
           typeShortName(tpe),
@@ -255,13 +254,13 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         case None => NoType
         case Some(t) => t
       }
-      val name = if (sym.isClass || sym.isTrait || sym.isModule ||
+      val nameString = sym.nameString
+      val (name, localName) = if (sym.isClass || sym.isTrait || sym.isModule ||
         sym.isModuleClass || sym.isPackageClass) {
-        typeFullName(tpe)
+        (typeFullName(tpe), nameString)
       } else {
-        sym.nameString
+        (nameString, nameString)
       }
-      val localName = sym.nameString
       val ownerTpe = if (sym.owner != NoSymbol && sym.owner.tpe != NoType) {
         Some(sym.owner.tpe)
       } else None
@@ -305,7 +304,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     def apply(m: TypeMember): NamedTypeMemberInfo = {
       val decl = declaredAs(m.sym)
       val pos = if (m.sym.pos == NoPosition) None else Some(EmptySourcePosition())
-      new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), pos, decl)
+      val signatureString = if (decl == 'method) Some(m.sym.signatureString) else None
+      new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), pos, signatureString, decl)
     }
   }
 
