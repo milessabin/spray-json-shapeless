@@ -623,7 +623,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-value - array") {
       testWithResponse("""(swank:debug-value (:type element :object-id "23" :index 2))""") { (t, m, id) =>
-        (t.rpcDebugValue _).expects(DebugArrayElement(23L, 2)).returns(Some(debugNullValue))
+        (t.rpcDebugValue _).expects(DebugArrayElement(DebugObjectId(23L), 2)).returns(Some(debugNullValue))
         (m.send _).expects("(:return (:ok " + debugNullValueStr + ") " + id + ")")
       }
     }
@@ -637,7 +637,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-value - object field") {
       testWithResponse("""(swank:debug-value (:type field :object-id "23" :field "fred"))""") { (t, m, id) =>
-        (t.rpcDebugValue _).expects(DebugObjectField(23L, "fred")).returns(Some(debugPrimitiveValue))
+        (t.rpcDebugValue _).expects(DebugObjectField(DebugObjectId(23L), "fred")).returns(Some(debugPrimitiveValue))
         (m.send _).expects("(:return (:ok " + debugPrimitiveValueStr + ") " + id + ")")
       }
     }
@@ -651,14 +651,14 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-to-string - array element") {
       testWithResponse("""(swank:debug-to-string "2" (:type element :object-id "23" :index 2))""") { (t, m, id) =>
-        (t.rpcDebugToString _).expects(DebugThreadId(2), DebugArrayElement(23L, 2)).returns(Some("null"))
+        (t.rpcDebugToString _).expects(DebugThreadId(2), DebugArrayElement(DebugObjectId(23L), 2)).returns(Some("null"))
         (m.send _).expects("(:return (:ok \"null\") " + id + ")")
       }
     }
 
     it("should understand swank:debug-set-value - array element") {
       testWithResponse("""(swank:debug-set-value (:type element :object-id "23" :index 2) "1")""") { (t, m, id) =>
-        (t.rpcDebugSetValue _).expects(DebugArrayElement(23L, 2), "1").returns(true)
+        (t.rpcDebugSetValue _).expects(DebugArrayElement(DebugObjectId(23L), 2), "1").returns(true)
         (m.send _).expects("(:return (:ok t) " + id + ")")
       }
     }

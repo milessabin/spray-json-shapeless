@@ -2,7 +2,7 @@ package org.ensime.core
 
 import java.io.File
 
-import org.ensime.model.DebugThreadId$
+import org.ensime.model.DebugThreadId
 import org.ensime.util.Note
 
 /** Asynchronous swank protocol event */

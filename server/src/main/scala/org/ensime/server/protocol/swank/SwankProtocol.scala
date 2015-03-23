@@ -1847,14 +1847,14 @@ object SwankProtocol {
             StringAtom(id) <- m.get(key(":object-id"));
             StringAtom(field) <- m.get(key(":field"))
           ) yield {
-            DebugObjectField(id.toLong, field)
+            DebugObjectField(DebugObjectId(id.toLong), field)
           }
         case SymbolAtom("element") =>
           for (
             StringAtom(id) <- m.get(key(":object-id"));
             IntAtom(index) <- m.get(key(":index"))
           ) yield {
-            DebugArrayElement(id.toLong, index)
+            DebugArrayElement(DebugObjectId(id.toLong), index)
           }
         case SymbolAtom("slot") =>
           for (

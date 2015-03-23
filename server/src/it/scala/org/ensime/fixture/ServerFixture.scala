@@ -78,7 +78,7 @@ class AsyncMsgHelper(actorSystem: ActorSystem) {
 
   private class AsyncMsgHelperActor extends Actor with ActorLogging {
     // ListMap instead of HashMap to avoid hashCode nonsense
-    private var asyncMsgs = ListMap[EnsimeEvent, Int]() withDefaultValue(0)
+    private var asyncMsgs = ListMap[EnsimeEvent, Int]() withDefaultValue (0)
 
     private var outstandingAsyncs = Vector[(EnsimeEvent, ActorRef)]()
 

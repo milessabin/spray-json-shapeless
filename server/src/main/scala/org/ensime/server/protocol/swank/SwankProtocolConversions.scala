@@ -108,9 +108,14 @@ object SwankProtocolConversions {
   implicit val DebugVMStartEventFormat = singletonFormat[DebugVMStartEvent.type]
   implicit val DebugVMDisconnectEventFormat = singletonFormat[DebugVMDisconnectEvent.type]
 
-  implicit val ThreadIdFormat: SexpFormat[DebugThreadId] = viaString(new ViaString[DebugThreadId] {
+  implicit val DebugThreadIdFormat: SexpFormat[DebugThreadId] = viaString(new ViaString[DebugThreadId] {
     def toSexpString(uuid: DebugThreadId) = uuid.id.toString
     def fromSexpString(s: String) = DebugThreadId(s)
+  })
+
+  implicit val DebugObjectIdFormat: SexpFormat[DebugObjectId] = viaString(new ViaString[DebugObjectId] {
+    def toSexpString(uuid: DebugObjectId) = uuid.id.toString
+    def fromSexpString(s: String) = DebugObjectId(s)
   })
 
   /**
