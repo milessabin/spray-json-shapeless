@@ -111,7 +111,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand connection-info request") {
       testWithResponse("(swank:connection-info)") { (t, m, id) =>
         (t.rpcConnectionInfo _).expects().returns(new ConnectionInfo())
-        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME") :version "0.8.13")) $id)""")
+        (m.send _).expects(s"""(:return (:ok (:pid nil :implementation (:name "ENSIME") :version "0.8.14")) $id)""")
       }
     }
 
@@ -288,9 +288,9 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       }
     }
 
-    it("should understand swank:member-by-name") {
-      testWithResponse("""(swank:member-by-name "org.example.A" "x" t)""") { (t, m, id) =>
-        (t.rpcMemberByName _).expects("org.example.A", "x", true).returns(Some(symbolInfo))
+    it("should understand swank:symbol-by-name") {
+      testWithResponse("""(swank:symbol-by-name "org.example.A" "x" nil)""") { (t, m, id) =>
+        (t.rpcSymbolByName _).expects("org.example.A", Some("x"), None).returns(Some(symbolInfo))
         (m.send _).expects(s"""(:return (:ok $symbolInfoStr) $id)""")
       }
     }

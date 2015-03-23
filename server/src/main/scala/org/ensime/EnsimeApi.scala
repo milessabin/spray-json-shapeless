@@ -73,16 +73,22 @@ trait EnsimeApi {
 
   def rpcSymbolAtPoint(fileName: String, point: Int): Option[SymbolInfo]
 
-  def rpcMemberByName(typeFullName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo]
+  /**
+   * Lookup a detailed symbol description.
+   * @param fullyQualifiedName The fully qualified name of a type, object or package.
+   * @param memberName The short name of a member symbol of the qualified symbol.
+   * @return signatureString An optional signature to disambiguate overloaded methods.
+   */
+  def rpcSymbolByName(fullyQualifiedName: String, memberName: Option[String], signatureString: Option[String]): Option[SymbolInfo]
   def rpcTypeById(id: Int): Option[TypeInfo]
   def rpcTypeByName(name: String): Option[TypeInfo]
   def rpcTypeByNameAtPoint(name: String, f: String, range: OffsetRange): Option[TypeInfo]
   def rpcCallCompletion(id: Int): Option[CallCompletionInfo]
   def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int): ImportSuggestions
   def rpcDocSignatureAtPoint(f: String, point: OffsetRange): Option[DocSigPair]
-  def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[DocSigPair]
+  def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[DocSigPair]
   def rpcDocUriAtPoint(f: String, point: OffsetRange): Option[String]
-  def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[String]
+  def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[String]
   def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults
   def rpcUsesOfSymAtPoint(f: String, point: Int): List[ERangePosition]
   def rpcTypeAtPoint(f: String, range: OffsetRange): Option[TypeInfo]

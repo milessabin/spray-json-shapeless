@@ -23,9 +23,12 @@ class SwankProtocol(actorSystem: ActorSystem,
   implicit val rpcExecutionContext = actorSystem.dispatchers.lookup("akka.swank-dispatcher")
 
   /**
-   * Protocol Version: 0.8.13 (Must match version at ConnectionInfo.protocolVersion)
+   * Protocol Version: 0.8.14 (Must match version at ConnectionInfo.protocolVersion)
    *
    * Protocol Change Log:
+   *   0.8.14
+   *     Added swank:symbol-by-name
+   *     Removed swank:member-by-name
    *   0.8.13
    *     Added swank:doc-uri-for-symbol
    *   0.8.12
@@ -871,9 +874,9 @@ class SwankProtocol(actorSystem: ActorSystem,
        * Summary:
        *   Returns a java/scaladoc url for the given, fully qualified symbol.
        * Arguments:
-       *   String:The fully qualified name of a type.
-       *   String:If non-nil, The name of a member of the above type.
-       *   Int:If non-nil, the type id of a member of the above type.
+       *   String:The fully qualified name of a package or type.
+       *   String:If non-nil, The name of a member of the above symbol.
+       *   String:If non-nil, the signature of a method.
        * Return:
        *   A String: A uri that can be plugged directly into a web browser.
        * Example call:
@@ -882,8 +885,8 @@ class SwankProtocol(actorSystem: ActorSystem,
        *   (:return (:ok "http://localhost:8080/java/util/Vector.html") 42)
        */
       case ("swank:doc-uri-for-symbol", StringAtom(typeFullName) ::
-        OptionalStringExtractor(memberName) :: OptionalIntExtractor(memberTypeId) :: Nil) =>
-        rpcTarget.rpcDocUriForSymbol(typeFullName, memberName, memberTypeId) match {
+        OptionalStringExtractor(memberName) :: OptionalStringExtractor(signatureString) :: Nil) =>
+        rpcTarget.rpcDocUriForSymbol(typeFullName, memberName, signatureString) match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
           case None => sendRPCReturn(toWF(value = false), callId)
         }
@@ -989,28 +992,6 @@ class SwankProtocol(actorSystem: ActorSystem,
        */
       case ("swank:uses-of-symbol-at-point", StringAtom(file) :: IntAtom(point) :: Nil) =>
         val result = rpcTarget.rpcUsesOfSymAtPoint(file, point)
-        sendRPCReturn(toWF(result), callId)
-
-      /**
-       * Doc RPC:
-       *   swank:member-by-name
-       * Summary:
-       *   Request description of a member of a given type
-       * Arguments:
-       *   String: Type full-name as return by swank:typeInfo
-       *   String: Member name
-       *   Boolean: true if the member is a trait or class, flase otherwise
-       * Return:
-       *   A SymbolInfo
-       * Example call:
-       *   (:swank-rpc (swank:member-by-name "com.example.Class", "x", nil) 42)
-       * Example return:
-       *   (:return (:ok (:name "x" :local-name "x" :type (:name "String" :type-id 25
-       *   :full-name "java.lang.String" :decl-as class) :decl-pos
-       *   (:file "SwankProtocol.scala" :offset 36404))) 42)
-       */
-      case ("swank:member-by-name", StringAtom(typeFullName) :: StringAtom(memberName) :: BooleanAtom(memberIsType) :: Nil) =>
-        val result = rpcTarget.rpcMemberByName(typeFullName, memberName, memberIsType)
         sendRPCReturn(toWF(result), callId)
 
       /**
@@ -1176,6 +1157,31 @@ class SwankProtocol(actorSystem: ActorSystem,
       case ("swank:symbol-at-point", StringAtom(file) :: IntAtom(point) :: Nil) =>
         val result = rpcTarget.rpcSymbolAtPoint(file, point)
         sendRPCReturn(toWF(result), callId)
+
+      /**
+       * Doc RPC:
+       *   swank:symbol-by-name
+       * Summary:
+       *   Get a description of the symbol with the given name and attributes.
+       * Arguments:
+       *   String:The fully qualified name of a package or type.
+       *   String:If non-nil, the name of a member of the above symbol.
+       *   String:If non-nil, the signature name of a method.
+       * Return:
+       *   A SymbolInfo
+       * Example call:
+       *   (:swank-rpc (swank:symbol-by-name "java.lang" "String" 4) 42)
+       * Example return:
+       *   (:return (:ok (:name "file" :type (:name "String" :type-id 25
+       *   :full-name "java.lang.String" :decl-as class) :decl-pos
+       *   (:file "SwankProtocol.scala" :offset 36404))) 42)
+       */
+      case ("swank:symbol-by-name", StringAtom(typeFullName) ::
+        OptionalStringExtractor(memberName) :: OptionalStringExtractor(signatureString) :: Nil) =>
+        rpcTarget.rpcSymbolByName(typeFullName, memberName, signatureString) match {
+          case Some(value) => sendRPCReturn(toWF(value), callId)
+          case None => sendRPCReturn(toWF(false), callId)
+        }
 
       /**
        * Doc RPC:

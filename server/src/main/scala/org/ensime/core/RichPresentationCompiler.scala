@@ -47,35 +47,29 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def askDocSignatureAtPoint(p: Position): Option[DocSigPair] =
     askOption {
       symbolAt(p).orElse(typeAt(p).map(_.typeSymbol)).flatMap(docSignature(_, Some(p)))
-    }.getOrElse(None)
+    }.flatten
 
-  def askDocSignatureForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[DocSigPair] =
+  def askDocSignatureForSymbol(typeFullName: String, memberName: Option[String],
+    signatureString: Option[String]): Option[DocSigPair] =
     askOption {
-      symbolByName(typeFullName).flatMap { owner =>
-        memberName.flatMap { nm =>
-          val candidates = owner.tpe.members.filter(_.nameString == nm)
-          val exact = memberTypeId.flatMap(typeById).flatMap { tpe => candidates.find(_.tpe == tpe) }
-          exact.orElse(candidates.headOption)
-        }.orElse(Some(owner))
-      }.flatMap(docSignature(_, None))
-    }.getOrElse(None)
+      symbolMemberByName(
+        typeFullName, memberName, signatureString).flatMap(docSignature(_, None))
+    }.flatten
 
   def askSymbolInfoAt(p: Position): Option[SymbolInfo] =
-    askOption(symbolAt(p).map(SymbolInfo(_))).getOrElse(None)
+    askOption(symbolAt(p).map(SymbolInfo(_))).flatten
+
+  def askSymbolByName(fqn: String, memberName: Option[String], signatureString: Option[String]): Option[SymbolInfo] =
+    askOption(symbolMemberByName(fqn, memberName, signatureString).map(SymbolInfo(_))).flatten
 
   def askTypeInfoAt(p: Position): Option[TypeInfo] =
-    askOption(typeAt(p).map(TypeInfo(_, PosNeededYes))).getOrElse(None)
+    askOption(typeAt(p).map(TypeInfo(_, PosNeededYes))).flatten
 
   def askTypeInfoById(id: Int): Option[TypeInfo] =
-    askOption(typeById(id).map(TypeInfo(_, PosNeededYes))).getOrElse(None)
-
-  def askMemberInfoByName(typeName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo] = {
-    val name = typeName + "$" + memberName + (if (memberIsType) "" else "$")
-    askOption(symbolByName(name).map(SymbolInfo(_))).getOrElse(None)
-  }
+    askOption(typeById(id).map(TypeInfo(_, PosNeededYes))).flatten
 
   def askTypeInfoByName(name: String): Option[TypeInfo] =
-    askOption(typeByName(name).map(TypeInfo(_, PosNeededYes))).getOrElse(None)
+    askOption(typeByName(name).map(TypeInfo(_, PosNeededYes))).flatten
 
   def askTypeInfoByNameAt(name: String, p: Position): Option[TypeInfo] = {
     val nameSegs = name.split("\\.")
@@ -85,16 +79,17 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     (for (
       members <- x.get.left.toOption;
       infos <- askOption {
-        val roots = filterMembersByPrefix(members, firstName, matchEntire = true, caseSens = true).map { _.sym }
+        val roots = filterMembersByPrefix(
+          members, firstName, matchEntire = true, caseSens = true).map { _.sym }
         val restOfPath = nameSegs.drop(1).mkString(".")
-        val syms = roots.flatMap { symsAtQualifiedPath(restOfPath, _) }
+        val syms = roots.flatMap { symbolByName(restOfPath, _) }
         syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe) }
       }
-    ) yield infos).getOrElse(None)
+    ) yield infos).flatten
   }
 
   def askCallCompletionInfoById(id: Int): Option[CallCompletionInfo] =
-    askOption(typeById(id).map(CallCompletionInfo(_))).getOrElse(None)
+    askOption(typeById(id).map(CallCompletionInfo(_))).flatten
 
   def askPackageByPath(path: String): Option[PackageInfo] =
     askOption(PackageInfo.fromPath(path))
@@ -137,13 +132,13 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askReloadFiles(loadedFiles)
 
   def askInspectTypeById(id: Int): Option[TypeInspectInfo] =
-    askOption(typeById(id).map(inspectType)).getOrElse(None)
+    askOption(typeById(id).map(inspectType)).flatten
 
   def askInspectTypeAt(p: Position): Option[TypeInspectInfo] =
-    askOption(inspectTypeAt(p)).getOrElse(None)
+    askOption(inspectTypeAt(p)).flatten
 
   def askInspectTypeByName(name: String): Option[TypeInspectInfo] =
-    askOption(typeByName(name).map(inspectType)).getOrElse(None)
+    askOption(typeByName(name).map(inspectType)).flatten
 
   def askCompletePackageMember(path: String, prefix: String): List[CompletionInfo] =
     askOption(completePackageMember(path, prefix)).getOrElse(List.empty)
@@ -348,16 +343,18 @@ class RichPresentationCompiler(
       }
     }
 
-  protected def symbolByName(name: String): Option[Symbol] = {
-    try {
-      val sym = symbolFromString(name)
-      sym match {
-        case NoSymbol => None
-        case sym: Symbol => Some(sym)
-        case _ => None
-      }
-    } catch {
-      case e: Throwable => None
+  protected def symbolMemberByName(
+    fqn: String, memberName: Option[String], signatureString: Option[String]): Option[Symbol] = {
+    symbolByName(fqn).flatMap { owner =>
+      memberName.flatMap { rawName =>
+        val module = rawName.endsWith("$")
+        val nm = if (module) rawName.dropRight(1) else rawName
+        val candidates = owner.info.members.filter { s =>
+          s.nameString == nm && ((module && s.isModule) || (!module && (!s.isModule || s.hasPackageFlag)))
+        }
+        val exact = signatureString.flatMap { s => candidates.find(_.signatureString == s) }
+        exact.orElse(candidates.headOption)
+      }.orElse(Some(owner))
     }
   }
 

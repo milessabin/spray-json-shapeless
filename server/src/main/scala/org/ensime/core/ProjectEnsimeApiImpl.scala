@@ -196,10 +196,6 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[SymbolInfo]](getAnalyzer, SymbolAtPointReq(new File(fileName), point))
   }
 
-  override def rpcMemberByName(typeFullName: String, memberName: String, memberIsType: Boolean): Option[SymbolInfo] = {
-    callRPC[Option[SymbolInfo]](getAnalyzer, MemberByNameReq(typeFullName, memberName, memberIsType))
-  }
-
   override def rpcTypeById(typeId: Int): Option[TypeInfo] = {
     callRPC[Option[TypeInfo]](getAnalyzer, TypeByIdReq(typeId))
   }
@@ -224,16 +220,20 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureAtPointReq(new File(f), range))
   }
 
-  override def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[DocSigPair] = {
-    callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureForSymbolReq(typeFullName, memberName, memberTypeId))
+  override def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[DocSigPair] = {
+    callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureForSymbolReq(typeFullName, memberName, signatureString))
+  }
+
+  override def rpcSymbolByName(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[SymbolInfo] = {
+    callRPC[Option[SymbolInfo]](getAnalyzer, SymbolByNameReq(typeFullName, memberName, signatureString))
   }
 
   override def rpcDocUriAtPoint(f: String, range: OffsetRange): Option[String] = {
     rpcDocSignatureAtPoint(f, range).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
   }
 
-  override def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], memberTypeId: Option[Int]): Option[String] = {
-    rpcDocSignatureForSymbol(typeFullName, memberName, memberTypeId).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
+  override def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[String] = {
+    rpcDocSignatureForSymbol(typeFullName, memberName, signatureString).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
   }
 
   override def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults = {
