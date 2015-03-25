@@ -30,9 +30,9 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
         // toWF(evt: DebugEvent): WireFormat
         assert(toWF(DebugOutputEvent("XXX")).toWireString === """(:debug-event (:type output :body "XXX"))""")
-        assert(toWF(DebugStepEvent("207", "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
+        assert(toWF(DebugStepEvent(DebugThreadId(207), "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
           s"""(:debug-event (:type step :thread-id "207" :thread-name "threadNameStr" :file $file1_str :line 57))""")
-        assert(toWF(DebugBreakEvent("209", "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
+        assert(toWF(DebugBreakEvent(DebugThreadId(209), "threadNameStr", sourcePos1.file, sourcePos1.line)).toWireString ===
           s"""(:debug-event (:type breakpoint :thread-id "209" :thread-name "threadNameStr" :file $file1_str :line 57))""")
         assert(toWF(DebugVMStartEvent).toWireString === """(:debug-event (:type start))""")
         assert(toWF(DebugVMDisconnectEvent).toWireString === """(:debug-event (:type disconnect))""")
@@ -48,12 +48,12 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
         // toWF(obj: DebugLocation)
         assert(toWF(DebugObjectReference(57L).asInstanceOf[DebugLocation]).toWireString ===
-          """(:type reference :object-id 57)""")
-        assert(toWF(DebugArrayElement(58L, 2).asInstanceOf[DebugLocation]).toWireString ===
-          """(:type element :object-id 58 :index 2)""")
-        assert(toWF(DebugObjectField(58L, "fieldName").asInstanceOf[DebugLocation]).toWireString ===
-          """(:type field :object-id 58 :field "fieldName")""")
-        assert(toWF(DebugStackSlot("27", 12, 23).asInstanceOf[DebugLocation]).toWireString ===
+          """(:type reference :object-id "57")""")
+        assert(toWF(DebugArrayElement(DebugObjectId(58L), 2).asInstanceOf[DebugLocation]).toWireString ===
+          """(:type element :object-id "58" :index 2)""")
+        assert(toWF(DebugObjectField(DebugObjectId(58L), "fieldName").asInstanceOf[DebugLocation]).toWireString ===
+          """(:type field :object-id "58" :field "fieldName")""")
+        assert(toWF(DebugStackSlot(DebugThreadId(27), 12, 23).asInstanceOf[DebugLocation]).toWireString ===
           """(:type slot :thread-id "27" :frame 12 :offset 23)""")
 
         // toWF(obj: DebugValue)
@@ -66,29 +66,29 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(debugClassField).toWireString === """(:index 19 :name "nameStr" :type-name "typeNameStr" :summary "summaryStr")""")
 
         // toWF(obj: DebugStringInstance)
-        assert(toWF(DebugStringInstance("summaryStr", List(debugClassField), "typeNameStr", 5L).asInstanceOf[DebugValue]).toWireString ===
-          """(:val-type str :summary "summaryStr" :fields ((:index 19 :name "nameStr" :type-name "typeNameStr" :summary "summaryStr")) :type-name "typeNameStr" :object-id 5)""")
+        assert(toWF(DebugStringInstance("summaryStr", List(debugClassField), "typeNameStr", DebugObjectId(5L)).asInstanceOf[DebugValue]).toWireString ===
+          """(:val-type str :summary "summaryStr" :fields ((:index 19 :name "nameStr" :type-name "typeNameStr" :summary "summaryStr")) :type-name "typeNameStr" :object-id "5")""")
 
         // toWF(evt: DebugObjectInstance)
-        assert(toWF(DebugObjectInstance("summaryStr", List(debugClassField), "typeNameStr", 5L).asInstanceOf[DebugValue]).toWireString ===
-          """(:val-type obj :summary "summaryStr" :fields ((:index 19 :name "nameStr" :type-name "typeNameStr" :summary "summaryStr")) :type-name "typeNameStr" :object-id 5)""")
+        assert(toWF(DebugObjectInstance("summaryStr", List(debugClassField), "typeNameStr", DebugObjectId(5L)).asInstanceOf[DebugValue]).toWireString ===
+          """(:val-type obj :summary "summaryStr" :fields ((:index 19 :name "nameStr" :type-name "typeNameStr" :summary "summaryStr")) :type-name "typeNameStr" :object-id "5")""")
 
         // toWF(evt: DebugNullValue)
         assert(toWF(DebugNullValue("typeNameStr").asInstanceOf[DebugValue]).toWireString ===
           """(:val-type null :type-name "typeNameStr")""")
 
         // toWF(evt: DebugArrayInstance)
-        assert(toWF(DebugArrayInstance(3, "typeName", "elementType", 5L).asInstanceOf[DebugValue]).toWireString ===
-          """(:val-type arr :length 3 :type-name "typeName" :element-type-name "elementType" :object-id 5)""")
+        assert(toWF(DebugArrayInstance(3, "typeName", "elementType", DebugObjectId(5L)).asInstanceOf[DebugValue]).toWireString ===
+          """(:val-type arr :length 3 :type-name "typeName" :element-type-name "elementType" :object-id "5")""")
 
         // toWF(evt: DebugStackLocal)
         assert(toWF(debugStackLocal1).toWireString === """(:index 3 :name "name1" :summary "summary1" :type-name "type1")""")
 
         // toWF(evt: DebugStackFrame)
-        assert(toWF(debugStackFrame).toWireString === s"""(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id 7)""")
+        assert(toWF(debugStackFrame).toWireString === s"""(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id "7")""")
 
         // toWF(evt: DebugBacktrace)
-        assert(toWF(DebugBacktrace(List(debugStackFrame), "17", "thread1")).toWireString === s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id 7)) :thread-id "17" :thread-name "thread1")""")
+        assert(toWF(DebugBacktrace(List(debugStackFrame), "17", "thread1")).toWireString === s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
 
         // toWF(pos: LineSourcePosition)
         assert(toWF(sourcePos1).toWireString === s"""(:file $file1_str :line 57)""")
@@ -114,8 +114,8 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(new ReplConfig(Set(file1))).toWireString === s"""(:classpath ($file1_str))""")
 
         // toWF(value: Boolean)
-        assert(toWF(true).toWireString === """t""")
-        assert(toWF(false).toWireString === """nil""")
+        assert(toWF(value = true).toWireString === """t""")
+        assert(toWF(value = false).toWireString === """nil""")
 
         // toWF(value: String)
         assert(toWF("ABC").toWireString === """"ABC"""")

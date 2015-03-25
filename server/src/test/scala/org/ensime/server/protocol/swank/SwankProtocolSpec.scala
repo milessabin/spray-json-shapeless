@@ -88,15 +88,15 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       val file3_str = fileToWireString(file3)
 
       testWithResponse("""(swank:peek-undo)""") { (t, m, id) =>
-        (t.rpcPeekUndo _).expects().returns(Right(Undo(3, "Undoing stuff", List(TextEdit(file3, 5, 7, "aaa")))))
+        (t.rpcPeekUndo _).expects().returns(Some(Undo(3, "Undoing stuff", List(TextEdit(file3, 5, 7, "aaa")))))
         (m.send _).expects(s"""(:return (:ok (:id 3 :summary "Undoing stuff" :changes ((:type edit :file $file3_str :from 5 :to 7 :text "aaa")))) $id)""")
       }
     }
 
     it("should understand swank:peek-undo - fail") {
       testWithResponse("""(swank:peek-undo)""") { (t, m, id) =>
-        (t.rpcPeekUndo _).expects().returns(Left("ErrorError"))
-        (m.send _).expects(s"""(:return (:abort 206 "ErrorError") $id)""")
+        (t.rpcPeekUndo _).expects().returns(None)
+        (m.send _).expects(s"""(:return (:abort 206 "No such undo.") $id)""")
       }
     }
 
@@ -588,42 +588,42 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-continue") {
       testWithResponse("""(swank:debug-continue "1")""") { (t, m, id) =>
-        (t.rpcDebugContinue _).expects("1").returns(true)
+        (t.rpcDebugContinue _).expects(DebugThreadId(1)).returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-step") {
       testWithResponse("""(swank:debug-step "982398123")""") { (t, m, id) =>
-        (t.rpcDebugStep _).expects("982398123").returns(true)
+        (t.rpcDebugStep _).expects(DebugThreadId(982398123)).returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-next") {
       testWithResponse("""(swank:debug-next "982398123")""") { (t, m, id) =>
-        (t.rpcDebugNext _).expects("982398123").returns(true)
+        (t.rpcDebugNext _).expects(DebugThreadId(982398123)).returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-step-out") {
       testWithResponse("""(swank:debug-step-out "982398123")""") { (t, m, id) =>
-        (t.rpcDebugStepOut _).expects("982398123").returns(true)
+        (t.rpcDebugStepOut _).expects(DebugThreadId(982398123)).returns(true)
         (m.send _).expects(s"""(:return (:ok t) $id)""")
       }
     }
 
     it("should understand swank:debug-locate-name") {
       testWithResponse("""(swank:debug-locate-name "7" "apple")""") { (t, m, id) =>
-        (t.rpcDebugLocateName _).expects("7", "apple").returns(Some(debugLocObjectRef))
+        (t.rpcDebugLocateName _).expects(DebugThreadId(7), "apple").returns(Some(debugLocObjectRef))
         (m.send _).expects("(:return (:ok " + debugLocObjectRefStr + ") " + id + ")")
       }
     }
 
     it("should understand swank:debug-value - array") {
       testWithResponse("""(swank:debug-value (:type element :object-id "23" :index 2))""") { (t, m, id) =>
-        (t.rpcDebugValue _).expects(DebugArrayElement(23L, 2)).returns(Some(debugNullValue))
+        (t.rpcDebugValue _).expects(DebugArrayElement(DebugObjectId(23L), 2)).returns(Some(debugNullValue))
         (m.send _).expects("(:return (:ok " + debugNullValueStr + ") " + id + ")")
       }
     }
@@ -637,35 +637,35 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:debug-value - object field") {
       testWithResponse("""(swank:debug-value (:type field :object-id "23" :field "fred"))""") { (t, m, id) =>
-        (t.rpcDebugValue _).expects(DebugObjectField(23L, "fred")).returns(Some(debugPrimitiveValue))
+        (t.rpcDebugValue _).expects(DebugObjectField(DebugObjectId(23L), "fred")).returns(Some(debugPrimitiveValue))
         (m.send _).expects("(:return (:ok " + debugPrimitiveValueStr + ") " + id + ")")
       }
     }
 
     it("should understand swank:debug-value - stack slot") {
       testWithResponse("""(swank:debug-value (:type slot :thread-id "23" :frame 7 :offset 25))""") { (t, m, id) =>
-        (t.rpcDebugValue _).expects(DebugStackSlot("23", 7, 25)).returns(Some(debugStringValue))
+        (t.rpcDebugValue _).expects(DebugStackSlot(DebugThreadId(23), 7, 25)).returns(Some(debugStringValue))
         (m.send _).expects("(:return (:ok " + debugStringValueStr + ") " + id + ")")
       }
     }
 
     it("should understand swank:debug-to-string - array element") {
       testWithResponse("""(swank:debug-to-string "2" (:type element :object-id "23" :index 2))""") { (t, m, id) =>
-        (t.rpcDebugToString _).expects("2", DebugArrayElement(23L, 2)).returns(Some("null"))
+        (t.rpcDebugToString _).expects(DebugThreadId(2), DebugArrayElement(DebugObjectId(23L), 2)).returns(Some("null"))
         (m.send _).expects("(:return (:ok \"null\") " + id + ")")
       }
     }
 
     it("should understand swank:debug-set-value - array element") {
       testWithResponse("""(swank:debug-set-value (:type element :object-id "23" :index 2) "1")""") { (t, m, id) =>
-        (t.rpcDebugSetValue _).expects(DebugArrayElement(23L, 2), "1").returns(true)
+        (t.rpcDebugSetValue _).expects(DebugArrayElement(DebugObjectId(23L), 2), "1").returns(true)
         (m.send _).expects("(:return (:ok t) " + id + ")")
       }
     }
 
     it("should understand swank:debug-backtrace") {
       testWithResponse("""(swank:debug-backtrace "23" 0 2)""") { (t, m, id) =>
-        (t.rpcDebugBacktrace _).expects("23", 0, 2).returns(debugBacktrace)
+        (t.rpcDebugBacktrace _).expects(DebugThreadId(23), 0, 2).returns(debugBacktrace)
         (m.send _).expects("(:return (:ok " + debugBacktraceStr + ") " + id + ")")
       }
     }

@@ -2,9 +2,6 @@ package org.ensime.model
 
 import java.io.File
 import org.ensime.util.FileEdit
-import scala.collection.mutable
-
-import org.ensime.config._
 
 sealed trait EntityInfo {
   def name: String
@@ -158,15 +155,48 @@ object OffsetRange {
   def apply(fromTo: Int): OffsetRange = new OffsetRange(fromTo, fromTo)
 }
 
+/**
+ * A debugger thread id.
+ */
+case class DebugThreadId(id: Long)
+
+object DebugThreadId {
+  /**
+   * Create a ThreadId from a String representation
+   * @param s A Long encoded as a string
+   * @return A ThreadId
+   */
+  def apply(s: String): DebugThreadId = {
+    new DebugThreadId(s.toLong)
+  }
+}
+
+case class DebugObjectId(id: Long)
+
+object DebugObjectId {
+  /**
+   * Create a DebugObjectId from a String representation
+   * @param s A Long encoded as a string
+   * @return A DebugObjectId
+   */
+  def apply(s: String): DebugObjectId = {
+    new DebugObjectId(s.toLong)
+  }
+}
+
 sealed trait DebugLocation
 
-case class DebugObjectReference(objectId: Long) extends DebugLocation
+case class DebugObjectReference(objectId: DebugObjectId) extends DebugLocation
 
-case class DebugStackSlot(threadId: String, frame: Int, offset: Int) extends DebugLocation
+object DebugObjectReference {
+  def apply(objId: Long): DebugObjectReference = new DebugObjectReference(DebugObjectId(objId))
+}
 
-case class DebugArrayElement(objectId: Long, index: Int) extends DebugLocation
+case class DebugStackSlot(threadId: DebugThreadId, frame: Int, offset: Int) extends DebugLocation
 
-case class DebugObjectField(objectId: Long, field: String) extends DebugLocation
+case class DebugArrayElement(objectId: DebugObjectId, index: Int) extends DebugLocation
+
+case class DebugObjectField(objectId: DebugObjectId, field: String) extends DebugLocation
 
 sealed trait DebugValue {
   def typeName: String
@@ -183,19 +213,19 @@ case class DebugObjectInstance(
   summary: String,
   fields: List[DebugClassField],
   typeName: String,
-  objectId: Long) extends DebugValue
+  objectId: DebugObjectId) extends DebugValue
 
 case class DebugStringInstance(
   summary: String,
   fields: List[DebugClassField],
   typeName: String,
-  objectId: Long) extends DebugValue
+  objectId: DebugObjectId) extends DebugValue
 
 case class DebugArrayInstance(
   length: Int,
   typeName: String,
   elementTypeName: String,
-  objectId: Long) extends DebugValue
+  objectId: DebugObjectId) extends DebugValue
 
 case class DebugClassField(
   index: Int,
@@ -216,7 +246,7 @@ case class DebugStackFrame(
   className: String,
   methodName: String,
   pcLocation: LineSourcePosition,
-  thisObjectId: Long)
+  thisObjectId: DebugObjectId)
 
 case class DebugBacktrace(
   frames: List[DebugStackFrame],

@@ -24,8 +24,6 @@ object ServerFixture {
     assert(connInfo.pid == None)
     assert(connInfo.implementation.name == "ENSIME")
 
-    server.project.rpcNotifyClientReady()
-
     val asyncHelper = new AsyncMsgHelper(sys)
 
     server.project.rpcSubscribeAsync(event => { asyncHelper.asyncReceived(event) })
