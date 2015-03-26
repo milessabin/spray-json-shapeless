@@ -506,13 +506,13 @@ class DebugManager(
 
     def start(): Unit = {
       evtQ.start()
-      monitor.map { _.start() }
+      monitor.foreach { _.start() }
     }
 
     def dispose() = try {
       evtQ.finished = true
       vm.dispose()
-      monitor.map { _.finished = true }
+      monitor.foreach { _.finished = true }
     } catch {
       case e: VMDisconnectedException =>
     }

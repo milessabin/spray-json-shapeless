@@ -1,14 +1,12 @@
 package org.ensime.fixture
 
 import akka.actor._
-import akka.pattern.AskTimeoutException
-import akka.pattern.Patterns
+import akka.pattern.{ AskTimeoutException, Patterns }
 import org.ensime.config._
 import org.ensime.core._
 import org.ensime.server._
-import scala.collection.immutable.ListMap
-import scala.collection.immutable.TreeMap
 
+import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -18,7 +16,7 @@ trait ServerFixture {
 
 object ServerFixture {
   private[fixture] def startup(config: EnsimeConfig)(implicit sys: ActorSystem): (Server, AsyncMsgHelper) = {
-    val server = Server.initialiseServer(config)
+    val (server, initFut) = Server.initialiseServer(config)
 
     val connInfo = server.project.rpcConnectionInfo()
     assert(connInfo.pid == None)
@@ -32,6 +30,7 @@ object ServerFixture {
     asyncHelper.expectAsync(60 seconds, FullTypeCheckCompleteEvent)
     asyncHelper.expectAsync(240 seconds, IndexerReadyEvent)
 
+    assert(initFut.isCompleted, "If we have seen init messages, future should be complete")
     (server, asyncHelper)
   }
 }

@@ -1179,7 +1179,7 @@ class SwankProtocol(actorSystem: ActorSystem,
         OptionalStringExtractor(memberName) :: OptionalStringExtractor(signatureString) :: Nil) =>
         rpcTarget.rpcSymbolByName(typeFullName, memberName, signatureString) match {
           case Some(value) => sendRPCReturn(toWF(value), callId)
-          case None => sendRPCReturn(toWF(false), callId)
+          case None => sendRPCReturn(toWF(value = false), callId)
         }
 
       /**
@@ -1874,10 +1874,10 @@ object SwankProtocol {
       case StringAtom(file) => Some(FileSourceFileInfo(new File(file)))
       case sexp: SExpList =>
         val m = sexp.toKeywordMap
-        val file = m.get(key(":file"))
-        val contents = m.get(key(":contents"))
-        val contentsIn = m.get(key(":contents-in"))
-        (file, contents, contentsIn) match {
+        val fileOpt = m.get(key(":file"))
+        val contentsOpt = m.get(key(":contents"))
+        val contentsInOpt = m.get(key(":contents-in"))
+        (fileOpt, contentsOpt, contentsInOpt) match {
           case (Some(StringAtom(file)), None, None) =>
             Some(FileSourceFileInfo(new File(file)))
           case (Some(StringAtom(file)), Some(StringAtom(contents)), None) =>

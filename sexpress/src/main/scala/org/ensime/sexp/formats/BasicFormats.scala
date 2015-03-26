@@ -36,9 +36,9 @@ trait BasicFormats {
   }
 
   // val allows override
-  implicit val SymbolFormat = new SexpFormat[Symbol] {
-    def write(x: Symbol): Sexp = SexpString(x.name)
-    def read(value: Sexp): Symbol = value match {
+  implicit val SymbolFormat: SexpFormat[Symbol] = new SexpFormat[Symbol] {
+    override def write(x: Symbol): Sexp = SexpString(x.name)
+    override def read(value: Sexp): Symbol = value match {
       case SexpString(x) => Symbol(x)
       case x => deserializationError(x)
     }

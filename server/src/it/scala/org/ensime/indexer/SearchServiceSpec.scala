@@ -3,7 +3,6 @@ package org.ensime.indexer
 import org.scalatest._
 import org.ensime.fixture._
 
-import org.ensime.config._
 import scala.concurrent._
 import scala.concurrent.duration._
 import pimpathon.file._
@@ -15,7 +14,7 @@ class SearchServiceSpec extends WordSpec with Matchers
   def original = EnsimeConfigFixture.SimpleTestProject
 
   "search refreshing" should {
-    "parse all files on a prestine structure" in withSearchService { implicit service =>
+    "parse all files on a pristine structure" in withSearchService { implicit service =>
       val (deleted, indexed) = refresh()
       deleted shouldBe 0
       indexed should be > 0
