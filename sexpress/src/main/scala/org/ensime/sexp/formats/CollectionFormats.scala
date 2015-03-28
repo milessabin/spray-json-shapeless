@@ -162,8 +162,8 @@ trait CollectionFormats {
     def read(s: Sexp) = s match {
       case SexpData(data) =>
         (data(start), data(end), data(step)) match {
-          case (SexpNumber(s), SexpNumber(e), SexpNumber(st)) =>
-            Range(s.toInt, e.toInt, st.toInt)
+          case (SexpNumber(rStart), SexpNumber(rEnd), SexpNumber(rStep)) =>
+            Range(rStart.toInt, rEnd.toInt, rStep.toInt)
           case _ => deserializationError(s)
         }
       case _ => deserializationError(s)

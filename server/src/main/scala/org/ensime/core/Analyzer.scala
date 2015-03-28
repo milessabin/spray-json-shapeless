@@ -128,7 +128,7 @@ class Analyzer(
           val elapsed = System.currentTimeMillis() - initTime
           log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
           reporter.enable()
-          project ! AsyncEvent(AnalyzerReadyEvent)
+          project ! AnalyzerReadyEvent
         }
         project ! AsyncEvent(FullTypeCheckCompleteEvent)
 

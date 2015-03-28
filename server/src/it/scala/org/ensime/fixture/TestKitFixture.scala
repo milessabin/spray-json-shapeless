@@ -27,17 +27,6 @@ trait TestKitFixture {
 
 class TestKitFix extends TestKit(ActorSystem()) with ImplicitSender
 
-trait IsolatedTestKitFixture extends TestKitFixture {
-  override def withTestKit(testCode: TestKitFix => Any): Any = {
-    val sys = new TestKitFix
-    try {
-      testCode(sys)
-    } finally {
-      sys.system.shutdown()
-    }
-  }
-}
-
 // this seems redundant, because it mimics "extends TestKit" behaviour,
 // but it allows for easy swapping with the refreshing implementation
 trait SharedTestKitFixture extends TestKitFixture with BeforeAndAfterAll {

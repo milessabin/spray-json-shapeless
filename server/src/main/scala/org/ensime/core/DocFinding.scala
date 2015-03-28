@@ -15,7 +15,7 @@ trait DocFinding { self: RichPresentationCompiler =>
       .takeWhile(_.hasPackageFlag).map(_.nameString).mkString(".")
 
   private def fullTypeName(sym: Symbol, nestedTypeSep: String, nameString: (Symbol => String)): String =
-    sym.ownerChain.takeWhile(!_.hasPackageFlag).reverse.map(nameString).mkString(nestedTypeSep)
+    sym.ownerChain.takeWhile(!_.hasPackageFlag).reverseMap(nameString).mkString(nestedTypeSep)
 
   private val ScalaPrim = """^(Boolean|Byte|Char|Double|Float|Int|Long|Short)$""".r
   private val ScalaAny = """^(Any|AnyVal|AnyRef)$""".r
