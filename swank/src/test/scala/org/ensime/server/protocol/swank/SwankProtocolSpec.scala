@@ -15,15 +15,10 @@ import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
 import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.reflect.io.ZipArchive
-import scala.tools.nsc.io._
 
 class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
 
   import org.ensime.server.protocol.swank.SwankTestData._
-
-  class MockZipEntry(entry: String, archive: ZipArchive) extends VirtualFile(entry, entry) {
-    override def underlyingSource: Option[ZipArchive] = Some(archive)
-  }
 
   describe("SwankProtocol") {
     it("can encode and decode sexp to wire") {
