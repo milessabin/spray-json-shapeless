@@ -2,6 +2,7 @@ package org.ensime.util
 
 import akka.actor.ActorSystem
 import java.io.File
+import org.slf4j.LoggerFactory
 import pimpathon.file._
 import RichFile._
 import scala.concurrent.duration._
@@ -14,6 +15,7 @@ object UnitTestUtils {
 
   def fileToWireString(file: File) = stringToWireString(file.canon.getAbsolutePath)
 
+  // DO NOT USE deprecating breaks the build, prefer TestKit
   def withActorSystem[T](f: ActorSystem => T): T = {
     val system = ActorSystem()
     try {

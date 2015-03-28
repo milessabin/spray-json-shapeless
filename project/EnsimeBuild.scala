@@ -132,6 +132,7 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val server = Project("server", file("server")).dependsOn(
     api, swank,
     sexpress % "test->test",
+    swank % "test->test",
     // must depend on these in "test" as well or they are added to the main dep list by sbt!
     // https://github.com/sbt/sbt/issues/1888
     testingEmpty % "test,it", testingSimple % "test,it", testingDebug % "test,it"
