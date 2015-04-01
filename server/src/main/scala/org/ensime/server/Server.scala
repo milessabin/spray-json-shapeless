@@ -16,7 +16,6 @@ import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
-import scala.concurrent.Future
 import scala.util.Properties
 import scala.util.Properties._
 
@@ -45,18 +44,12 @@ object Server {
     initialiseServer(config)
   }
 
-  /**
-   * Initialise a server based on the given ensime config.
-   * @param config The ensime config
-   * @return A tuple of Server instance and initialisation future.
-   * @see Project.start()
-   */
-  def initialiseServer(config: EnsimeConfig): (Server, Future[Unit]) = {
+  def initialiseServer(config: EnsimeConfig): Server = {
     val server = new Server(config, "127.0.0.1", 0,
       (actorSystem, peerRef, rpcTarget) => { new SwankProtocol(actorSystem, peerRef, rpcTarget) }
     )
-    val initFuture = server.start()
-    (server, initFuture)
+    server.start()
+    server
   }
 }
 
@@ -83,14 +76,9 @@ class Server(
 
   val project = new Project(config, actorSystem)
 
-  /**
-   * Start the server
-   * @return A Future representing when the server initialisation is complete.
-   */
-  def start(): Future[Unit] = {
-    val initFuture = project.initProject()
+  def start(): Unit = {
+    project.initProject()
     startSocketListener()
-    initFuture
   }
 
   private val hasShutdownFlag = new AtomicBoolean(false)
@@ -127,9 +115,7 @@ class Server(
     log.info("Shutdown complete")
   }
   private def writePort(cacheDir: File, port: Int): Unit = {
-
     val portfile = new File(cacheDir, "port")
-
     if (!portfile.exists()) {
       log.info("creating portfile " + portfile)
       portfile.createNewFile()
