@@ -1,7 +1,8 @@
 // ensime-sbt is needed for the integration tests
 addSbtPlugin("org.ensime" % "ensime-sbt" % "0.1.5")
 
-addMavenResolverPlugin
+// not working on Windows https://github.com/sbt/sbt/issues/1952
+//addMavenResolverPlugin
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
 
