@@ -1,5 +1,7 @@
 package org.ensime.server.protocol.swank
 
+import org.ensime.sexp._
+
 import org.ensime.model._
 import org.ensime.core._
 import org.scalatest.FunSpec
@@ -10,7 +12,25 @@ import UnitTestUtils._
 
 class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
+  import SwankProtocolConversions._
+  import SwankProtocolCommon._
+  import SwankProtocolResponse._
+
   import SwankTestData._
+
+  // need to force some types to be the parent trait alternative would
+  // be to restrict the types when calling toWF
+  def toWF(value: EnsimeEvent): Sexp = value.toSexp
+  def toWF(value: TypeInfo): Sexp = value.toSexp
+  def toWF(value: EntityInfo): Sexp = value.toSexp
+  def toWF(value: NamedTypeMemberInfo): Sexp = value.toSexp
+  def toWF(value: SymbolSearchResult): Sexp = value.toSexp
+  def toWF(value: DebugVmStatus): Sexp = value.toSexp
+  def toWF[T: SexpFormat](value: T): Sexp = value.toSexp
+
+  implicit class WireStringSexp(sexp: Sexp) {
+    def toWireString = sexp.compactPrint
+  }
 
   describe("SwankProtocolConversionsSpec") {
     withActorSystem { as =>
@@ -173,10 +193,10 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(FileRange("/abc", 7, 9)).toWireString === """(:file "/abc" :start 7 :end 9)""")
 
         // TODO Add all the other symbols
-        assert(toWF(SymbolDesignations("/abc", List(
+        assert(toWF(SymbolDesignations(symFile, List(
           SymbolDesignation(7, 9, VarFieldSymbol),
           SymbolDesignation(11, 22, ClassSymbol)
-        ))).toWireString === """(:file "/abc" :syms ((varField 7 9) (class 11 22)))""")
+        ))).toWireString === s"""(:file "${symFile.getPath}" :syms ((varField 7 9) (class 11 22)))""")
 
         assert(toWF(RefactorFailure(7, "message")).toWireString === """(:procedure-id 7 :reason "message" :status failure)""")
 

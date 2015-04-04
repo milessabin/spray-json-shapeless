@@ -1,5 +1,6 @@
 package org.ensime.server
 
+import akka.event.LoggingReceive
 import java.io._
 import java.net.{ InetAddress, ServerSocket, Socket }
 import java.util.concurrent.atomic.AtomicBoolean
@@ -8,10 +9,11 @@ import akka.actor._
 import com.google.common.base.Charsets
 import com.google.common.io.Files
 import org.ensime.EnsimeApi
+import org.ensime.sexp.Sexp
 import org.ensime.config._
 import org.ensime.core.Project
 import org.ensime.server.protocol.swank.SwankProtocol
-import org.ensime.server.protocol.{ IncomingMessageEvent, OutgoingMessageEvent, Protocol }
+import org.ensime.server.protocol._
 import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -52,7 +54,7 @@ object Server {
    */
   def initialiseServer(config: EnsimeConfig): (Server, Future[Unit]) = {
     val server = new Server(config, "127.0.0.1", 0,
-      (actorSystem, peerRef, rpcTarget) => { new SwankProtocol(actorSystem, peerRef, rpcTarget) }
+      (_, peerRef, rpcTarget) => { new SwankProtocol(peerRef, rpcTarget) }
     )
     val readyFuture = server.start()
     (server, readyFuture)
@@ -63,7 +65,7 @@ class Server(
     val config: EnsimeConfig,
     host: String,
     requestedPort: Int,
-    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol) {
+    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol[Sexp]) {
 
   import org.ensime.server.Server.log
 
@@ -147,7 +149,11 @@ class Server(
 
 case object SocketClosed
 
-class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extends Thread {
+// these must be destroyed
+case class IncomingMessageEvent(obj: Sexp)
+case class OutgoingMessageEvent(obj: Sexp)
+
+class SocketReader(socket: Socket, protocol: Protocol[Sexp], handler: ActorRef) extends Thread {
   val log = LoggerFactory.getLogger(this.getClass)
   val in = new BufferedInputStream(socket.getInputStream)
   val reader = new InputStreamReader(in, "UTF-8")
@@ -155,9 +161,8 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
   override def run(): Unit = {
     try {
       while (true) {
-        val msg: WireFormat = protocol.readMessage(reader)
+        val msg = protocol.readMessage(reader).asInstanceOf[Sexp]
         handler ! IncomingMessageEvent(msg)
-
       }
     } catch {
       case e: IOException =>
@@ -180,13 +185,13 @@ class SocketReader(socket: Socket, protocol: Protocol, handler: ActorRef) extend
  */
 class SocketHandler(socket: Socket,
     rpcTarget: EnsimeApi,
-    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol) extends Actor with ActorLogging {
+    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol[Sexp]) extends Actor with ActorLogging {
   val protocol = connectionCreator(context.system, self, rpcTarget)
 
   val reader = new SocketReader(socket, protocol, self)
   val out = new BufferedOutputStream(socket.getOutputStream)
 
-  def write(value: WireFormat): Unit = {
+  def write(value: Sexp): Unit = {
     try {
       protocol.writeMessage(value, out)
     } catch {
@@ -200,10 +205,12 @@ class SocketHandler(socket: Socket,
     reader.start()
   }
 
-  override def receive = {
+  override def receive = LoggingReceive {
+    case message: Sexp =>
+      write(message)
     case IncomingMessageEvent(message) =>
       protocol.handleIncomingMessage(message)
-    case OutgoingMessageEvent(message: WireFormat) =>
+    case OutgoingMessageEvent(message) =>
       write(message)
     case SocketClosed =>
       log.error("Socket closed, stopping self")

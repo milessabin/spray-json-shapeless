@@ -2,7 +2,7 @@ package org.ensime.core
 
 import java.io.File
 
-import org.ensime.model.{ AddUndo, FileSourceFileInfo, SourceFileInfo, Undo, UndoResult }
+import org.ensime.model._
 import org.ensime.util._
 
 import scala.collection.mutable
@@ -12,9 +12,6 @@ case class RefactorFailure(
   reason: String,
   status: scala.Symbol = 'failure // redundant field
   )
-case class RefactorPrepareReq(procedureId: Int, refactor: RefactorDesc) extends RPCRequest
-case class RefactorExecReq(procedureId: Int, refactorType: Symbol) extends RPCRequest
-case class RefactorCancelReq(procedureId: Int) extends RPCRequest
 
 trait RefactorProcedure {
   def procedureId: Int
@@ -37,17 +34,17 @@ case class RefactorResult(
 
 sealed abstract class RefactorDesc(val refactorType: Symbol)
 
-case class InlineLocalRefactorDesc(file: String, start: Int, end: Int) extends RefactorDesc(Symbols.InlineLocal)
+case class InlineLocalRefactorDesc(file: File, start: Int, end: Int) extends RefactorDesc(Symbols.InlineLocal)
 
-case class RenameRefactorDesc(newName: String, file: String, start: Int, end: Int) extends RefactorDesc(Symbols.Rename)
+case class RenameRefactorDesc(newName: String, file: File, start: Int, end: Int) extends RefactorDesc(Symbols.Rename)
 
-case class ExtractMethodRefactorDesc(methodName: String, file: String, start: Int, end: Int)
+case class ExtractMethodRefactorDesc(methodName: String, file: File, start: Int, end: Int)
   extends RefactorDesc(Symbols.ExtractMethod)
 
-case class ExtractLocalRefactorDesc(name: String, file: String, start: Int, end: Int)
+case class ExtractLocalRefactorDesc(name: String, file: File, start: Int, end: Int)
   extends RefactorDesc(Symbols.ExtractLocal)
 
-case class OrganiseImportsRefactorDesc(file: String) extends RefactorDesc(Symbols.OrganizeImports)
+case class OrganiseImportsRefactorDesc(file: File) extends RefactorDesc(Symbols.OrganizeImports)
 
-case class AddImportRefactorDesc(qualifiedName: String, file: String)
+case class AddImportRefactorDesc(qualifiedName: String, file: File)
   extends RefactorDesc(Symbols.AddImport)

@@ -9,6 +9,7 @@ import akka.io.IO
 import com.google.common.io.{ ByteStreams, Files }
 import org.ensime.config._
 import org.ensime.model.{ DocFqn, DocSigPair }
+import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
 import spray.can.Http
 import spray.http.HttpMethods._
@@ -212,15 +213,12 @@ class DocServer(
         sender ! response
 
       // Handle internal ENSIME requests.
-      case req: RPCRequest =>
+      case DocUriReq(sig) =>
         try {
-          req match {
-            case DocUriReq(sig) =>
-              sender ! resolveLocalUri(sig).orElse(resolveWellKnownUri(sig))
-          }
+          sender ! resolveLocalUri(sig).orElse(resolveWellKnownUri(sig))
         } catch {
           case e: Exception =>
-            log.error(e, "Error handling RPC: " + req)
+            log.error(e, "Error handling RPC: " + sig)
             sender ! RPCError(ErrExceptionInRPC,
               "Error occurred in indexer. Check the server log.")
         }

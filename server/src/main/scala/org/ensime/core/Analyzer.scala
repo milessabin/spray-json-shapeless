@@ -1,5 +1,6 @@
 package org.ensime.core
 
+import akka.event.LoggingReceive
 import java.io.File
 import java.nio.charset.Charset
 
@@ -7,15 +8,18 @@ import akka.actor.{ Actor, ActorLogging, ActorRef }
 import org.ensime.config._
 import org.ensime.indexer.SearchService
 import org.ensime.model._
-import org.ensime.server.protocol.ProtocolConst
-import org.ensime.server.protocol.ProtocolConst._
+import org.ensime.server.protocol._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
+
+import RichFile._
 
 import scala.concurrent.Future
 import scala.reflect.internal.util.{ OffsetPosition, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
+
+import ProtocolConst._
 
 case class CompilerFatalError(e: Throwable)
 
@@ -79,7 +83,7 @@ class Analyzer(
     }
   }
 
-  override def receive = {
+  override def receive = LoggingReceive {
     case x: Any =>
       try {
         process(x)
@@ -132,7 +136,7 @@ class Analyzer(
         }
         project ! AsyncEvent(FullTypeCheckCompleteEvent)
 
-      case rpcReq: RPCRequest =>
+      case rpcReq: RpcRequest =>
         try {
           if (awaitingInitialCompile) {
             sender ! RPCError(ErrAnalyzerNotReady, "Analyzer is not ready! Please wait.")
@@ -143,7 +147,7 @@ class Analyzer(
               case RemoveFileReq(file: File) =>
                 scalaCompiler.askRemoveDeleted(file)
                 sender ! VoidResponse
-              case ReloadAllReq =>
+              case TypecheckAllReq =>
                 allFilesLoaded = true
                 scalaCompiler.askRemoveAllDeleted()
                 scalaCompiler.askReloadAllFiles()
@@ -159,8 +163,11 @@ class Analyzer(
                   restartCompiler(keepLoaded = false)
                 }
                 sender ! VoidResponse
-              case ReloadFilesReq(files: List[SourceFileInfo], async: Boolean) =>
-                handleReloadFiles(files, async)
+              case TypecheckFileReq(fileInfo) =>
+                handleReloadFiles(List(fileInfo), true)
+                sender ! VoidResponse
+              case TypecheckFilesReq(files) =>
+                handleReloadFiles(files.map(SourceFileInfo(_)), false)
                 sender ! VoidResponse
               case PatchSourceReq(file, edits) =>
                 if (!file.exists()) {
@@ -173,26 +180,25 @@ class Analyzer(
                   sender ! VoidResponse
                 }
 
-              case req: RefactorPrepareReq =>
+              case req: PrepareRefactorReq =>
                 handleRefactorPrepareRequest(req)
-              case req: RefactorExecReq =>
+              case req: ExecRefactorReq =>
                 handleRefactorExec(req)
-              case req: RefactorCancelReq =>
+              case req: CancelRefactorReq =>
                 handleRefactorCancel(req)
-              case CompletionsReq(fileInfo: SourceFileInfo, point: Int,
-                maxResults: Int, caseSens: Boolean) =>
+              case CompletionsReq(fileInfo, point, maxResults, caseSens, reload) =>
                 val sourcefile = createSourceFile(fileInfo)
                 reporter.disable()
                 val p = new OffsetPosition(sourcefile, point)
                 val info = scalaCompiler.askCompletionsAt(p, maxResults, caseSens)
                 sender ! info
-              case UsesOfSymAtPointReq(file: File, point: Int) =>
+              case UsesOfSymbolAtPointReq(file, point) =>
                 val p = pos(file, point)
                 sender ! scalaCompiler.askUsesOfSymAtPoint(p).map(ERangePositionHelper.fromRangePosition)
               case PackageMemberCompletionReq(path: String, prefix: String) =>
                 val members = scalaCompiler.askCompletePackageMember(path, prefix)
                 sender ! members
-              case InspectTypeReq(file: File, range: OffsetRange) =>
+              case InspectTypeAtPointReq(file: File, range: OffsetRange) =>
                 val p = pos(file, range)
                 sender ! scalaCompiler.askInspectTypeAt(p)
               case InspectTypeByIdReq(id: Int) =>
@@ -204,10 +210,10 @@ class Analyzer(
                 sender ! scalaCompiler.askSymbolInfoAt(p)
               case SymbolByNameReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
                 sender ! scalaCompiler.askSymbolByName(typeFullName, memberName, signatureString)
-              case DocSignatureAtPointReq(file: File, range: OffsetRange) =>
+              case DocUriAtPointReq(file: File, range: OffsetRange) =>
                 val p = pos(file, range)
                 sender ! scalaCompiler.askDocSignatureAtPoint(p)
-              case DocSignatureForSymbolReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
+              case DocUriForSymbolReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
                 sender ! scalaCompiler.askDocSignatureForSymbol(typeFullName, memberName, signatureString)
               case InspectPackageByPathReq(path: String) =>
                 sender ! scalaCompiler.askPackageByPath(path)
@@ -225,7 +231,7 @@ class Analyzer(
                 sender ! scalaCompiler.askCallCompletionInfoById(id)
               case SymbolDesignationsReq(file, start, end, tpes) =>
                 if (!FileUtils.isScalaSourceFile(file)) {
-                  sender ! SymbolDesignations(file.getPath, List.empty)
+                  sender ! SymbolDesignations(file, List.empty)
                 } else {
                   val f = createSourceFile(file)
                   val clampedEnd = math.max(end, start)
@@ -234,18 +240,22 @@ class Analyzer(
                     val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                     sender ! syms
                   } else {
-                    sender ! SymbolDesignations(f.path, List.empty)
+                    sender ! SymbolDesignations(new File(f.path).canon, List.empty)
                   }
                 }
-              case ExecUndoReq(undo: Undo) =>
+              case DoExecUndo(undo) =>
                 sender ! handleExecUndo(undo)
-              case ExpandSelectionReq(filename: String, start: Int, stop: Int) =>
-                sender ! handleExpandselection(filename, start, stop)
-              case FormatFilesReq(filenames: List[String]) =>
-                handleFormatFiles(filenames)
+              case ExpandSelectionReq(file, start: Int, stop: Int) =>
+                sender ! handleExpandselection(file, start, stop)
+              case FormatSourceReq(files: List[File]) =>
+                handleFormatFiles(files)
                 sender ! VoidResponse
-              case FormatFileReq(fileInfo: SourceFileInfo) =>
+              case FormatOneSourceReq(fileInfo: SourceFileInfo) =>
                 sender ! handleFormatFile(fileInfo)
+
+              case unexpected =>
+                // TODO compiler blew up... too many missing cases
+                require(false, unexpected.toString)
             }
           }
         } catch {

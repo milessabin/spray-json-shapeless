@@ -2,19 +2,146 @@ package org.ensime.server.protocol.swank
 
 import org.ensime.core._
 import org.ensime.model._
-import org.ensime.server.ConnectionInfo
+import org.ensime.server._
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
 import org.ensime.util._
+import org.ensime.server.protocol._
 
-object SwankProtocolConversions {
-  object Protocol extends DefaultSexpProtocol
-    with SymbolAltFormat
-    with OptionAltFormat
-    with CanonFileFormat
-    with FamilyFormats
-    with CamelCaseToDashes
-  import org.ensime.server.protocol.swank.SwankProtocolConversions.Protocol._
+/*
+ * WARNING: THERE BE DRAGONS
+ *
+ * This file exists to define the custom marshalling of the domain
+ * objects into the legacy ENSIME SWANK protocol (v0.9/1.0).
+ *
+ * We could reduce the boilerplate of this file by using shapeless,
+ * but we need to backport it to scala-2.9 anyway, so there is no
+ * point in doing so.
+ *
+ * However, in ENSIME 2.0 we plan to revisit the protocol and that may
+ * mean using shapeless to produce the "natural" marshalling form for
+ * all domain objects. At that time, this file will simply disappear
+ * and there will be no need to maintain a scala-2.9 backport.
+ *
+ * https://github.com/ensime/ensime-server/issues/834
+ */
+object SwankProtocolConversions extends DefaultSexpProtocol
+  with SymbolAltFormat
+  with OptionAltFormat
+  with CanonFileFormat
+  with FamilyFormats
+  with CamelCaseToDashes
+
+object SwankProtocolCommon {
+  import SwankProtocolConversions._
+
+  /**
+   * Alternative form for family formats that serialises the typehint
+   * as a field value on the same level as the other parts (assumed to
+   * be a SexpData), i.e. to match our legacy format.
+   */
+  abstract class TraitFormatAlt[T] extends SexpFormat[T] {
+    val key = SexpSymbol(":type")
+    protected def wrap[E](t: E)(
+      implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp = t.toSexp match {
+      case SexpNil => SexpData(key -> th.hint)
+      case SexpData(data) if !data.contains(key) =>
+        SexpData(key -> th.hint :: data.toList)
+      case SexpList(Nil) =>
+        // special case: no param case classes
+        SexpData(key -> th.hint)
+      case other =>
+        serializationError(s"expected ${th.hint}'s wrap to be SexpData, was $other")
+    }
+    final def read(sexp: Sexp): T = sexp match {
+      case SexpData(map) if map.contains(key) =>
+        map(key) match {
+          case hint: SexpSymbol => read(hint, SexpData((map - key).toList))
+          case not => deserializationError(not)
+        }
+      case x => deserializationError(x)
+    }
+    protected def read(hint: SexpSymbol, value: Sexp): T
+  }
+
+  implicit val SourceFileInfoFormat = SexpFormat[SourceFileInfo]
+
+  private val sourceSymbolMap = Map(
+    "object" -> ObjectSymbol,
+    "class" -> ClassSymbol,
+    "trait" -> TraitSymbol,
+    "package" -> PackageSymbol,
+    "constructor" -> ConstructorSymbol,
+    "importedName" -> ImportedNameSymbol,
+    "typeParam" -> TypeParamSymbol,
+    "param" -> ParamSymbol,
+    "varField" -> VarFieldSymbol,
+    "valField" -> ValFieldSymbol,
+    "operator" -> OperatorFieldSymbol,
+    "var" -> VarSymbol,
+    "val" -> ValSymbol,
+    "functionCall" -> FunctionCallSymbol
+  )
+  private val reverseSourceSymbolMap: Map[SourceSymbol, String] =
+    sourceSymbolMap.map { case (name, symbol) => symbol -> name }
+
+  private[swank] def symbolToSourceSymbol(stringRep: String): Option[SourceSymbol] = sourceSymbolMap.get(stringRep)
+  private[swank] def sourceSymbolToSymbol(sym: SourceSymbol): String = reverseSourceSymbolMap.get(sym).get
+
+  implicit object SourceSymbolFormat extends SexpFormat[SourceSymbol] {
+    def write(sym: SourceSymbol): Sexp = SexpSymbol(sourceSymbolToSymbol(sym))
+    def read(sexp: Sexp): SourceSymbol = sexp match {
+      case SexpSymbol(name) if sourceSymbolMap.contains(name) =>
+        sourceSymbolMap(name)
+      case _ => deserializationError(sexp)
+    }
+  }
+
+  implicit val DebugThreadIdFormat: SexpFormat[DebugThreadId] = viaString(new ViaString[DebugThreadId] {
+    def toSexpString(id: DebugThreadId) = id.id.toString
+    def fromSexpString(s: String) = DebugThreadId(s)
+  })
+
+  implicit val DebugObjectIdFormat: SexpFormat[DebugObjectId] = viaString(new ViaString[DebugObjectId] {
+    def toSexpString(id: DebugObjectId) = id.id.toString
+    def fromSexpString(s: String) = DebugObjectId(s)
+  })
+
+  implicit val DebugObjectReferenceHint = TypeHint[DebugObjectReference](SexpSymbol("reference"))
+  implicit val DebugArrayElementHint = TypeHint[DebugArrayElement](SexpSymbol("element"))
+  implicit val DebugObjectFieldHint = TypeHint[DebugObjectField](SexpSymbol("field"))
+  implicit val DebugStackSlotHint = TypeHint[DebugStackSlot](SexpSymbol("slot"))
+
+  implicit val DebugObjectReferenceFormat = SexpFormat[DebugObjectReference]
+  implicit val DebugArrayElementFormat = SexpFormat[DebugArrayElement]
+  implicit val DebugObjectFieldFormat = SexpFormat[DebugObjectField]
+  implicit val DebugStackSlotFormat = SexpFormat[DebugStackSlot]
+
+  implicit object DebugLocationFormat extends TraitFormatAlt[DebugLocation] {
+    def write(dl: DebugLocation): Sexp = dl match {
+      case dor: DebugObjectReference => wrap(dor)
+      case dae: DebugArrayElement => wrap(dae)
+      case dof: DebugObjectField => wrap(dof)
+      case dss: DebugStackSlot => wrap(dss)
+    }
+    def read(hint: SexpSymbol, value: Sexp): DebugLocation = hint match {
+      case s if s == DebugObjectReferenceHint.hint =>
+        value.convertTo[DebugObjectReference]
+      case s if s == DebugArrayElementHint.hint =>
+        value.convertTo[DebugArrayElement]
+      case s if s == DebugObjectFieldHint.hint =>
+        value.convertTo[DebugObjectField]
+      case s if s == DebugStackSlotHint.hint =>
+        value.convertTo[DebugStackSlot]
+      case _ => deserializationError(hint)
+    }
+  }
+
+}
+
+object SwankProtocolResponse {
+  import SwankProtocolConversions._
+  import SwankProtocolCommon._
 
   /**
    * By default, S-Express uses the simple name of a class as the
@@ -22,10 +149,6 @@ object SwankProtocolConversions {
    * However, the ENSIME protocol uses custom typehints, which are
    * defined here - in combination with trait-specific typehint rules.
    */
-  implicit val DebugObjectReferenceHint = TypeHint[DebugObjectReference](SexpSymbol("reference"))
-  implicit val DebugArrayElementHint = TypeHint[DebugArrayElement](SexpSymbol("element"))
-  implicit val DebugObjectFieldHint = TypeHint[DebugObjectField](SexpSymbol("field"))
-  implicit val DebugStackSlotHint = TypeHint[DebugStackSlot](SexpSymbol("slot"))
   implicit val DebugPrimitiveHint = TypeHint[DebugPrimitiveValue](SexpSymbol("prim"))
   implicit val DebugObjectHint = TypeHint[DebugObjectInstance](SexpSymbol("obj"))
   implicit val DebugArrayHint = TypeHint[DebugArrayInstance](SexpSymbol("arr"))
@@ -68,35 +191,6 @@ object SwankProtocolConversions {
   implicit val NewFileHint = TypeHint[NewFile](SexpSymbol("new"))
 
   /**
-   * Alternative form for family formats that serialises the typehint
-   * as a field value on the same level as the other parts (assumed to
-   * be a SexpData), i.e. to match our legacy format.
-   */
-  abstract class TraitFormatAlt[T] extends SexpFormat[T] {
-    val key = SexpSymbol(":type")
-    protected def wrap[E](t: E)(
-      implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp = t.toSexp match {
-      case SexpNil => SexpData(key -> th.hint)
-      case SexpData(data) if !data.contains(key) =>
-        SexpData(key -> th.hint :: data.toList)
-      case SexpList(Nil) =>
-        // special case: no param case classes
-        SexpData(key -> th.hint)
-      case other =>
-        serializationError(s"expected ${th.hint}'s wrap to be SexpData, was $other")
-    }
-    final def read(sexp: Sexp): T = sexp match {
-      case SexpData(map) if map.contains(key) =>
-        map(key) match {
-          case hint: SexpSymbol => read(hint, SexpData((map - key).toList))
-          case not => deserializationError(not)
-        }
-      case x => deserializationError(x)
-    }
-    protected def read(hint: SexpSymbol, value: Sexp): T
-  }
-
-  /**
    * These implicits are required until shapeless stops println-ing when
    * singletonFormat is made implicit.
    */
@@ -108,26 +202,12 @@ object SwankProtocolConversions {
   implicit val DebugVMStartEventFormat = singletonFormat[DebugVMStartEvent.type]
   implicit val DebugVMDisconnectEventFormat = singletonFormat[DebugVMDisconnectEvent.type]
 
-  implicit val DebugThreadIdFormat: SexpFormat[DebugThreadId] = viaString(new ViaString[DebugThreadId] {
-    def toSexpString(uuid: DebugThreadId) = uuid.id.toString
-    def fromSexpString(s: String) = DebugThreadId(s)
-  })
-
-  implicit val DebugObjectIdFormat: SexpFormat[DebugObjectId] = viaString(new ViaString[DebugObjectId] {
-    def toSexpString(uuid: DebugObjectId) = uuid.id.toString
-    def fromSexpString(s: String) = DebugObjectId(s)
-  })
-
   /**
    * These implicit vals are actually optional - S-Express doesn't
    * *need* them - and exist only to help the compiler to resolve
    * various implicits without recomputing them. Runtime performance
    * is also improved by having these assigned to vals.
    */
-  implicit val DebugObjectReferenceFormat = SexpFormat[DebugObjectReference]
-  implicit val DebugArrayElementFormat = SexpFormat[DebugArrayElement]
-  implicit val DebugObjectFieldFormat = SexpFormat[DebugObjectField]
-  implicit val DebugStackSlotFormat = SexpFormat[DebugStackSlot]
   implicit val DebugPrimitiveValueFormat = SexpFormat[DebugPrimitiveValue]
   implicit val DebugObjectInstanceFormat = SexpFormat[DebugObjectInstance]
   implicit val DebugArrayInstanceFormat = SexpFormat[DebugArrayInstance]
@@ -154,26 +234,6 @@ object SwankProtocolConversions {
   implicit val RefactorResultFormat = SexpFormat[RefactorResult]
   implicit val DebugVmErrorFormat = SexpFormat[DebugVmError]
   implicit val EmptySourcePositionFormat = SexpFormat[EmptySourcePosition]
-
-  implicit object DebugLocationFormat extends TraitFormatAlt[DebugLocation] {
-    def write(dl: DebugLocation): Sexp = dl match {
-      case dor: DebugObjectReference => wrap(dor)
-      case dae: DebugArrayElement => wrap(dae)
-      case dof: DebugObjectField => wrap(dof)
-      case dss: DebugStackSlot => wrap(dss)
-    }
-    def read(hint: SexpSymbol, value: Sexp): DebugLocation = hint match {
-      case s if s == DebugObjectReferenceHint.hint =>
-        value.convertTo[DebugObjectReference]
-      case s if s == DebugArrayElementHint.hint =>
-        value.convertTo[DebugArrayElement]
-      case s if s == DebugObjectFieldHint.hint =>
-        value.convertTo[DebugObjectField]
-      case s if s == DebugStackSlotHint.hint =>
-        value.convertTo[DebugStackSlot]
-      case _ => deserializationError(hint)
-    }
-  }
 
   implicit object DebugValueFormat extends TraitFormatAlt[DebugValue] {
     override val key = SexpSymbol(":val-type")
@@ -393,29 +453,6 @@ object SwankProtocolConversions {
   implicit val UndoFormat = SexpFormat[Undo]
   implicit val UndoResultFormat = SexpFormat[UndoResult]
 
-  // TODO: don't use this lookup
-  private val sourceSymbolMap = Map(
-    "object" -> ObjectSymbol,
-    "class" -> ClassSymbol,
-    "trait" -> TraitSymbol,
-    "package" -> PackageSymbol,
-    "constructor" -> ConstructorSymbol,
-    "importedName" -> ImportedNameSymbol,
-    "typeParam" -> TypeParamSymbol,
-    "param" -> ParamSymbol,
-    "varField" -> VarFieldSymbol,
-    "valField" -> ValFieldSymbol,
-    "operator" -> OperatorFieldSymbol,
-    "var" -> VarSymbol,
-    "val" -> ValSymbol,
-    "functionCall" -> FunctionCallSymbol
-  )
-
-  private val reverseSourceSymbolMap: Map[SourceSymbol, String] = sourceSymbolMap.map { case (name, symbol) => symbol -> name }
-
-  def symbolToSourceSymbol(stringRep: String): Option[SourceSymbol] = sourceSymbolMap.get(stringRep)
-  private def sourceSymbolToSymbol(sym: SourceSymbol): String = reverseSourceSymbolMap.get(sym).get
-
   // must be after SourceSymbol
   implicit object SymbolDesignationFormat extends SexpFormat[SymbolDesignation] {
     def write(o: SymbolDesignation): Sexp =
@@ -439,70 +476,308 @@ object SwankProtocolConversions {
       case _ => deserializationError(hint)
     }
   }
+}
 
-  //////////////////////////////////////////////////////////////////////////
-  // Everything below this line is to implement the legacy toWF API
-  implicit class SExpressWireFormat(sexp: Sexp) extends WireFormat {
-    def toWireString: String = sexp.compactPrint
-    def withRpcReturn(callId: Int): WireFormat = new SExpressWireFormat(SexpList(
-      SexpSymbol(":return"),
-      SexpList(SexpSymbol(":ok"), sexp),
-      SexpNumber(callId)
-    ))
+// we get diverging implicits if everything is in the one object
+object SwankProtocolRequest {
+  import SwankProtocolConversions._
+  import SwankProtocolCommon._
+
+  // I don't know why, but OffsetRangeFormat needs to be here
+  implicit object OffsetRangeFormat extends SexpFormat[OffsetRange] {
+    def write(or: OffsetRange): Sexp = ???
+    def read(sexp: Sexp): OffsetRange = sexp match {
+      case SexpNumber(a) =>
+        OffsetRange(a.intValue, a.intValue)
+      case SexpList(SexpNumber(a) :: SexpNumber(b) :: Nil) =>
+        OffsetRange(a.intValue, b.intValue)
+      case _ => deserializationError(sexp)
+    }
   }
-  def toWF(dl: DebugLocation): WireFormat = dl.toSexp
-  def toWF(dor: DebugObjectReference): WireFormat = dor.toSexp
-  def toWF(dae: DebugArrayElement): WireFormat = dae.toSexp
-  def toWF(dof: DebugObjectField): WireFormat = dof.toSexp
-  def toWF(dss: DebugStackSlot): WireFormat = dss.toSexp
-  def toWF(obj: DebugValue): WireFormat = obj.toSexp
-  def toWF(obj: DebugNullValue): WireFormat = obj.toSexp
-  def toWF(obj: DebugPrimitiveValue): WireFormat = obj.toSexp
-  def toWF(obj: DebugObjectInstance): WireFormat = obj.toSexp
-  def toWF(obj: DebugStringInstance): WireFormat = obj.toSexp
-  def toWF(obj: DebugArrayInstance): WireFormat = obj.toSexp
-  def toWF(obj: DebugClassField): WireFormat = obj.toSexp
-  def toWF(obj: DebugStackLocal): WireFormat = obj.toSexp
-  def toWF(obj: DebugStackFrame): WireFormat = obj.toSexp
-  def toWF(obj: DebugBacktrace): WireFormat = obj.toSexp
-  def toWF(pos: SourcePosition): WireFormat = pos.toSexp
-  def toWF(pos: LineSourcePosition): WireFormat = pos.toSexp
-  def toWF(pos: EmptySourcePosition): WireFormat = pos.toSexp
-  def toWF(pos: OffsetSourcePosition): WireFormat = pos.toSexp
-  def toWF(info: ConnectionInfo): WireFormat = info.toSexp
-  def toWF(evt: EnsimeEvent): WireFormat = evt.toSexp
-  def toWF(note: Note): WireFormat = note.toSexp
-  def toWF(bp: Breakpoint): WireFormat = bp.toSexp
-  def toWF(bps: BreakpointList): WireFormat = bps.toSexp
-  def toWF(config: ReplConfig): WireFormat = config.toSexp
-  def toWF(value: Boolean): WireFormat = value.toSexp
-  def toWF(value: String): WireFormat = value.toSexp
-  def toWF(cs: CompletionSignature): WireFormat = cs.toSexp
-  def toWF(value: CompletionInfo): WireFormat = value.toSexp
-  def toWF(value: CompletionInfoList): WireFormat = value.toSexp
-  def toWF(value: PackageMemberInfoLight): WireFormat = value.toSexp
-  def toWF(value: FileRange): WireFormat = value.toSexp
-  def toWF(value: NamedTypeMemberInfo): WireFormat = value.toSexp
-  def toWF(value: EntityInfo): WireFormat = value.toSexp
-  def toWF(value: TypeInfo): WireFormat = value.toSexp
-  def toWF(value: ParamSectionInfo): WireFormat = value.toSexp
-  def toWF(value: SymbolInfo): WireFormat = value.toSexp
-  def toWF(value: CallCompletionInfo): WireFormat = value.toSexp
-  def toWF(value: TypeInspectInfo): WireFormat = value.toSexp
-  def toWF(value: InterfaceInfo): WireFormat = value.toSexp
-  def toWF(p: ERangePosition): WireFormat = p.toSexp
-  def toWF(value: RefactorFailure): WireFormat = value.toSexp
-  def toWF(value: RefactorEffect): WireFormat = value.toSexp
-  def toWF(value: RefactorResult): WireFormat = value.toSexp
-  def toWF(value: SymbolSearchResult): WireFormat = value.toSexp
-  def toWF(value: SymbolSearchResults): WireFormat = value.toSexp
-  def toWF(value: ImportSuggestions): WireFormat = value.toSexp
-  def toWF(value: Undo): WireFormat = value.toSexp
-  def toWF(value: UndoResult): WireFormat = value.toSexp
-  def toWF(value: SymbolDesignations): WireFormat = value.toSexp
-  def toWF(v: DebugVmStatus): WireFormat = v.toSexp
 
-  // don't always work as expected by the legacy API
-  def toWF[T: SexpFormat](els: Iterable[T]): WireFormat = els.toSexp
-  def toWF[T: SexpFormat](els: Option[T]): WireFormat = els.toSexp
+  implicit val ConnectionInfoReqHint = TypeHint[ConnectionInfoReq.type](SexpSymbol("swank:connection-info"))
+  implicit val InitProjectReqHint = TypeHint[InitProjectReq.type](SexpSymbol("swank:init-project"))
+  implicit val PeekUndoReqHint = TypeHint[PeekUndoReq.type](SexpSymbol("swank:peek-undo"))
+  implicit val ExecUndoReqHint = TypeHint[ExecUndoReq](SexpSymbol("swank:exec-undo"))
+  implicit val ReplConfigReqHint = TypeHint[ReplConfigReq.type](SexpSymbol("swank:repl-config"))
+  implicit val RemoveFileReqHint = TypeHint[RemoveFileReq](SexpSymbol("swank:remove-file"))
+  implicit val TypecheckFileReqHint = TypeHint[TypecheckFileReq](SexpSymbol("swank:typecheck-file"))
+  implicit val TypecheckFilesReqHint = TypeHint[TypecheckFilesReq](SexpSymbol("swank:typecheck-files"))
+  implicit val PatchSourceReqHint = TypeHint[PatchSourceReq](SexpSymbol("swank:patch-source"))
+  implicit val UnloadAllReqHint = TypeHint[UnloadAllReq.type](SexpSymbol("swank:unload-all"))
+  implicit val TypecheckAllReqHint = TypeHint[TypecheckAllReq.type](SexpSymbol("swank:typecheck-all"))
+  implicit val FormatSourceReqHint = TypeHint[FormatSourceReq](SexpSymbol("swank:format-source"))
+  implicit val FormatOneSourceReqHint = TypeHint[FormatOneSourceReq](SexpSymbol("swank:format-one-source"))
+  implicit val PublicSymbolSearchReqHint = TypeHint[PublicSymbolSearchReq](SexpSymbol("swank:public-symbol-search"))
+  implicit val ImportSuggestionsReqHint = TypeHint[ImportSuggestionsReq](SexpSymbol("swank:import-suggestions"))
+  implicit val DocUriAtPointReqHint = TypeHint[DocUriAtPointReq](SexpSymbol("swank:doc-uri-at-point"))
+  implicit val DocUriForSymbolReqHint = TypeHint[DocUriForSymbolReq](SexpSymbol("swank:doc-uri-for-symbol"))
+  implicit val CompletionsReqHint = TypeHint[CompletionsReq](SexpSymbol("swank:completions"))
+  implicit val PackageMemberCompletionReqHint = TypeHint[PackageMemberCompletionReq](SexpSymbol("swank:package-member-completion"))
+  implicit val CallCompletionReqHint = TypeHint[CallCompletionReq](SexpSymbol("swank:call-completion"))
+  implicit val UsesOfSymbolAtPointReqHint = TypeHint[UsesOfSymbolAtPointReq](SexpSymbol("swank:uses-of-symbol-at-point"))
+  implicit val TypeByIdReqHint = TypeHint[TypeByIdReq](SexpSymbol("swank:type-by-id"))
+  implicit val TypeByNameReqHint = TypeHint[TypeByNameReq](SexpSymbol("swank:type-by-name"))
+  implicit val TypeByNameAtPointReqHint = TypeHint[TypeByNameAtPointReq](SexpSymbol("swank:type-by-name-at-point"))
+  implicit val TypeAtPointReqHint = TypeHint[TypeAtPointReq](SexpSymbol("swank:type-at-point"))
+  implicit val InspectTypeAtPointReqHint = TypeHint[InspectTypeAtPointReq](SexpSymbol("swank:inspect-type-at-point"))
+  implicit val InspectTypeByIdReqHint = TypeHint[InspectTypeByIdReq](SexpSymbol("swank:inspect-type-by-id"))
+  implicit val InspectTypeByNameReqHint = TypeHint[InspectTypeByNameReq](SexpSymbol("swank:inspect-type-by-name"))
+  implicit val SymbolAtPointReqHint = TypeHint[SymbolAtPointReq](SexpSymbol("swank:symbol-at-point"))
+  implicit val SymbolByNameReqHint = TypeHint[SymbolByNameReq](SexpSymbol("swank:symbol-by-name"))
+  implicit val InspectPackageByPathReqHint = TypeHint[InspectPackageByPathReq](SexpSymbol("swank:inspect-package-by-path"))
+  implicit val PrepareRefactorReqHint = TypeHint[PrepareRefactorReq](SexpSymbol("swank:prepare-refactor"))
+  implicit val ExecRefactorReqHint = TypeHint[ExecRefactorReq](SexpSymbol("swank:exec-refactor"))
+  implicit val CancelRefactorReqHint = TypeHint[CancelRefactorReq](SexpSymbol("swank:cancel-refactor"))
+  implicit val SymbolDesignationsReqHint = TypeHint[SymbolDesignationsReq](SexpSymbol("swank:symbol-designations"))
+  implicit val ExpandSelectionReqHint = TypeHint[ExpandSelectionReq](SexpSymbol("swank:expand-selection"))
+  implicit val DebugActiveVmReqHint = TypeHint[DebugActiveVmReq.type](SexpSymbol("swank:debug-active-vm"))
+  implicit val DebugStartReqHint = TypeHint[DebugStartReq](SexpSymbol("swank:debug-start"))
+  implicit val DebugAttachReqHint = TypeHint[DebugAttachReq](SexpSymbol("swank:debug-attach"))
+  implicit val DebugStopReqHint = TypeHint[DebugStopReq.type](SexpSymbol("swank:debug-stop"))
+  implicit val DebugSetBreakReqHint = TypeHint[DebugSetBreakReq](SexpSymbol("swank:debug-set-break"))
+  implicit val DebugClearBreakReqHint = TypeHint[DebugClearBreakReq](SexpSymbol("swank:debug-clear-break"))
+  implicit val DebugClearAllBreaksReqHint = TypeHint[DebugClearAllBreaksReq.type](SexpSymbol("swank:debug-clear-all-breaks"))
+  implicit val DebugListBreakpointsReqHint = TypeHint[DebugListBreakpointsReq.type](SexpSymbol("swank:debug-list-breakpoints"))
+  implicit val DebugRunReqHint = TypeHint[DebugRunReq.type](SexpSymbol("swank:debug-run"))
+  implicit val DebugContinueReqHint = TypeHint[DebugContinueReq](SexpSymbol("swank:debug-continue"))
+  implicit val DebugStepReqHint = TypeHint[DebugStepReq](SexpSymbol("swank:debug-step"))
+  implicit val DebugNextReqHint = TypeHint[DebugNextReq](SexpSymbol("swank:debug-next"))
+  implicit val DebugStepOutReqHint = TypeHint[DebugStepOutReq](SexpSymbol("swank:debug-step-out"))
+  implicit val DebugLocateNameReqHint = TypeHint[DebugLocateNameReq](SexpSymbol("swank:debug-locate-name"))
+  implicit val DebugValueReqHint = TypeHint[DebugValueReq](SexpSymbol("swank:debug-value"))
+  implicit val DebugToStringReqHint = TypeHint[DebugToStringReq](SexpSymbol("swank:debug-to-string"))
+  implicit val DebugSetValueReqHint = TypeHint[DebugSetValueReq](SexpSymbol("swank:debug-set-value"))
+  implicit val DebugBacktraceReqHint = TypeHint[DebugBacktraceReq](SexpSymbol("swank:debug-backtrace"))
+  implicit val ShutdownServerReqHint = TypeHint[ShutdownServerReq.type](SexpSymbol("swank:shutdown-server"))
+
+  // higher priority than labelledProductFormat, so SexpFormat[T]
+  // should pick up on this instead, also private so we don't
+  // accidentally export it.
+  private implicit def tupledProductFormat[T <: RpcRequest, R <: shapeless.HList](
+    implicit g: shapeless.Generic.Aux[T, R],
+    r: HListFormat[R]): SexpFormat[T] = new SexpFormat[T] {
+    def write(x: T): Sexp = SexpList(r.write(g.to(x)))
+
+    def read(value: Sexp): T = value match {
+      case SexpNil => g.from(r.read(Nil))
+      case SexpList(els) =>
+        g.from(r.read(els))
+      case x =>
+        deserializationError(x)
+    }
+  }
+
+  implicit object PatchOpFormat extends SexpFormat[PatchOp] {
+    def write(v: PatchOp): Sexp = ???
+    def read(sexp: Sexp): PatchOp = sexp match {
+      case SexpList(SexpString("+") :: SexpNumber(i) :: SexpString(text) :: Nil) =>
+        PatchInsert(i.intValue, text)
+      case SexpList(SexpString("*") :: SexpNumber(i) :: SexpNumber(j) :: SexpString(text) :: Nil) =>
+        PatchReplace(i.intValue, j.intValue, text)
+      case SexpList(SexpString("-") :: SexpNumber(i) :: SexpNumber(j) :: Nil) =>
+        PatchDelete(i.intValue, j.intValue)
+      case _ => deserializationError(sexp)
+    }
+  }
+
+  // this works only because the parameter lists are mutually
+  // exclusive it might not agree with the `tpe` given on
+  // PrepareRefactorReq
+  implicit object RefactorDescFormat extends SexpFormat[RefactorDesc] {
+    import org.ensime.util.{ Symbols => S }
+    import pimpathon.file._
+    import RichFile._
+
+    def write(v: RefactorDesc): Sexp = ???
+    def read(sexp: Sexp): RefactorDesc = sexp match {
+      case SexpList(params) =>
+        params.grouped(2).collect {
+          case List(SexpSymbol(name), value) => (Symbol(name), value)
+        }.toList.sortBy(_._1.name) match {
+          case List(
+            (S.End, SexpNumber(end)),
+            (S.File, SexpString(f)),
+            (S.NewName, SexpString(newName)),
+            (S.Start, SexpNumber(start))
+            ) => RenameRefactorDesc(newName, file(f).canon, start.intValue, end.intValue)
+
+          case List(
+            (S.End, SexpNumber(end)),
+            (S.File, SexpString(f)),
+            (S.MethodName, SexpString(methodName)),
+            (S.Start, SexpNumber(start))
+            ) => ExtractMethodRefactorDesc(methodName, file(f).canon, start.intValue, end.intValue)
+
+          case List(
+            (S.End, SexpNumber(end)),
+            (S.File, SexpString(f)),
+            (S.Name, SexpString(name)),
+            (S.Start, SexpNumber(start))
+            ) => ExtractLocalRefactorDesc(name, file(f).canon, start.intValue, end.intValue)
+
+          case List(
+            (S.End, SexpNumber(end)),
+            (S.File, SexpString(f)),
+            (S.Start, SexpNumber(start))
+            ) => InlineLocalRefactorDesc(file(f).canon, start.intValue, end.intValue)
+
+          case List(
+            (S.File, SexpString(f))
+            ) =>
+            OrganiseImportsRefactorDesc(file(f).canon)
+
+          case List(
+            (S.End, SexpNumber(_)),
+            (S.File, SexpString(f)),
+            (S.QualifiedName, SexpString(qualifiedName)),
+            (S.Start, SexpNumber(_))
+            ) => AddImportRefactorDesc(qualifiedName, file(f).canon)
+
+          case List(
+            (S.File, SexpString(f)),
+            (S.QualifiedName, SexpString(qualifiedName))
+            ) => AddImportRefactorDesc(qualifiedName, file(f).canon)
+
+          case _ => deserializationError(sexp)
+        }
+      case _ => deserializationError(sexp)
+    }
+  }
+
+  // incoming messages
+  implicit def ConnectionInfoReqFormat = singletonFormat[ConnectionInfoReq.type]
+  implicit def InitProjectReqFormat = singletonFormat[InitProjectReq.type]
+  implicit def PeekUndoReqFormat = singletonFormat[PeekUndoReq.type]
+  implicit def ExecUndoReqFormat = SexpFormat[ExecUndoReq]
+  implicit def ReplConfigReqFormat = singletonFormat[ReplConfigReq.type]
+  implicit def RemoveFileReqFormat = SexpFormat[RemoveFileReq]
+  implicit def TypecheckFileReqFormat = SexpFormat[TypecheckFileReq]
+  implicit def TypecheckFilesReqFormat = SexpFormat[TypecheckFilesReq]
+  implicit def PatchSourceReqFormat = SexpFormat[PatchSourceReq]
+  implicit def UnloadAllReqFormat = singletonFormat[UnloadAllReq.type]
+  implicit def TypecheckAllReqFormat = singletonFormat[TypecheckAllReq.type]
+  implicit def FormatSourceReqFormat = SexpFormat[FormatSourceReq]
+  implicit def FormatOneSourceReqFormat = SexpFormat[FormatOneSourceReq]
+  implicit def PublicSymbolSearchHint = SexpFormat[PublicSymbolSearchReq]
+  implicit def ImportSuggestionsReqFormat = SexpFormat[ImportSuggestionsReq]
+  implicit def DocUriAtPointReqFormat = SexpFormat[DocUriAtPointReq]
+  implicit def DocUriForSymbolReqFormat = SexpFormat[DocUriForSymbolReq]
+  implicit def CompletionsReqFormat = SexpFormat[CompletionsReq]
+  implicit def PackageMemberCompletionReqFormat = SexpFormat[PackageMemberCompletionReq]
+  implicit def CallCompletionReqFormat = SexpFormat[CallCompletionReq]
+  implicit def UsesOfSymbolAtPointReqFormat = SexpFormat[UsesOfSymbolAtPointReq]
+  implicit def TypeByIdReqFormat = SexpFormat[TypeByIdReq]
+  implicit def TypeByNameReqFormat = SexpFormat[TypeByNameReq]
+  implicit def TypeByNameAtPointReqFormat = SexpFormat[TypeByNameAtPointReq]
+  implicit def TypeAtPointReqFormat = SexpFormat[TypeAtPointReq]
+  implicit def InspectTypeAtPointReqFormat = SexpFormat[InspectTypeAtPointReq]
+  implicit def InspectTypeByIdReqFormat = SexpFormat[InspectTypeByIdReq]
+  implicit def InspectTypeByNameReqFormat = SexpFormat[InspectTypeByNameReq]
+  implicit def SymbolAtPointReqFormat = SexpFormat[SymbolAtPointReq]
+  implicit def SymbolByNameReqFormat = SexpFormat[SymbolByNameReq]
+  implicit def InspectPackageByPathReqFormat = SexpFormat[InspectPackageByPathReq]
+  implicit def PrepareRefactorReqFormat = SexpFormat[PrepareRefactorReq]
+  implicit def ExecRefactorReqFormat = SexpFormat[ExecRefactorReq]
+  implicit def CancelRefactorReqFormat = SexpFormat[CancelRefactorReq]
+  implicit def SymbolDesignationsReqFormat = SexpFormat[SymbolDesignationsReq]
+  implicit def ExpandSelectionReqFormat = SexpFormat[ExpandSelectionReq]
+  implicit def DebugActiveVmReqFormat = singletonFormat[DebugActiveVmReq.type]
+  implicit def DebugStartReqFormat = SexpFormat[DebugStartReq]
+  implicit def DebugAttachReqFormat = SexpFormat[DebugAttachReq]
+  implicit def DebugStopReqFormat = singletonFormat[DebugStopReq.type]
+  implicit def DebugSetBreakReqFormat = SexpFormat[DebugSetBreakReq]
+  implicit def DebugClearBreakReqFormat = SexpFormat[DebugClearBreakReq]
+  implicit def DebugClearAllBreaksReqFormat = singletonFormat[DebugClearAllBreaksReq.type]
+  implicit def DebugListBreakpointsReqFormat = singletonFormat[DebugListBreakpointsReq.type]
+  implicit def DebugRunReqFormat = singletonFormat[DebugRunReq.type]
+  implicit def DebugContinueReqFormat = SexpFormat[DebugContinueReq]
+  implicit def DebugStepReqFormat = SexpFormat[DebugStepReq]
+  implicit def DebugNextReqFormat = SexpFormat[DebugNextReq]
+  implicit def DebugStepOutReqFormat = SexpFormat[DebugStepOutReq]
+  implicit def DebugLocateNameReqFormat = SexpFormat[DebugLocateNameReq]
+  implicit def DebugValueReqFormat = SexpFormat[DebugValueReq]
+  implicit def DebugToStringReqFormat = SexpFormat[DebugToStringReq]
+  implicit def DebugSetValueueReqFormat = SexpFormat[DebugSetValueReq]
+  implicit def DebugBacktraceReqFormat = SexpFormat[DebugBacktraceReq]
+  implicit def ShutdownServerReqFormat = singletonFormat[ShutdownServerReq.type]
+
+  implicit object RpcRequestFormat extends SexpFormat[RpcRequest] {
+    def write(o: RpcRequest): Sexp = ???
+    def read(sexp: Sexp): RpcRequest = sexp match {
+      case SexpList((kind: SexpSymbol) :: rest) =>
+        val value = SexpList(rest)
+        kind match {
+          case s if s == ConnectionInfoReqHint.hint => ConnectionInfoReq
+          case s if s == InitProjectReqHint.hint => InitProjectReq
+          case s if s == PeekUndoReqHint.hint => PeekUndoReq
+          case s if s == ExecUndoReqHint.hint => value.convertTo[ExecUndoReq]
+          case s if s == ReplConfigReqHint.hint => ReplConfigReq
+          case s if s == RemoveFileReqHint.hint => value.convertTo[RemoveFileReq]
+          case s if s == TypecheckFileReqHint.hint => value.convertTo[TypecheckFileReq]
+          case s if s == TypecheckFilesReqHint.hint => value.convertTo[TypecheckFilesReq]
+          case s if s == PatchSourceReqHint.hint => value.convertTo[PatchSourceReq]
+          case s if s == UnloadAllReqHint.hint => UnloadAllReq
+          case s if s == TypecheckAllReqHint.hint => TypecheckAllReq
+          case s if s == FormatSourceReqHint.hint => value.convertTo[FormatSourceReq]
+          case s if s == FormatOneSourceReqHint.hint => value.convertTo[FormatOneSourceReq]
+          case s if s == PublicSymbolSearchReqHint.hint => value.convertTo[PublicSymbolSearchReq]
+          case s if s == ImportSuggestionsReqHint.hint => value.convertTo[ImportSuggestionsReq]
+          case s if s == DocUriAtPointReqHint.hint => value.convertTo[DocUriAtPointReq]
+          case s if s == DocUriForSymbolReqHint.hint => value.convertTo[DocUriForSymbolReq]
+          case s if s == CompletionsReqHint.hint => value.convertTo[CompletionsReq]
+          case s if s == PackageMemberCompletionReqHint.hint => value.convertTo[PackageMemberCompletionReq]
+          case s if s == CallCompletionReqHint.hint => value.convertTo[CallCompletionReq]
+          case s if s == UsesOfSymbolAtPointReqHint.hint => value.convertTo[UsesOfSymbolAtPointReq]
+          case s if s == TypeByIdReqHint.hint => value.convertTo[TypeByIdReq]
+          case s if s == TypeByNameReqHint.hint => value.convertTo[TypeByNameReq]
+          case s if s == TypeByNameAtPointReqHint.hint => value.convertTo[TypeByNameAtPointReq]
+          case s if s == TypeAtPointReqHint.hint => value.convertTo[TypeAtPointReq]
+          case s if s == InspectTypeAtPointReqHint.hint => value.convertTo[InspectTypeAtPointReq]
+          case s if s == InspectTypeByIdReqHint.hint => value.convertTo[InspectTypeByIdReq]
+          case s if s == InspectTypeByNameReqHint.hint => value.convertTo[InspectTypeByNameReq]
+          case s if s == SymbolAtPointReqHint.hint => value.convertTo[SymbolAtPointReq]
+          case s if s == SymbolByNameReqHint.hint => value.convertTo[SymbolByNameReq]
+          case s if s == InspectPackageByPathReqHint.hint => value.convertTo[InspectPackageByPathReq]
+          case s if s == PrepareRefactorReqHint.hint => value.convertTo[PrepareRefactorReq]
+          case s if s == ExecRefactorReqHint.hint => value.convertTo[ExecRefactorReq]
+          case s if s == CancelRefactorReqHint.hint => value.convertTo[CancelRefactorReq]
+          case s if s == SymbolDesignationsReqHint.hint => value.convertTo[SymbolDesignationsReq]
+          case s if s == ExpandSelectionReqHint.hint => value.convertTo[ExpandSelectionReq]
+          case s if s == DebugActiveVmReqHint.hint => DebugActiveVmReq
+          case s if s == DebugStartReqHint.hint => value.convertTo[DebugStartReq]
+          case s if s == DebugAttachReqHint.hint => value.convertTo[DebugAttachReq]
+          case s if s == DebugStopReqHint.hint => DebugStopReq
+          case s if s == DebugSetBreakReqHint.hint => value.convertTo[DebugSetBreakReq]
+          case s if s == DebugClearBreakReqHint.hint => value.convertTo[DebugClearBreakReq]
+          case s if s == DebugClearAllBreaksReqHint.hint => DebugClearAllBreaksReq
+          case s if s == DebugListBreakpointsReqHint.hint => DebugListBreakpointsReq
+          case s if s == DebugRunReqHint.hint => DebugRunReq
+          case s if s == DebugContinueReqHint.hint => value.convertTo[DebugContinueReq]
+          case s if s == DebugStepReqHint.hint => value.convertTo[DebugStepReq]
+          case s if s == DebugNextReqHint.hint => value.convertTo[DebugNextReq]
+          case s if s == DebugStepOutReqHint.hint => value.convertTo[DebugStepOutReq]
+          case s if s == DebugLocateNameReqHint.hint => value.convertTo[DebugLocateNameReq]
+          case s if s == DebugValueReqHint.hint => value.convertTo[DebugValueReq]
+          case s if s == DebugToStringReqHint.hint => value.convertTo[DebugToStringReq]
+          case s if s == DebugSetValueReqHint.hint => value.convertTo[DebugSetValueReq]
+          case s if s == DebugBacktraceReqHint.hint => value.convertTo[DebugBacktraceReq]
+          case s if s == ShutdownServerReqHint.hint => ShutdownServerReq
+
+          case _ => deserializationError(sexp)
+        }
+
+      case _ => deserializationError(sexp)
+    }
+  }
+
+  implicit object RpcRequestEnvelopeFormat extends SexpFormat[RpcRequestEnvelope] {
+    def write(env: RpcRequestEnvelope): Sexp = ???
+    def read(sexp: Sexp): RpcRequestEnvelope = sexp match {
+      case SexpList(SexpSymbol(":swank-rpc") :: form :: SexpNumber(callId) :: Nil) =>
+        RpcRequestEnvelope(form.convertTo[RpcRequest], callId.intValue)
+      case _ => deserializationError(sexp)
+    }
+  }
+
 }

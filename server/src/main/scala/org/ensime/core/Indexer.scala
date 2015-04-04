@@ -1,11 +1,12 @@
 package org.ensime.core
 
 import akka.actor.{ Actor, ActorLogging }
+import akka.event.LoggingReceive
 import org.ensime.config.EnsimeConfig
 import org.ensime.indexer.DatabaseService.FqnSymbol
 import org.ensime.indexer.SearchService
 import org.ensime.model._
-import org.ensime.server.protocol.ProtocolConst
+import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
 
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
@@ -34,8 +35,8 @@ class Indexer(
       case _ => None // were never supported
     }
 
-  override def receive = {
-    case req: RPCRequest =>
+  override def receive = LoggingReceive {
+    case req: RpcRequest =>
       try {
         req match {
           case TypeCompletionsReq(query: String, maxResults: Int) =>
@@ -48,6 +49,10 @@ class Indexer(
           case PublicSymbolSearchReq(keywords, maxResults) =>
             val suggestions = oldSearchSymbols(keywords, maxResults)
             sender ! SymbolSearchResults(suggestions)
+
+          case unexpected =>
+            // TODO compiler blew up... too many missing cases
+            require(false, unexpected.toString)
         }
       } catch {
         case e: Exception =>

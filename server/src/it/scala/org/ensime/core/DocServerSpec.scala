@@ -7,6 +7,7 @@ import akka.event.slf4j.SLF4JLogging
 import akka.pattern.Patterns
 import akka.util.Timeout
 import org.apache.commons.lang.StringEscapeUtils
+import org.ensime.server.protocol._
 import org.ensime.config._
 import org.ensime.fixture._
 import org.ensime.model._

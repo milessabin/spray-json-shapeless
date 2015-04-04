@@ -1,11 +1,10 @@
 package org.ensime.core
 
 import java.io.File
-import org.ensime.model.ContentsInSourceFileInfo
-import org.ensime.model.ContentsSourceFileInfo
-import org.ensime.model.FileSourceFileInfo
+import org.ensime.model._
 import org.scalatest._
 import org.ensime.fixture._
+import org.ensime.util.RichFile._
 
 class RefactoringHandlerSpec extends WordSpec with Matchers
     with IsolatedAnalyzerFixture with RichPresentationCompilerTestUtils {
@@ -14,6 +13,12 @@ class RefactoringHandlerSpec extends WordSpec with Matchers
   def original = EnsimeConfigFixture.EmptyTestProject.copy(
     compilerArgs = List("-encoding", encoding)
   )
+
+  // transitionary methods
+  def ContentsSourceFileInfo(file: File, contents: String) =
+    SourceFileInfo(file, Some(contents))
+  def ContentsInSourceFileInfo(file: File, contentsIn: File) =
+    SourceFileInfo(file, contentsIn = Some(contentsIn))
 
   "RefactoringHandler" should {
     "format files and preserve encoding" in withAnalyzer { (config, analyzerRef) =>
@@ -27,7 +32,7 @@ class RefactoringHandlerSpec extends WordSpec with Matchers
 
       val analyzer = analyzerRef.underlyingActor
 
-      analyzer.handleFormatFiles(List(file.path))
+      analyzer.handleFormatFiles(List(new File(file.path)))
       val fileContents = readSrcFile(file, encoding)
 
       val expectedContents = contents(
@@ -81,7 +86,7 @@ class RefactoringHandlerSpec extends WordSpec with Matchers
 
       val analyzer = analyzerRef.underlyingActor
 
-      val formatted = analyzer.handleFormatFile(FileSourceFileInfo(new File(file.path)))
+      val formatted = analyzer.handleFormatFile(SourceFileInfo(new File(file.path)))
       val expectedContents = contents(
         "package blah",
         "class Something {}",

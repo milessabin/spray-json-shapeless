@@ -2,24 +2,30 @@ package org.ensime.server.protocol.swank
 
 import java.io.{ EOFException, OutputStream }
 
-import org.ensime.server.protocol.ProtocolWireFormatCodec
-import org.ensime.util.{ SExpParser, WireFormat }
+import org.ensime.sexp.Sexp
+import org.ensime.sexp.SexpParser
 import org.slf4j.Logger
 
 import scala.util.parsing.input
 
-trait SwankWireFormatCodec extends ProtocolWireFormatCodec {
+/**
+ * Factors out some of the S-Express marshalling.
+ *
+ * WireFormat needs to be completely internal to allow protocol
+ * implementations to be independent of representation.
+ */
+trait SwankWireFormatCodec {
+  type WireFormat = Sexp
 
-  val log: Logger
+  protected def log: Logger
 
-  // Handle reading / writing of messages
-  override def writeMessage(value: WireFormat, out: OutputStream): Unit = {
-    val dataString: String = value.toWireString
+  def writeMessage(value: WireFormat, out: OutputStream): Unit = {
+    val dataString: String = value.compactPrint
     val data: Array[Byte] = dataString.getBytes("UTF-8")
     val header: Array[Byte] = "%06x".format(data.length).getBytes("UTF-8")
 
-    val displayStr = if (dataString.length > 3000)
-      dataString.take(3000) + "..."
+    val displayStr = if (dataString.length > 512)
+      dataString.take(512) + "..."
     else
       dataString
     log.info("Writing: " + displayStr)
@@ -43,18 +49,24 @@ trait SwankWireFormatCodec extends ProtocolWireFormatCodec {
     }
   }
 
-  private val headerBuf = new Array[Char](6)
-
-  override def readMessage(reader: java.io.InputStreamReader): WireFormat = {
+  def readMessage(reader: java.io.InputStreamReader): WireFormat = {
+    val headerBuf = new Array[Char](6)
     fillArray(reader, headerBuf)
     val msgLen = Integer.valueOf(new String(headerBuf), 16).intValue()
-    if (msgLen > 0) {
-      val buf: Array[Char] = new Array[Char](msgLen)
-      fillArray(reader, buf)
-      SExpParser.read(new input.CharArrayReader(buf))
-    } else {
+    if (msgLen == 0)
       throw new IllegalStateException("Empty message read from socket!")
-    }
+
+    val buf: Array[Char] = new Array[Char](msgLen)
+    fillArray(reader, buf)
+
+    val msgStr = new String(buf)
+    val displayStr = if (msgStr.length > 500)
+      msgStr.take(500) + "..."
+    else
+      msgStr
+    log.info("Received msg: " + displayStr)
+
+    SexpParser.parse(msgStr)
   }
 
 }

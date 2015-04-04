@@ -18,7 +18,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
     config: EnsimeConfig,
     cc: RichCompilerControl,
     content: String,
-    tpes: Set[SourceSymbol] = SourceSymbol.allSymbols): List[(SourceSymbol, String)] = {
+    tpes: List[SourceSymbol] = SourceSymbol.allSymbols): List[(SourceSymbol, String)] = {
 
     val file = srcFile(config, "abc.scala", contents(content))
     cc.askLoadedTyped(file)
@@ -45,7 +45,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               def fun(a: Any) = a match { case x: Test => Unit }
             }
           """,
-        Set(ClassSymbol)
+        List(ClassSymbol)
       )
       assert(sds === List(
         (ClassSymbol, "Int"),
@@ -73,7 +73,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               val e1 = new   X3
             }
           """,
-        Set(ConstructorSymbol)
+        List(ConstructorSymbol)
       )
       // TODO It would be better if the "new" was consistent.
       assert(sds === List(
@@ -96,7 +96,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               def baz { def quux(): Int = { 1 } ; quux() }
             }
           """,
-        Set(FunctionCallSymbol)
+        List(FunctionCallSymbol)
       )
       assert(sds === List(
         (FunctionCallSymbol, "fun"),
@@ -114,7 +114,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
             import org.scalatest. { Matchers,
                  FunSpec }
             """,
-        Set(ImportedNameSymbol)
+        List(ImportedNameSymbol)
       )
       assert(sds === List(
         (ImportedNameSymbol, "RangePosition"),
@@ -137,7 +137,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               val d = c.E(1)
             }
           """,
-        Set(ObjectSymbol)
+        List(ObjectSymbol)
       )
       assert(sds === List(
         (ObjectSymbol, "C"),
@@ -158,7 +158,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               a += 8
             }
           """,
-        Set(OperatorFieldSymbol)
+        List(OperatorFieldSymbol)
       )
       // TODO We should highlight the "+="
       assert(sds === List(
@@ -173,7 +173,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
              package com.example
              package other
           """,
-        Set(PackageSymbol)
+        List(PackageSymbol)
       )
       assert(sds === List(
         (PackageSymbol, "com"),
@@ -190,7 +190,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               def f(u:  Int, v   :String) = v + u
             }
           """,
-        Set(ParamSymbol)
+        List(ParamSymbol)
       )
       assert(sds === List(
         (ParamSymbol, "u"),
@@ -220,7 +220,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               }
             }
           """,
-        Set(TraitSymbol)
+        List(TraitSymbol)
       )
       assert(sds === List(
         (TraitSymbol, "X2"),
@@ -242,7 +242,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               f[Int, String](1, "a")
             }
           """,
-        Set(TypeParamSymbol)
+        List(TypeParamSymbol)
       )
       assert(sds === List(
         (TypeParamSymbol, "XX"),
@@ -265,7 +265,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               }
             }
           """,
-        Set(ValSymbol)
+        List(ValSymbol)
       )
       assert(sds === List(
         (ValSymbol, "u"),
@@ -287,7 +287,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               println((new Test).v)
             }
           """,
-        Set(ValFieldSymbol)
+        List(ValFieldSymbol)
       )
       assert(sds === List(
         (ValFieldSymbol, "u"),
@@ -309,7 +309,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               }
             }
           """,
-        Set(VarSymbol)
+        List(VarSymbol)
       )
       assert(sds === List(
         (VarSymbol, "u"),
@@ -331,7 +331,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               println((new Test).v)
             }
           """,
-        Set(VarFieldSymbol)
+        List(VarFieldSymbol)
       )
       assert(sds === List(
         (VarFieldSymbol, "u"),
@@ -354,7 +354,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               Fubar.value = 1
             }
           """,
-        Set(OperatorFieldSymbol)
+        List(OperatorFieldSymbol)
       )
       assert(sds === List(
         (OperatorFieldSymbol, "value")
@@ -366,7 +366,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
         config, cc, """
             package com.  example
           """,
-        Set(PackageSymbol)
+        List(PackageSymbol)
       )
       // only part of "example" is highlighted
       assert(sds === List(
@@ -383,7 +383,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               val x = !(3 == 4)
             }
           """,
-        Set(OperatorFieldSymbol)
+        List(OperatorFieldSymbol)
       )
       // Call to foo is missing
       assert(sds === List(
@@ -402,7 +402,7 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
               fun(1, 2) + foo(4, 5)
             }
           """,
-        Set(FunctionCallSymbol)
+        List(FunctionCallSymbol)
       )
       assert(sds === List(
         (FunctionCallSymbol, "fun"),

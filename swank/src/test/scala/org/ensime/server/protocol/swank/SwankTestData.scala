@@ -5,7 +5,9 @@ import java.io.File
 import org.ensime.model._
 import org.ensime.core._
 import org.ensime.util._
+
 import pimpathon.file._
+import RichFile._
 
 import UnitTestUtils._
 
@@ -22,10 +24,11 @@ object SwankTestData {
   val callCompletionInfo = new CallCompletionInfo(typeInfo, List(paramSectionInfo))
   val callCompletionInfoStr = """(:result-type """ + typeInfoStr + """ :param-sections ((:params (("ABC" """ + typeInfoStr + """)) :is-implicit nil)))"""
 
-  val symbolDesignations = SymbolDesignations("/abc",
+  val symFile = file("/abc").canon
+  val symbolDesignations = SymbolDesignations(symFile,
     List(SymbolDesignation(7, 9, ObjectSymbol),
       SymbolDesignation(11, 22, TraitSymbol)))
-  val symbolDesignationsStr = """(:file "/abc" :syms ((object 7 9) (trait 11 22)))"""
+  val symbolDesignationsStr = s"""(:file "${symFile.getPath}" :syms ((object 7 9) (trait 11 22)))"""
 
   val symbolInfo = new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))
   val symbolInfoStr = """(:name "name" :local-name "localName" :decl-pos nil :type """ + typeInfoStr + """ :is-callable nil :owner-type-id 2)"""
@@ -96,8 +99,8 @@ object SwankTestData {
   val replConfig = new ReplConfig(Set(file1))
   val replConfigStr = """(:classpath (""" + file1_str + """))"""
 
-  val analyzerFile = new File("Analyzer.scala")
-  val fooFile = new File("Foo.scala")
+  val analyzerFile = file("Analyzer.scala").canon
+  val fooFile = file("Foo.scala").canon
 
   val abd = CanonFile("abd").file
   val abd_str = fileToWireString(abd)

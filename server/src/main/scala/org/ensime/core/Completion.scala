@@ -2,8 +2,9 @@ package org.ensime.core
 
 import akka.pattern.Patterns
 import akka.util.Timeout
-import org.ensime.model.{ CompletionInfo, CompletionInfoList, CompletionSignature, SymbolSearchResults }
+import org.ensime.model._
 import org.ensime.util.Arrays
+import org.ensime.server.protocol._
 
 import scala.collection.mutable
 import scala.concurrent.duration._
