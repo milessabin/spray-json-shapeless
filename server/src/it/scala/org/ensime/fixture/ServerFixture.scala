@@ -1,14 +1,12 @@
 package org.ensime.fixture
 
 import akka.actor._
-import akka.pattern.AskTimeoutException
-import akka.pattern.Patterns
+import akka.pattern.{ AskTimeoutException, Patterns }
 import org.ensime.config._
 import org.ensime.core._
 import org.ensime.server._
-import scala.collection.immutable.ListMap
-import scala.collection.immutable.TreeMap
 
+import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -18,7 +16,7 @@ trait ServerFixture {
 
 object ServerFixture {
   private[fixture] def startup(config: EnsimeConfig)(implicit sys: ActorSystem): (Server, AsyncMsgHelper) = {
-    val server = Server.initialiseServer(config)
+    val (server, readyFut) = Server.initialiseServer(config)
 
     val connInfo = server.project.rpcConnectionInfo()
     assert(connInfo.pid == None)
@@ -32,6 +30,8 @@ object ServerFixture {
     asyncHelper.expectAsync(60 seconds, FullTypeCheckCompleteEvent)
     asyncHelper.expectAsync(240 seconds, IndexerReadyEvent)
 
+    // this should be completed as all of the expected initialisation events have occurred.
+    assert(readyFut.isCompleted)
     (server, asyncHelper)
   }
 }
@@ -78,7 +78,7 @@ class AsyncMsgHelper(actorSystem: ActorSystem) {
 
   private class AsyncMsgHelperActor extends Actor with ActorLogging {
     // ListMap instead of HashMap to avoid hashCode nonsense
-    private var asyncMsgs = ListMap[EnsimeEvent, Int]() withDefaultValue (0)
+    private var asyncMsgs = ListMap[EnsimeEvent, Int]().withDefaultValue(0)
 
     private var outstandingAsyncs = Vector[(EnsimeEvent, ActorRef)]()
 

@@ -271,5 +271,4 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
   override def rpcFormatFile(fileInfo: SourceFileInfo): String = {
     callRPC[String](getAnalyzer, FormatFileReq(fileInfo))
   }
-
 }
