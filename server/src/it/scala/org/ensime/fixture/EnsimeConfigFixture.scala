@@ -109,11 +109,13 @@ object EnsimeConfigFixture {
  * index if not needed).
  */
 trait IsolatedEnsimeConfigFixture extends Suite
-    with EnsimeConfigFixture
-    with ParallelTestExecution {
-  // can be parallel because everything
-  // should be independent, except Jenkins doesn't like it:
-  // https://github.com/scoverage/sbt-scoverage/issues/97
+    with EnsimeConfigFixture {
+  //    with ParallelTestExecution {
+  // careful: ParallelTestExecution is causing weird failures:
+  //   https://github.com/sbt/sbt/issues/1890
+  //
+  // also, Jenkins doesn't like it:
+  //   https://github.com/scoverage/sbt-scoverage/issues/97
   import EnsimeConfigFixture._
 
   override def withEnsimeConfig(testCode: EnsimeConfig => Any): Any = withTempDirectory(

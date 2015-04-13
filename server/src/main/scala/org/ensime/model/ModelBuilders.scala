@@ -341,7 +341,7 @@ object LineSourcePositionHelper {
   import org.ensime.util.RichFileObject._
   import pimpathon.any._
   import pimpathon.file._
-  import pimpathon.java.io.outputStream._
+  import pimpathon.java.io._
 
   private def possiblyExtractFile(fo: FileObject)(implicit config: EnsimeConfig): File =
     fo.pathWithinArchive match {
@@ -351,7 +351,7 @@ object LineSourcePositionHelper {
         (config.cacheDir / "dep-src" / "source-jars" / path) withSideEffect { f =>
           if (!f.exists) {
             f.getParentFile.mkdirs()
-            f.outputStream.drain(fo.getContent.getInputStream)
+            f.outputStream().drain(fo.getContent.getInputStream)
             f.setWritable(false)
           }
         }
