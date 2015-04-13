@@ -1,7 +1,5 @@
 package org.ensime.core
 
-import java.io.File
-
 import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
@@ -20,10 +18,6 @@ class Project(
   val log = LoggerFactory.getLogger(this.getClass)
 
   protected val actor = actorSystem.actorOf(Props(new ProjectActor()), "project")
-
-  def !(msg: AnyRef): Unit = {
-    actor ! msg
-  }
 
   private val readyPromise = Promise[Unit]()
 
@@ -96,6 +90,7 @@ class Project(
         addUndo(sum, changes)
 
       case AsyncEvent(event) =>
+        checkReady(event)
         asyncListeners foreach { l =>
           l(event)
         }
@@ -104,7 +99,29 @@ class Project(
         sender ! false
     }
 
-    private val waiting: Receive = {
+    private[this] var initialisationComplete = false
+
+    private[this] var indexerReady = false
+    private[this] var analyserReady = false
+
+    private[this] def checkReady(event: EnsimeEvent): Unit = {
+      if (!initialisationComplete) {
+        event match {
+          case AnalyzerReadyEvent =>
+            analyserReady = true
+          case IndexerReadyEvent =>
+            indexerReady = true
+          case _ =>
+        }
+
+        if (analyserReady && indexerReady) {
+          initialisationComplete = true
+          readyPromise.success(())
+        }
+      }
+    }
+
+    private[this] val waiting: Receive = {
       case SubscribeAsync(handler) =>
         asyncListeners ::= handler
         asyncEvents.foreach { event => handler(event) }
@@ -113,6 +130,7 @@ class Project(
         sender ! true
       case AsyncEvent(event) =>
         asyncEvents :+= event
+        checkReady(event)
     }
   }
 

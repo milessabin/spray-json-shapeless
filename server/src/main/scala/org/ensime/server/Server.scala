@@ -16,6 +16,7 @@ import org.ensime.util._
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
+import scala.concurrent.Future
 import scala.util.Properties
 import scala.util.Properties._
 
@@ -44,12 +45,17 @@ object Server {
     initialiseServer(config)
   }
 
-  def initialiseServer(config: EnsimeConfig): Server = {
+  /**
+   * Initialise a server against the given configuration
+   * @param config The Ensime configuration to use.
+   * @return A tuple of the server instance and a future that will complete when the system is ready for user actions.
+   */
+  def initialiseServer(config: EnsimeConfig): (Server, Future[Unit]) = {
     val server = new Server(config, "127.0.0.1", 0,
       (actorSystem, peerRef, rpcTarget) => { new SwankProtocol(actorSystem, peerRef, rpcTarget) }
     )
-    server.start()
-    server
+    val readyFuture = server.start()
+    (server, readyFuture)
   }
 }
 
@@ -76,9 +82,14 @@ class Server(
 
   val project = new Project(config, actorSystem)
 
-  def start(): Unit = {
-    project.initProject()
+  /**
+   * Start the server
+   * @return A future representing when the server is ready to process events
+   */
+  def start(): Future[Unit] = {
+    val readyFuture = project.initProject()
     startSocketListener()
+    readyFuture
   }
 
   private val hasShutdownFlag = new AtomicBoolean(false)
