@@ -86,7 +86,7 @@ object EnsimeBuild extends Build with JdkResolver {
     licenses := Seq("LGPL 3.0" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt")),
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.chuusai" %% "shapeless" % "2.0.0",
+      "com.chuusai" %% "shapeless" % "2.2.0-RC4",
       "org.parboiled" %% "parboiled-scala" % "1.1.7",
       // perhaps drop the pimpathon dependency here in the interest of
       // minimising deps and move to server only

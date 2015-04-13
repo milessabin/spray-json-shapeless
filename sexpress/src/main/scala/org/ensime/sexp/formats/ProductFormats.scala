@@ -18,7 +18,7 @@ trait LowPriorityProductFormats {
   }
 
   object HListFormat {
-    implicit def hNilFormat: HListFormat[HNil] = new HListFormat[HNil] {
+    implicit val HNilFormat: HListFormat[HNil] = new HListFormat[HNil] {
       def write(x: HNil) = Nil
       def read(value: List[Sexp]) = value match {
         case Nil => HNil
@@ -27,14 +27,14 @@ trait LowPriorityProductFormats {
     }
 
     implicit def hListFormat[H, T <: HList](
-      implicit h: SexpFormat[H],
-      t: HListFormat[T]): HListFormat[H :: T] = new HListFormat[H :: T] {
-      def write(x: H :: T) = h.write(x.head) :: t.write(x.tail)
+      implicit h: Lazy[SexpFormat[H]],
+      t: Lazy[HListFormat[T]]): HListFormat[H :: T] = new HListFormat[H :: T] {
+      def write(x: H :: T) = h.value.write(x.head) :: t.value.write(x.tail)
 
       def read(values: List[Sexp]): H :: T = {
         import HList.ListCompat._
         values match {
-          case head :: tail => h.read(head) :: t.read(tail)
+          case head :: tail => h.value.read(head) :: t.value.read(tail)
           case x => throw new DeserializationException("Didn't expect Nil")
         }
       }
@@ -55,7 +55,7 @@ trait LowPriorityProductFormats {
     lg: LabelledGeneric.Aux[T, LR],
     k: ops.record.Keys.Aux[LR, K],
     ltl: ops.hlist.ToList[K, Symbol],
-    r: HListFormat[R]): SexpFormat[T] = new SexpFormat[T] {
+    r: Lazy[HListFormat[R]]): SexpFormat[T] = new SexpFormat[T] {
 
     private val keys = k().toList[Symbol].map { sym =>
       SexpSymbol(":" + toWireName(sym.name))
@@ -63,16 +63,16 @@ trait LowPriorityProductFormats {
 
     def write(x: T): Sexp =
       if (keys.isEmpty) SexpNil
-      else SexpData(keys zip r.write(g.to(x)))
+      else SexpData(keys zip r.value.write(g.to(x)))
 
     def read(value: Sexp): T = value match {
-      case SexpNil => g.from(r.read(Nil))
+      case SexpNil => g.from(r.value.read(Nil))
       case SexpData(pairs) =>
         val els = keys.map { k =>
           // missing keys are interpreted as nil
           pairs.getOrElse(k, SexpNil)
         }
-        g.from(r.read(els))
+        g.from(r.value.read(els))
 
       case x =>
         deserializationError(x)
@@ -89,10 +89,10 @@ trait ProductFormats extends LowPriorityProductFormats {
     implicit g: Generic.Aux[T, R],
     t: ops.hlist.Tupler.Aux[R, T2],
     p: T =:= T2,
-    r: HListFormat[R]): SexpFormat[T] = new SexpFormat[T] {
-    def write(x: T): Sexp = SexpList(r.write(g.to(x)))
+    r: Lazy[HListFormat[R]]): SexpFormat[T] = new SexpFormat[T] {
+    def write(x: T): Sexp = SexpList(r.value.write(g.to(x)))
     def read(value: Sexp): T = value match {
-      case SexpList(els) => g.from(r.read(els))
+      case SexpList(els) => g.from(r.value.read(els))
       case x => deserializationError(x)
     }
   }
