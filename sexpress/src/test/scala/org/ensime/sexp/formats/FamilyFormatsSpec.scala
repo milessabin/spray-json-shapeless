@@ -7,7 +7,6 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
   case object Bloo
   describe("FamilyFormats") {
     it("should support case objects") {
-      implicit val BlooF = singletonFormat[Bloo.type]
       assertFormat(Bloo, SexpNil)
     }
 
@@ -25,9 +24,6 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
       // implicit val InTermF = SexpFormat[InTerm]
       // implicit val LikeTermF = SexpFormat[LikeTerm]
       // implicit val QualifierTokenF = SexpFormat[QualifierToken]
-
-      // FIXME: upgrade shapeless and see if this is needed
-      implicit val SpecialTokenF = singletonFormat[SpecialToken.type]
 
       /////////////////// START OF BOILERPLATE /////////////////
       implicit object TokenTreeFormat extends TraitFormat[TokenTree] {

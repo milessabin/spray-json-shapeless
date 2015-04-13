@@ -19,16 +19,11 @@ trait FamilyFormats {
     TypeHint(SexpSymbol(":" + typeOf[T].dealias.toString.replaceAll("\\.type$", "").split("(\\.|\\$)").last))
 
   // always serialises to Nil, and is differentiated by the TraitFormat
-  //
-  // this is not implicit because of a stray println in shapeless that
-  // makes this extremely frustrating to use.
-  // https://github.com/milessabin/shapeless/pull/259
-  def singletonFormat[T <: Singleton](implicit w: Witness.Aux[T]) = new SexpFormat[T] {
-    // TODO: scala names https://github.com/milessabin/shapeless/issues/256
-    private val value = w.value
+  // scala names https://github.com/milessabin/shapeless/issues/256
+  implicit def singletonFormat[T <: Singleton](implicit w: Witness.Aux[T]) = new SexpFormat[T] {
     def write(t: T) = SexpNil
     def read(v: Sexp) =
-      if (v == SexpNil) value
+      if (v == SexpNil) w.value
       else deserializationError(v)
   }
 
