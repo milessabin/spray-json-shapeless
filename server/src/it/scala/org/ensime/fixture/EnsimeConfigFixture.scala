@@ -49,6 +49,9 @@ object EnsimeConfigFixture {
   lazy val DebugTestProject: EnsimeConfig = EnsimeTestProject.copy(
     subprojects = EnsimeTestProject.subprojects.filter(_.name == "testingDebug")
   )
+  lazy val DocsTestProject: EnsimeConfig = EnsimeTestProject.copy(
+    subprojects = EnsimeTestProject.subprojects.filter(_.name == "testingDocs")
+  )
 
   // generates an empty single module project in a temporary directory
   // and returns the config, containing many of the same settings

@@ -116,26 +116,36 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val testingEmpty = Project("testingEmpty", file("testing/empty"), settings = basicSettings).settings(
     ScoverageKeys.coverageExcludedPackages := ".*"
   )
-                          //.settings (publishArtifact := false)
 
   lazy val testingSimple = Project("testingSimple", file("testing/simple"), settings = basicSettings) settings (
     libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive(),
-    //publishArtifact := false,
     ScoverageKeys.coverageExcludedPackages := ".*"
   )
 
   lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings).settings(
     ScoverageKeys.coverageExcludedPackages := ".*"
   )
-                          //.settings (publishArtifact := false)
+
+  lazy val testingDocs = Project("testingDocs", file("testing/docs"), settings = basicSettings).settings(
+    libraryDependencies ++= Seq(
+      // specifically using ForecastIOLib version 1.5.1 for javadoc 1.8 output
+      "com.github.dvdme" %  "ForecastIOLib" % "1.5.1",
+      "com.google.guava" % "guava" % "18.0",
+      "commons-io" % "commons-io" % "2.4"
+    ),
+    ScoverageKeys.coverageExcludedPackages := ".*"
+  )
 
   lazy val server = Project("server", file("server")).dependsOn(
     api, swank,
     sexpress % "test->test",
     swank % "test->test",
-    // must depend on these in "test" as well or they are added to the main dep list by sbt!
+    // depend on "it" dependencies in "test" or sbt adds them to the release deps!
     // https://github.com/sbt/sbt/issues/1888
-    testingEmpty % "test,it", testingSimple % "test,it", testingDebug % "test,it"
+    testingEmpty % "test,it",
+    testingSimple % "test,it",
+    testingDebug % "test,it",
+    testingDocs % "test,it"
   ).configs(IntegrationTest).settings (
     commonSettings
   ).settings (
@@ -176,11 +186,7 @@ object EnsimeBuild extends Build with JdkResolver {
       "com.typesafe.akka" %% "akka-actor" % "2.3.9",
       "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
       "commons-lang" % "commons-lang" % "2.6",
-      "io.spray" %% "spray-can" % "1.3.3",
-      // specifically using FocecastIOLib version 1.5.1 for javadoc 1.8 output
-      "com.github.dvdme" %  "ForecastIOLib" % "1.5.1"  % "test,it",
-      "com.google.guava" % "guava" % "18.0" % "test,it",
-      "commons-io" % "commons-io" % "2.4" % "test,it"
+      "io.spray" %% "spray-can" % "1.3.3"
     ) ++ testLibs(scalaVersion.value, "it,test")
   )
 

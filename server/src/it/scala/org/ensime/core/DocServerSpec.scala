@@ -21,8 +21,7 @@ import scala.concurrent.duration._
 class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
     with IsolatedRichPresentationCompilerFixture {
 
-  // TODO: perhaps we should use a different project
-  val original = EnsimeConfigFixture.EnsimeTestProject
+  val original = EnsimeConfigFixture.DocsTestProject
 
   // confusing/bloated type signature, the key of the map is the
   // version of Java. It would be nice to refactor this so that the
