@@ -72,10 +72,10 @@ class BasicWorkflow extends WordSpec with Matchers
       // public symbol search - java.io.File
 
       val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 30)
-      assert(javaSearchSymbol.syms.exists(sr => sr match {
+      assert(javaSearchSymbol.syms.exists {
         case TypeSearchResult("java.io.File", "File", 'class, Some(_)) => true
         case _ => false
-      }))
+      })
 
       //-----------------------------------------------------------------------------------------------
       // public symbol search - scala.util.Random
@@ -94,8 +94,7 @@ class BasicWorkflow extends WordSpec with Matchers
       val typeByIdOpt: Option[TypeInfo] = project.rpcTypeById(intTypeId)
       val intTypeInspectInfo = typeByIdOpt match {
         case Some(ti @ BasicTypeInfo("Int", `intTypeId`, 'class, "scala.Int", List(), List(), Some(_), None)) =>
-          // TODO in inspectType, pos is Some(EmptySourcePosition()) hack to make flow work
-          ti.copy(pos = Some(EmptySourcePosition()))
+          ti
         case _ =>
           fail("type by id does not match expectations, got " + typeByIdOpt)
       }
@@ -164,14 +163,14 @@ class BasicWorkflow extends WordSpec with Matchers
       val insPacByPathResOpt = project.rpcInspectPackageByPath("org.example")
       insPacByPathResOpt match {
         case Some(PackageInfo("example", "org.example", List(
-          BasicTypeInfo("Bloo", _: Int, 'class, "org.example.Bloo", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Bloo$", _: Int, 'object, "org.example.Bloo$", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("CaseClassWithCamelCaseName", _: Int, 'class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("CaseClassWithCamelCaseName$", _: Int, 'object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Foo", _: Int, 'class, "org.example.Foo", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("Foo$", _: Int, 'object, "org.example.Foo$", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), Some(EmptySourcePosition()), None),
-          BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), Some(EmptySourcePosition()), None)))) =>
+          BasicTypeInfo("Bloo", _: Int, 'class, "org.example.Bloo", List(), List(), Some(_), None),
+          BasicTypeInfo("Bloo$", _: Int, 'object, "org.example.Bloo$", List(), List(), Some(_), None),
+          BasicTypeInfo("CaseClassWithCamelCaseName", _: Int, 'class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(_), None),
+          BasicTypeInfo("CaseClassWithCamelCaseName$", _: Int, 'object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(_), None),
+          BasicTypeInfo("Foo", _: Int, 'class, "org.example.Foo", List(), List(), None, None),
+          BasicTypeInfo("Foo$", _: Int, 'object, "org.example.Foo$", List(), List(), Some(_), None),
+          BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), None, None),
+          BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), None, None)))) =>
         case _ =>
           fail("inspect package by path failed, got: " + insPacByPathResOpt)
       }

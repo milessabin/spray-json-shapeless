@@ -39,29 +39,33 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
   }
 
-  def locateSymbolPos(sym: Symbol, needPos: PosNeeded): Option[SourcePosition] =
-    if (sym == NoSymbol || needPos == PosNeededNo) None
+  def locateSymbolPos(sym: Symbol, needPos: PosNeeded): Option[SourcePosition] = {
+    if (sym == NoSymbol || needPos == PosNeededNo)
+      None
     else if (sym.pos != NoPosition) {
-      if (needPos eq PosNeededYes)
+      if (needPos == PosNeededYes || needPos == PosNeededAvail) {
         OffsetSourcePositionHelper.fromPosition(sym.pos)
-      else Some(EmptySourcePosition())
+      } else
+        Some(EmptySourcePosition())
     } else {
-      // we might need this for some Java fqns but we need some evidence
-      // val name = genASM.jsymbol(sym).fullName
-      val name = symbolIndexerName(sym)
-      val hit = search.findUnique(name)
-      logger.debug(s"search: $name = $hit")
-      if (needPos eq PosNeededYes)
-        hit.flatMap(LineSourcePositionHelper.fromFqnSymbol(_)(config)).
-          flatMap(sourcePos =>
-            if (sourcePos.file.getName.endsWith(".scala"))
-              askLinkPos(sym, AbstractFile.getFile(sourcePos.file)).
+      // only perform operations is actively requested - this is comparatively expensive
+      if (needPos == PosNeededYes) {
+        // we might need this for some Java fqns but we need some evidence
+        // val name = genASM.jsymbol(sym).fullName
+        val name = symbolIndexerName(sym)
+        val hit = search.findUnique(name)
+        logger.debug(s"search: $name = $hit")
+        hit.flatMap(LineSourcePositionHelper.fromFqnSymbol(_)(config)).flatMap { sourcePos =>
+          if (sourcePos.file.getName.endsWith(".scala"))
+            askLinkPos(sym, AbstractFile.getFile(sourcePos.file)).
               flatMap(pos => OffsetSourcePositionHelper.fromPosition(pos))
-            else
-              Some(sourcePos))
-      else
-        hit.map(_ => EmptySourcePosition())
+          else
+            Some(sourcePos)
+        }
+      } else
+        None
     }
+  }
 
   // When inspecting a type, transform a raw list of TypeMembers to a sorted
   // list of InterfaceInfo objects, each with its own list of sorted member infos.
@@ -191,8 +195,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       }
       def basicTypeInfo(tpe: Type): BasicTypeInfo = {
         val typeSym = tpe.typeSymbol
-        val symPos = locateSymbolPos(
-          if (typeSym.isModuleClass) typeSym.sourceModule else typeSym, needPos)
+        val symbolToLocate = if (typeSym.isModuleClass) typeSym.sourceModule else typeSym
+        val symPos = locateSymbolPos(symbolToLocate, needPos)
         val outerTypeId = outerClass(typeSym).map(s => cacheType(s.tpe))
         new BasicTypeInfo(
           typeShortName(tpe),
