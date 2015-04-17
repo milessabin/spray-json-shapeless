@@ -43,7 +43,9 @@ object SwankProtocolCommon {
   abstract class TraitFormatAlt[T] extends SexpFormat[T] {
     val key = SexpSymbol(":type")
     protected def wrap[E](t: E)(
-      implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp = t.toSexp match {
+      implicit
+      th: TypeHint[E], sf: SexpFormat[E]
+    ): Sexp = t.toSexp match {
       case SexpNil => SexpData(key -> th.hint)
       case SexpData(data) if !data.contains(key) =>
         SexpData(key -> th.hint :: data.toList)
@@ -543,8 +545,10 @@ object SwankProtocolRequest {
   // should pick up on this instead, also private so we don't
   // accidentally export it.
   private implicit def tupledProductFormat[T <: RpcRequest, R <: shapeless.HList](
-    implicit g: shapeless.Generic.Aux[T, R],
-    r: HListFormat[R]): SexpFormat[T] = new SexpFormat[T] {
+    implicit
+    g: shapeless.Generic.Aux[T, R],
+    r: HListFormat[R]
+  ): SexpFormat[T] = new SexpFormat[T] {
     def write(x: T): Sexp = SexpList(r.write(g.to(x)))
 
     def read(value: Sexp): T = value match {

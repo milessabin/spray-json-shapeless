@@ -5,7 +5,8 @@ import org.ensime.indexer.SearchService
 
 trait SearchServiceFixture {
   def withSearchService(
-    testCode: (EnsimeConfig, SearchService) => Any): Any
+    testCode: (EnsimeConfig, SearchService) => Any
+  ): Any
 
   def withSearchService(testCode: SearchService => Any): Any
 }
@@ -13,7 +14,8 @@ trait SearchServiceFixture {
 trait IsolatedSearchServiceFixture extends SearchServiceFixture
     with IsolatedSourceResolverFixture {
   override def withSearchService(
-    testCode: (EnsimeConfig, SearchService) => Any): Any = withSourceResolver { (config, resolver) =>
+    testCode: (EnsimeConfig, SearchService) => Any
+  ): Any = withSourceResolver { (config, resolver) =>
     testCode(config, new SearchService(config, resolver))
   }
 
@@ -32,7 +34,8 @@ trait SharedSearchServiceFixture extends SearchServiceFixture
   }
 
   def withSearchService(
-    testCode: (EnsimeConfig, SearchService) => Any): Unit = testCode(_config, _search)
+    testCode: (EnsimeConfig, SearchService) => Any
+  ): Unit = testCode(_config, _search)
 
   def withSearchService(testCode: SearchService => Any): Unit = testCode(_search)
 }

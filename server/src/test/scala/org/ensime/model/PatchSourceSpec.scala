@@ -13,7 +13,8 @@ class PatchSourceSpec extends FunSpec with Matchers {
       assert(applyOperations("abc", List(
         PatchDelete(0, 1),
         PatchInsert(1, "z"),
-        PatchDelete(2, 3))) == "zb")
+        PatchDelete(2, 3)
+      )) == "zb")
       assert(applyOperations("hello there", List(PatchReplace(0, 6, ""))) == "there")
       assert(applyOperations("hello there", List(PatchInsert(0, "zz"))) == "zzhello there")
       assert(applyOperations("", List(PatchInsert(0, "moose"))) == "moose")

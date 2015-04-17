@@ -83,6 +83,7 @@ trait DocUsecaseHandling { self: DocServer =>
     "updated",
     "zip",
     "zipAll",
-    "zipWithIndex")
+    "zipWithIndex"
+  )
 
 }

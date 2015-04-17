@@ -25,9 +25,13 @@ object SwankTestData {
   val callCompletionInfoStr = """(:result-type """ + typeInfoStr + """ :param-sections ((:params (("ABC" """ + typeInfoStr + """)) :is-implicit nil)))"""
 
   val symFile = file("/abc").canon
-  val symbolDesignations = SymbolDesignations(symFile,
-    List(SymbolDesignation(7, 9, ObjectSymbol),
-      SymbolDesignation(11, 22, TraitSymbol)))
+  val symbolDesignations = SymbolDesignations(
+    symFile,
+    List(
+      SymbolDesignation(7, 9, ObjectSymbol),
+      SymbolDesignation(11, 22, TraitSymbol)
+    )
+  )
   val symbolDesignationsStr = s"""(:file "${symFile.getPath}" :syms ((object 7 9) (trait 11 22)))"""
 
   val symbolInfo = new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))

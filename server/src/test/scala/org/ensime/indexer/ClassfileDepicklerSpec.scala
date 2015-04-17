@@ -26,7 +26,8 @@ class ClassfileDepicklerSpec extends FunSpec with Matchers {
 
     it("can find type aliases") {
       assert(new ClassfileDepickler(vres("scala/Predef.class")).getTypeAliases.contains(
-        RawType("scala.Predef$String", Public)))
+        RawType("scala.Predef$String", Public)
+      ))
     }
   }
 }

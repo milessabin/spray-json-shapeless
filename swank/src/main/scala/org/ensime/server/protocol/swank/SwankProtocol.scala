@@ -33,7 +33,8 @@ import scala.util.control.NonFatal
  */
 class SwankProtocol(
   val peer: ActorRef,
-  val syncApi: EnsimeApi) extends Protocol[Sexp]
+  val syncApi: EnsimeApi
+) extends Protocol[Sexp]
     with SwankWireFormatCodec {
   protected val log = LoggerFactory.getLogger(classOf[SwankProtocol])
 

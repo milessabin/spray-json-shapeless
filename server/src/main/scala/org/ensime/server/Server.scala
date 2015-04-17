@@ -30,7 +30,8 @@ object Server {
 
   def main(args: Array[String]): Unit = {
     val ensimeFileStr = propOrNone("ensime.config").getOrElse(
-      throw new RuntimeException("ensime.config (the location of the .ensime file) must be set"))
+      throw new RuntimeException("ensime.config (the location of the .ensime file) must be set")
+    )
 
     val ensimeFile = new File(ensimeFileStr)
     if (!ensimeFile.exists() || !ensimeFile.isFile)
@@ -54,8 +55,7 @@ object Server {
    */
   def initialiseServer(config: EnsimeConfig): (Server, Future[Unit]) = {
     val server = new Server(config, "127.0.0.1", 0,
-      (_, peerRef, rpcTarget) => { new SwankProtocol(peerRef, rpcTarget) }
-    )
+      (_, peerRef, rpcTarget) => { new SwankProtocol(peerRef, rpcTarget) })
     val readyFuture = server.start()
     (server, readyFuture)
   }
@@ -65,7 +65,8 @@ class Server(
     val config: EnsimeConfig,
     host: String,
     requestedPort: Int,
-    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol[Sexp]) {
+    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol[Sexp]
+) {
 
   import org.ensime.server.Server.log
 
@@ -183,9 +184,11 @@ class SocketReader(socket: Socket, protocol: Protocol[Sexp], handler: ActorRef) 
  * @param socket The incoming socket
  * @param connectionCreator Function to create protocol instance given actorSystem and the peer (this) ref
  */
-class SocketHandler(socket: Socket,
+class SocketHandler(
+    socket: Socket,
     rpcTarget: EnsimeApi,
-    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol[Sexp]) extends Actor with ActorLogging {
+    connectionCreator: (ActorSystem, ActorRef, EnsimeApi) => Protocol[Sexp]
+) extends Actor with ActorLogging {
   val protocol = connectionCreator(context.system, self, rpcTarget)
 
   val reader = new SocketReader(socket, protocol, self)

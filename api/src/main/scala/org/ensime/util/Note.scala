@@ -19,4 +19,5 @@ case class Note(
   beg: Int,
   end: Int,
   line: Int,
-  col: Int)
+  col: Int
+)

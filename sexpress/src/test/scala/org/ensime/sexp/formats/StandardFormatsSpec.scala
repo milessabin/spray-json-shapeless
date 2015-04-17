@@ -18,10 +18,14 @@ class StandardFormatsSpec extends FormatSpec with StandardFormats with BasicForm
     it("should support Either") {
       val left = Left(13)
       val right = Right("thirteen")
-      assertFormat(left: Either[Int, String],
-        SexpData(SexpSymbol(":left") -> SexpNumber(13)))
-      assertFormat(right: Either[Int, String],
-        SexpData(SexpSymbol(":right") -> SexpString("thirteen")))
+      assertFormat(
+        left: Either[Int, String],
+        SexpData(SexpSymbol(":left") -> SexpNumber(13))
+      )
+      assertFormat(
+        right: Either[Int, String],
+        SexpData(SexpSymbol(":right") -> SexpString("thirteen"))
+      )
     }
 
     it("should support UUID") {

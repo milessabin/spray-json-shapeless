@@ -238,8 +238,10 @@ trait DebugTestUtils {
   def withDebugSession(
     className: String,
     fileName: String,
-    breakLine: Int)(
-      f: (Server, AsyncMsgHelper, File) => Any): Any = withServer { (server, asyncHelper) =>
+    breakLine: Int
+  )(
+    f: (Server, AsyncMsgHelper, File) => Any
+  ): Any = withServer { (server, asyncHelper) =>
     val project = server.project
     val config = project.config
     val resolvedFile = scalaMain(server.config) / fileName
@@ -271,11 +273,13 @@ trait DebugTestUtils {
     val project = server.project
     val vLocOpt = project.rpcDebugLocateName(threadId, variableName)
     val vLoc = vLocOpt.getOrThrow(
-      s"unable to locate variable $variableName on thread $threadId")
+      s"unable to locate variable $variableName on thread $threadId"
+    )
 
     val vValueOpt = project.rpcDebugValue(vLoc)
     val vValue = vValueOpt.getOrThrow(
-      s"Unable to get value of variable $variableName")
+      s"Unable to get value of variable $variableName"
+    )
     vValue
   }
 

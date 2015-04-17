@@ -8,7 +8,8 @@ import org.ensime.util.FileEdit
 case class SourceFileInfo(
   file: File,
   contents: Option[String] = None,
-  contentsIn: Option[File] = None)
+  contentsIn: Option[File] = None
+)
 
 sealed trait PatchOp {
   def start: Int
@@ -16,16 +17,19 @@ sealed trait PatchOp {
 
 case class PatchInsert(
   start: Int,
-  text: String) extends PatchOp
+  text: String
+) extends PatchOp
 
 case class PatchDelete(
   start: Int,
-  end: Int) extends PatchOp
+  end: Int
+) extends PatchOp
 
 case class PatchReplace(
   start: Int,
   end: Int,
-  text: String) extends PatchOp
+  text: String
+) extends PatchOp
 
 // responses
 
@@ -37,7 +41,8 @@ sealed trait EntityInfo {
 object SourceSymbol {
   val allSymbols: List[SourceSymbol] = List(
     ObjectSymbol, ClassSymbol, TraitSymbol, PackageSymbol, ConstructorSymbol, ImportedNameSymbol, TypeParamSymbol,
-    ParamSymbol, VarFieldSymbol, ValFieldSymbol, OperatorFieldSymbol, VarSymbol, ValSymbol, FunctionCallSymbol)
+    ParamSymbol, VarFieldSymbol, ValFieldSymbol, OperatorFieldSymbol, VarSymbol, ValSymbol, FunctionCallSymbol
+  )
 }
 
 sealed trait RefactorType
@@ -73,7 +78,8 @@ case class PackageInfo(
     name: String,
     fullName: String,
     // n.b. members should be sorted by name for consistency
-    members: Seq[EntityInfo]) extends EntityInfo {
+    members: Seq[EntityInfo]
+) extends EntityInfo {
   require(members == members.sortBy(_.name), "members should be sorted by name")
 }
 
@@ -88,14 +94,16 @@ case class TypeSearchResult(
   name: String,
   localName: String,
   declAs: scala.Symbol,
-  pos: Option[SourcePosition]) extends SymbolSearchResult
+  pos: Option[SourcePosition]
+) extends SymbolSearchResult
 
 case class MethodSearchResult(
   name: String,
   localName: String,
   declAs: scala.Symbol,
   pos: Option[SourcePosition],
-  ownerName: String) extends SymbolSearchResult
+  ownerName: String
+) extends SymbolSearchResult
 
 // what is the point of these types?
 case class ImportSuggestions(symLists: List[List[SymbolSearchResult]])
@@ -103,12 +111,14 @@ case class SymbolSearchResults(syms: List[SymbolSearchResult])
 
 case class SymbolDesignations(
   file: File,
-  syms: List[SymbolDesignation])
+  syms: List[SymbolDesignation]
+)
 
 case class SymbolDesignation(
   start: Int,
   end: Int,
-  symType: SourceSymbol)
+  symType: SourceSymbol
+)
 
 case class SymbolInfo(
     name: String,
@@ -116,13 +126,15 @@ case class SymbolInfo(
     declPos: Option[SourcePosition],
     `type`: TypeInfo,
     isCallable: Boolean,
-    ownerTypeId: Option[Int]) {
+    ownerTypeId: Option[Int]
+) {
   def tpe = `type`
 }
 
 case class Op(
   op: String,
-  description: String)
+  description: String
+)
 
 case class MethodBytecode(
   className: String,
@@ -130,11 +142,13 @@ case class MethodBytecode(
   methodSignature: Option[String],
   byteCode: List[Op],
   startLine: Int,
-  endLine: Int)
+  endLine: Int
+)
 
 case class CompletionSignature(
   sections: List[List[(String, String)]],
-  result: String)
+  result: String
+)
 
 case class CompletionInfo(
   name: String,
@@ -142,11 +156,13 @@ case class CompletionInfo(
   typeId: Int,
   isCallable: Boolean,
   relevance: Int,
-  toInsert: Option[String])
+  toInsert: Option[String]
+)
 
 case class CompletionInfoList(
   prefix: String,
-  completions: List[CompletionInfo])
+  completions: List[CompletionInfo]
+)
 
 case class Breakpoint(file: File, line: Int)
 case class BreakpointList(active: List[Breakpoint], pending: List[Breakpoint])
@@ -205,41 +221,48 @@ sealed trait DebugValue {
 }
 
 case class DebugNullValue(
-  typeName: String) extends DebugValue
+  typeName: String
+) extends DebugValue
 
 case class DebugPrimitiveValue(
   summary: String,
-  typeName: String) extends DebugValue
+  typeName: String
+) extends DebugValue
 
 case class DebugObjectInstance(
   summary: String,
   fields: List[DebugClassField],
   typeName: String,
-  objectId: DebugObjectId) extends DebugValue
+  objectId: DebugObjectId
+) extends DebugValue
 
 case class DebugStringInstance(
   summary: String,
   fields: List[DebugClassField],
   typeName: String,
-  objectId: DebugObjectId) extends DebugValue
+  objectId: DebugObjectId
+) extends DebugValue
 
 case class DebugArrayInstance(
   length: Int,
   typeName: String,
   elementTypeName: String,
-  objectId: DebugObjectId) extends DebugValue
+  objectId: DebugObjectId
+) extends DebugValue
 
 case class DebugClassField(
   index: Int,
   name: String,
   typeName: String,
-  summary: String)
+  summary: String
+)
 
 case class DebugStackLocal(
   index: Int,
   name: String,
   summary: String,
-  typeName: String)
+  typeName: String
+)
 
 case class DebugStackFrame(
   index: Int,
@@ -248,19 +271,22 @@ case class DebugStackFrame(
   className: String,
   methodName: String,
   pcLocation: LineSourcePosition,
-  thisObjectId: DebugObjectId)
+  thisObjectId: DebugObjectId
+)
 
 case class DebugBacktrace(
   frames: List[DebugStackFrame],
   threadId: String,
-  threadName: String)
+  threadName: String
+)
 
 case class NamedTypeMemberInfo(
     name: String,
     `type`: TypeInfo,
     pos: Option[SourcePosition],
     signatureString: Option[String],
-    declAs: scala.Symbol) extends EntityInfo {
+    declAs: scala.Symbol
+) extends EntityInfo {
   override def members = List.empty
   def tpe = `type`
 }
@@ -289,13 +315,15 @@ case class BasicTypeInfo(
   typeArgs: Iterable[TypeInfo],
   members: Iterable[EntityInfo],
   pos: Option[SourcePosition],
-  outerTypeId: Option[Int]) extends TypeInfo
+  outerTypeId: Option[Int]
+) extends TypeInfo
 
 case class ArrowTypeInfo(
     name: String,
     typeId: Int,
     resultType: TypeInfo,
-    paramSections: Iterable[ParamSectionInfo]) extends TypeInfo {
+    paramSections: Iterable[ParamSectionInfo]
+) extends TypeInfo {
   def declAs = 'nil
   def fullName = name
   def typeArgs = List.empty
@@ -306,15 +334,18 @@ case class ArrowTypeInfo(
 
 case class CallCompletionInfo(
   resultType: TypeInfo,
-  paramSections: Iterable[ParamSectionInfo])
+  paramSections: Iterable[ParamSectionInfo]
+)
 
 case class ParamSectionInfo(
   params: Iterable[(String, TypeInfo)],
-  isImplicit: Boolean)
+  isImplicit: Boolean
+)
 
 case class InterfaceInfo(
     `type`: TypeInfo,
-    viaView: Option[String]) {
+    viaView: Option[String]
+) {
   def tpe = `type`
 }
 
@@ -323,7 +354,7 @@ case class TypeInspectInfo(
     companionId: Option[Int],
     interfaces: Iterable[InterfaceInfo],
     infoType: scala.Symbol = 'typeInspect // redundant field in protocol
-    ) {
+) {
   def supers = interfaces
 }
 

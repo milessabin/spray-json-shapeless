@@ -5,7 +5,8 @@ import collection.{ immutable => im }
 
 class BigDecimalConvertor[T](
     val to: T => BigDecimal,
-    val from: BigDecimal => T) {
+    val from: BigDecimal => T
+) {
   protected def unsupported(message: String) =
     throw new UnsupportedOperationException(message)
 

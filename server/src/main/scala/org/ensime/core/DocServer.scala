@@ -21,7 +21,8 @@ class DocServer(
   val config: EnsimeConfig,
   startHttpServer: Boolean = true,
   // Should be a raw version string, as in 1.7.x
-  forceJavaVersion: Option[String] = None)
+  forceJavaVersion: Option[String] = None
+)
     extends Actor with ActorLogging with DocUsecaseHandling {
   import context.system
 
@@ -208,7 +209,8 @@ class DocServer(
         val response = getJarEntry(p.path.toString()).map { bytes =>
           HttpResponse(entity = HttpEntity(
             MediaTypes.forExtension(Files.getFileExtension(p.path.toString()))
-              .getOrElse(MediaTypes.`text/html`), HttpData(bytes)))
+              .getOrElse(MediaTypes.`text/html`), HttpData(bytes)
+          ))
         }.getOrElse(HttpResponse(status = 404))
         sender ! response
 
@@ -219,8 +221,10 @@ class DocServer(
         } catch {
           case e: Exception =>
             log.error(e, "Error handling RPC: " + sig)
-            sender ! RPCError(ErrExceptionInRPC,
-              "Error occurred in indexer. Check the server log.")
+            sender ! RPCError(
+              ErrExceptionInRPC,
+              "Error occurred in indexer. Check the server log."
+            )
         }
       case other => log.error("Unknown message type: " + other)
     }

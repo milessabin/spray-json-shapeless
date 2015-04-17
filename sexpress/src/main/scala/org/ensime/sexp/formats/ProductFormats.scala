@@ -27,8 +27,10 @@ trait LowPriorityProductFormats {
     }
 
     implicit def hListFormat[H, T <: HList](
-      implicit h: Lazy[SexpFormat[H]],
-      t: Lazy[HListFormat[T]]): HListFormat[H :: T] = new HListFormat[H :: T] {
+      implicit
+      h: Lazy[SexpFormat[H]],
+      t: Lazy[HListFormat[T]]
+    ): HListFormat[H :: T] = new HListFormat[H :: T] {
       def write(x: H :: T) = h.value.write(x.head) :: t.value.write(x.tail)
 
       def read(values: List[Sexp]): H :: T = {
@@ -51,11 +53,13 @@ trait LowPriorityProductFormats {
    * implementations of the `Aux`s are provided by shapeless macros.
    */
   implicit def labelledProductFormat[T, R <: HList, LR <: HList, K <: HList](
-    implicit g: Generic.Aux[T, R],
+    implicit
+    g: Generic.Aux[T, R],
     lg: LabelledGeneric.Aux[T, LR],
     k: ops.record.Keys.Aux[LR, K],
     ltl: ops.hlist.ToList[K, Symbol],
-    r: Lazy[HListFormat[R]]): SexpFormat[T] = new SexpFormat[T] {
+    r: Lazy[HListFormat[R]]
+  ): SexpFormat[T] = new SexpFormat[T] {
 
     private val keys = k().toList[Symbol].map { sym =>
       SexpSymbol(":" + toWireName(sym.name))
@@ -86,10 +90,12 @@ trait LowPriorityProductFormats {
 trait ProductFormats extends LowPriorityProductFormats {
   // higher priority so that tuples and case classes are not ambiguous
   implicit def tupleProductFormat[T, R <: HList, T2](
-    implicit g: Generic.Aux[T, R],
+    implicit
+    g: Generic.Aux[T, R],
     t: ops.hlist.Tupler.Aux[R, T2],
     p: T =:= T2,
-    r: Lazy[HListFormat[R]]): SexpFormat[T] = new SexpFormat[T] {
+    r: Lazy[HListFormat[R]]
+  ): SexpFormat[T] = new SexpFormat[T] {
     def write(x: T): Sexp = SexpList(r.value.write(g.to(x)))
     def read(value: Sexp): T = value match {
       case SexpList(els) => g.from(r.value.read(els))

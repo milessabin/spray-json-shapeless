@@ -52,7 +52,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     signatureString: Option[String]): Option[DocSigPair] =
     askOption {
       symbolMemberByName(
-        typeFullName, memberName, signatureString).flatMap(docSignature(_, None))
+        typeFullName, memberName, signatureString
+      ).flatMap(docSignature(_, None))
     }.flatten
 
   def askSymbolInfoAt(p: Position): Option[SymbolInfo] =
@@ -79,7 +80,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       members <- x.get.left.toOption;
       infos <- askOption {
         val roots = filterMembersByPrefix(
-          members, firstName, matchEntire = true, caseSens = true).map { _.sym }
+          members, firstName, matchEntire = true, caseSens = true
+        ).map { _.sym }
         val restOfPath = nameSegs.drop(1).mkString(".")
         val syms = roots.flatMap { symbolByName(restOfPath, _) }
         syms.find(_.tpe != NoType).map { sym => TypeInfo(sym.tpe) }
@@ -154,7 +156,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   // force the full path of Set because nsc appears to have a conflicting Set....
   def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[SourceSymbol]): SymbolDesignations =
     askOption(
-      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations(new File("."), List.empty))
+      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)
+    ).getOrElse(SymbolDesignations(new File("."), List.empty))
 
   def askClearTypeCache(): Unit = clearTypeCache()
 
@@ -173,7 +176,8 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
   }
   def findSourceFile(path: String): Option[SourceFile] = allSources.find(
-    _.file.path == path)
+    _.file.path == path
+  )
 
   // TODO: friends should not give friends other people's types (Position)
   def askLinkPos(sym: Symbol, path: AbstractFile): Option[Position] =
@@ -186,7 +190,8 @@ class RichPresentationCompiler(
   val richReporter: Reporter,
   var parent: ActorRef,
   var indexer: ActorRef,
-  val search: SearchService) extends Global(settings, richReporter)
+  val search: SearchService
+) extends Global(settings, richReporter)
     with ModelBuilders with RichCompilerControl
     with RefactoringImpl with Completion with Helpers {
 
@@ -248,7 +253,8 @@ class RichPresentationCompiler(
           sym.tpe,
           sym.isPublic,
           inherited,
-          viaView)
+          viaView
+        )
         members(sym) = m
       } catch {
         case e: Throwable =>
@@ -292,7 +298,8 @@ class RichPresentationCompiler(
     new TypeInspectInfo(
       TypeInfo(tpe, PosNeededAvail),
       companionTypeOf(tpe).map(cacheType),
-      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]), parents))
+      prepareSortedInterfaceInfo(typePublicMembers(tpe.asInstanceOf[Type]), parents)
+    )
   }
 
   protected def inspectTypeAt(p: Position): Option[TypeInspectInfo] = {
@@ -343,7 +350,8 @@ class RichPresentationCompiler(
     }
 
   protected def symbolMemberByName(
-    fqn: String, memberName: Option[String], signatureString: Option[String]): Option[Symbol] = {
+    fqn: String, memberName: Option[String], signatureString: Option[String]
+  ): Option[Symbol] = {
     symbolByName(fqn).flatMap { owner =>
       memberName.flatMap { rawName =>
         val module = rawName.endsWith("$")
@@ -433,7 +441,8 @@ class RichPresentationCompiler(
               case p: RangePosition => p
               case p =>
                 new RangePosition(
-                  p.source, p.point, p.point, p.point)
+                  p.source, p.point, p.point, p.point
+                )
             }
           }
         }

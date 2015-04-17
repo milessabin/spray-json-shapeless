@@ -115,7 +115,8 @@ object FileUtils {
       rewriteFiles(rewriteList, cs) match {
         case Right(Right(_)) => Right(changes.groupBy(_.file).keys)
         case Right(Left(e)) => Left(new IllegalStateException(
-          "Possibly incomplete write of change-set caused by: " + e))
+          "Possibly incomplete write of change-set caused by: " + e
+        ))
         case Left(e) => Left(e)
       }
     } catch {

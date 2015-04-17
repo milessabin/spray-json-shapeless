@@ -59,20 +59,28 @@ class SexpSpec extends FunSpec with Matchers {
         barkey -> foosym
       ) === SexpCons(
           fookey, SexpCons(
-            barsym, SexpCons(
-              barkey, SexpCons(
-                foosym, SexpNil)))))
+          barsym, SexpCons(
+          barkey, SexpCons(
+          foosym, SexpNil
+        )
+        )
+        )
+        ))
     }
 
     it("should match SexpData") {
       SexpCons(
         fookey, SexpCons(
-          barsym, SexpCons(
-            barkey, SexpCons(
-              foosym, SexpNil)))) match {
-          case SexpData(kvs) if kvs.size == 2 =>
-          case _ => fail()
-        }
+        barsym, SexpCons(
+        barkey, SexpCons(
+        foosym, SexpNil
+      )
+      )
+      )
+      ) match {
+        case SexpData(kvs) if kvs.size == 2 =>
+        case _ => fail()
+      }
 
       SexpNil match {
         case SexpData(_) => fail()
@@ -86,8 +94,7 @@ class SexpSpec extends FunSpec with Matchers {
       val a = SexpList(foosym)
       val b = SexpList(barsym)
       assert(SexpCons(a, b) ===
-        SexpCons(SexpCons(foosym, SexpNil), SexpCons(barsym, SexpNil))
-      )
+        SexpCons(SexpCons(foosym, SexpNil), SexpCons(barsym, SexpNil)))
     }
   }
 }

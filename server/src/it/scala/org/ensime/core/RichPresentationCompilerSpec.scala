@@ -79,7 +79,8 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
     "get symbol info by name" in withPresCompiler { (config, cc) =>
       def verify(
         fqn: String, member: Option[String], sig: Option[String], expectedLocalName: String,
-        expectedName: String, expectedDeclAs: scala.Symbol) = {
+        expectedName: String, expectedDeclAs: scala.Symbol
+      ) = {
         val symOpt = cc.askSymbolByName(fqn, member, sig)
         assert(symOpt.isDefined)
         val sym = symOpt.get
@@ -419,7 +420,8 @@ trait ReallyRichPresentationCompilerFixture {
 
   // conveniences for accessing the fixtures
   final def withPresCompiler(
-    testCode: (EnsimeConfig, RichPresentationCompiler) => Any): Any =
+    testCode: (EnsimeConfig, RichPresentationCompiler) => Any
+  ): Any =
     withRichPresentationCompiler { (_, c, cc) => testCode(c, cc) }
 
   // final def withPosInCompiledSource(lines: String*)(testCode: (OffsetPosition, RichPresentationCompiler) => Any) =

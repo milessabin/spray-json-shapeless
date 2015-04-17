@@ -15,7 +15,8 @@ trait ScalariformFormat {
 
     private def deser(
       descriptor: PreferenceDescriptor[_],
-      data: Map[SexpSymbol, Sexp]): Option[Any] =
+      data: Map[SexpSymbol, Sexp]
+    ): Option[Any] =
       data.get(key(descriptor)).map { sexp =>
         descriptor.preferenceType match {
           case BooleanPreference => sexp.convertTo[Boolean]
@@ -39,7 +40,8 @@ trait ScalariformFormat {
 
     private def ser(
       descriptor: PreferenceDescriptor[_],
-      value: Any): Sexp = descriptor.preferenceType match {
+      value: Any
+    ): Sexp = descriptor.preferenceType match {
       case BooleanPreference => value.asInstanceOf[Boolean].toSexp
       case IntegerPreference(_, _) => value.asInstanceOf[Int].toSexp
     }

@@ -21,7 +21,8 @@ case class EnsimeConfig(
     formattingPrefs: FormattingPreferences,
     sourceMode: Boolean,
     debugArgs: List[String],
-    javaLibs: List[File]) {
+    javaLibs: List[File]
+) {
   (rootDir :: cacheDir :: javaHome :: referenceSourceRoots ::: javaLibs).foreach { f =>
     require(f.exists, "" + f + " is required but does not exist")
   }
@@ -74,7 +75,8 @@ case class EnsimeModule(
     testDeps: List[File],
     sourceRoots: List[File],
     docJars: List[File],
-    referenceSourceRoots: List[File]) {
+    referenceSourceRoots: List[File]
+) {
   // only check the files, not the directories, see below
   (compileDeps ::: runtimeDeps :::
     testDeps ::: referenceSourceRoots).foreach { f =>

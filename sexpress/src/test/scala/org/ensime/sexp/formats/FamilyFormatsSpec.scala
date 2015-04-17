@@ -82,8 +82,10 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
       val expectField = SexpData(
         SexpSymbol(":text") -> SexpString("thing is ten"),
         SexpSymbol(":field") -> SexpData(
-          SexpSymbol(":column") -> SexpString("THING")),
-        SexpSymbol(":value") -> SexpString("10"))
+          SexpSymbol(":column") -> SexpString("THING")
+        ),
+        SexpSymbol(":value") -> SexpString("10")
+      )
 
       // confirm that the wrapper is picked up for a specific case class
       assertFormat(fieldTerm, expectField)

@@ -32,7 +32,8 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
   // the FQN lookup separately with a cleaner fixture (only needs nested
   // EnsimeConfig and TestKit)
   def withDocServerAndPresentationCompiler(javaVersions: String*)(
-    testCode: (Map[String, ActorRef], EnsimeConfig, RichPresentationCompiler) => Any): Any = withRichPresentationCompiler {
+    testCode: (Map[String, ActorRef], EnsimeConfig, RichPresentationCompiler) => Any
+  ): Any = withRichPresentationCompiler {
     (testkit: TestKitFix, config: EnsimeConfig, pc: RichPresentationCompiler) =>
       import testkit._
       val servers = javaVersions.map { javaVersion =>
@@ -59,19 +60,24 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
         }
 
         def getUri(serv: ActorRef, sig: DocSig): Option[String] = {
-          Await.result(Patterns.ask(serv, DocUriReq(DocSigPair(sig, sig)), Timeout(5.second)),
-            Duration.Inf).asInstanceOf[Option[String]]
+          Await.result(
+            Patterns.ask(serv, DocUriReq(DocSigPair(sig, sig)), Timeout(5.second)),
+            Duration.Inf
+          ).asInstanceOf[Option[String]]
         }
 
         def getReponse(serv: ActorRef, path: Uri): HttpResponse = {
-          Await.result(Patterns.ask(serv, HttpRequest(GET, path), Timeout(5.second)),
-            Duration.Inf).asInstanceOf[HttpResponse]
+          Await.result(
+            Patterns.ask(serv, HttpRequest(GET, path), Timeout(5.second)),
+            Duration.Inf
+          ).asInstanceOf[HttpResponse]
         }
 
         def contentPath(uri: Uri): Uri = {
           if (uri.path.toString().endsWith("index.html")) {
             val path = uri.path.toString().replace(
-              "index", uri.fragment.flatMap { s => s.split("@").headOption }.getOrElse("").replace(".", "/"))
+              "index", uri.fragment.flatMap { s => s.split("@").headOption }.getOrElse("").replace(".", "/")
+            )
             Uri(path = Uri.Path(path))
           } else {
             uri.path.toString()
@@ -207,8 +213,10 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
               case "30" => checkScala(sig, DocSig(DocFqn("scala.collection.immutable", "List"), Some("flatMap[B,That](f:A=>scala.collection.GenTraversableOnce[B])(implicitbf:scala.collection.generic.CanBuildFrom[List[A],B,That]):That")))
               case "31" => checkScala(sig, DocSig(DocFqn("scala.collection.immutable", "List"), Some("collect[B,That](pf:PartialFunction[A,B])(implicitbf:scala.collection.generic.CanBuildFrom[List[A],B,That]):That")))
             }
-            checkJava(cc.askDocSignatureForSymbol("com.google.common.io.Files$", Some("simplifyPath"), None).get,
-              DocSig(DocFqn("com.google.common.io", "Files"), Some("simplifyPath(java.lang.String)")))
+            checkJava(
+              cc.askDocSignatureForSymbol("com.google.common.io.Files$", Some("simplifyPath"), None).get,
+              DocSig(DocFqn("com.google.common.io", "Files"), Some("simplifyPath(java.lang.String)"))
+            )
           }
 
         val libdoc = docs.find { f => f.getName.startsWith("scala-library") }.get
