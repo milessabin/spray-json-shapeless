@@ -98,7 +98,7 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val api = Project("api", file("api"), settings = commonSettings) settings (
     libraryDependencies ++= Seq(
       "com.github.stacycurl" %% "pimpathon-core" % "1.4.0",
-      "com.danieltrinh" %% "scalariform" % "0.1.5"
+      "org.scalariform" %% "scalariform" % "0.1.6"
     ) ++ testLibs(scalaVersion.value)
   )
 

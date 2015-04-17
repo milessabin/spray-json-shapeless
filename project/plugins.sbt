@@ -4,7 +4,7 @@ addSbtPlugin("org.ensime" % "ensime-sbt" % "0.1.5")
 // not working on Windows https://github.com/sbt/sbt/issues/1952
 //addMavenResolverPlugin
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
+addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.4.0")
 
 addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.0.4")
 
