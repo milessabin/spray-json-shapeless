@@ -1,6 +1,7 @@
 import java.io._
 import scala.util.Try
 import sbt._
+import sbt.{ IntegrationTest => It }
 import Keys._
 import com.typesafe.sbt.SbtScalariform._
 import scoverage.ScoverageSbtPlugin.ScoverageKeys
@@ -20,6 +21,14 @@ object EnsimeBuild extends Build with JdkResolver {
     version := "0.9.10-SNAPSHOT"
   )
   val isEmacs = sys.env.get("TERM") == Some("dumb")
+
+  // WORKAROUND https://github.com/daniel-trinh/sbt-scalariform/issues/4
+  def scalariformSettingsWithIt: Seq[Setting[_]] =
+    defaultScalariformSettings ++ inConfig(It)(configScalariformSettings) ++ List(
+      compileInputs in (Compile, compile) <<= (compileInputs in (Compile, compile)) dependsOn (ScalariformKeys.format in Compile),
+      compileInputs in (Test, compile) <<= (compileInputs in (Test, compile)) dependsOn (ScalariformKeys.format in Test),
+      compileInputs in (It, compile) <<= (compileInputs in (It, compile)) dependsOn (ScalariformKeys.format in It)
+    )
 
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
@@ -146,29 +155,29 @@ object EnsimeBuild extends Build with JdkResolver {
     testingSimple % "test,it",
     testingDebug % "test,it",
     testingDocs % "test,it"
-  ).configs(IntegrationTest).settings (
+  ).configs(It).settings (
     commonSettings
   ).settings (
-    inConfig(IntegrationTest)(Defaults.testSettings)
+    inConfig(It)(Defaults.testSettings)
   ).settings (
     scalariformSettingsWithIt
   ).settings (
     // careful: parallel forks are causing weird failures
     // https://github.com/sbt/sbt/issues/1890
-    parallelExecution in IntegrationTest := false,
+    parallelExecution in It := false,
     // https://github.com/sbt/sbt/issues/1891
     // this is supposed to set the number of forked JVMs, but it doesn't
     // concurrentRestrictions in Global := Seq(
     //   Tags.limit(Tags.ForkedTestGroup, 4)
     // ),
-    fork in IntegrationTest := true,
-    testForkedParallel in IntegrationTest := true,
-    javaOptions in IntegrationTest += "-Dfile.encoding=UTF8", // for file cloning
-    testOptions in IntegrationTest ++= noColorIfEmacs,
+    fork in It := true,
+    testForkedParallel in It := true,
+    javaOptions in It += "-Dfile.encoding=UTF8", // for file cloning
+    testOptions in It ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
-    internalDependencyClasspath in IntegrationTest += { Attributed.blank(JavaTools) },
-    javaOptions in IntegrationTest ++= Seq(
+    internalDependencyClasspath in It += { Attributed.blank(JavaTools) },
+    javaOptions in It ++= Seq(
       "-Dlogback.configurationFile=../logback-it.xml"
     ),
     libraryDependencies ++= Seq(
