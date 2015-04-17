@@ -28,6 +28,9 @@ and many more.
 
 # Contributions
 
+Ensime builds on the shoulders of giants, this includes contributors, users, bug reporters, many free and open source projects 
+and commercial entities.
+
 This project is actively community maintained, and we are very pleased
 to see contributions from new members. Please see the
 [Contributing](CONTRIBUTING.md) file for information on how to help
@@ -44,3 +47,10 @@ If you are still experiencing a problem with the latest version of ENSIME, befor
 * check the [tickets flagged as FAQ](https://github.com/ensime/ensime-server/issues?labels=FAQ).
 * check the [most recently updated tickets](http://github.com/ensime/ensime-server/issues?direction=desc&sort=updated) (others are probably talking about it already with workarounds).
 * do a few keyword searches using the github search (top of the page) to see if anybody has reported this already.
+
+
+------
+
+![YourKit Logo](https://www.yourkit.com/images/yklogo.png)
+supports Ensime by providing access to its awesome [YourKit Java Profiler](https://www.yourkit.com/java/profiler/index.jsp)
+
