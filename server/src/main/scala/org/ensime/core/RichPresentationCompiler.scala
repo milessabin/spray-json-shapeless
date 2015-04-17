@@ -11,14 +11,13 @@ import org.ensime.util.FileUtils
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
-import scala.reflect.internal.util.{ RangePosition, SourceFile, _ }
+import scala.reflect.internal.util.{ BatchSourceFile, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.{ CompilerControl, Global }
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.util._
 import scala.tools.refactoring.analysis.GlobalIndexes
-import scala.reflect.internal.util.BatchSourceFile
 
 trait RichCompilerControl extends CompilerControl with RefactoringControl with CompletionControl with DocFinding {
   self: RichPresentationCompiler =>
