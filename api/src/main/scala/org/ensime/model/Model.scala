@@ -3,13 +3,39 @@ package org.ensime.model
 import java.io.File
 import org.ensime.util.FileEdit
 
+// requests
+
+case class SourceFileInfo(
+  file: File,
+  contents: Option[String] = None,
+  contentsIn: Option[File] = None)
+
+sealed trait PatchOp {
+  def start: Int
+}
+
+case class PatchInsert(
+  start: Int,
+  text: String) extends PatchOp
+
+case class PatchDelete(
+  start: Int,
+  end: Int) extends PatchOp
+
+case class PatchReplace(
+  start: Int,
+  end: Int,
+  text: String) extends PatchOp
+
+// responses
+
 sealed trait EntityInfo {
   def name: String
   def members: Iterable[EntityInfo]
 }
 
 object SourceSymbol {
-  val allSymbols: Set[SourceSymbol] = Set(
+  val allSymbols: List[SourceSymbol] = List(
     ObjectSymbol, ClassSymbol, TraitSymbol, PackageSymbol, ConstructorSymbol, ImportedNameSymbol, TypeParamSymbol,
     ParamSymbol, VarFieldSymbol, ValFieldSymbol, OperatorFieldSymbol, VarSymbol, ValSymbol, FunctionCallSymbol)
 }
@@ -42,13 +68,6 @@ sealed trait SourcePosition
 case class EmptySourcePosition() extends SourcePosition
 case class OffsetSourcePosition(file: File, offset: Int) extends SourcePosition
 case class LineSourcePosition(file: File, line: Int) extends SourcePosition
-
-sealed trait SourceFileInfo {
-  def file: File
-}
-case class FileSourceFileInfo(file: File) extends SourceFileInfo
-case class ContentsSourceFileInfo(file: File, contents: String) extends SourceFileInfo
-case class ContentsInSourceFileInfo(file: File, contentsIn: File) extends SourceFileInfo
 
 case class PackageInfo(
     name: String,
@@ -83,7 +102,7 @@ case class ImportSuggestions(symLists: List[List[SymbolSearchResult]])
 case class SymbolSearchResults(syms: List[SymbolSearchResult])
 
 case class SymbolDesignations(
-  file: String,
+  file: File,
   syms: List[SymbolDesignation])
 
 case class SymbolDesignation(
@@ -129,29 +148,12 @@ case class CompletionInfoList(
   prefix: String,
   completions: List[CompletionInfo])
 
-sealed trait PatchOp {
-  def start: Int
-}
-
-case class PatchInsert(
-  start: Int,
-  text: String) extends PatchOp
-
-case class PatchDelete(
-  start: Int,
-  end: Int) extends PatchOp
-
-case class PatchReplace(
-  start: Int,
-  end: Int,
-  text: String) extends PatchOp
-
 case class Breakpoint(file: File, line: Int)
 case class BreakpointList(active: List[Breakpoint], pending: List[Breakpoint])
 
 case class OffsetRange(from: Int, to: Int)
 
-object OffsetRange {
+object OffsetRange extends ((Int, Int) => OffsetRange) {
   def apply(fromTo: Int): OffsetRange = new OffsetRange(fromTo, fromTo)
 }
 

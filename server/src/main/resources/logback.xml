@@ -14,6 +14,7 @@
   
   <logger name="org.ensime" level="DEBUG"/>
   <logger name="scala.tools" level="WARN"/>
+  <logger name="akka" level="DEBUG"/>
   <!-- <logger name="org.ensime.server.RichPresentationCompiler" level="WARN"/> -->
   
   <root level="INFO">

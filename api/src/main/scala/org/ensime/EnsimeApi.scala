@@ -1,5 +1,7 @@
 package org.ensime
 
+import java.io.File
+
 import org.ensime.core._
 import org.ensime.model._
 import org.ensime.server.ConnectionInfo
@@ -39,20 +41,21 @@ trait EnsimeApi {
    * Return:
    *   SymbolDesignations The given
    */
-  def rpcSymbolDesignations(f: String, start: Int, end: Int, requestedTypes: Set[SourceSymbol]): SymbolDesignations
+  def rpcSymbolDesignations(f: File, start: Int, end: Int, requestedTypes: List[SourceSymbol]): SymbolDesignations
 
   /**
    *   Patch the source with the given changes.
    *   @param f The file to patch
    *   @param edits The patches to apply to the file.
    */
-  def rpcPatchSource(f: String, edits: List[PatchOp]): Unit
+  def rpcPatchSource(f: File, edits: List[PatchOp]): Unit
 
-  def rpcTypecheckFiles(fs: List[SourceFileInfo], async: Boolean): Unit
-  def rpcRemoveFile(f: String): Unit
+  def rpcTypecheckFile(fileInfo: SourceFileInfo): Unit
+  def rpcTypecheckFiles(fs: List[File]): Unit
+  def rpcRemoveFile(f: File): Unit
   def rpcUnloadAll(): Unit
   def rpcTypecheckAll(): Unit
-  def rpcCompletionsAtPoint(fileInfo: SourceFileInfo, point: Int, maxResults: Int, caseSens: Boolean): CompletionInfoList
+  def rpcCompletionsAtPoint(fileInfo: SourceFileInfo, point: Int, maxResults: Int, caseSens: Boolean, reload: Boolean): CompletionInfoList
   def rpcPackageMemberCompletion(path: String, prefix: String): List[CompletionInfo]
 
   /**
@@ -61,7 +64,7 @@ trait EnsimeApi {
    * @param range The range in the file to inspect.
    * @return Some(TypeInspectInfo) if the range represents a valid type, None otherwise
    */
-  def rpcInspectTypeAtPoint(fileName: String, range: OffsetRange): Option[TypeInspectInfo]
+  def rpcInspectTypeAtPoint(fileName: File, range: OffsetRange): Option[TypeInspectInfo]
 
   /**
    * Lookup detailed type description by typeId
@@ -77,7 +80,7 @@ trait EnsimeApi {
    */
   def rpcInspectTypeByName(typeFQN: String): Option[TypeInspectInfo]
 
-  def rpcSymbolAtPoint(fileName: String, point: Int): Option[SymbolInfo]
+  def rpcSymbolAtPoint(fileName: File, point: Int): Option[SymbolInfo]
 
   /**
    * Lookup a detailed symbol description.
@@ -88,24 +91,24 @@ trait EnsimeApi {
   def rpcSymbolByName(fullyQualifiedName: String, memberName: Option[String], signatureString: Option[String]): Option[SymbolInfo]
   def rpcTypeById(id: Int): Option[TypeInfo]
   def rpcTypeByName(name: String): Option[TypeInfo]
-  def rpcTypeByNameAtPoint(name: String, f: String, range: OffsetRange): Option[TypeInfo]
+  def rpcTypeByNameAtPoint(name: String, f: File, range: OffsetRange): Option[TypeInfo]
   def rpcCallCompletion(id: Int): Option[CallCompletionInfo]
-  def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int): ImportSuggestions
-  def rpcDocSignatureAtPoint(f: String, point: OffsetRange): Option[DocSigPair]
+  def rpcImportSuggestions(f: File, point: Int, names: List[String], maxResults: Int): ImportSuggestions
+  def rpcDocSignatureAtPoint(f: File, point: OffsetRange): Option[DocSigPair]
   def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[DocSigPair]
-  def rpcDocUriAtPoint(f: String, point: OffsetRange): Option[String]
+  def rpcDocUriAtPoint(f: File, point: OffsetRange): Option[String]
   def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[String]
   def rpcPublicSymbolSearch(names: List[String], maxResults: Int): SymbolSearchResults
-  def rpcUsesOfSymAtPoint(f: String, point: Int): List[ERangePosition]
-  def rpcTypeAtPoint(f: String, range: OffsetRange): Option[TypeInfo]
+  def rpcUsesOfSymAtPoint(f: File, point: Int): List[ERangePosition]
+  def rpcTypeAtPoint(f: File, range: OffsetRange): Option[TypeInfo]
   def rpcInspectPackageByPath(path: String): Option[PackageInfo]
 
   def rpcPrepareRefactor(procId: Int, refactorDesc: RefactorDesc): Either[RefactorFailure, RefactorEffect]
   def rpcExecRefactor(procId: Int, refactorType: Symbol): Either[RefactorFailure, RefactorResult]
   def rpcCancelRefactor(procId: Int): Unit
 
-  def rpcExpandSelection(filename: String, start: Int, stop: Int): FileRange
-  def rpcFormatFiles(filenames: List[String]): Unit
+  def rpcExpandSelection(filename: File, start: Int, stop: Int): FileRange
+  def rpcFormatFiles(filenames: List[File]): Unit
   def rpcFormatFile(fileInfo: SourceFileInfo): String
 
   def rpcDebugStartVM(commandLine: String): DebugVmStatus
@@ -113,8 +116,8 @@ trait EnsimeApi {
   def rpcDebugStopVM(): Boolean
   def rpcDebugRun(): Boolean
   def rpcDebugContinue(threadId: DebugThreadId): Boolean
-  def rpcDebugSetBreakpoint(file: String, line: Int): Unit
-  def rpcDebugClearBreakpoint(file: String, line: Int): Unit
+  def rpcDebugSetBreakpoint(file: File, line: Int): Unit
+  def rpcDebugClearBreakpoint(file: File, line: Int): Unit
   def rpcDebugClearAllBreakpoints(): Unit
   def rpcDebugListBreakpoints(): BreakpointList
   def rpcDebugNext(threadId: DebugThreadId): Boolean

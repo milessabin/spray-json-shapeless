@@ -1,11 +1,15 @@
 package org.ensime.core
 
+import akka.event.LoggingReceive
+import java.io.File
+
 import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
 import org.ensime.indexer._
 import org.ensime.model._
 import org.ensime.util._
+import org.ensime.server.protocol._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -55,6 +59,9 @@ class Project(
   }
 
   private var undoCounter = 0
+
+  // undos probably shouldn't be stored here. It makes more sense to
+  // store them where they are used.
   private val undos: mutable.LinkedHashMap[Int, Undo] = new mutable.LinkedHashMap[Int, Undo]
 
   class ProjectActor extends Actor {
@@ -76,7 +83,7 @@ class Project(
 
     override def receive: Receive = waiting orElse ready
 
-    private val ready: Receive = {
+    private val ready: Receive = LoggingReceive.withLabel("ready") {
       case Retypecheck =>
         log.warn("Re-typecheck needed")
         analyzer.foreach(_ ! ReloadExistingFilesEvent)
@@ -121,7 +128,7 @@ class Project(
       }
     }
 
-    private[this] val waiting: Receive = {
+    private[this] val waiting: Receive = LoggingReceive.withLabel("waiting") {
       case SubscribeAsync(handler) =>
         asyncListeners ::= handler
         asyncEvents.foreach { event => handler(event) }
@@ -147,7 +154,7 @@ class Project(
     undos.get(undoId) match {
       case Some(u) =>
         undos.remove(u.id)
-        callRPC[Either[String, UndoResult]](getAnalyzer, ExecUndoReq(u))
+        callRPC[Either[String, UndoResult]](getAnalyzer, DoExecUndo(u))
       case _ => Left("No such undo.")
     }
   }

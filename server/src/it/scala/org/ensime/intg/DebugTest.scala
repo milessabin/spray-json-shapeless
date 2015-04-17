@@ -62,9 +62,9 @@ class DebugTest extends WordSpec with Matchers with Inside
         }
 
         //            val bp11 = session.addLineBreakpoint(BP_TYPENAME, 11)
-        project.rpcDebugSetBreakpoint(breakpointsPath, 11)
+        project.rpcDebugSetBreakpoint(breakpointsFile, 11)
         //            val bp13 = session.addLineBreakpoint(BP_TYPENAME, 13)
-        project.rpcDebugSetBreakpoint(breakpointsPath, 13)
+        project.rpcDebugSetBreakpoint(breakpointsFile, 13)
         try {
           //              session.waitForBreakpointsToBeEnabled(bp11, bp13)
 
@@ -81,7 +81,7 @@ class DebugTest extends WordSpec with Matchers with Inside
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 13))
 
           //              bp11.setEnabled(false)
-          project.rpcDebugClearBreakpoint(breakpointsPath, 11)
+          project.rpcDebugClearBreakpoint(breakpointsFile, 11)
           //              session.waitForBreakpointsToBeDisabled(bp11)
           //
           //              session.resumetoSuspension()
@@ -90,8 +90,8 @@ class DebugTest extends WordSpec with Matchers with Inside
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 13))
           //
           //              bp11.setEnabled(true); bp13.setEnabled(false)
-          project.rpcDebugSetBreakpoint(breakpointsPath, 11)
-          project.rpcDebugClearBreakpoint(breakpointsPath, 13)
+          project.rpcDebugSetBreakpoint(breakpointsFile, 11)
+          project.rpcDebugClearBreakpoint(breakpointsFile, 13)
           //
           //              session.waitForBreakpointsToBeEnabled(bp11)
           //              session.waitForBreakpointsToBeDisabled(bp13)
@@ -131,8 +131,8 @@ class DebugTest extends WordSpec with Matchers with Inside
         }
 
         // break in main
-        project.rpcDebugSetBreakpoint(breakpointsPath, 11)
-        project.rpcDebugSetBreakpoint(breakpointsPath, 13)
+        project.rpcDebugSetBreakpoint(breakpointsFile, 11)
+        project.rpcDebugSetBreakpoint(breakpointsFile, 13)
 
         // breakpoints should now be active
         inside(project.rpcDebugListBreakpoints()) {
@@ -244,14 +244,14 @@ trait DebugTestUtils {
     val config = project.config
     val resolvedFile = scalaMain(server.config) / fileName
 
-    project.rpcDebugSetBreakpoint(fileName, breakLine)
+    project.rpcDebugSetBreakpoint(resolvedFile, breakLine)
 
     val startStatus = project.rpcDebugStartVM(className)
     assert(startStatus == DebugVmSuccess())
 
     val expect = DebugBreakEvent(DebugThreadId(1), "main", resolvedFile, breakLine)
     asyncHelper.expectAsync(10 seconds, expect)
-    project.rpcDebugClearBreakpoint(fileName, breakLine)
+    project.rpcDebugClearBreakpoint(resolvedFile, breakLine)
 
     try {
       f(server, asyncHelper, resolvedFile)

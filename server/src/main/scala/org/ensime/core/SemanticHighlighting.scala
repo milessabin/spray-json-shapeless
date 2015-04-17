@@ -1,5 +1,6 @@
 package org.ensime.core
 
+import java.io.File
 import org.ensime.model._
 import org.slf4j.LoggerFactory
 
@@ -149,16 +150,16 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
 
   def symbolDesignationsInRegion(
     p: RangePosition,
-    requestedTypes: Set[SourceSymbol]): SymbolDesignations = {
+    requestedTypes: List[SourceSymbol]): SymbolDesignations = {
     val typed = new Response[global.Tree]
     global.askLoadedTyped(p.source, keepLoaded = true, typed)
     typed.get.left.toOption match {
       case Some(tree) =>
-        val traverser = new SymDesigsTraverser(p, requestedTypes)
+        val traverser = new SymDesigsTraverser(p, requestedTypes.toSet)
         traverser.traverse(tree)
-        SymbolDesignations(p.source.file.path, traverser.syms.toList)
+        SymbolDesignations(p.source.file.file, traverser.syms.toList)
       case None =>
-        SymbolDesignations("", List.empty)
+        SymbolDesignations(new File("."), List.empty)
     }
   }
 

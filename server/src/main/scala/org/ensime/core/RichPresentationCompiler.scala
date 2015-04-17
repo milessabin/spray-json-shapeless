@@ -153,9 +153,9 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
     askOption(usesOfSymbolAtPoint(p).toList).getOrElse(List.empty)
 
   // force the full path of Set because nsc appears to have a conflicting Set....
-  def askSymbolDesignationsInRegion(p: RangePosition, tpes: collection.immutable.Set[SourceSymbol]): SymbolDesignations =
+  def askSymbolDesignationsInRegion(p: RangePosition, tpes: List[SourceSymbol]): SymbolDesignations =
     askOption(
-      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations("", List.empty))
+      new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)).getOrElse(SymbolDesignations(new File("."), List.empty))
 
   def askClearTypeCache(): Unit = clearTypeCache()
 
@@ -164,9 +164,9 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
   def createSourceFile(path: String) = getSourceFile(path)
   def createSourceFile(file: AbstractFile) = getSourceFile(file)
   def createSourceFile(file: SourceFileInfo) = file match {
-    case FileSourceFileInfo(f: File) => getSourceFile(f.getCanonicalPath)
-    case ContentsSourceFileInfo(f: File, contents: String) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
-    case ContentsInSourceFileInfo(f: File, contentsIn: File) =>
+    case SourceFileInfo(f, None, None) => getSourceFile(f.getCanonicalPath)
+    case SourceFileInfo(f, Some(contents), None) => new BatchSourceFile(AbstractFile.getFile(f.getCanonicalPath), contents)
+    case SourceFileInfo(f, None, Some(contentsIn)) =>
       val contents = FileUtils.readFile(contentsIn, charset) match {
         case Right(contentStr) => contentStr
         case Left(e) => throw e

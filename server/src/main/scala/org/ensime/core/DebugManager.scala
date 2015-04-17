@@ -1,5 +1,6 @@
 package org.ensime.core
 
+import akka.event.LoggingReceive
 import java.io.{ File, InputStream, InputStreamReader }
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
@@ -8,7 +9,7 @@ import com.sun.jdi.event._
 import com.sun.jdi.request.{ EventRequest, EventRequestManager, StepRequest }
 import org.ensime.config._
 import org.ensime.model._
-import org.ensime.server.protocol.ProtocolConst
+import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
 import org.ensime.util._
 
@@ -54,26 +55,26 @@ class DebugManager(
     for (breaks <- pendingBreaksBySourceName.get(sourceName)) {
       val toTry = mutable.HashSet() ++ breaks
       for (bp <- toTry) {
-        setBreakpoint(CanonFile(bp.file), bp.line)
+        setBreakpoint(bp.file, bp.line)
       }
     }
   }
 
-  def setBreakpoint(file: CanonFile, line: Int): Boolean = {
+  def setBreakpoint(file: File, line: Int): Boolean = {
     if ((for (vm <- maybeVM) yield {
       vm.setBreakpoint(file, line)
     }).getOrElse { false }) {
-      activeBreakpoints.add(Breakpoint(file.file, line))
+      activeBreakpoints.add(Breakpoint(file, line))
       true
     } else {
-      addPendingBreakpoint(Breakpoint(file.file, line))
+      addPendingBreakpoint(Breakpoint(file, line))
       false
     }
   }
 
-  def clearBreakpoint(file: CanonFile, line: Int): Unit = {
-    val clearBp = Breakpoint(file.file, line)
-    for (bps <- pendingBreaksBySourceName.get(file.file.getName)) {
+  def clearBreakpoint(file: File, line: Int): Unit = {
+    val clearBp = Breakpoint(file, line)
+    for (bps <- pendingBreaksBySourceName.get(file.getName)) {
       bps.retain { _ != clearBp }
     }
     val toRemove = activeBreakpoints.filter { _ == clearBp }
@@ -175,7 +176,7 @@ class DebugManager(
     project ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
   }
 
-  override def receive = {
+  override def receive = LoggingReceive {
     case x: Any =>
       try {
         processMsg(x)
@@ -241,7 +242,7 @@ class DebugManager(
           case e: MethodExitEvent =>
           case _ =>
         }
-      case req: RPCRequest =>
+      case req: RpcRequest =>
         try {
           def handleStartupFailure(e: Exception): Unit = {
             maybeVM = None
@@ -251,7 +252,7 @@ class DebugManager(
           }
 
           req match {
-            case DebugStartVMReq(commandLine: String) ⇒
+            case DebugStartReq(commandLine: String) ⇒
               withVM { vm ⇒
                 vm.dispose()
               }
@@ -265,7 +266,7 @@ class DebugManager(
                   log.error(e, "Could not start VM")
                   handleStartupFailure(e)
               }
-            case DebugAttachVMReq(hostname, port) ⇒
+            case DebugAttachReq(hostname, port) ⇒
               withVM { vm ⇒
                 vm.dispose()
               }
@@ -279,12 +280,12 @@ class DebugManager(
                   log.error(e, "Could not attach VM")
                   handleStartupFailure(e)
               }
-            case DebugActiveVMReq =>
+            case DebugActiveVmReq =>
               handleRPCWithVM() { vm =>
                 sender ! true
               }
 
-            case DebugStopVMReq =>
+            case DebugStopReq =>
               handleRPCWithVM() { vm =>
                 vm.dispose()
                 sender ! true
@@ -301,18 +302,16 @@ class DebugManager(
                   vm.resume()
                   sender ! true
               }
-            case DebugSetBreakpointReq(filePath: String, line: Int) =>
-              val file = CanonFile(filePath)
+            case DebugSetBreakReq(file, line: Int) =>
               if (!setBreakpoint(file, line)) {
                 bgMessage("Location not loaded. Set pending breakpoint.")
               }
               sender ! VoidResponse
-            case DebugClearBreakpointReq(filePath: String, line: Int) =>
-              val file = CanonFile(filePath)
+            case DebugClearBreakReq(file, line: Int) =>
               clearBreakpoint(file, line)
               sender ! VoidResponse
 
-            case DebugClearAllBreakpointsReq =>
+            case DebugClearAllBreaksReq =>
               clearAllBreakpoints()
               sender ! VoidResponse
 
@@ -380,6 +379,11 @@ class DebugManager(
                     sender ! false
                 }
               }
+
+            case unexpected =>
+              // TODO compiler blew up... too many missing cases
+              require(false, unexpected.toString)
+
           }
         } catch {
           case e: Throwable =>
@@ -513,7 +517,7 @@ class DebugManager(
       vm.resume()
     }
 
-    def setBreakpoint(file: CanonFile, line: Int): Boolean = {
+    def setBreakpoint(file: File, line: Int): Boolean = {
       val locs = locations(file, line)
       if (locs.nonEmpty) {
         bgMessage("Resolved breakpoint at: " + file + " : " + line)
@@ -565,7 +569,7 @@ class DebugManager(
       }
     }
 
-    def locations(file: CanonFile, line: Int): Set[Location] = {
+    def locations(file: File, line: Int): Set[Location] = {
 
       // Group locations by file and line
       case class LocationClass(loc: Location) {
@@ -580,7 +584,7 @@ class DebugManager(
       }
 
       val buf = mutable.HashSet[LocationClass]()
-      val key = file.file.getName
+      val key = file.getName
       for (types <- fileToUnits.get(key)) {
         for (t <- types) {
           for (m <- t.methods()) {

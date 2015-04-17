@@ -7,7 +7,7 @@ import akka.pattern.ask
 import org.ensime.EnsimeApi
 import org.ensime.model._
 import org.ensime.server.ConnectionInfo
-import org.ensime.server.protocol.ProtocolConst
+import org.ensime.server.protocol._
 import org.ensime.util._
 import shapeless.Typeable
 import shapeless.syntax.typeable._
@@ -19,11 +19,11 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
 
   val defaultMaxWait: FiniteDuration = 30.seconds
 
-  def callVoidRPC(target: ActorRef, request: RPCRequest, maxWait: FiniteDuration = defaultMaxWait): Unit = {
+  def callVoidRPC(target: ActorRef, request: RpcRequest, maxWait: FiniteDuration = defaultMaxWait): Unit = {
     callRPC[VoidResponse.type](target, request, maxWait)
   }
 
-  def callRPC[R](target: ActorRef, request: RPCRequest, maxWait: FiniteDuration = defaultMaxWait)(implicit typ: Typeable[R]): R = {
+  def callRPC[R](target: ActorRef, request: RpcRequest, maxWait: FiniteDuration = defaultMaxWait)(implicit typ: Typeable[R]): R = {
     val future = target.ask(request)(maxWait)
     val result = Await.result(future, maxWait)
     result match {
@@ -66,22 +66,21 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     new ReplConfig(config.runtimeClasspath)
   }
 
-  override def rpcSymbolDesignations(f: String, start: Int, end: Int,
-    requestedTypes: Set[SourceSymbol]): SymbolDesignations = {
-    val file: File = new File(f)
+  override def rpcSymbolDesignations(file: File, start: Int, end: Int,
+    requestedTypes: List[SourceSymbol]): SymbolDesignations = {
     callRPC[SymbolDesignations](getAnalyzer, SymbolDesignationsReq(file, start, end, requestedTypes))
   }
 
   override def rpcDebugStartVM(commandLine: String): DebugVmStatus = {
-    callRPC[DebugVmStatus](acquireDebugger, DebugStartVMReq(commandLine))
+    callRPC[DebugVmStatus](acquireDebugger, DebugStartReq(commandLine))
   }
 
   override def rpcDebugAttachVM(hostname: String, port: String): DebugVmStatus = {
-    callRPC[DebugVmStatus](acquireDebugger, DebugAttachVMReq(hostname, port))
+    callRPC[DebugVmStatus](acquireDebugger, DebugAttachReq(hostname, port))
   }
 
   override def rpcDebugStopVM(): Boolean = {
-    callRPC[Boolean](acquireDebugger, DebugStopVMReq)
+    callRPC[Boolean](acquireDebugger, DebugStopReq)
   }
 
   override def rpcDebugRun(): Boolean = {
@@ -92,16 +91,16 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Boolean](acquireDebugger, DebugContinueReq(threadId))
   }
 
-  override def rpcDebugSetBreakpoint(file: String, line: Int): Unit = {
-    callVoidRPC(acquireDebugger, DebugSetBreakpointReq(file, line))
+  override def rpcDebugSetBreakpoint(file: File, line: Int): Unit = {
+    callVoidRPC(acquireDebugger, DebugSetBreakReq(file, line))
   }
 
-  override def rpcDebugClearBreakpoint(file: String, line: Int): Unit = {
-    callVoidRPC(acquireDebugger, DebugClearBreakpointReq(file, line))
+  override def rpcDebugClearBreakpoint(file: File, line: Int): Unit = {
+    callVoidRPC(acquireDebugger, DebugClearBreakReq(file, line))
   }
 
   override def rpcDebugClearAllBreakpoints(): Unit = {
-    callVoidRPC(acquireDebugger, DebugClearAllBreakpointsReq)
+    callVoidRPC(acquireDebugger, DebugClearAllBreaksReq)
   }
 
   override def rpcDebugListBreakpoints(): BreakpointList = {
@@ -141,20 +140,22 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
   }
 
   override def rpcDebugActiveVM(): Boolean = {
-    callRPC[Boolean](acquireDebugger, DebugActiveVMReq)
+    callRPC[Boolean](acquireDebugger, DebugActiveVmReq)
   }
 
-  override def rpcPatchSource(f: String, edits: List[PatchOp]): Unit = {
-    val file: File = new File(f)
+  override def rpcPatchSource(file: File, edits: List[PatchOp]): Unit = {
     callVoidRPC(getAnalyzer, PatchSourceReq(file, edits))
   }
 
-  override def rpcTypecheckFiles(fs: List[SourceFileInfo], async: Boolean): Unit = {
-    callVoidRPC(getAnalyzer, ReloadFilesReq(fs, async))
+  override def rpcTypecheckFile(fileInfo: SourceFileInfo): Unit = {
+    callVoidRPC(getAnalyzer, TypecheckFileReq(fileInfo))
   }
 
-  override def rpcRemoveFile(f: String): Unit = {
-    val file: File = new File(f)
+  override def rpcTypecheckFiles(fs: List[File]): Unit = {
+    callVoidRPC(getAnalyzer, TypecheckFilesReq(fs))
+  }
+
+  override def rpcRemoveFile(file: File): Unit = {
     callVoidRPC(getAnalyzer, RemoveFileReq(file))
   }
 
@@ -163,21 +164,21 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
   }
 
   override def rpcTypecheckAll(): Unit = {
-    callVoidRPC(getAnalyzer, ReloadAllReq)
+    callVoidRPC(getAnalyzer, TypecheckAllReq)
   }
 
   override def rpcCompletionsAtPoint(fileInfo: SourceFileInfo, point: Int, maxResults: Int,
-    caseSens: Boolean): CompletionInfoList = {
+    caseSens: Boolean, reload: Boolean): CompletionInfoList = {
 
-    callRPC[CompletionInfoList](getAnalyzer, CompletionsReq(fileInfo, point, maxResults, caseSens))
+    callRPC[CompletionInfoList](getAnalyzer, CompletionsReq(fileInfo, point, maxResults, caseSens, reload))
   }
 
   override def rpcPackageMemberCompletion(path: String, prefix: String): List[CompletionInfo] = {
     callRPC[List[CompletionInfo]](getAnalyzer, PackageMemberCompletionReq(path, prefix))
   }
 
-  override def rpcInspectTypeAtPoint(f: String, range: OffsetRange): Option[TypeInspectInfo] = {
-    callRPC[Option[TypeInspectInfo]](getAnalyzer, InspectTypeReq(new File(f), range))
+  override def rpcInspectTypeAtPoint(f: File, range: OffsetRange): Option[TypeInspectInfo] = {
+    callRPC[Option[TypeInspectInfo]](getAnalyzer, InspectTypeAtPointReq(f, range))
   }
 
   override def rpcInspectTypeById(id: Int): Option[TypeInspectInfo] = {
@@ -188,8 +189,8 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[TypeInspectInfo]](getAnalyzer, InspectTypeByNameReq(typeFQN))
   }
 
-  override def rpcSymbolAtPoint(fileName: String, point: Int): Option[SymbolInfo] = {
-    callRPC[Option[SymbolInfo]](getAnalyzer, SymbolAtPointReq(new File(fileName), point))
+  override def rpcSymbolAtPoint(file: File, point: Int): Option[SymbolInfo] = {
+    callRPC[Option[SymbolInfo]](getAnalyzer, SymbolAtPointReq(file, point))
   }
 
   override def rpcTypeById(typeId: Int): Option[TypeInfo] = {
@@ -200,32 +201,32 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Option[TypeInfo]](getAnalyzer, TypeByNameReq(name))
   }
 
-  override def rpcTypeByNameAtPoint(name: String, f: String, range: OffsetRange): Option[TypeInfo] = {
-    callRPC[Option[TypeInfo]](getAnalyzer, TypeByNameAtPointReq(name, new File(f), range))
+  override def rpcTypeByNameAtPoint(name: String, file: File, range: OffsetRange): Option[TypeInfo] = {
+    callRPC[Option[TypeInfo]](getAnalyzer, TypeByNameAtPointReq(name, file, range))
   }
 
   override def rpcCallCompletion(typeId: Int): Option[CallCompletionInfo] = {
     callRPC[Option[CallCompletionInfo]](getAnalyzer, CallCompletionReq(typeId))
   }
 
-  override def rpcImportSuggestions(f: String, point: Int, names: List[String], maxResults: Int): ImportSuggestions = {
-    callRPC[ImportSuggestions](indexer, ImportSuggestionsReq(new File(f), point, names, maxResults))
+  override def rpcImportSuggestions(file: File, point: Int, names: List[String], maxResults: Int): ImportSuggestions = {
+    callRPC[ImportSuggestions](indexer, ImportSuggestionsReq(file, point, names, maxResults))
   }
 
-  override def rpcDocSignatureAtPoint(f: String, range: OffsetRange): Option[DocSigPair] = {
-    callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureAtPointReq(new File(f), range))
+  override def rpcDocSignatureAtPoint(file: File, range: OffsetRange): Option[DocSigPair] = {
+    callRPC[Option[DocSigPair]](getAnalyzer, DocUriAtPointReq(file, range))
   }
 
   override def rpcDocSignatureForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[DocSigPair] = {
-    callRPC[Option[DocSigPair]](getAnalyzer, DocSignatureForSymbolReq(typeFullName, memberName, signatureString))
+    callRPC[Option[DocSigPair]](getAnalyzer, DocUriForSymbolReq(typeFullName, memberName, signatureString))
   }
 
   override def rpcSymbolByName(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[SymbolInfo] = {
     callRPC[Option[SymbolInfo]](getAnalyzer, SymbolByNameReq(typeFullName, memberName, signatureString))
   }
 
-  override def rpcDocUriAtPoint(f: String, range: OffsetRange): Option[String] = {
-    rpcDocSignatureAtPoint(f, range).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
+  override def rpcDocUriAtPoint(file: File, range: OffsetRange): Option[String] = {
+    rpcDocSignatureAtPoint(file, range).flatMap { sig => callRPC[Option[String]](docServer, DocUriReq(sig)) }
   }
 
   override def rpcDocUriForSymbol(typeFullName: String, memberName: Option[String], signatureString: Option[String]): Option[String] = {
@@ -236,12 +237,12 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[SymbolSearchResults](indexer, PublicSymbolSearchReq(names, maxResults))
   }
 
-  override def rpcUsesOfSymAtPoint(f: String, point: Int): List[ERangePosition] = {
-    callRPC[List[ERangePosition]](getAnalyzer, UsesOfSymAtPointReq(new File(f), point))
+  override def rpcUsesOfSymAtPoint(file: File, point: Int): List[ERangePosition] = {
+    callRPC[List[ERangePosition]](getAnalyzer, UsesOfSymbolAtPointReq(file, point))
   }
 
-  override def rpcTypeAtPoint(f: String, range: OffsetRange): Option[TypeInfo] = {
-    callRPC[Option[TypeInfo]](getAnalyzer, TypeAtPointReq(new File(f), range))
+  override def rpcTypeAtPoint(file: File, range: OffsetRange): Option[TypeInfo] = {
+    callRPC[Option[TypeInfo]](getAnalyzer, TypeAtPointReq(file, range))
   }
 
   override def rpcInspectPackageByPath(path: String): Option[PackageInfo] = {
@@ -249,26 +250,26 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
   }
 
   override def rpcPrepareRefactor(procId: Int, refactorDesc: RefactorDesc): Either[RefactorFailure, RefactorEffect] = {
-    callRPC[Either[RefactorFailure, RefactorEffect]](getAnalyzer, RefactorPrepareReq(procId, refactorDesc))
+    callRPC[Either[RefactorFailure, RefactorEffect]](getAnalyzer, PrepareRefactorReq(procId, null, refactorDesc, interactive = false))
   }
 
   override def rpcExecRefactor(procId: Int, refactorType: Symbol): Either[RefactorFailure, RefactorResult] = {
-    callRPC[Either[RefactorFailure, RefactorResult]](getAnalyzer, RefactorExecReq(procId, refactorType))
+    callRPC[Either[RefactorFailure, RefactorResult]](getAnalyzer, ExecRefactorReq(procId, refactorType))
   }
 
   override def rpcCancelRefactor(procId: Int): Unit = {
-    callVoidRPC(getAnalyzer, RefactorCancelReq(procId))
+    callVoidRPC(getAnalyzer, CancelRefactorReq(procId))
   }
 
-  override def rpcExpandSelection(filename: String, start: Int, stop: Int): FileRange = {
-    callRPC[FileRange](getAnalyzer, ExpandSelectionReq(filename, start, stop))
+  override def rpcExpandSelection(file: File, start: Int, stop: Int): FileRange = {
+    callRPC[FileRange](getAnalyzer, ExpandSelectionReq(file, start, stop))
   }
 
-  override def rpcFormatFiles(filenames: List[String]): Unit = {
-    callVoidRPC(getAnalyzer, FormatFilesReq(filenames))
+  override def rpcFormatFiles(files: List[File]): Unit = {
+    callVoidRPC(getAnalyzer, FormatSourceReq(files))
   }
 
   override def rpcFormatFile(fileInfo: SourceFileInfo): String = {
-    callRPC[String](getAnalyzer, FormatFileReq(fileInfo))
+    callRPC[String](getAnalyzer, FormatOneSourceReq(fileInfo))
   }
 }
