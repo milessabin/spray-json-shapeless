@@ -1,5 +1,6 @@
 # Before Opening an Issue
 
+* if the problem is related to the update stage or a dodgy ENSIME classpath, try nuking your ivy cache and `ensime-reload`.
 * check the [tickets flagged as FAQ](https://github.com/ensime/ensime-server/issues?labels=FAQ).
 * check the [most recently updated tickets](http://github.com/ensime/ensime-server/issues?direction=desc&sort=updated).
 * do a few keyword searches using the github search (top of the page) to see if anybody has reported this already.
