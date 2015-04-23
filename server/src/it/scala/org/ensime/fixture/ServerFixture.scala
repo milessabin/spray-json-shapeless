@@ -15,13 +15,13 @@ object ServerFixture {
 
     val (server, readyFut) = Server.initialiseServer(config)
 
-    val connInfo = server.project.rpcConnectionInfo()
+    val connInfo = server.project.connectionInfo()
     assert(connInfo.pid == None)
     assert(connInfo.implementation.name == "ENSIME")
 
     val asyncHelper = new AsyncMsgHelper(sys)
 
-    server.project.rpcSubscribeAsync(event => { asyncHelper.asyncReceived(event) })
+    server.project.subscribeAsync(event => { asyncHelper.asyncReceived(event) })
 
     asyncHelper.expectAsync(60 seconds, AnalyzerReadyEvent) // compiler ready
     asyncHelper.expectAsync(60 seconds, FullTypeCheckCompleteEvent)

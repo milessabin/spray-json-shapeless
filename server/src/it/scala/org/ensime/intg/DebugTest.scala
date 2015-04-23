@@ -31,7 +31,7 @@ class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSys
     ) { (server, _, _) =>
         implicit val s = server
         checkTopStackFrame("stepping.ForComprehensionListString$", "main", 9)
-        server.project.rpcDebugNext(DebugThreadId(1))
+        server.project.debugNext(DebugThreadId(1))
         checkTopStackFrame("stepping.ForComprehensionListString$$anonfun$main$1", "apply", 10)
       }
   }
@@ -46,7 +46,7 @@ class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSys
         val project = server.project
         val breakpointsPath = breakpointsFile.getAbsolutePath
 
-        project.rpcDebugBacktrace(DebugThreadId(1), 0, 3) should matchPattern {
+        project.debugBacktrace(DebugThreadId(1), 0, 3) should matchPattern {
           case DebugBacktrace(List(
             DebugStackFrame(0, List(), 0, "breakpoints.Breakpoints", "mainTest",
               LineSourcePosition(`breakpointsFile`, 32), _),
@@ -60,51 +60,51 @@ class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSys
         }
 
         //            val bp11 = session.addLineBreakpoint(BP_TYPENAME, 11)
-        project.rpcDebugSetBreakpoint(breakpointsFile, 11)
+        project.debugSetBreakpoint(breakpointsFile, 11)
         //            val bp13 = session.addLineBreakpoint(BP_TYPENAME, 13)
-        project.rpcDebugSetBreakpoint(breakpointsFile, 13)
+        project.debugSetBreakpoint(breakpointsFile, 13)
         try {
           //              session.waitForBreakpointsToBeEnabled(bp11, bp13)
 
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
 
-          project.rpcDebugContinue(DebugThreadId(1))
+          project.debugContinue(DebugThreadId(1))
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
 
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
 
-          project.rpcDebugContinue(DebugThreadId(1))
+          project.debugContinue(DebugThreadId(1))
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 13))
 
           //              bp11.setEnabled(false)
-          project.rpcDebugClearBreakpoint(breakpointsFile, 11)
+          project.debugClearBreakpoint(breakpointsFile, 11)
           //              session.waitForBreakpointsToBeDisabled(bp11)
           //
           //              session.resumetoSuspension()
-          project.rpcDebugContinue(DebugThreadId(1))
+          project.debugContinue(DebugThreadId(1))
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 13))
           //
           //              bp11.setEnabled(true); bp13.setEnabled(false)
-          project.rpcDebugSetBreakpoint(breakpointsFile, 11)
-          project.rpcDebugClearBreakpoint(breakpointsFile, 13)
+          project.debugSetBreakpoint(breakpointsFile, 11)
+          project.debugClearBreakpoint(breakpointsFile, 13)
           //
           //              session.waitForBreakpointsToBeEnabled(bp11)
           //              session.waitForBreakpointsToBeDisabled(bp13)
           //
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
-          project.rpcDebugContinue(DebugThreadId(1))
+          project.debugContinue(DebugThreadId(1))
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
           //
           //              session.resumetoSuspension()
           //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 11)
-          project.rpcDebugContinue(DebugThreadId(1))
+          project.debugContinue(DebugThreadId(1))
           asyncHelper.expectAsync(60 seconds, DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
           //
-          project.rpcDebugContinue(DebugThreadId(1))
+          project.debugContinue(DebugThreadId(1))
           //asyncHelper.expectAsync(60 seconds, DebugVMDisconnectEvent)
           //              session.resumeToCompletion()
         } finally {
@@ -124,16 +124,16 @@ class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSys
 
         // TODO: test listing/clearing pending breakpoints (i.e. before we connect)
 
-        project.rpcDebugListBreakpoints() should matchPattern {
+        project.debugListBreakpoints() should matchPattern {
           case BreakpointList(Nil, Nil) =>
         }
 
         // break in main
-        project.rpcDebugSetBreakpoint(breakpointsFile, 11)
-        project.rpcDebugSetBreakpoint(breakpointsFile, 13)
+        project.debugSetBreakpoint(breakpointsFile, 11)
+        project.debugSetBreakpoint(breakpointsFile, 13)
 
         // breakpoints should now be active
-        inside(project.rpcDebugListBreakpoints()) {
+        inside(project.debugListBreakpoints()) {
           case BreakpointList(activeBreakpoints, pendingBreakpoints) =>
             activeBreakpoints should contain theSameElementsAs Set(
               Breakpoint(breakpointsFile, 11), Breakpoint(breakpointsFile, 13)
@@ -142,8 +142,8 @@ class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSys
         }
 
         // check clear works again
-        project.rpcDebugClearAllBreakpoints()
-        project.rpcDebugListBreakpoints() should matchPattern {
+        project.debugClearAllBreakpoints()
+        project.debugListBreakpoints() should matchPattern {
           case BreakpointList(Nil, Nil) =>
         }
       }
@@ -247,24 +247,24 @@ trait DebugTestUtils {
         val config = project.config
         val resolvedFile = scalaMain(server.config) / fileName
 
-        project.rpcDebugSetBreakpoint(resolvedFile, breakLine)
+        project.debugSetBreakpoint(resolvedFile, breakLine)
 
-        val startStatus = project.rpcDebugStartVM(className)
+        val startStatus = project.debugStartVM(className)
         assert(startStatus == DebugVmSuccess())
 
         val expect = DebugBreakEvent(DebugThreadId(1), "main", resolvedFile, breakLine)
         asyncHelper.expectAsync(10 seconds, expect)
-        project.rpcDebugClearBreakpoint(resolvedFile, breakLine)
+        project.debugClearBreakpoint(resolvedFile, breakLine)
 
         try {
           f(server, asyncHelper, resolvedFile)
         } finally {
-          project.rpcDebugClearAllBreakpoints() // otherwise we can have pending
+          project.debugClearAllBreakpoints() // otherwise we can have pending
 
           // no way to await the stopped condition so we let the app run
           // its course on the main thread
-          project.rpcDebugContinue(DebugThreadId(1))
-          project.rpcDebugStopVM()
+          project.debugContinue(DebugThreadId(1))
+          project.debugStopVM()
 
           //asyncHelper.expectAsync(30 seconds, DebugVMDisconnectEvent)
         }
@@ -274,12 +274,12 @@ trait DebugTestUtils {
 
   def getVariableValue(threadId: DebugThreadId, variableName: String)(implicit server: Server): DebugValue = {
     val project = server.project
-    val vLocOpt = project.rpcDebugLocateName(threadId, variableName)
+    val vLocOpt = project.debugLocateName(threadId, variableName)
     val vLoc = vLocOpt.getOrThrow(
       s"unable to locate variable $variableName on thread $threadId"
     )
 
-    val vValueOpt = project.rpcDebugValue(vLoc)
+    val vValueOpt = project.debugValue(vLoc)
     val vValue = vValueOpt.getOrThrow(
       s"Unable to get value of variable $variableName"
     )
@@ -287,7 +287,7 @@ trait DebugTestUtils {
   }
 
   def checkTopStackFrame(className: String, method: String, line: Int)(implicit server: Server): Unit = {
-    server.project.rpcDebugBacktrace(DebugThreadId(1), 0, 1) should matchPattern {
+    server.project.debugBacktrace(DebugThreadId(1), 0, 1) should matchPattern {
       case DebugBacktrace(List(DebugStackFrame(0, _, 1, `className`, `method`,
         LineSourcePosition(_, `line`), _)),
         "1", "main") =>
