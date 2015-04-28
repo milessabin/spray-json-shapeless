@@ -18,7 +18,8 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
     config: EnsimeConfig,
     cc: RichCompilerControl,
     content: String,
-    tpes: List[SourceSymbol] = SourceSymbol.allSymbols): List[(SourceSymbol, String)] = {
+    tpes: List[SourceSymbol] = SourceSymbol.allSymbols
+  ): List[(SourceSymbol, String)] = {
 
     val file = srcFile(config, "abc.scala", contents(content))
     cc.askLoadedTyped(file)

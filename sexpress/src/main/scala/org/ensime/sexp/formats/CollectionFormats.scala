@@ -53,9 +53,11 @@ trait CollectionFormats {
    trick under the hood.
    */
   implicit def genTraversableFormat[T[_], E](
-    implicit evidence: T[E] <:< GenTraversable[E],
+    implicit
+    evidence: T[E] <:< GenTraversable[E],
     cbf: CanBuildFrom[T[E], E, T[E]],
-    ef: SexpFormat[E]): SexpFormat[T[E]] = new SexpFormat[T[E]] {
+    ef: SexpFormat[E]
+  ): SexpFormat[T[E]] = new SexpFormat[T[E]] {
     def write(t: T[E]) = SexpList(t.map(_.toSexp)(breakOut): List[Sexp])
 
     def read(v: Sexp): T[E] = v match {
@@ -72,15 +74,16 @@ trait CollectionFormats {
    hierarchy.
    */
   implicit def genMapFormat[M[_, _], K, V](
-    implicit ev: M[K, V] <:< GenMap[K, V],
+    implicit
+    ev: M[K, V] <:< GenMap[K, V],
     cbf: CanBuildFrom[M[K, V], (K, V), M[K, V]],
     kf: SexpFormat[K],
-    vf: SexpFormat[V]): SexpFormat[M[K, V]] = new SexpFormat[M[K, V]] {
+    vf: SexpFormat[V]
+  ): SexpFormat[M[K, V]] = new SexpFormat[M[K, V]] {
     def write(m: M[K, V]) =
       SexpList(m.map {
         case (k, v) => SexpList(k.toSexp, v.toSexp)
-      }(breakOut): List[Sexp]
-      )
+      }(breakOut): List[Sexp])
 
     def read(v: Sexp): M[K, V] = v match {
       case SexpNil => cbf().result()
@@ -157,7 +160,8 @@ trait CollectionFormats {
     def write(r: im.Range) = SexpData(
       start -> SexpNumber(r.start),
       end -> SexpNumber(r.end),
-      step -> SexpNumber(r.step))
+      step -> SexpNumber(r.step)
+    )
 
     def read(s: Sexp) = s match {
       case SexpData(data) =>
@@ -173,7 +177,8 @@ trait CollectionFormats {
   // note that the type has to be im.NumericRange[E]
   // not im.NumericRange.{Inclusive, Exclusive}[E]
   // (same problem as above, but getting the cons is trickier)
-  implicit def numericRangeFormat[E](implicit nf: SexpFormat[E],
+  implicit def numericRangeFormat[E](implicit
+    nf: SexpFormat[E],
     n: Numeric[E],
     int: Integral[E]): SexpFormat[im.NumericRange[E]] = new SexpFormat[im.NumericRange[E]] {
     def write(r: im.NumericRange[E]) = SexpData(
@@ -188,7 +193,8 @@ trait CollectionFormats {
         (data(start), data(end), data(step), data(inclusive)) match {
           case (s, e, st, incl) if BooleanFormat.read(incl) =>
             im.NumericRange.inclusive(
-              s.convertTo[E], e.convertTo[E], st.convertTo[E])
+              s.convertTo[E], e.convertTo[E], st.convertTo[E]
+            )
           case (s, e, st, incl) =>
             im.NumericRange(s.convertTo[E], e.convertTo[E], st.convertTo[E])
           case _ => deserializationError(s)

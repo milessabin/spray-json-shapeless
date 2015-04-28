@@ -16,6 +16,7 @@ trait ServerFixture {
 
 object ServerFixture {
   private[fixture] def startup(config: EnsimeConfig)(implicit sys: ActorSystem): (Server, AsyncMsgHelper) = {
+
     val (server, readyFut) = Server.initialiseServer(config)
 
     val connInfo = server.project.rpcConnectionInfo()
@@ -88,18 +89,21 @@ class AsyncMsgHelper(actorSystem: ActorSystem) {
           asyncMsgs(event) match {
             case 0 => true
             case n =>
-              asyncMsgs += (event -> (n - 1))
+              val newCount = n - 1
+              asyncMsgs += (event -> newCount)
               sender ! None
-              false
+              newCount > 0
           }
       }
     }
 
     override def receive: Receive = {
       case AsyncRequest(req) =>
+        log.info("Received request for " + req + " awaiting = " + asyncMsgs)
         outstandingAsyncs = outstandingAsyncs :+ (req, sender())
         processOutstandingRequests()
       case AsyncSent(event) =>
+        log.info("Received event " + event)
         val newCount = asyncMsgs(event) + 1
         asyncMsgs = asyncMsgs + (event -> newCount)
         processOutstandingRequests()

@@ -31,21 +31,24 @@ case object ClearAllScalaNotesEvent extends GeneralSwankEvent
 /** The presentation compiler is providing notes: e.g. errors, warnings. */
 case class NewScalaNotesEvent(
   isFull: Boolean,
-  notes: List[Note]) extends GeneralSwankEvent
+  notes: List[Note]
+) extends GeneralSwankEvent
 
 /** The debugged VM has stepped to a new location and is now paused awaiting control. */
 case class DebugStepEvent(
   threadId: DebugThreadId,
   threadName: String,
   file: File,
-  line: Int) extends DebugEvent
+  line: Int
+) extends DebugEvent
 
 /** The debugged VM has stopped at a breakpoint. */
 case class DebugBreakEvent(
   threadId: DebugThreadId,
   threadName: String,
   file: File,
-  line: Int) extends DebugEvent
+  line: Int
+) extends DebugEvent
 
 /** The debugged VM has started. */
 case object DebugVMStartEvent extends DebugEvent
@@ -59,7 +62,8 @@ case class DebugExceptionEvent(
   threadId: String,
   threadName: String,
   file: Option[File],
-  line: Option[Int]) extends DebugEvent
+  line: Option[Int]
+) extends DebugEvent
 
 /** A new thread has started. */
 case class DebugThreadStartEvent(threadId: String) extends DebugEvent

@@ -27,7 +27,8 @@ class Analyzer(
   val project: ActorRef,
   val indexer: ActorRef,
   search: SearchService,
-  val config: EnsimeConfig)
+  val config: EnsimeConfig
+)
     extends Actor with ActorLogging with RefactoringHandler {
 
   private val presCompLog = LoggerFactory.getLogger(classOf[Global])
@@ -94,7 +95,8 @@ class Analyzer(
   }
 
   protected def makeScalaCompiler() = new RichPresentationCompiler(
-    config, settings, reporter, self, indexer, search)
+    config, settings, reporter, self, indexer, search
+  )
 
   protected def restartCompiler(keepLoaded: Boolean): Unit = {
     val files = scalaCompiler.loadedFiles
@@ -111,15 +113,15 @@ class Analyzer(
     presCompLog.warn("Started")
   }
 
+  override def postStop(): Unit = {
+    scalaCompiler.askClearTypeCache()
+    scalaCompiler.askShutdown()
+  }
+
   def charset: Charset = scalaCompiler.charset
 
   def process(msg: Any): Unit = {
     msg match {
-      case AnalyzerShutdownEvent =>
-        scalaCompiler.askClearTypeCache()
-        scalaCompiler.askShutdown()
-        context.stop(self)
-
       case ReloadExistingFilesEvent => if (allFilesLoaded) {
         presCompLog.warn("Skipping reload, in all-files mode")
       } else {
@@ -275,7 +277,8 @@ class Analyzer(
     }
 
     val (javas, scalas) = files.filter(_.file.exists).partition(
-      _.file.getName.endsWith(".java"))
+      _.file.getName.endsWith(".java")
+    )
 
     if (scalas.nonEmpty) {
       val sourceFiles = scalas.map(createSourceFile)

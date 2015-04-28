@@ -12,7 +12,8 @@ import org.ensime.server.protocol.ProtocolConst._
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
 class Indexer(
     config: EnsimeConfig,
-    index: SearchService) extends Actor with ActorLogging {
+    index: SearchService
+) extends Actor with ActorLogging {
 
   private def typeResult(hit: FqnSymbol) = TypeSearchResult(
     hit.fqn, hit.fqn.split("\\.").last, hit.declAs,

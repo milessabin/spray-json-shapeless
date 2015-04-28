@@ -1,11 +1,7 @@
 package org.ensime.config
 
 import java.io.File
-import java.io.FileNotFoundException
-import org.ensime.util._
-import scala.util.Try
 import scalariform.formatter.preferences.FormattingPreferences
-import scala.sys.process._
 
 import pimpathon.file._
 
@@ -21,7 +17,8 @@ case class EnsimeConfig(
     formattingPrefs: FormattingPreferences,
     sourceMode: Boolean,
     debugArgs: List[String],
-    javaLibs: List[File]) {
+    javaLibs: List[File]
+) {
   (rootDir :: cacheDir :: javaHome :: referenceSourceRoots ::: javaLibs).foreach { f =>
     require(f.exists, "" + f + " is required but does not exist")
   }
@@ -74,7 +71,8 @@ case class EnsimeModule(
     testDeps: List[File],
     sourceRoots: List[File],
     docJars: List[File],
-    referenceSourceRoots: List[File]) {
+    referenceSourceRoots: List[File]
+) {
   // only check the files, not the directories, see below
   (compileDeps ::: runtimeDeps :::
     testDeps ::: referenceSourceRoots).foreach { f =>

@@ -25,13 +25,15 @@ trait CompletionControl {
     source: SourceFile,
     offset: Int,
     prefix: String,
-    constructing: Boolean) extends CompletionContext
+    constructing: Boolean
+  ) extends CompletionContext
 
   case class MemberContext(
     source: SourceFile,
     offset: Int,
     prefix: String,
-    constructing: Boolean) extends CompletionContext
+    constructing: Boolean
+  ) extends CompletionContext
 
   private val IdentRegexp = """([a-zA-Z0-9_#:<=>@!%&*+/?\\^|~-]*)$""".r
   private val ImportTopLevelRegexp = """import [^\.]*$""".r
@@ -42,7 +44,8 @@ trait CompletionControl {
     val maxResults = if (maxResultsArg == 0) Int.MaxValue else maxResultsArg
 
     val preceding = inputP.source.content.slice(
-      Math.max(0, inputP.point - 100), inputP.point)
+      Math.max(0, inputP.point - 100), inputP.point
+    )
 
     val defaultPrefix = IdentRegexp.findFirstMatchIn(preceding) match {
       case Some(m) => m.group(1)
@@ -105,15 +108,18 @@ trait CompletionControl {
             c1.relevance > c2.relevance ||
               (c1.relevance == c2.relevance &&
                 c1.name.length < c2.name.length)
-          }).take(maxResults))
+          }).take(maxResults)
+        )
       case _ => CompletionInfoList("", Nil)
     }
   }
 
   private def spliceSource(s: SourceFile, start: Int, end: Int,
     replacement: String): SourceFile = {
-    new BatchSourceFile(s.file,
-      Arrays.splice(s.content, start, end, replacement.toArray))
+    new BatchSourceFile(
+      s.file,
+      Arrays.splice(s.content, start, end, replacement.toArray)
+    )
   }
 
   def fetchTypeSearchCompletions(prefix: String, maxResults: Int): Future[Option[List[CompletionInfo]]] = {
@@ -125,7 +131,8 @@ trait CompletionControl {
         s.syms.map { s =>
           CompletionInfo(
             s.localName, CompletionSignature(List.empty, s.name),
-            -1, isCallable = false, 40, Some(s.name))
+            -1, isCallable = false, 40, Some(s.name)
+          )
         }.toList
       case unknown =>
         throw new IllegalStateException("Unexpected response type from request:" + unknown)
@@ -140,7 +147,8 @@ trait CompletionControl {
       sym: Symbol,
       tpe: Type,
       inherited: Boolean,
-      viaView: Symbol): List[CompletionInfo] = {
+      viaView: Symbol
+    ): List[CompletionInfo] = {
 
       var score = 0
       if (sym.nameString.startsWith(context.prefix)) score += 10

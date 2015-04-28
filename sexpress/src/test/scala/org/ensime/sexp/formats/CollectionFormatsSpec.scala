@@ -134,35 +134,47 @@ class CollectionFormatsSpec extends FormatSpec
     }
 
     it("should support im.Range") {
-      assertFormat(im.Range(-100, 100),
+      assertFormat(
+        im.Range(-100, 100),
         SexpList(
           SexpSymbol(":start"), SexpNumber(-100),
           SexpSymbol(":end"), SexpNumber(100),
-          SexpSymbol(":step"), SexpNumber(1)))
+          SexpSymbol(":step"), SexpNumber(1)
+        )
+      )
 
-      assertFormat(im.Range(-100, 100, 2),
+      assertFormat(
+        im.Range(-100, 100, 2),
         SexpList(
           SexpSymbol(":start"), SexpNumber(-100),
           SexpSymbol(":end"), SexpNumber(100),
-          SexpSymbol(":step"), SexpNumber(2)))
+          SexpSymbol(":step"), SexpNumber(2)
+        )
+      )
     }
 
     it("should support im.NumericRange") {
       implicit val DoubleIntegral = Numeric.DoubleAsIfIntegral
 
-      assertFormat(-100.0 to 100.0 by 1.5,
+      assertFormat(
+        -100.0 to 100.0 by 1.5,
         SexpData(
           SexpSymbol(":start") -> SexpNumber(-100),
           SexpSymbol(":end") -> SexpNumber(100),
           SexpSymbol(":step") -> SexpNumber(1.5),
-          SexpSymbol(":inclusive") -> SexpSymbol("t")))
+          SexpSymbol(":inclusive") -> SexpSymbol("t")
+        )
+      )
 
-      assertFormat(-100.0 until 100.0 by 1.5,
+      assertFormat(
+        -100.0 until 100.0 by 1.5,
         SexpData(
           SexpSymbol(":start") -> SexpNumber(-100),
           SexpSymbol(":end") -> SexpNumber(100),
           SexpSymbol(":step") -> SexpNumber(1.5),
-          SexpSymbol(":inclusive") -> SexpNil))
+          SexpSymbol(":inclusive") -> SexpNil
+        )
+      )
     }
 
   }

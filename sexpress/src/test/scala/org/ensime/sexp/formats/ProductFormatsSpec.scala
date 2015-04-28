@@ -38,9 +38,7 @@ class ProductFormatsSpec extends FormatSpec
         SexpSymbol(":foo") -> fooexpect
       )
 
-      // WORKAROUND http://stackoverflow.com/questions/25923974
-      implicit val FastFooFormat = SexpFormat[Foo]
-
+      // (this is actually a really big deal, thank you shapeless!)
       assertFormat(bar, expect)
     }
 

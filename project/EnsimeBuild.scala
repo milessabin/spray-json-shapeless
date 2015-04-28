@@ -1,6 +1,7 @@
 import java.io._
 import scala.util.Try
 import sbt._
+import sbt.{ IntegrationTest => It }
 import Keys._
 import com.typesafe.sbt.SbtScalariform._
 import scoverage.ScoverageSbtPlugin.ScoverageKeys
@@ -20,6 +21,14 @@ object EnsimeBuild extends Build with JdkResolver {
     version := "0.9.10-SNAPSHOT"
   )
   val isEmacs = sys.env.get("TERM") == Some("dumb")
+
+  // WORKAROUND https://github.com/daniel-trinh/sbt-scalariform/issues/4
+  def scalariformSettingsWithIt: Seq[Setting[_]] =
+    defaultScalariformSettings ++ inConfig(It)(configScalariformSettings) ++ List(
+      compileInputs in (Compile, compile) <<= (compileInputs in (Compile, compile)) dependsOn (ScalariformKeys.format in Compile),
+      compileInputs in (Test, compile) <<= (compileInputs in (Test, compile)) dependsOn (ScalariformKeys.format in Test),
+      compileInputs in (It, compile) <<= (compileInputs in (It, compile)) dependsOn (ScalariformKeys.format in It)
+    )
 
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
@@ -86,7 +95,7 @@ object EnsimeBuild extends Build with JdkResolver {
     licenses := Seq("LGPL 3.0" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt")),
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.chuusai" %% "shapeless" % "2.0.0",
+      "com.chuusai" %% "shapeless" % "2.2.0-RC4",
       "org.parboiled" %% "parboiled-scala" % "1.1.7",
       // perhaps drop the pimpathon dependency here in the interest of
       // minimising deps and move to server only
@@ -98,7 +107,7 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val api = Project("api", file("api"), settings = commonSettings) settings (
     libraryDependencies ++= Seq(
       "com.github.stacycurl" %% "pimpathon-core" % "1.4.0",
-      "com.danieltrinh" %% "scalariform" % "0.1.5"
+      "org.scalariform" %% "scalariform" % "0.1.6"
     ) ++ testLibs(scalaVersion.value)
   )
 
@@ -116,54 +125,63 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val testingEmpty = Project("testingEmpty", file("testing/empty"), settings = basicSettings).settings(
     ScoverageKeys.coverageExcludedPackages := ".*"
   )
-                          //.settings (publishArtifact := false)
 
   lazy val testingSimple = Project("testingSimple", file("testing/simple"), settings = basicSettings) settings (
     libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive(),
-    //publishArtifact := false,
     ScoverageKeys.coverageExcludedPackages := ".*"
   )
 
   lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings).settings(
     ScoverageKeys.coverageExcludedPackages := ".*"
   )
-                          //.settings (publishArtifact := false)
+
+  lazy val testingDocs = Project("testingDocs", file("testing/docs"), settings = basicSettings).settings(
+    libraryDependencies ++= Seq(
+      // specifically using ForecastIOLib version 1.5.1 for javadoc 1.8 output
+      "com.github.dvdme" %  "ForecastIOLib" % "1.5.1",
+      "com.google.guava" % "guava" % "18.0",
+      "commons-io" % "commons-io" % "2.4"
+    ),
+    ScoverageKeys.coverageExcludedPackages := ".*"
+  )
 
   lazy val server = Project("server", file("server")).dependsOn(
     api, swank,
     sexpress % "test->test",
     swank % "test->test",
-    // must depend on these in "test" as well or they are added to the main dep list by sbt!
+    // depend on "it" dependencies in "test" or sbt adds them to the release deps!
     // https://github.com/sbt/sbt/issues/1888
-    testingEmpty % "test,it", testingSimple % "test,it", testingDebug % "test,it"
-  ).configs(IntegrationTest).settings (
+    testingEmpty % "test,it",
+    testingSimple % "test,it",
+    testingDebug % "test,it",
+    testingDocs % "test,it"
+  ).configs(It).settings (
     commonSettings
   ).settings (
-    inConfig(IntegrationTest)(Defaults.testSettings)
+    inConfig(It)(Defaults.testSettings)
   ).settings (
     scalariformSettingsWithIt
   ).settings (
     // careful: parallel forks are causing weird failures
     // https://github.com/sbt/sbt/issues/1890
-    parallelExecution in IntegrationTest := false,
+    parallelExecution in It := false,
     // https://github.com/sbt/sbt/issues/1891
     // this is supposed to set the number of forked JVMs, but it doesn't
     // concurrentRestrictions in Global := Seq(
     //   Tags.limit(Tags.ForkedTestGroup, 4)
     // ),
-    fork in IntegrationTest := true,
-    testForkedParallel in IntegrationTest := true,
-    javaOptions in IntegrationTest += "-Dfile.encoding=UTF8", // for file cloning
-    testOptions in IntegrationTest ++= noColorIfEmacs,
+    fork in It := true,
+    testForkedParallel in It := true,
+    javaOptions in It += "-Dfile.encoding=UTF8", // for file cloning
+    testOptions in It ++= noColorIfEmacs,
     internalDependencyClasspath in Compile += { Attributed.blank(JavaTools) },
     internalDependencyClasspath in Test += { Attributed.blank(JavaTools) },
-    internalDependencyClasspath in IntegrationTest += { Attributed.blank(JavaTools) },
-    javaOptions in IntegrationTest ++= Seq(
+    internalDependencyClasspath in It += { Attributed.blank(JavaTools) },
+    javaOptions in It ++= Seq(
       "-Dlogback.configurationFile=../logback-it.xml"
     ),
     libraryDependencies ++= Seq(
-      // h2 1.4.183 is bad https://github.com/ensime/ensime-server/issues/717
-      "com.h2database" % "h2" % "1.4.182",
+      "com.h2database" % "h2" % "1.4.187",
       "com.typesafe.slick" %% "slick" % "2.1.0",
       "com.jolbox" % "bonecp" % "0.8.0.RELEASE",
       "org.apache.commons" % "commons-vfs2" % "2.0" intransitive(),
@@ -177,11 +195,7 @@ object EnsimeBuild extends Build with JdkResolver {
       "com.typesafe.akka" %% "akka-actor" % "2.3.9",
       "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
       "commons-lang" % "commons-lang" % "2.6",
-      "io.spray" %% "spray-can" % "1.3.3",
-      // specifically using FocecastIOLib version 1.5.1 for javadoc 1.8 output
-      "com.github.dvdme" %  "ForecastIOLib" % "1.5.1"  % "test,it",
-      "com.google.guava" % "guava" % "18.0" % "test,it",
-      "commons-io" % "commons-io" % "2.4" % "test,it"
+      "io.spray" %% "spray-can" % "1.3.3"
     ) ++ testLibs(scalaVersion.value, "it,test")
   )
 

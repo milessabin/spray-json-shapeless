@@ -199,7 +199,8 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand swank:completions with SourceFileInfo") {
       val f = file("ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala").canon
       testWithResponse(
-        s"""(swank:completions (:file "${f.getPath}") 22626 0 t t)""") { (t, m, id) =>
+        s"""(swank:completions (:file "${f.getPath}") 22626 0 t t)"""
+      ) { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
             SourceFileInfo(f), 22626, 0, true, true
           ).returns(completionInfoCList)
@@ -210,7 +211,8 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand swank:completions with ContentsSourceFileInfo") {
       val f = file("ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala").canon
       testWithResponse(
-        s"""(swank:completions (:file "${f.getPath}" :contents "zz") 22626 0 t t)""") { (t, m, id) =>
+        s"""(swank:completions (:file "${f.getPath}" :contents "zz") 22626 0 t t)"""
+      ) { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
             ContentsSourceFileInfo(f, "zz"), 22626, 0, true, true
           ).returns(completionInfoCList)
@@ -221,7 +223,8 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand swank:completions with ContentsInSourceFileInfo") {
       val f = file("ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala").canon
       testWithResponse(
-        s"""(swank:completions (:file "${f.getPath}" :contents-in "Foo.scala") 22626 0 t t)""") { (t, m, id) =>
+        s"""(swank:completions (:file "${f.getPath}" :contents-in "Foo.scala") 22626 0 t t)"""
+      ) { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
             ContentsInSourceFileInfo(f, fooFile), 22626, 0, true, true
           ).returns(completionInfoCList)
@@ -346,14 +349,16 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
         //        Either[RefactorFailure, RefactorEffect]
         (t.rpcPrepareRefactor _).expects(7, InlineLocalRefactorDesc(file("SwankProtocol.scala").canon, 100, 200)).returns(
-          Left(refactorFailure))
+          Left(refactorFailure)
+        )
         (m.send _).expects(s"""(:return (:ok $refactorFailureStr) $id)""")
       }
     }
     it("should understand swank:prepare-refactor - inline local - prepare - interactive") {
       testWithResponse("""(swank:prepare-refactor 7 inlineLocal (file "SwankProtocol.scala" start 100 end 200) t)""") { (t, m, id) =>
         (t.rpcPrepareRefactor _).expects(7, InlineLocalRefactorDesc(file("SwankProtocol.scala").canon, 100, 200)).returns(
-          Right(refactorRenameEffect))
+          Right(refactorRenameEffect)
+        )
         (m.send _).expects(s"""(:return (:ok $refactorRenameEffectStr) $id)""")
       }
     }
@@ -382,41 +387,57 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     }
 
     it("should understand swank:prepare-refactor - inline local - non-interactive") {
-      testRefactorMethod("""inlineLocal (file "SwankProtocol.scala" start 100 end 200)""",
-        InlineLocalRefactorDesc(file("SwankProtocol.scala").canon, 100, 200))
+      testRefactorMethod(
+        """inlineLocal (file "SwankProtocol.scala" start 100 end 200)""",
+        InlineLocalRefactorDesc(file("SwankProtocol.scala").canon, 100, 200)
+      )
     }
 
     it("should understand swank:prepare-refactor - rename") {
-      testRefactorMethod("""rename (file "SwankProtocol.scala" start 39504 end 39508 newName "dude")""",
-        RenameRefactorDesc("dude", file("SwankProtocol.scala").canon, 39504, 39508))
+      testRefactorMethod(
+        """rename (file "SwankProtocol.scala" start 39504 end 39508 newName "dude")""",
+        RenameRefactorDesc("dude", file("SwankProtocol.scala").canon, 39504, 39508)
+      )
     }
 
     it("should understand swank:prepare-refactor - extractMethod") {
-      testRefactorMethod("""extractMethod (methodName "foo" file "SwankProtocol.scala" start 39504 end 39508)""",
-        ExtractMethodRefactorDesc("foo", file("SwankProtocol.scala").canon, 39504, 39508))
+      testRefactorMethod(
+        """extractMethod (methodName "foo" file "SwankProtocol.scala" start 39504 end 39508)""",
+        ExtractMethodRefactorDesc("foo", file("SwankProtocol.scala").canon, 39504, 39508)
+      )
     }
 
     it("should understand swank:prepare-refactor - extractLocal") {
-      testRefactorMethod("""extractLocal (name "foo" file "SwankProtocol.scala" start 39504 end 39508)""",
-        ExtractLocalRefactorDesc("foo", file("SwankProtocol.scala").canon, 39504, 39508))
+      testRefactorMethod(
+        """extractLocal (name "foo" file "SwankProtocol.scala" start 39504 end 39508)""",
+        ExtractLocalRefactorDesc("foo", file("SwankProtocol.scala").canon, 39504, 39508)
+      )
     }
 
     it("should understand swank:prepare-refactor - organiseImports") {
-      testRefactorMethod("""organiseImports (file "SwankProtocol.scala")""",
-        OrganiseImportsRefactorDesc(file("SwankProtocol.scala").canon))
+      testRefactorMethod(
+        """organiseImports (file "SwankProtocol.scala")""",
+        OrganiseImportsRefactorDesc(file("SwankProtocol.scala").canon)
+      )
     }
 
     it("should not fail on swank:prepareRefactor from bug 573") {
-      testRefactorMethod("""organizeImports (file "src/main/scala/org/ensime/indexer/DatabaseService.scala")""",
-        OrganiseImportsRefactorDesc(file("src/main/scala/org/ensime/indexer/DatabaseService.scala").canon))
+      testRefactorMethod(
+        """organizeImports (file "src/main/scala/org/ensime/indexer/DatabaseService.scala")""",
+        OrganiseImportsRefactorDesc(file("src/main/scala/org/ensime/indexer/DatabaseService.scala").canon)
+      )
     }
 
     it("should understand swank:prepare-refactor - addImport") {
-      testRefactorMethod("""addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala" start 39504 end 39508)""",
-        AddImportRefactorDesc("com.bar.Foo", file("SwankProtocol.scala").canon))
+      testRefactorMethod(
+        """addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala" start 39504 end 39508)""",
+        AddImportRefactorDesc("com.bar.Foo", file("SwankProtocol.scala").canon)
+      )
 
-      testRefactorMethod("""addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala")""",
-        AddImportRefactorDesc("com.bar.Foo", file("SwankProtocol.scala").canon))
+      testRefactorMethod(
+        """addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala")""",
+        AddImportRefactorDesc("com.bar.Foo", file("SwankProtocol.scala").canon)
+      )
 
     }
 

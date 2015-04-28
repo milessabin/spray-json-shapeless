@@ -104,13 +104,15 @@ case class DocUriAtPointReq(file: File, point: OffsetRange) extends RpcRequest
 case class DocUriForSymbolReq(
   typeFullName: String,
   memberName: Option[String],
-  signatureString: Option[String]) extends RpcRequest
+  signatureString: Option[String]
+) extends RpcRequest
 case class CompletionsReq(
   fileInfo: SourceFileInfo,
   point: Int,
   maxResults: Int,
   caseSens: Boolean,
-  reload: Boolean) extends RpcRequest
+  reload: Boolean
+) extends RpcRequest
 case class PackageMemberCompletionReq(path: String, prefix: String) extends RpcRequest
 case class CallCompletionReq(id: Int) extends RpcRequest
 case class UsesOfSymbolAtPointReq(file: File, point: Int) extends RpcRequest
@@ -125,20 +127,23 @@ case class SymbolAtPointReq(file: File, point: Int) extends RpcRequest
 case class SymbolByNameReq(
   typeFullName: String,
   memberName: Option[String],
-  signatureString: Option[String]) extends RpcRequest
+  signatureString: Option[String]
+) extends RpcRequest
 case class InspectPackageByPathReq(path: String) extends RpcRequest
 case class PrepareRefactorReq(
   procId: Int,
   tpe: Symbol, // tpe is ignored but part of the legacy wire format
   params: RefactorDesc,
-  interactive: Boolean) extends RpcRequest
+  interactive: Boolean
+) extends RpcRequest
 case class ExecRefactorReq(procId: Int, tpe: Symbol) extends RpcRequest
 case class CancelRefactorReq(procId: Int) extends RpcRequest
 case class SymbolDesignationsReq(
   file: File,
   start: Int,
   end: Int,
-  requestedTypes: List[SourceSymbol]) extends RpcRequest
+  requestedTypes: List[SourceSymbol]
+) extends RpcRequest
 case class ExpandSelectionReq(file: File, start: Int, end: Int) extends RpcRequest
 case object DebugActiveVmReq extends RpcRequest
 case class DebugStartReq(commandLine: String) extends RpcRequest

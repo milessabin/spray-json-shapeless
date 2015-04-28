@@ -45,7 +45,8 @@ trait ClassfileIndexer {
 
     override def visit(
       version: Int, access: Int, name: String, signature: String,
-      superName: String, interfaces: Array[String]): Unit = {
+      superName: String, interfaces: Array[String]
+    ): Unit = {
 
       clazz = RawClassfile(
         ClassName.fromInternal(name),
@@ -122,7 +123,8 @@ trait ClassfileIndexer {
     private val fieldVisitor = new FieldVisitor(ASM5) {
       override def visitAnnotation(desc: String, visible: Boolean) = handleAnn(desc)
       override def visitTypeAnnotation(
-        typeRef: Int, typePath: TypePath, desc: String, visible: Boolean) = handleAnn(desc)
+        typeRef: Int, typePath: TypePath, desc: String, visible: Boolean
+      ) = handleAnn(desc)
     }
 
     override def visitField(access: Int, name: String, desc: String, signature: String, value: AnyRef): FieldVisitor = {
@@ -148,7 +150,8 @@ trait ClassfileIndexer {
     private val annVisitor: AnnotationVisitor = new AnnotationVisitor(ASM5) {
       override def visitAnnotation(name: String, desc: String) = handleAnn(desc)
       override def visitEnum(
-        name: String, desc: String, value: String): Unit = handleAnn(desc)
+        name: String, desc: String, value: String
+      ): Unit = handleAnn(desc)
     }
     private def handleAnn(desc: String): AnnotationVisitor = {
       addRef(ClassName.fromDescriptor(desc))
@@ -156,7 +159,8 @@ trait ClassfileIndexer {
     }
     override def visitAnnotation(desc: String, visible: Boolean) = handleAnn(desc)
     override def visitTypeAnnotation(
-      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean) = handleAnn(desc)
+      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean
+    ) = handleAnn(desc)
   }
 
   private trait ReferenceInMethodHunter {
@@ -172,7 +176,8 @@ trait ClassfileIndexer {
 
     override def visitLocalVariable(
       name: String, desc: String, signature: String,
-      start: Label, end: Label, index: Int): Unit = {
+      start: Label, end: Label, index: Int
+    ): Unit = {
       internalRefs :+= ClassName.fromDescriptor(desc)
     }
 
@@ -185,13 +190,15 @@ trait ClassfileIndexer {
     }
 
     override def visitFieldInsn(
-      opcode: Int, owner: String, name: String, desc: String): Unit = {
+      opcode: Int, owner: String, name: String, desc: String
+    ): Unit = {
       internalRefs :+= memberOrInit(owner, name)
       internalRefs :+= ClassName.fromDescriptor(desc)
     }
 
     override def visitMethodInsn(
-      opcode: Int, owner: String, name: String, desc: String, itf: Boolean): Unit = {
+      opcode: Int, owner: String, name: String, desc: String, itf: Boolean
+    ): Unit = {
       internalRefs :+= memberOrInit(owner, name)
       internalRefs ++= classesInDescriptor(desc)
     }
@@ -212,16 +219,21 @@ trait ClassfileIndexer {
     override def visitAnnotation(desc: String, visible: Boolean) = handleAnn(desc)
     override def visitAnnotationDefault() = annVisitor
     override def visitInsnAnnotation(
-      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean) = handleAnn(desc)
+      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean
+    ) = handleAnn(desc)
     override def visitLocalVariableAnnotation(
       typeRef: Int, typePath: TypePath, start: Array[Label], end: Array[Label],
-      index: Array[Int], desc: String, visible: Boolean) = handleAnn(desc)
+      index: Array[Int], desc: String, visible: Boolean
+    ) = handleAnn(desc)
     override def visitParameterAnnotation(
-      parameter: Int, desc: String, visible: Boolean) = handleAnn(desc)
+      parameter: Int, desc: String, visible: Boolean
+    ) = handleAnn(desc)
     override def visitTryCatchAnnotation(
-      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean) = handleAnn(desc)
+      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean
+    ) = handleAnn(desc)
     override def visitTypeAnnotation(
-      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean) = handleAnn(desc)
+      typeRef: Int, typePath: TypePath, desc: String, visible: Boolean
+    ) = handleAnn(desc)
   }
 }
 

@@ -43,7 +43,9 @@ object SwankProtocolCommon {
   abstract class TraitFormatAlt[T] extends SexpFormat[T] {
     val key = SexpSymbol(":type")
     protected def wrap[E](t: E)(
-      implicit th: TypeHint[E], sf: SexpFormat[E]): Sexp = t.toSexp match {
+      implicit
+      th: TypeHint[E], sf: SexpFormat[E]
+    ): Sexp = t.toSexp match {
       case SexpNil => SexpData(key -> th.hint)
       case SexpData(data) if !data.contains(key) =>
         SexpData(key -> th.hint :: data.toList)
@@ -189,18 +191,6 @@ object SwankProtocolResponse {
   implicit val TextEditHint = TypeHint[TextEdit](SexpSymbol("edit"))
   implicit val DeleteFileHint = TypeHint[DeleteFile](SexpSymbol("delete"))
   implicit val NewFileHint = TypeHint[NewFile](SexpSymbol("new"))
-
-  /**
-   * These implicits are required until shapeless stops println-ing when
-   * singletonFormat is made implicit.
-   */
-  implicit val AnalyzerReadyEventFormat = singletonFormat[AnalyzerReadyEvent.type]
-  implicit val FullTypeCheckCompleteEventFormat = singletonFormat[FullTypeCheckCompleteEvent.type]
-  implicit val IndexerReadyEventFormat = singletonFormat[IndexerReadyEvent.type]
-  implicit val CompilerRestartedEventFormat = singletonFormat[CompilerRestartedEvent.type]
-  implicit val ClearAllScalaNotesEventFormat = singletonFormat[ClearAllScalaNotesEvent.type]
-  implicit val DebugVMStartEventFormat = singletonFormat[DebugVMStartEvent.type]
-  implicit val DebugVMDisconnectEventFormat = singletonFormat[DebugVMDisconnectEvent.type]
 
   /**
    * These implicit vals are actually optional - S-Express doesn't
@@ -555,8 +545,10 @@ object SwankProtocolRequest {
   // should pick up on this instead, also private so we don't
   // accidentally export it.
   private implicit def tupledProductFormat[T <: RpcRequest, R <: shapeless.HList](
-    implicit g: shapeless.Generic.Aux[T, R],
-    r: HListFormat[R]): SexpFormat[T] = new SexpFormat[T] {
+    implicit
+    g: shapeless.Generic.Aux[T, R],
+    r: HListFormat[R]
+  ): SexpFormat[T] = new SexpFormat[T] {
     def write(x: T): Sexp = SexpList(r.write(g.to(x)))
 
     def read(value: Sexp): T = value match {
@@ -646,17 +638,11 @@ object SwankProtocolRequest {
   }
 
   // incoming messages
-  implicit def ConnectionInfoReqFormat = singletonFormat[ConnectionInfoReq.type]
-  implicit def InitProjectReqFormat = singletonFormat[InitProjectReq.type]
-  implicit def PeekUndoReqFormat = singletonFormat[PeekUndoReq.type]
   implicit def ExecUndoReqFormat = SexpFormat[ExecUndoReq]
-  implicit def ReplConfigReqFormat = singletonFormat[ReplConfigReq.type]
   implicit def RemoveFileReqFormat = SexpFormat[RemoveFileReq]
   implicit def TypecheckFileReqFormat = SexpFormat[TypecheckFileReq]
   implicit def TypecheckFilesReqFormat = SexpFormat[TypecheckFilesReq]
   implicit def PatchSourceReqFormat = SexpFormat[PatchSourceReq]
-  implicit def UnloadAllReqFormat = singletonFormat[UnloadAllReq.type]
-  implicit def TypecheckAllReqFormat = singletonFormat[TypecheckAllReq.type]
   implicit def FormatSourceReqFormat = SexpFormat[FormatSourceReq]
   implicit def FormatOneSourceReqFormat = SexpFormat[FormatOneSourceReq]
   implicit def PublicSymbolSearchHint = SexpFormat[PublicSymbolSearchReq]
@@ -682,15 +668,10 @@ object SwankProtocolRequest {
   implicit def CancelRefactorReqFormat = SexpFormat[CancelRefactorReq]
   implicit def SymbolDesignationsReqFormat = SexpFormat[SymbolDesignationsReq]
   implicit def ExpandSelectionReqFormat = SexpFormat[ExpandSelectionReq]
-  implicit def DebugActiveVmReqFormat = singletonFormat[DebugActiveVmReq.type]
   implicit def DebugStartReqFormat = SexpFormat[DebugStartReq]
   implicit def DebugAttachReqFormat = SexpFormat[DebugAttachReq]
-  implicit def DebugStopReqFormat = singletonFormat[DebugStopReq.type]
   implicit def DebugSetBreakReqFormat = SexpFormat[DebugSetBreakReq]
   implicit def DebugClearBreakReqFormat = SexpFormat[DebugClearBreakReq]
-  implicit def DebugClearAllBreaksReqFormat = singletonFormat[DebugClearAllBreaksReq.type]
-  implicit def DebugListBreakpointsReqFormat = singletonFormat[DebugListBreakpointsReq.type]
-  implicit def DebugRunReqFormat = singletonFormat[DebugRunReq.type]
   implicit def DebugContinueReqFormat = SexpFormat[DebugContinueReq]
   implicit def DebugStepReqFormat = SexpFormat[DebugStepReq]
   implicit def DebugNextReqFormat = SexpFormat[DebugNextReq]
@@ -700,7 +681,6 @@ object SwankProtocolRequest {
   implicit def DebugToStringReqFormat = SexpFormat[DebugToStringReq]
   implicit def DebugSetValueueReqFormat = SexpFormat[DebugSetValueReq]
   implicit def DebugBacktraceReqFormat = SexpFormat[DebugBacktraceReq]
-  implicit def ShutdownServerReqFormat = singletonFormat[ShutdownServerReq.type]
 
   implicit object RpcRequestFormat extends SexpFormat[RpcRequest] {
     def write(o: RpcRequest): Sexp = ???

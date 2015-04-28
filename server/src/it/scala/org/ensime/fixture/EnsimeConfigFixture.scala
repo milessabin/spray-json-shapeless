@@ -32,9 +32,11 @@ trait EnsimeConfigFixture {
 object EnsimeConfigFixture {
 
   lazy val dotEnsime = file("../.ensime")
-  require(dotEnsime.exists,
+  require(
+    dotEnsime.exists,
     "the .ensime file must exist to run the integration tests." +
-      "Type 'sbt gen-ensime' to create it")
+      "Type 'sbt gen-ensime' to create it"
+  )
 
   lazy val EnsimeTestProject = EnsimeConfigProtocol.parse(dotEnsime.readLines().mkString)
 
@@ -49,6 +51,9 @@ object EnsimeConfigFixture {
   lazy val DebugTestProject: EnsimeConfig = EnsimeTestProject.copy(
     subprojects = EnsimeTestProject.subprojects.filter(_.name == "testingDebug")
   )
+  lazy val DocsTestProject: EnsimeConfig = EnsimeTestProject.copy(
+    subprojects = EnsimeTestProject.subprojects.filter(_.name == "testingDocs")
+  )
 
   // generates an empty single module project in a temporary directory
   // and returns the config, containing many of the same settings
@@ -56,7 +61,8 @@ object EnsimeConfigFixture {
   // with options to copy ENSIME's own sources/classes into the structure.
   def cloneForTesting(
     source: EnsimeConfig,
-    target: File): EnsimeConfig = {
+    target: File
+  ): EnsimeConfig = {
 
     def rename(from: File): File = {
       val toPath = from.getAbsolutePath.replace(

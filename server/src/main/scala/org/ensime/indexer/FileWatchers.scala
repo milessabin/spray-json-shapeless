@@ -33,7 +33,8 @@ trait SourceListener {
  */
 class ClassfileWatcher(
     config: EnsimeConfig,
-    listeners: Seq[ClassfileListener]) extends SLF4JLogging {
+    listeners: Seq[ClassfileListener]
+) extends SLF4JLogging {
 
   private val fm = new DefaultFileMonitor(new FileListener {
     def watched(event: FileChangeEvent) = {
@@ -106,7 +107,8 @@ class ClassfileWatcher(
 
 class SourceWatcher(
     config: EnsimeConfig,
-    listeners: Seq[SourceListener]) extends SLF4JLogging {
+    listeners: Seq[SourceListener]
+) extends SLF4JLogging {
   private val fm = new DefaultFileMonitor(new FileListener {
     def watched(event: FileChangeEvent) =
       SourceSelector.include(event.getFile.getName.getExtension)

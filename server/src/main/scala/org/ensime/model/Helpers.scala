@@ -50,10 +50,12 @@ trait Helpers { self: Global =>
 
   def completionSignatureForType(tpe: Type): CompletionSignature = {
     if (isArrowType(tpe)) {
-      CompletionSignature(tpe.paramss.map { sect =>
-        sect.map { p => (p.name.toString, typeShortNameWithArgs(p.tpe)) }
-      },
-        typeShortNameWithArgs(tpe.finalResultType))
+      CompletionSignature(
+        tpe.paramss.map { sect =>
+          sect.map { p => (p.name.toString, typeShortNameWithArgs(p.tpe)) }
+        },
+        typeShortNameWithArgs(tpe.finalResultType)
+      )
     } else CompletionSignature(List.empty, resultTypeName(tpe))
   }
 
@@ -229,8 +231,10 @@ trait Helpers { self: Global =>
    * @return Some(packageSymbol) if `path` represents a valid package or None
    */
   def packageSymFromPath(path: String): Option[Symbol] = {
-    symbolByName(if (path.endsWith("$")) path else path + "$",
-      RootPackage).find { s => s.hasPackageFlag }
+    symbolByName(
+      if (path.endsWith("$")) path else path + "$",
+      RootPackage
+    ).find { s => s.hasPackageFlag }
   }
 
   /*

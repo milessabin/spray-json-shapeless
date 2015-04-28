@@ -206,7 +206,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
           tpe.typeArgs.map(TypeInfo(_)),
           members,
           symPos,
-          outerTypeId)
+          outerTypeId
+        )
       }
       tpe match {
         case tpe: MethodType => ArrowTypeInfo(tpe)
@@ -226,7 +227,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     def apply(params: Iterable[Symbol]): ParamSectionInfo = {
       new ParamSectionInfo(
         params.map { s => (s.nameString, TypeInfo(s.tpe)) },
-        params.exists(_.isImplicit))
+        params.exists(_.isImplicit)
+      )
     }
   }
 
@@ -243,7 +245,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     def apply(paramSections: List[ParamSectionInfo], finalResultType: Type): CallCompletionInfo = {
       new CallCompletionInfo(
         TypeInfo(finalResultType),
-        paramSections)
+        paramSections
+      )
     }
 
     def nullInfo() = {
@@ -274,7 +277,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         locateSymbolPos(sym, PosNeededYes),
         TypeInfo(tpe, PosNeededAvail),
         isArrowType(tpe),
-        ownerTpe.map(cacheType))
+        ownerTpe.map(cacheType)
+      )
     }
   }
 
@@ -286,8 +290,10 @@ trait ModelBuilders { self: RichPresentationCompiler =>
       tpeId: Int,
       isCallable: Boolean,
       relevance: Int,
-      toInsert: Option[String]) = new CompletionInfo(
-      name, tpeSig, tpeId, isCallable, relevance, toInsert)
+      toInsert: Option[String]
+    ) = new CompletionInfo(
+      name, tpeSig, tpeId, isCallable, relevance, toInsert
+    )
 
     def fromSymbol(sym: Symbol, relevance: Int): CompletionInfo =
       CompletionInfo.fromSymbolAndType(sym, sym.tpe, relevance)
@@ -299,7 +305,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         cacheType(tpe.underlying),
         isArrowType(tpe.underlying),
         relevance,
-        None)
+        None
+      )
     }
 
   }
@@ -328,7 +335,8 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         tpe.toString(),
         cacheType(tpe),
         TypeInfo(tpe.finalResultType),
-        paramSections)
+        paramSections
+      )
     }
 
     def nullInfo() = {

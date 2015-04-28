@@ -79,8 +79,7 @@ class DatabaseService(dir: File) extends SLF4JLogging {
     }
 
   private val findCompiled = Compiled((fqn: Column[String]) =>
-    fqnSymbols.filter(_.fqn === fqn).take(1)
-  )
+    fqnSymbols.filter(_.fqn === fqn).take(1))
   def find(fqn: String): Option[FqnSymbol] = db.withSession { implicit s =>
     findCompiled(fqn).firstOption
   }
@@ -147,8 +146,8 @@ object DatabaseService {
       source: Option[String], // VFS
       line: Option[Int],
       offset: Option[Int] = None // future features:
-      //    type: ??? --- better than descriptor/internal
-      ) {
+  //    type: ??? --- better than descriptor/internal
+  ) {
     // this is just as a helper until we can use more sensible
     // domain objects with slick
     def sourceFileObject = source.map(vfile)

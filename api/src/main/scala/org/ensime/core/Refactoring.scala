@@ -11,7 +11,7 @@ case class RefactorFailure(
   procedureId: Int,
   reason: String,
   status: scala.Symbol = 'failure // redundant field
-  )
+)
 
 trait RefactorProcedure {
   def procedureId: Int
@@ -23,14 +23,14 @@ case class RefactorEffect(
   refactorType: scala.Symbol,
   changes: Seq[FileEdit],
   status: scala.Symbol = 'success // redundant field
-  ) extends RefactorProcedure
+) extends RefactorProcedure
 
 case class RefactorResult(
   procedureId: Int,
   refactorType: scala.Symbol,
   touchedFiles: Seq[File],
   status: scala.Symbol = 'success // redundant field
-  ) extends RefactorProcedure
+) extends RefactorProcedure
 
 sealed abstract class RefactorDesc(val refactorType: Symbol)
 
