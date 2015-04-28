@@ -1,14 +1,5 @@
 package org.ensime.core
 
-import java.io.{ File, InputStream, InputStreamReader }
-
-import org.ensime.config._
-import org.ensime.model._
-import org.ensime.util._
-
-import scala.collection.mutable.ListBuffer
-import scala.collection.{ Iterable, mutable }
-
 case object DebuggerShutdownEvent
 
 abstract class DebugVmStatus

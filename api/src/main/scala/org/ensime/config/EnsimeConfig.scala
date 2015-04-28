@@ -1,11 +1,7 @@
 package org.ensime.config
 
 import java.io.File
-import java.io.FileNotFoundException
-import org.ensime.util._
-import scala.util.Try
 import scalariform.formatter.preferences.FormattingPreferences
-import scala.sys.process._
 
 import pimpathon.file._
 
