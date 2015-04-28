@@ -113,15 +113,15 @@ class Analyzer(
     presCompLog.warn("Started")
   }
 
+  override def postStop(): Unit = {
+    scalaCompiler.askClearTypeCache()
+    scalaCompiler.askShutdown()
+  }
+
   def charset: Charset = scalaCompiler.charset
 
   def process(msg: Any): Unit = {
     msg match {
-      case AnalyzerShutdownEvent =>
-        scalaCompiler.askClearTypeCache()
-        scalaCompiler.askShutdown()
-        context.stop(self)
-
       case ReloadExistingFilesEvent => if (allFilesLoaded) {
         presCompLog.warn("Skipping reload, in all-files mode")
       } else {

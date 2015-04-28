@@ -1,11 +1,9 @@
 package org.ensime.server.protocol.swank
 
-import java.io._
 import scala.util._
 
 import org.ensime.sexp.Sexp
-import scala.concurrent.Future
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.ActorRef
 
 import org.ensime.EnsimeApi
 import org.ensime.sexp._
@@ -14,7 +12,6 @@ import org.ensime.core._
 import org.ensime.model._
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
-import org.ensime.util._
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
