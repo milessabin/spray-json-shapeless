@@ -32,7 +32,7 @@ object SwankTestData {
       SymbolDesignation(11, 22, TraitSymbol)
     )
   )
-  val symbolDesignationsStr = s"""(:file "${symFile.getPath}" :syms ((object 7 9) (trait 11 22)))"""
+  val symbolDesignationsStr = s"""(:file ${fileToWireString(symFile)} :syms ((object 7 9) (trait 11 22)))"""
 
   val symbolInfo = new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))
   val symbolInfoStr = """(:name "name" :local-name "localName" :decl-pos nil :type """ + typeInfoStr + """ :is-callable nil :owner-type-id 2)"""

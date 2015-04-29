@@ -198,7 +198,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(SymbolDesignations(symFile, List(
           SymbolDesignation(7, 9, VarFieldSymbol),
           SymbolDesignation(11, 22, ClassSymbol)
-        ))).toWireString === s"""(:file "${symFile.getPath}" :syms ((varField 7 9) (class 11 22)))""")
+        ))).toWireString === s"""(:file ${fileToWireString(symFile)} :syms ((varField 7 9) (class 11 22)))""")
 
         assert(toWF(RefactorFailure(7, "message")).toWireString === """(:procedure-id 7 :reason "message" :status failure)""")
 
