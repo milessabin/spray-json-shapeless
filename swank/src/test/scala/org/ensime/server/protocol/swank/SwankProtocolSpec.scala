@@ -199,7 +199,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand swank:completions with SourceFileInfo") {
       val f = file("ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala").canon
       testWithResponse(
-        s"""(swank:completions (:file "${f.getPath}") 22626 0 t t)"""
+        s"""(swank:completions (:file ${fileToWireString(f)}) 22626 0 t t)"""
       ) { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
             SourceFileInfo(f), 22626, 0, true, true
@@ -211,7 +211,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand swank:completions with ContentsSourceFileInfo") {
       val f = file("ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala").canon
       testWithResponse(
-        s"""(swank:completions (:file "${f.getPath}" :contents "zz") 22626 0 t t)"""
+        s"""(swank:completions (:file ${fileToWireString(f)} :contents "zz") 22626 0 t t)"""
       ) { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
             ContentsSourceFileInfo(f, "zz"), 22626, 0, true, true
@@ -223,7 +223,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     it("should understand swank:completions with ContentsInSourceFileInfo") {
       val f = file("ensime/src/main/scala/org/ensime/protocol/SwankProtocol.scala").canon
       testWithResponse(
-        s"""(swank:completions (:file "${f.getPath}" :contents-in "Foo.scala") 22626 0 t t)"""
+        s"""(swank:completions (:file ${fileToWireString(f)} :contents-in "Foo.scala") 22626 0 t t)"""
       ) { (t, m, id) =>
           (t.rpcCompletionsAtPoint _).expects(
             ContentsInSourceFileInfo(f, fooFile), 22626, 0, true, true
