@@ -1,7 +1,7 @@
 package org.ensime.model
 
 import java.io.File
-import org.ensime.util.FileEdit
+import org.ensime.util.{ DeclaredAs, FileEdit }
 
 // requests
 
@@ -45,8 +45,6 @@ object SourceSymbol {
   )
 }
 
-sealed trait RefactorType
-
 sealed trait SourceSymbol
 
 case object ObjectSymbol extends SourceSymbol
@@ -86,21 +84,21 @@ case class PackageInfo(
 trait SymbolSearchResult {
   def name: String
   def localName: String
-  def declAs: scala.Symbol
+  def declAs: DeclaredAs
   def pos: Option[SourcePosition]
 }
 
 case class TypeSearchResult(
   name: String,
   localName: String,
-  declAs: scala.Symbol,
+  declAs: DeclaredAs,
   pos: Option[SourcePosition]
 ) extends SymbolSearchResult
 
 case class MethodSearchResult(
   name: String,
   localName: String,
-  declAs: scala.Symbol,
+  declAs: DeclaredAs,
   pos: Option[SourcePosition],
   ownerName: String
 ) extends SymbolSearchResult
@@ -285,7 +283,7 @@ case class NamedTypeMemberInfo(
     `type`: TypeInfo,
     pos: Option[SourcePosition],
     signatureString: Option[String],
-    declAs: scala.Symbol
+    declAs: DeclaredAs
 ) extends EntityInfo {
   override def members = List.empty
   def tpe = `type`
@@ -296,7 +294,7 @@ case class PackageMemberInfoLight(name: String)
 sealed trait TypeInfo extends EntityInfo {
   def name: String
   def typeId: Int
-  def declAs: scala.Symbol
+  def declAs: DeclaredAs
   def fullName: String
   def typeArgs: Iterable[TypeInfo]
   def members: Iterable[EntityInfo]
@@ -310,7 +308,7 @@ sealed trait TypeInfo extends EntityInfo {
 case class BasicTypeInfo(
   name: String,
   typeId: Int,
-  declAs: scala.Symbol,
+  declAs: DeclaredAs,
   fullName: String,
   typeArgs: Iterable[TypeInfo],
   members: Iterable[EntityInfo],
@@ -324,7 +322,7 @@ case class ArrowTypeInfo(
     resultType: TypeInfo,
     paramSections: Iterable[ParamSectionInfo]
 ) extends TypeInfo {
-  def declAs = 'nil
+  def declAs = DeclaredAs.Nil
   def fullName = name
   def typeArgs = List.empty
   def members = List.empty

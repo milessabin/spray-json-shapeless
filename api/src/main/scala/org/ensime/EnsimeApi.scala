@@ -5,7 +5,7 @@ import java.io.File
 import org.ensime.core._
 import org.ensime.model._
 import org.ensime.server.ConnectionInfo
-import org.ensime.util.FileRange
+import org.ensime.util.{ FileRange, RefactorType }
 
 trait EnsimeApi {
 
@@ -104,7 +104,7 @@ trait EnsimeApi {
   def rpcInspectPackageByPath(path: String): Option[PackageInfo]
 
   def rpcPrepareRefactor(procId: Int, refactorDesc: RefactorDesc): Either[RefactorFailure, RefactorEffect]
-  def rpcExecRefactor(procId: Int, refactorType: Symbol): Either[RefactorFailure, RefactorResult]
+  def rpcExecRefactor(procId: Int, refactorType: RefactorType): Either[RefactorFailure, RefactorResult]
   def rpcCancelRefactor(procId: Int): Unit
 
   def rpcExpandSelection(filename: File, start: Int, stop: Int): FileRange
@@ -130,4 +130,3 @@ trait EnsimeApi {
   def rpcDebugBacktrace(threadId: DebugThreadId, index: Int, count: Int): DebugBacktrace
   def rpcDebugActiveVM(): Boolean
 }
-

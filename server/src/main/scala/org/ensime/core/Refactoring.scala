@@ -24,7 +24,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
 
   def performRefactoring(
     procId: Int,
-    tpe: scala.Symbol,
+    tpe: RefactorType,
     parameters: refactoring.RefactoringParameters
   ): Either[RefactorFailure, RefactorEffect] = {
 
@@ -73,7 +73,7 @@ trait RefactoringHandler { self: Analyzer =>
     effects.get(procedureId) match {
       case Some(effect: RefactorEffect) =>
         project ! AddUndo(
-          "Refactoring of type: " + req.tpe.toString,
+          "Refactoring of type: " + req.tpe.symbol.toString,
           FileUtils.inverseEdits(effect.changes, charset)
         )
         val result = scalaCompiler.askExecRefactor(procedureId, req.tpe, effect)
@@ -160,7 +160,7 @@ trait RefactoringControl { self: RichCompilerControl with RefactoringImpl =>
 
   def askExecRefactor(
     procId: Int,
-    tpe: scala.Symbol,
+    tpe: RefactorType,
     effect: RefactorEffect
   ): Either[RefactorFailure, RefactorResult] = {
     askOption(execRefactor(procId, tpe, effect)).getOrElse(
@@ -181,7 +181,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
 
   import org.ensime.util.FileUtils._
 
-  protected def doRename(procId: Int, tpe: scala.Symbol, name: String, file: File, start: Int, end: Int) =
+  protected def doRename(procId: Int, tpe: RefactorType, name: String, file: File, start: Int, end: Int) =
     new RefactoringEnvironment(file.getPath, start, end) {
       val refactoring = new Rename with GlobalIndexes {
         val global = RefactoringImpl.this
@@ -192,7 +192,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
       val result = performRefactoring(procId, tpe, name)
     }.result
 
-  protected def doExtractMethod(procId: Int, tpe: scala.Symbol,
+  protected def doExtractMethod(procId: Int, tpe: RefactorType,
     name: String, file: File, start: Int, end: Int) =
     new RefactoringEnvironment(file.getPath, start, end) {
       val refactoring = new ExtractMethod with GlobalIndexes {
@@ -203,7 +203,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
       val result = performRefactoring(procId, tpe, name)
     }.result
 
-  protected def doExtractLocal(procId: Int, tpe: scala.Symbol,
+  protected def doExtractLocal(procId: Int, tpe: RefactorType,
     name: String, file: File, start: Int, end: Int) =
     new RefactoringEnvironment(file.getPath, start, end) {
       val refactoring = new ExtractLocal with GlobalIndexes {
@@ -214,7 +214,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
       val result = performRefactoring(procId, tpe, name)
     }.result
 
-  protected def doInlineLocal(procId: Int, tpe: scala.Symbol, file: File,
+  protected def doInlineLocal(procId: Int, tpe: RefactorType, file: File,
     start: Int, end: Int) =
     new RefactoringEnvironment(file.getPath, start, end) {
       val refactoring = new InlineLocal with GlobalIndexes {
@@ -225,7 +225,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
       val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
     }.result
 
-  protected def doOrganizeImports(procId: Int, tpe: scala.Symbol, file: File) =
+  protected def doOrganizeImports(procId: Int, tpe: RefactorType, file: File) =
     new RefactoringEnvironment(file.getPath, 0, 0) {
       val refactoring = new OrganizeImports {
         val global = RefactoringImpl.this
@@ -233,7 +233,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
       val result = performRefactoring(procId, tpe, new refactoring.RefactoringParameters())
     }.result
 
-  protected def doAddImport(procId: Int, tpe: scala.Symbol, qualName: String, file: File) = {
+  protected def doAddImport(procId: Int, tpe: RefactorType, qualName: String, file: File) = {
     val refactoring = new AddImportStatement {
       val global = RefactoringImpl.this
     }
@@ -278,7 +278,7 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
 
   protected def execRefactor(
     procId: Int,
-    refactorType: scala.Symbol,
+    refactorType: RefactorType,
     effect: RefactorEffect
   ): Either[RefactorFailure, RefactorResult] = {
     logger.info("Applying changes: " + effect.changes)
@@ -291,4 +291,3 @@ trait RefactoringImpl { self: RichPresentationCompiler =>
   }
 
 }
-

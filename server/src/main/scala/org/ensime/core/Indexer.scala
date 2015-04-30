@@ -8,6 +8,7 @@ import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
+import org.ensime.util.DeclaredAs
 
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
 class Indexer(
@@ -28,8 +29,8 @@ class Indexer(
 
   def oldSearchSymbols(terms: List[String], max: Int) =
     index.searchClassesMethods(terms, max).flatMap {
-      case hit if hit.declAs == 'class => Some(typeResult(hit))
-      case hit if hit.declAs == 'method => Some(MethodSearchResult(
+      case hit if hit.declAs == DeclaredAs.Class => Some(typeResult(hit))
+      case hit if hit.declAs == DeclaredAs.Method => Some(MethodSearchResult(
         hit.fqn, hit.fqn.split("\\.").last, hit.declAs,
         LineSourcePositionHelper.fromFqnSymbol(hit)(config, vfs),
         hit.fqn.split("\\.").init.mkString(".")

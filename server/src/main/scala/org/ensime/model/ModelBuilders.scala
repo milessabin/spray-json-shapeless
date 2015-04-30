@@ -7,6 +7,7 @@ import org.ensime.config._
 import org.ensime.core.RichPresentationCompiler
 import org.ensime.indexer.DatabaseService._
 import org.ensime.indexer.EnsimeVFS
+import org.ensime.util.DeclaredAs
 import org.ensime.util.RichFile._
 
 import scala.collection.mutable
@@ -115,16 +116,16 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         for (tm <- sortedMembers) {
           val info = NamedTypeMemberInfo(tm)
           val decl = info.declAs
-          if (decl == 'method) {
+          if (decl == DeclaredAs.Method) {
             if (info.name == "this") {
               constructors += info
             } else {
               methods += info
             }
-          } else if (decl == 'field) {
+          } else if (decl == DeclaredAs.Field) {
             fields += info
-          } else if (decl == 'class || decl == 'trait ||
-            decl == 'interface || decl == 'object) {
+          } else if (decl == DeclaredAs.Class || decl == DeclaredAs.Trait ||
+            decl == DeclaredAs.Interface || decl == DeclaredAs.Object) {
             nestedTypes += info
           }
         }
@@ -220,7 +221,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     }
 
     def nullInfo = {
-      new BasicTypeInfo("NA", -1, 'nil, "NA", List.empty, List.empty, None, None)
+      new BasicTypeInfo("NA", -1, DeclaredAs.Nil, "NA", List.empty, List.empty, None, None)
     }
   }
 
@@ -316,7 +317,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
     def apply(m: TypeMember): NamedTypeMemberInfo = {
       val decl = declaredAs(m.sym)
       val pos = if (m.sym.pos == NoPosition) None else Some(EmptySourcePosition())
-      val signatureString = if (decl == 'method) Some(m.sym.signatureString) else None
+      val signatureString = if (decl == DeclaredAs.Method) Some(m.sym.signatureString) else None
       new NamedTypeMemberInfo(m.sym.nameString, TypeInfo(m.tpe), pos, signatureString, decl)
     }
   }

@@ -156,39 +156,39 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         // toWF(value: PackageMemberInfoLight)
         assert(toWF(new PackageMemberInfoLight("packageName")).toWireString === """(:name "packageName")""")
         // toWF(value: SymbolInfo)
-        assert(toWF(new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))).toWireString === """(:name "name" :local-name "localName" :decl-pos nil :type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :is-callable nil :owner-type-id 2)""")
+        assert(toWF(new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))).toWireString === """(:name "name" :local-name "localName" :decl-pos nil :type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :is-callable nil :owner-type-id 2)""")
 
         // toWF(value: NamedTypeMemberInfo)
-        assert(toWF(new NamedTypeMemberInfo("typeX", typeInfo, None, None, 'abcd)).toWireString === """(:name "typeX" :type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :pos nil :signature-string nil :decl-as abcd)""")
+        assert(toWF(new NamedTypeMemberInfo("typeX", typeInfo, None, None, DeclaredAs.Method)).toWireString === """(:name "typeX" :type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :pos nil :signature-string nil :decl-as method)""")
 
         // toWF(value: EntityInfo)
         assert(toWF(entityInfo).toWireString === entityInfoStr)
 
         // toWF(value: TypeInfo)
-        assert(toWF(typeInfo).toWireString === """(:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8)""")
+        assert(toWF(typeInfo).toWireString === typeInfoStr)
 
         // toWF(value: PackageInfo)
         assert(toWF(packageInfo).toWireString === """(:info-type package :name "name" :full-name "fullName" :members nil)""")
 
         // toWF(value: CallCompletionInfo)
-        assert(toWF(new CallCompletionInfo(typeInfo, List(paramSectionInfo))).toWireString === """(:result-type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :param-sections ((:params (("ABC" (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8))) :is-implicit nil)))""")
+        assert(toWF(new CallCompletionInfo(typeInfo, List(paramSectionInfo))).toWireString === """(:result-type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :param-sections ((:params (("ABC" (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8))) :is-implicit nil)))""")
 
         // toWF(value: InterfaceInfo)
-        assert(toWF(interfaceInfo).toWireString === """(:type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :via-view "DEF")""")
+        assert(toWF(interfaceInfo).toWireString === """(:type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :via-view "DEF")""")
 
         // toWF(value: TypeInspectInfo)
-        assert(toWF(new TypeInspectInfo(typeInfo, Some(1), List(interfaceInfo))).toWireString === """(:type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :companion-id 1 :interfaces ((:type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :via-view "DEF")) :info-type typeInspect)""")
+        assert(toWF(new TypeInspectInfo(typeInfo, Some(1), List(interfaceInfo))).toWireString === """(:type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :companion-id 1 :interfaces ((:type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :via-view "DEF")) :info-type typeInspect)""")
 
         // toWF(value: SymbolSearchResults)
-        assert(toWF(new SymbolSearchResults(List(methodSearchRes, typeSearchRes))).toWireString === s"""((:type method :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10)))""")
+        assert(toWF(new SymbolSearchResults(List(methodSearchRes, typeSearchRes))).toWireString === s"""((:type method :name "abc" :local-name "a" :decl-as method :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as trait :pos (:type line :file $abd_str :line 10)))""")
 
         // toWF(value: ImportSuggestions)
         assert(toWF(new ImportSuggestions(List(List(methodSearchRes, typeSearchRes)))).toWireString ===
-          s"""(((:type method :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10))))""")
+          s"""(((:type method :name "abc" :local-name "a" :decl-as method :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as trait :pos (:type line :file $abd_str :line 10))))""")
 
         // toWF(value: SymbolSearchResult)
-        assert(toWF(methodSearchRes).toWireString === s"""(:type method :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr")""")
-        assert(toWF(typeSearchRes).toWireString === s"""(:type type :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10))""")
+        assert(toWF(methodSearchRes).toWireString === s"""(:type method :name "abc" :local-name "a" :decl-as method :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr")""")
+        assert(toWF(typeSearchRes).toWireString === s"""(:type type :name "abc" :local-name "a" :decl-as trait :pos (:type line :file $abd_str :line 10))""")
 
         assert(toWF(new ERangePosition(batchSourceFile, 75, 70, 90)).toWireString === """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)""")
 
@@ -202,9 +202,9 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
         assert(toWF(RefactorFailure(7, "message")).toWireString === """(:procedure-id 7 :reason "message" :status failure)""")
 
-        assert(toWF(new RefactorEffect(9, 'add, List(TextEdit(file3, 5, 7, "aaa")))).toWireString === s"""(:procedure-id 9 :refactor-type add :changes ((:type edit :file $file3_str :from 5 :to 7 :text "aaa")) :status success)""")
+        assert(toWF(refactorEffect).toWireString === refactorEffectStr)
 
-        assert(toWF(new RefactorResult(7, 'abc, List(file3, file1))).toWireString === s"""(:procedure-id 7 :refactor-type abc :touched-files ($file3_str $file1_str) :status success)""")
+        assert(toWF(refactorResult).toWireString === refactorResultStr)
 
         assert(toWF(Undo(3, "Undoing stuff", List(
           TextEdit(file3, 5, 7, "aaa"),

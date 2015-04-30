@@ -261,30 +261,31 @@ trait Helpers { self: Global =>
   }
 
   import scala.tools.nsc.symtab.Flags._
+  import org.ensime.util.DeclaredAs
 
-  def declaredAs(sym: Symbol): scala.Symbol = {
-    import org.ensime.util.{ Symbols => S }
+  def declaredAs(sym: Symbol): DeclaredAs = {
     if (sym.isMethod)
-      S.Method
-    else if (sym.isTrait)
-      S.Trait
+      DeclaredAs.Method
     else if (sym.isTrait && sym.hasFlag(JAVA))
-      S.Interface
+      DeclaredAs.Interface
+    else if (sym.isTrait)
+      DeclaredAs.Trait
     else if (sym.isInterface)
-      S.Interface
+      DeclaredAs.Interface
     else if (sym.isModule)
-      S.Object
+      DeclaredAs.Object
     else if (sym.isModuleClass)
-      S.Object
+      DeclaredAs.Object
     else if (sym.isClass)
-      S.Class
+      DeclaredAs.Class
     else if (sym.isPackageClass)
-      S.Class
+      DeclaredAs.Class
 
     // check this last so objects are not
     // classified as fields
     else if (sym.isValue || sym.isVariable)
-      S.Field
-    else S.Nil
+      DeclaredAs.Field
+    else
+      DeclaredAs.Nil
   }
 }

@@ -15,36 +15,36 @@ case class RefactorFailure(
 
 trait RefactorProcedure {
   def procedureId: Int
-  def refactorType: scala.Symbol
+  def refactorType: RefactorType
 }
 
 case class RefactorEffect(
   procedureId: Int,
-  refactorType: scala.Symbol,
+  refactorType: RefactorType,
   changes: Seq[FileEdit],
   status: scala.Symbol = 'success // redundant field
 ) extends RefactorProcedure
 
 case class RefactorResult(
   procedureId: Int,
-  refactorType: scala.Symbol,
+  refactorType: RefactorType,
   touchedFiles: Seq[File],
   status: scala.Symbol = 'success // redundant field
 ) extends RefactorProcedure
 
-sealed abstract class RefactorDesc(val refactorType: Symbol)
+sealed abstract class RefactorDesc(val refactorType: RefactorType)
 
-case class InlineLocalRefactorDesc(file: File, start: Int, end: Int) extends RefactorDesc(Symbols.InlineLocal)
+case class InlineLocalRefactorDesc(file: File, start: Int, end: Int) extends RefactorDesc(RefactorType.InlineLocal)
 
-case class RenameRefactorDesc(newName: String, file: File, start: Int, end: Int) extends RefactorDesc(Symbols.Rename)
+case class RenameRefactorDesc(newName: String, file: File, start: Int, end: Int) extends RefactorDesc(RefactorType.Rename)
 
 case class ExtractMethodRefactorDesc(methodName: String, file: File, start: Int, end: Int)
-  extends RefactorDesc(Symbols.ExtractMethod)
+  extends RefactorDesc(RefactorType.ExtractMethod)
 
 case class ExtractLocalRefactorDesc(name: String, file: File, start: Int, end: Int)
-  extends RefactorDesc(Symbols.ExtractLocal)
+  extends RefactorDesc(RefactorType.ExtractLocal)
 
-case class OrganiseImportsRefactorDesc(file: File) extends RefactorDesc(Symbols.OrganizeImports)
+case class OrganiseImportsRefactorDesc(file: File) extends RefactorDesc(RefactorType.OrganizeImports)
 
 case class AddImportRefactorDesc(qualifiedName: String, file: File)
-  extends RefactorDesc(Symbols.AddImport)
+  extends RefactorDesc(RefactorType.AddImport)

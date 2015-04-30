@@ -13,8 +13,8 @@ import UnitTestUtils._
 
 object SwankTestData {
 
-  val typeInfo = new BasicTypeInfo("type1", 7, 'type1, "FOO.type1", List(), List(), None, Some(8))
-  val typeInfoStr = """(:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8)"""
+  val typeInfo = new BasicTypeInfo("type1", 7, DeclaredAs.Method, "FOO.type1", List(), List(), None, Some(8))
+  val typeInfoStr = """(:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8)"""
 
   val interfaceInfo = new InterfaceInfo(typeInfo, Some("DEF"))
   val typeInspectInfo = new TypeInspectInfo(typeInfo, Some(1), List(interfaceInfo))
@@ -72,11 +72,11 @@ object SwankTestData {
   val file5 = CanonFile("/foo/hij").file
   val file5_str = fileToWireString(file5)
 
-  val refactorEffect = new RefactorEffect(9, 'add, List(TextEdit(file3, 5, 7, "aaa")))
-  val refactorEffectStr = """(:procedure-id 9 :refactor-type add :status success :changes ((:file """ + file3_str + """ :text "aaa" :from 5 :to 7)))"""
+  val refactorEffect = new RefactorEffect(9, RefactorType.AddImport, List(TextEdit(file3, 5, 7, "aaa")))
+  val refactorEffectStr = """(:procedure-id 9 :refactor-type addImport :changes ((:type edit :file """ + file3_str + """ :from 5 :to 7 :text "aaa")) :status success)"""
 
-  val refactorResult = new RefactorResult(7, 'abc, List(file3, file1))
-  val refactorResultStr = s"""(:procedure-id 7 :refactor-type abc :touched-files ($file3_str $file1_str) :status success)"""
+  val refactorResult = new RefactorResult(7, RefactorType.AddImport, List(file3, file1))
+  val refactorResultStr = s"""(:procedure-id 7 :refactor-type addImport :touched-files ($file3_str $file1_str) :status success)"""
 
   val sourcePos1 = new LineSourcePosition(file1, 57)
   val sourcePos2 = new LineSourcePosition(file1, 59)
@@ -109,19 +109,19 @@ object SwankTestData {
   val abd = CanonFile("abd").file
   val abd_str = fileToWireString(abd)
 
-  val methodSearchRes = MethodSearchResult("abc", "a", 'abcd, Some(LineSourcePosition(file("abd"), 10)), "ownerStr")
-  val typeSearchRes = TypeSearchResult("abc", "a", 'abcd, Some(LineSourcePosition(file("abd"), 10)))
+  val methodSearchRes = MethodSearchResult("abc", "a", DeclaredAs.Method, Some(LineSourcePosition(file("abd"), 10)), "ownerStr")
+  val typeSearchRes = TypeSearchResult("abc", "a", DeclaredAs.Trait, Some(LineSourcePosition(file("abd"), 10)))
 
   val importSuggestions = new ImportSuggestions(List(List(methodSearchRes, typeSearchRes)))
-  val importSuggestionsStr = s"""(((:type method :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10))))"""
+  val importSuggestionsStr = s"""(((:type method :name "abc" :local-name "a" :decl-as method :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as trait :pos (:type line :file $abd_str :line 10))))"""
 
   val symbolSearchResults = new SymbolSearchResults(List(methodSearchRes, typeSearchRes))
-  val symbolSearchResultsStr = s"""((:type method :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as abcd :pos (:type line :file $abd_str :line 10)))"""
+  val symbolSearchResultsStr = s"""((:type method :name "abc" :local-name "a" :decl-as method :pos (:type line :file $abd_str :line 10) :owner-name "ownerStr") (:type type :name "abc" :local-name "a" :decl-as trait :pos (:type line :file $abd_str :line 10)))"""
 
   val completionInfoCList = CompletionInfoList("fooBar", List(completionInfo))
   val completionInfoCListStr = s"""(:prefix "fooBar" :completions ($completionInfoStr))"""
 
-  val refactorRenameEffect = new RefactorEffect(7, 'rename, List(TextEdit(file3, 5, 7, "aaa")))
+  val refactorRenameEffect = new RefactorEffect(7, RefactorType.Rename, List(TextEdit(file3, 5, 7, "aaa")))
   val refactorRenameEffectStr = s"""(:procedure-id 7 :refactor-type rename :changes ((:type edit :file $file3_str :from 5 :to 7 :text "aaa")) :status success)"""
 
   val fileRange = FileRange("/abc", 7, 9)
@@ -154,5 +154,5 @@ object SwankTestData {
   val noteListStr = "(:is-full t :notes (" + note1Str + " " + note2Str + "))"
 
   val entityInfo: TypeInfo = new ArrowTypeInfo("Arrow1", 8, typeInfo, List(paramSectionInfo))
-  val entityInfoStr = """(:arrow-type t :name "Arrow1" :type-id 8 :result-type (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :param-sections ((:params (("ABC" (:arrow-type nil :name "type1" :type-id 7 :decl-as type1 :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8))) :is-implicit nil)))"""
+  val entityInfoStr = """(:arrow-type t :name "Arrow1" :type-id 8 :result-type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :param-sections ((:params (("ABC" (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8))) :is-implicit nil)))"""
 }

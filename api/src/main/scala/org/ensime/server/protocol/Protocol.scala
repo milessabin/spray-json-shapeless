@@ -3,6 +3,7 @@ package org.ensime.server.protocol
 import java.io._
 import org.ensime.core._
 import org.ensime.model._
+import org.ensime.util.RefactorType
 
 object ProtocolConst {
 
@@ -136,7 +137,7 @@ case class PrepareRefactorReq(
   params: RefactorDesc,
   interactive: Boolean
 ) extends RpcRequest
-case class ExecRefactorReq(procId: Int, tpe: Symbol) extends RpcRequest
+case class ExecRefactorReq(procId: Int, tpe: RefactorType) extends RpcRequest
 case class CancelRefactorReq(procId: Int) extends RpcRequest
 case class SymbolDesignationsReq(
   file: File,
