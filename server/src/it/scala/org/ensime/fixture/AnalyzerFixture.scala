@@ -1,12 +1,11 @@
 package org.ensime.fixture
 
 import akka.actor._
-import org.ensime.indexer.SearchService
-import org.scalatest._
 import akka.testkit._
-
 import org.ensime.config._
 import org.ensime.core._
+import org.ensime.indexer.SearchService
+import org.scalatest._
 
 trait AnalyzerFixture {
   def withAnalyzer(testCode: (EnsimeConfig, TestActorRef[Analyzer]) => Any): Any
@@ -26,10 +25,9 @@ trait IsolatedAnalyzerFixture
     extends AnalyzerFixture
     with IsolatedSearchServiceFixture
     with IsolatedTestKitFixture {
-  import AnalyzerFixture._
 
-  override def withAnalyzer(testCode: (EnsimeConfig, TestActorRef[Analyzer]) => Any): Any = withSearchService { (config, search) =>
-    withTestKit { testkit =>
+  override def withAnalyzer(testCode: (EnsimeConfig, TestActorRef[Analyzer]) => Any): Any = withSearchService { (actorSystem, config, search) =>
+    withTestKit(actorSystem) { testkit =>
       testCode(config, AnalyzerFixture.create(config, search)(testkit.system))
     }
   }
@@ -41,6 +39,7 @@ trait SharedAnalyzerFixture
     with SharedSearchServiceFixture
     with SharedTestKitFixture
     with BeforeAndAfterAll {
+
   private[fixture] var analyzer: TestActorRef[Analyzer] = _
 
   override def beforeAll(): Unit = {

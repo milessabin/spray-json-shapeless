@@ -52,10 +52,15 @@ trait IsolatedRichPresentationCompilerFixture
 
   override def withRichPresentationCompiler(
     testCode: (TestKitFix, EnsimeConfig, RichPresentationCompiler) => Any
-  ): Any = withSearchService { (config, search) =>
-    withTestKit { testkit =>
+  ): Any = withSearchService { (actorSystem, config, search) =>
+    withTestKit(actorSystem) { testkit =>
       import org.ensime.fixture.RichPresentationCompilerFixture._
-      testCode(testkit, config, create(config, search)(testkit.system))
+      val pc = create(config, search)(testkit.system)
+      try {
+        testCode(testkit, config, pc)
+      } finally {
+        pc.askShutdown()
+      }
     }
   }
 

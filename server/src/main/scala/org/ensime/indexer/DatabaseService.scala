@@ -11,7 +11,8 @@ import org.ensime.indexer.DatabaseService._
 import scala.slick.driver.H2Driver.simple._
 
 class DatabaseService(dir: File) extends SLF4JLogging {
-  lazy val db = {
+
+  lazy val (datasource, db) = {
     // MVCC plus connection pooling speeds up the tests ~10%
     val url = "jdbc:h2:file:" + dir.getAbsolutePath + "/db;MVCC=TRUE"
     val driver = "org.h2.Driver"
@@ -22,7 +23,13 @@ class DatabaseService(dir: File) extends SLF4JLogging {
     ds.setDriverClass(driver)
     ds.setJdbcUrl(url)
     ds.setStatementsCacheSize(50)
-    Database.forDataSource(ds)
+    (ds, Database.forDataSource(ds))
+  }
+
+  def shutdown(): Unit = {
+    // call directly - using slick withSession barfs as it runs a how many rows were updated
+    // after shutdown is executed.
+    db.createSession().createStatement() execute "shutdown;"
   }
 
   if (!dir.exists) {

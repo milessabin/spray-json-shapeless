@@ -1,20 +1,19 @@
 package org.ensime.server
 
-import akka.event.LoggingReceive
 import java.io._
 import java.net.{ InetAddress, ServerSocket, Socket }
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor._
+import akka.event.LoggingReceive
 import com.google.common.base.Charsets
 import com.google.common.io.Files
 import org.ensime.EnsimeApi
-import org.ensime.sexp.Sexp
 import org.ensime.config._
 import org.ensime.core.Project
-import org.ensime.server.protocol.swank.SwankProtocol
 import org.ensime.server.protocol._
-import org.ensime.util._
+import org.ensime.server.protocol.swank.SwankProtocol
+import org.ensime.sexp.Sexp
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
 
@@ -73,7 +72,7 @@ class Server(
   // the config file parsing will attempt to create directories that are expected
   require(config.cacheDir.isDirectory, "" + config.cacheDir + " is not a valid cache directory")
 
-  val actorSystem = ActorSystem.create()
+  val actorSystem = ActorSystem.create("EnsimeServer")
   // TODO move this to only be started when we want to receive
   val listener = new ServerSocket(requestedPort, 0, InetAddress.getByName(host))
   val actualPort = listener.getLocalPort
@@ -123,6 +122,7 @@ class Server(
     log.info("Shutting down server")
     hasShutdownFlag.set(true)
     listener.close()
+    project.shutdown()
     actorSystem.shutdown()
     log.info("Awaiting actor system shutdown")
     actorSystem.awaitTermination()
@@ -162,7 +162,7 @@ class SocketReader(socket: Socket, protocol: Protocol[Sexp], handler: ActorRef) 
   override def run(): Unit = {
     try {
       while (true) {
-        val msg = protocol.readMessage(reader).asInstanceOf[Sexp]
+        val msg = protocol.readMessage(reader)
         handler ! IncomingMessageEvent(msg)
       }
     } catch {

@@ -1,10 +1,10 @@
 package org.ensime.fixture
 
+import akka.actor.ActorSystem
+import akka.testkit.{ ImplicitSender, TestKit }
 import org.scalatest._
 
-import akka.actor.ActorSystem
-import akka.testkit.ImplicitSender
-import akka.testkit.TestKit
+import scala.concurrent.duration._
 
 /**
  * Normally a TestKit will reuse the same actor system for all tests
@@ -22,18 +22,36 @@ trait TestKitFixture {
     "IsolatedActorSystems are incompatible with TestKit. Instead, 'import sys._'"
   )
 
+  def withTestKit(actorSystem: ActorSystem)(testCode: TestKitFix => Any): Any
   def withTestKit(testCode: TestKitFix => Any): Any
 }
 
-class TestKitFix extends TestKit(ActorSystem()) with ImplicitSender
+class TestKitFix(actorSystem: ActorSystem) extends TestKit(actorSystem) with ImplicitSender
+object TestKitFix {
+
+  def apply(): TestKitFix = {
+    new TestKitFix(ActorSystem("TestKitFix"))
+  }
+
+  def apply(actorSystem: ActorSystem) = {
+    new TestKitFix(actorSystem)
+  }
+}
 
 trait IsolatedTestKitFixture extends TestKitFixture {
+
+  override def withTestKit(actorSystem: ActorSystem)(testCode: TestKitFix => Any): Any = {
+    val sys = TestKitFix(actorSystem)
+    testCode(sys)
+  }
+
   override def withTestKit(testCode: TestKitFix => Any): Any = {
-    val sys = new TestKitFix
+    val actorSystem = ActorSystem("IsolatedTestKitFixture")
     try {
-      testCode(sys)
+      withTestKit(actorSystem)(testCode)
     } finally {
-      sys.system.shutdown()
+      actorSystem.shutdown()
+      actorSystem.awaitTermination(10.seconds)
     }
   }
 }
@@ -41,20 +59,25 @@ trait IsolatedTestKitFixture extends TestKitFixture {
 // this seems redundant, because it mimics "extends TestKit" behaviour,
 // but it allows for easy swapping with the refreshing implementation
 trait SharedTestKitFixture extends TestKitFixture with BeforeAndAfterAll {
+
   this: Suite =>
 
   private[fixture] var _testkit: TestKitFix = _
+  private[fixture] var _actorSystem2: ActorSystem = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    _testkit = new TestKitFix
+    _actorSystem2 = ActorSystem("SharedTestKitFixture")
+    _testkit = TestKitFix(_actorSystem2)
   }
 
   override def afterAll(): Unit = {
     super.afterAll()
-    _testkit.system.shutdown()
+    _actorSystem2.shutdown()
+    _actorSystem2.awaitTermination(10.seconds)
   }
 
+  // TODO Need to check if we already have an actor system here.
   override def withTestKit(testCode: TestKitFix => Any): Any = testCode(_testkit)
 
 }

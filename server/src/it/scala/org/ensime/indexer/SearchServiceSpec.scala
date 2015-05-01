@@ -1,13 +1,12 @@
 package org.ensime.indexer
 
-import org.scalatest._
 import org.ensime.fixture._
+import org.scalatest._
+import pimpathon.any._
+import pimpathon.file._
 
-import org.ensime.config._
 import scala.concurrent._
 import scala.concurrent.duration._
-import pimpathon.file._
-import pimpathon.any._
 
 class SearchServiceSpec extends WordSpec with Matchers
     with SharedSearchServiceFixture with SearchServiceTestUtils {
@@ -25,7 +24,7 @@ class SearchServiceSpec extends WordSpec with Matchers
       refresh() shouldBe (0, 0)
     }
 
-    "refresh files that have 'changed'" in withSearchService { (config, service) =>
+    "refresh files that have 'changed'" in withSearchService { (actorSystem, config, service) =>
       implicit val s = service
       val now = System.currentTimeMillis()
       for {
@@ -42,7 +41,7 @@ class SearchServiceSpec extends WordSpec with Matchers
       indexed should be > 0
     }
 
-    "remove classfiles that have been deleted" in withSearchService { (config, service) =>
+    "remove classfiles that have been deleted" in withSearchService { (actorSystem, config, service) =>
       implicit val s = service
       val classfile = config.subprojects.head.targetDirs.head / "org/example/Foo.class"
 

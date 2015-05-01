@@ -114,6 +114,7 @@ class Analyzer(
   }
 
   override def postStop(): Unit = {
+    log.info("Shutting down presentation compiler")
     scalaCompiler.askClearTypeCache()
     scalaCompiler.askShutdown()
   }
@@ -166,10 +167,10 @@ class Analyzer(
                 }
                 sender ! VoidResponse
               case TypecheckFileReq(fileInfo) =>
-                handleReloadFiles(List(fileInfo), true)
+                handleReloadFiles(List(fileInfo), async = true)
                 sender ! VoidResponse
               case TypecheckFilesReq(files) =>
-                handleReloadFiles(files.map(SourceFileInfo(_)), false)
+                handleReloadFiles(files.map(SourceFileInfo(_)), async = false)
                 sender ! VoidResponse
               case PatchSourceReq(file, edits) =>
                 if (!file.exists()) {
@@ -257,7 +258,7 @@ class Analyzer(
 
               case unexpected =>
                 // TODO compiler blew up... too many missing cases
-                require(false, unexpected.toString)
+                require(requirement = false, unexpected.toString)
             }
           }
         } catch {

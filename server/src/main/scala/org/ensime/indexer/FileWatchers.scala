@@ -103,6 +103,11 @@ class ClassfileWatcher(
 
   reset()
 
+  def shutdown(): Unit = {
+    fm.stop()
+    workaround.stop()
+  }
+
 }
 
 class SourceWatcher(
@@ -128,5 +133,9 @@ class SourceWatcher(
 
   config.modules.values.foreach { m =>
     m.sourceRoots foreach { r => fm.addFile(r) }
+  }
+
+  def shutdown(): Unit = {
+    fm.stop()
   }
 }

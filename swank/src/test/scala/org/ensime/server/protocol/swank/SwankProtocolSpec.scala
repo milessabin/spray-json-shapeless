@@ -13,9 +13,6 @@ import org.ensime.util.UnitTestUtils._
 import org.ensime.util._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
-import org.slf4j.{ Logger, LoggerFactory }
-
-import scala.reflect.io.ZipArchive
 
 import pimpathon.file._
 import org.ensime.util.RichFile._

@@ -51,7 +51,8 @@ trait IsolatedServerFixture extends ServerFixture
 }
 
 trait SharedServerFixture extends ServerFixture
-    with SharedEnsimeConfigFixture with SharedTestKitFixture {
+    with SharedEnsimeConfigFixture
+    with SharedTestKitFixture {
 
   private var _server: Server = _
   private var _helper: AsyncMsgHelper = _
