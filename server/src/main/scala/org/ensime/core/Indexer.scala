@@ -4,7 +4,7 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.event.LoggingReceive
 import org.ensime.config.EnsimeConfig
 import org.ensime.indexer.DatabaseService.FqnSymbol
-import org.ensime.indexer.SearchService
+import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
@@ -12,12 +12,13 @@ import org.ensime.server.protocol.ProtocolConst._
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
 class Indexer(
     config: EnsimeConfig,
-    index: SearchService
+    index: SearchService,
+    val vfs: EnsimeVFS
 ) extends Actor with ActorLogging {
 
   private def typeResult(hit: FqnSymbol) = TypeSearchResult(
     hit.fqn, hit.fqn.split("\\.").last, hit.declAs,
-    LineSourcePositionHelper.fromFqnSymbol(hit)(config)
+    LineSourcePositionHelper.fromFqnSymbol(hit)(config, vfs)
   )
 
   def oldSearchTypes(query: String, max: Int) =
@@ -30,7 +31,7 @@ class Indexer(
       case hit if hit.declAs == 'class => Some(typeResult(hit))
       case hit if hit.declAs == 'method => Some(MethodSearchResult(
         hit.fqn, hit.fqn.split("\\.").last, hit.declAs,
-        LineSourcePositionHelper.fromFqnSymbol(hit)(config),
+        LineSourcePositionHelper.fromFqnSymbol(hit)(config, vfs),
         hit.fqn.split("\\.").init.mkString(".")
       ))
       case _ => None // were never supported

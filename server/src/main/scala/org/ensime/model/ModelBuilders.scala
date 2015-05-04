@@ -6,6 +6,7 @@ import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
 import org.ensime.core.RichPresentationCompiler
 import org.ensime.indexer.DatabaseService._
+import org.ensime.indexer.EnsimeVFS
 import org.ensime.util.RichFile._
 
 import scala.collection.mutable
@@ -55,7 +56,7 @@ trait ModelBuilders { self: RichPresentationCompiler =>
         val name = symbolIndexerName(sym)
         val hit = search.findUnique(name)
         logger.debug(s"search: $name = $hit")
-        hit.flatMap(LineSourcePositionHelper.fromFqnSymbol(_)(config)).flatMap { sourcePos =>
+        hit.flatMap(LineSourcePositionHelper.fromFqnSymbol(_)(config, vfs)).flatMap { sourcePos =>
           if (sourcePos.file.getName.endsWith(".scala"))
             askLinkPos(sym, AbstractFile.getFile(sourcePos.file)).
               flatMap(pos => OffsetSourcePositionHelper.fromPosition(pos))
@@ -369,7 +370,7 @@ object LineSourcePositionHelper {
         }
     }
 
-  def fromFqnSymbol(sym: FqnSymbol)(implicit config: EnsimeConfig): Option[LineSourcePosition] =
+  def fromFqnSymbol(sym: FqnSymbol)(implicit config: EnsimeConfig, vfs: EnsimeVFS): Option[LineSourcePosition] =
     (sym.sourceFileObject, sym.line, sym.offset) match {
       case (None, _, _) => None
       case (Some(fo), lineOpt, offsetOpt) =>

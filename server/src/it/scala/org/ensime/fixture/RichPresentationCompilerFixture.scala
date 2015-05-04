@@ -40,7 +40,7 @@ object RichPresentationCompilerFixture {
     val parent = TestProbe()
 
     new RichPresentationCompiler(
-      config, settings, reporter, parent.ref, indexer.ref, search
+      config, settings, reporter, parent.ref, indexer.ref, search, search.vfs
     )
   }
 }

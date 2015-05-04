@@ -7,7 +7,10 @@ import pimpathon.list._
 import pimpathon.multiMap._
 
 // mutable: lookup of user's source files are atomically updated
-class SourceResolver(config: EnsimeConfig) extends SourceListener with SLF4JLogging {
+class SourceResolver(
+    config: EnsimeConfig,
+    val vfs: EnsimeVFS
+) extends SourceListener with SLF4JLogging {
 
   // it's not worth doing incremental updates - this is cheap
   // (but it would be nice to have a "debounce" throttler)
@@ -33,7 +36,7 @@ class SourceResolver(config: EnsimeConfig) extends SourceListener with SLF4JLogg
     all = recalculate
   }
 
-  private def scan(f: FileObject) = f.findFiles(SourceSelector) match {
+  private def scan(f: FileObject) = f.findFiles(EnsimeVFS.SourceSelector) match {
     case null => Nil
     case res => res.toList
   }
@@ -48,7 +51,7 @@ class SourceResolver(config: EnsimeConfig) extends SourceListener with SLF4JLogg
     for {
       srcJarFile <- srcJars
       // interestingly, this is able to handle zip files
-      srcJar = vjar(srcJarFile)
+      srcJar = vfs.vjar(srcJarFile)
       srcEntry <- scan(srcJar)
     } yield (infer(srcJar, srcEntry), srcEntry)
   }.toMultiMap[Set]
@@ -57,7 +60,7 @@ class SourceResolver(config: EnsimeConfig) extends SourceListener with SLF4JLogg
     for {
       (_, module) <- config.modules.toList
       root <- module.sourceRoots
-      dir = vfile(root)
+      dir = vfs.vfile(root)
       file <- scan(dir)
     } yield (infer(dir, file), file)
   }.toMultiMap[Set]

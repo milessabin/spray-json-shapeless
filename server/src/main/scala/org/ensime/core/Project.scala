@@ -26,17 +26,20 @@ class Project(
 
   protected var analyzer: Option[ActorRef] = None
 
-  private val resolver = new SourceResolver(config)
+  private val ensimeVFS = EnsimeVFS()
+
+  private val resolver = new SourceResolver(config, ensimeVFS)
+
   // TODO: add PresCompiler to the source watcher
-  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil)
-  private val searchService = new SearchService(config, resolver, actorSystem)
+  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil, ensimeVFS)
+  private val searchService = new SearchService(config, resolver, actorSystem, ensimeVFS)
   private val reTypecheck = new ClassfileListener {
     def reTypeCheck(): Unit = actor ! AskReTypecheck
     def classfileAdded(f: FileObject): Unit = reTypeCheck()
     def classfileChanged(f: FileObject): Unit = reTypeCheck()
     def classfileRemoved(f: FileObject): Unit = reTypeCheck()
   }
-  private val classfileWatcher = new ClassfileWatcher(config, searchService :: reTypecheck :: Nil)
+  private val classfileWatcher = new ClassfileWatcher(config, searchService :: reTypecheck :: Nil, ensimeVFS)
 
   import scala.concurrent.ExecutionContext.Implicits.global
   searchService.refresh().onSuccess {
@@ -46,7 +49,7 @@ class Project(
   }
 
   protected val indexer: ActorRef = actorSystem.actorOf(Props(
-    new Indexer(config, searchService)
+    new Indexer(config, searchService, ensimeVFS)
   ), "indexer")
 
   protected val docServer: ActorRef = actorSystem.actorOf(Props(
@@ -170,7 +173,7 @@ class Project(
 
   protected def startCompiler(): Unit = {
     val newAnalyzer = actorSystem.actorOf(Props(
-      new Analyzer(actor, indexer, searchService, config)
+      new Analyzer(actor, indexer, searchService, config, ensimeVFS)
     ), "analyzer")
     analyzer = Some(newAnalyzer)
   }
@@ -200,6 +203,7 @@ class Project(
     classfileWatcher.shutdown()
     sourceWatcher.shutdown()
     searchService.shutdown()
+    ensimeVFS.close()
   }
 
   // TODO Move to server - this does not belong here

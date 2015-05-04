@@ -6,7 +6,7 @@ import java.nio.charset.Charset
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import org.ensime.config._
-import org.ensime.indexer.SearchService
+import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._
 import org.ensime.server.protocol._
 import org.ensime.util._
@@ -27,7 +27,8 @@ class Analyzer(
   val project: ActorRef,
   val indexer: ActorRef,
   search: SearchService,
-  val config: EnsimeConfig
+  val config: EnsimeConfig,
+  val vfs: EnsimeVFS
 )
     extends Actor with ActorLogging with RefactoringHandler {
 
@@ -95,7 +96,7 @@ class Analyzer(
   }
 
   protected def makeScalaCompiler() = new RichPresentationCompiler(
-    config, settings, reporter, self, indexer, search
+    config, settings, reporter, self, indexer, search, vfs
   )
 
   protected def restartCompiler(keepLoaded: Boolean): Unit = {

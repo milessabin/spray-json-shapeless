@@ -3,11 +3,12 @@ package org.ensime.model
 import org.ensime.config._
 import org.ensime.fixture._
 import org.ensime.indexer.DatabaseService.FqnSymbol
+import org.ensime.indexer.EnsimeVFS
 import org.scalatest._
 import pimpathon.file._
 
 class SourcePositionSpec extends WordSpec with Matchers
-    with SharedEnsimeConfigFixture {
+    with SharedEnsimeConfigFixture with SharedEnsimeVFSFixture {
   val original = EnsimeConfigFixture.SimpleTestProject.copy(
     javaLibs = Nil
   )
@@ -55,7 +56,9 @@ class SourcePositionSpec extends WordSpec with Matchers
   }
 
   def lookup(uri: String, line: Option[Int] = None)(implicit config: EnsimeConfig) = {
-    val sym = FqnSymbol(None, "", "", "", None, None, Some(uri), line, Some(0))
-    LineSourcePositionHelper.fromFqnSymbol(sym)
+    withVFS { implicit vfs: EnsimeVFS =>
+      val sym = FqnSymbol(None, "", "", "", None, None, Some(uri), line, Some(0))
+      LineSourcePositionHelper.fromFqnSymbol(sym)
+    }
   }
 }

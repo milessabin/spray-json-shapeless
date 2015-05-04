@@ -23,7 +23,8 @@ import scala.concurrent.Future
 class SearchService(
   config: EnsimeConfig,
   resolver: SourceResolver,
-  actorSystem: ActorSystem
+  actorSystem: ActorSystem,
+  implicit val vfs: EnsimeVFS
 ) extends ClassfileIndexer
     with ClassfileListener
     with SLF4JLogging {
@@ -49,14 +50,14 @@ class SearchService(
    *         because we may not have TODO
    */
   def refresh(): Future[(Int, Int)] = {
-    def scan(f: FileObject) = f.findFiles(ClassfileSelector) match {
+    def scan(f: FileObject) = f.findFiles(EnsimeVFS.ClassfileSelector) match {
       case null => Nil
       case res => res.toList
     }
 
     // TODO visibility test/main and which module is viewed (a Lucene concern, not H2)
 
-    val jarUris = config.allJars.map(vfile).map(_.getName.getURI)
+    val jarUris = config.allJars.map(vfs.vfile).map(_.getName.getURI)
 
     // remove stale entries: must be before index or INSERT/DELETE races
     val stale = for {
@@ -84,10 +85,10 @@ class SearchService(
     val bases = {
       config.modules.flatMap {
         case (name, m) =>
-          m.targetDirs.flatMap { d => scan(d) } ::: m.testTargetDirs.flatMap { d => scan(d) } :::
-            m.compileJars.map(vfile) ::: m.testJars.map(vfile)
+          m.targetDirs.flatMap { d => scan(vfs.vfile(d)) } ::: m.testTargetDirs.flatMap { d => scan(vfs.vfile(d)) } :::
+            m.compileJars.map(vfs.vfile) ::: m.testJars.map(vfs.vfile)
       }
-    }.toSet ++ config.javaLibs.map(vfile)
+    }.toSet ++ config.javaLibs.map(vfs.vfile)
 
     // start indexing after all deletes have completed (not pretty)
     val indexing = removed.map { _ =>
@@ -102,7 +103,7 @@ class SearchService(
         case jar => Future[Unit] {
           log.debug(s"indexing $jar")
           val check = FileCheck(jar)
-          val symbols = scan(vjar(jar)) flatMap (extractSymbols(jar, _))
+          val symbols = scan(vfs.vjar(jar)) flatMap (extractSymbols(jar, _))
           persist(check, symbols)
         }(workerEC)
       }

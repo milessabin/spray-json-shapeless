@@ -2,7 +2,7 @@ package org.ensime.fixture
 
 import akka.actor.ActorSystem
 import org.ensime.config._
-import org.ensime.indexer.SearchService
+import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import scala.concurrent.duration._
 
 trait SearchServiceFixture {
@@ -19,12 +19,14 @@ trait IsolatedSearchServiceFixture extends SearchServiceFixture
     testCode: (ActorSystem, EnsimeConfig, SearchService) => Any
   ): Any = withSourceResolver { (config, resolver) =>
     val actorSystem = ActorSystem("IsolatedSearchServiceFixture")
-    val searchService = new SearchService(config, resolver, actorSystem)
+    val ensimeVFS = EnsimeVFS()
+    val searchService = new SearchService(config, resolver, actorSystem, ensimeVFS)
     try {
 
       testCode(actorSystem, config, searchService)
     } finally {
       searchService.shutdown()
+      ensimeVFS.close()
       actorSystem.shutdown()
       actorSystem.awaitTermination(10.seconds)
     }
@@ -32,18 +34,20 @@ trait IsolatedSearchServiceFixture extends SearchServiceFixture
 
   override def withSearchService(testCode: SearchService => Any): Any = withSourceResolver { (config, resolver) =>
     val actorSystem = ActorSystem("IsolatedSearchServiceFixture")
-    val searchService = new SearchService(config, resolver, actorSystem)
+    val ensimeVFS = EnsimeVFS()
+    val searchService = new SearchService(config, resolver, actorSystem, ensimeVFS)
     try {
       testCode(searchService)
     } finally {
       searchService.shutdown()
+      ensimeVFS.close()
       actorSystem.shutdown()
       actorSystem.awaitTermination(10.seconds)
     }
   }
 }
 
-trait SharedSearchServiceFixture extends SearchServiceFixture
+trait SharedSearchServiceFixture extends SearchServiceFixture with SharedEnsimeVFSFixture
     with SharedSourceResolverFixture {
   private[fixture] var _actorSystem: ActorSystem = _
   private[fixture] var _search: SearchService = _
@@ -51,11 +55,12 @@ trait SharedSearchServiceFixture extends SearchServiceFixture
   override def beforeAll(): Unit = {
     super.beforeAll()
     _actorSystem = ActorSystem("SharedSearchServiceFixture")
-    _search = new SearchService(_config, _resolver, _actorSystem)
+    _search = new SearchService(_config, _resolver, _actorSystem, _vfs)
   }
 
   override def afterAll(): Unit = {
     _search.shutdown()
+    _vfs.close()
     _actorSystem.shutdown()
   }
 

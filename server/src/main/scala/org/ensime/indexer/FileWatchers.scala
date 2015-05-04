@@ -33,13 +33,14 @@ trait SourceListener {
  */
 class ClassfileWatcher(
     config: EnsimeConfig,
-    listeners: Seq[ClassfileListener]
+    listeners: Seq[ClassfileListener],
+    implicit val vfs: EnsimeVFS
 ) extends SLF4JLogging {
 
   private val fm = new DefaultFileMonitor(new FileListener {
     def watched(event: FileChangeEvent) = {
       val name = event.getFile.getName
-      ClassfileSelector.include(name.getExtension)
+      EnsimeVFS.ClassfileSelector.include(name.getExtension)
     }
 
     def fileChanged(event: FileChangeEvent): Unit =
@@ -59,7 +60,7 @@ class ClassfileWatcher(
   // We don't have a dedicated test for this because it is an upstream bug
   private val workaround = new DefaultFileMonitor(new FileListener {
     private def targets =
-      config.compileClasspath.filter(_.isDirectory).map(vfile).map(_.getName)
+      config.compileClasspath.filter(_.isDirectory).map(vfs.vfile).map(_.getName)
     def watched(event: FileChangeEvent) = {
       val dir = event.getFile
       val name = dir.getName
@@ -90,15 +91,15 @@ class ClassfileWatcher(
 
     for {
       d <- config.targetClasspath
-      _ = fm.removeFile(d)
-      _ = fm.addFile(d)
+      _ = fm.removeFile(vfs.vfile(d))
+      _ = fm.addFile(vfs.vfile(d))
       ancestor <- ancestors(d)
       if config.root.contains(ancestor)
-      _ = workaround.removeFile(ancestor)
-      _ = workaround.addFile(ancestor)
-    } workaround.removeFile(config.root)
+      _ = workaround.removeFile(vfs.vfile(ancestor))
+      _ = workaround.addFile(vfs.vfile(ancestor))
+    } workaround.removeFile(vfs.vfile(config.root))
 
-    workaround.addFile(config.root)
+    workaround.addFile(vfs.vfile(config.root))
   }
 
   reset()
@@ -112,11 +113,12 @@ class ClassfileWatcher(
 
 class SourceWatcher(
     config: EnsimeConfig,
-    listeners: Seq[SourceListener]
+    listeners: Seq[SourceListener],
+    implicit val vfs: EnsimeVFS
 ) extends SLF4JLogging {
   private val fm = new DefaultFileMonitor(new FileListener {
     def watched(event: FileChangeEvent) =
-      SourceSelector.include(event.getFile.getName.getExtension)
+      EnsimeVFS.SourceSelector.include(event.getFile.getName.getExtension)
 
     def fileChanged(event: FileChangeEvent): Unit =
       if (watched(event))
@@ -132,7 +134,7 @@ class SourceWatcher(
   fm.start()
 
   config.modules.values.foreach { m =>
-    m.sourceRoots foreach { r => fm.addFile(r) }
+    m.sourceRoots foreach { r => fm.addFile(vfs.vfile(r)) }
   }
 
   def shutdown(): Unit = {
