@@ -1,15 +1,13 @@
 package org.ensime.core
 
+import akka.actor._
 import akka.event.LoggingReceive
-import java.io.File
-
-import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
 import org.ensime.indexer._
 import org.ensime.model._
-import org.ensime.util._
 import org.ensime.server.protocol._
+import org.ensime.util._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -28,27 +26,30 @@ class Project(
 
   protected var analyzer: Option[ActorRef] = None
 
-  private val resolver = new SourceResolver(config)
+  private val ensimeVFS = EnsimeVFS()
+
+  private val resolver = new SourceResolver(config, ensimeVFS)
+
   // TODO: add PresCompiler to the source watcher
-  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil)
-  private val search = new SearchService(config, resolver)
+  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil, ensimeVFS)
+  private val searchService = new SearchService(config, resolver, actorSystem, ensimeVFS)
   private val reTypecheck = new ClassfileListener {
     def reTypeCheck(): Unit = actor ! AskReTypecheck
     def classfileAdded(f: FileObject): Unit = reTypeCheck()
     def classfileChanged(f: FileObject): Unit = reTypeCheck()
     def classfileRemoved(f: FileObject): Unit = reTypeCheck()
   }
-  private val classfileWatcher = new ClassfileWatcher(config, search :: reTypecheck :: Nil)
+  private val classfileWatcher = new ClassfileWatcher(config, searchService :: reTypecheck :: Nil, ensimeVFS)
 
   import scala.concurrent.ExecutionContext.Implicits.global
-  search.refresh().onSuccess {
+  searchService.refresh().onSuccess {
     case (deletes, inserts) =>
       actor ! AsyncEvent(IndexerReadyEvent)
       log.debug(s"indexed $inserts and removed $deletes")
   }
 
   protected val indexer: ActorRef = actorSystem.actorOf(Props(
-    new Indexer(config, search)
+    new Indexer(config, searchService, ensimeVFS)
   ), "indexer")
 
   protected val docServer: ActorRef = actorSystem.actorOf(Props(
@@ -172,7 +173,7 @@ class Project(
 
   protected def startCompiler(): Unit = {
     val newAnalyzer = actorSystem.actorOf(Props(
-      new Analyzer(actor, indexer, search, config)
+      new Analyzer(actor, indexer, searchService, config, ensimeVFS)
     ), "analyzer")
     analyzer = Some(newAnalyzer)
   }
@@ -192,6 +193,20 @@ class Project(
     debugger = None
   }
 
+  protected def shutdownCompiler(): Unit = {
+    analyzer.foreach(_ ! PoisonPill)
+  }
+
+  def shutdown(): Unit = {
+    shutdownCompiler()
+    shutdownDebugger()
+    classfileWatcher.shutdown()
+    sourceWatcher.shutdown()
+    searchService.shutdown()
+    ensimeVFS.close()
+  }
+
+  // TODO Move to server - this does not belong here
   protected def shutdownServer(): Unit = {
     val t = new Thread() {
       override def run(): Unit = {

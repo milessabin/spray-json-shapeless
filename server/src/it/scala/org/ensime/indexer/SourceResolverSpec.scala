@@ -1,11 +1,11 @@
 package org.ensime.indexer
 
-import org.ensime.config._
 import org.ensime.fixture._
 import org.scalatest._
 import pimpathon.file._
 
-class SourceResolverSpec extends WordSpec with Matchers with SharedSourceResolverFixture with SourceResolverTestUtils {
+class SourceResolverSpec extends WordSpec with Matchers with SharedEnsimeVFSFixture
+    with SharedSourceResolverFixture with SourceResolverTestUtils {
 
   def original = EnsimeConfigFixture.SimpleTestProject
 

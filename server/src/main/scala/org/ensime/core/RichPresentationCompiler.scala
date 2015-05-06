@@ -5,7 +5,7 @@ import java.nio.charset.Charset
 
 import akka.actor.ActorRef
 import org.ensime.config._
-import org.ensime.indexer.SearchService
+import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._
 import org.ensime.util.FileUtils
 import org.slf4j.LoggerFactory
@@ -190,7 +190,8 @@ class RichPresentationCompiler(
   val richReporter: Reporter,
   var parent: ActorRef,
   var indexer: ActorRef,
-  val search: SearchService
+  val search: SearchService,
+  implicit val vfs: EnsimeVFS
 ) extends Global(settings, richReporter)
     with ModelBuilders with RichCompilerControl
     with RefactoringImpl with Completion with Helpers {

@@ -6,8 +6,6 @@ import org.ensime.core.{ DebugBreakEvent, DebugVmSuccess }
 import org.ensime.fixture._
 import org.ensime.model._
 import org.ensime.server.Server
-import org.ensime.util.CanonFile
-import org.ensime.util.RichFile
 import org.scalatest._
 import pimpathon.file._
 import pimpathon.option._
@@ -15,7 +13,7 @@ import pimpathon.option._
 import scala.concurrent.duration._
 
 // must be refreshing as the tests don't clean up after themselves properly
-class DebugTest extends WordSpec with Matchers with Inside
+class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSystemFixture
     with IsolatedServerFixture with DebugTestUtils {
 
   val original = EnsimeConfigFixture.DebugTestProject.copy(
@@ -228,7 +226,7 @@ class DebugTest extends WordSpec with Matchers with Inside
 }
 
 trait DebugTestUtils {
-  this: ServerFixture with EnsimeConfigFixture with Matchers =>
+  this: IsolatedServerFixture with EnsimeConfigFixture with IsolatedActorSystemFixture with Matchers =>
 
   /**
    * @param fileName to place the breakpoint
@@ -241,31 +239,36 @@ trait DebugTestUtils {
     breakLine: Int
   )(
     f: (Server, AsyncMsgHelper, File) => Any
-  ): Any = withServer { (server, asyncHelper) =>
-    val project = server.project
-    val config = project.config
-    val resolvedFile = scalaMain(server.config) / fileName
+  ): Any = {
+    withActorSystem { implicit actorSystem =>
 
-    project.rpcDebugSetBreakpoint(resolvedFile, breakLine)
+      withServer { (server, asyncHelper) =>
+        val project = server.project
+        val config = project.config
+        val resolvedFile = scalaMain(server.config) / fileName
 
-    val startStatus = project.rpcDebugStartVM(className)
-    assert(startStatus == DebugVmSuccess())
+        project.rpcDebugSetBreakpoint(resolvedFile, breakLine)
 
-    val expect = DebugBreakEvent(DebugThreadId(1), "main", resolvedFile, breakLine)
-    asyncHelper.expectAsync(10 seconds, expect)
-    project.rpcDebugClearBreakpoint(resolvedFile, breakLine)
+        val startStatus = project.rpcDebugStartVM(className)
+        assert(startStatus == DebugVmSuccess())
 
-    try {
-      f(server, asyncHelper, resolvedFile)
-    } finally {
-      project.rpcDebugClearAllBreakpoints() // otherwise we can have pending
+        val expect = DebugBreakEvent(DebugThreadId(1), "main", resolvedFile, breakLine)
+        asyncHelper.expectAsync(10 seconds, expect)
+        project.rpcDebugClearBreakpoint(resolvedFile, breakLine)
 
-      // no way to await the stopped condition so we let the app run
-      // its course on the main thread
-      project.rpcDebugContinue(DebugThreadId(1))
-      project.rpcDebugStopVM()
+        try {
+          f(server, asyncHelper, resolvedFile)
+        } finally {
+          project.rpcDebugClearAllBreakpoints() // otherwise we can have pending
 
-      //asyncHelper.expectAsync(30 seconds, DebugVMDisconnectEvent)
+          // no way to await the stopped condition so we let the app run
+          // its course on the main thread
+          project.rpcDebugContinue(DebugThreadId(1))
+          project.rpcDebugStopVM()
+
+          //asyncHelper.expectAsync(30 seconds, DebugVMDisconnectEvent)
+        }
+      }
     }
   }
 

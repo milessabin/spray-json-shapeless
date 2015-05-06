@@ -1,9 +1,8 @@
 package org.ensime.indexer
 
 import java.sql.SQLException
-import java.util
-import java.util.concurrent.{ Executors, LinkedBlockingQueue }
 
+import akka.actor.{ Props, ActorLogging, Actor, ActorSystem }
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.ensime.config.EnsimeConfig
@@ -23,7 +22,9 @@ import scala.concurrent.Future
  */
 class SearchService(
   config: EnsimeConfig,
-  resolver: SourceResolver
+  resolver: SourceResolver,
+  actorSystem: ActorSystem,
+  implicit val vfs: EnsimeVFS
 ) extends ClassfileIndexer
     with ClassfileListener
     with SLF4JLogging {
@@ -33,12 +34,7 @@ class SearchService(
   private val index = new IndexService(config.cacheDir / ("index-" + version))
   private val db = new DatabaseService(config.cacheDir / ("sql-" + version))
 
-  // don't use Global because it stalls trivial tasks
-  private object worker {
-    implicit val context = concurrent.ExecutionContext.fromExecutor(
-      Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors)
-    )
-  }
+  implicit val workerEC = actorSystem.dispatchers.lookup("akka.search-service-dispatcher")
 
   /**
    * Indexes everything, making best endeavours to avoid scanning what
@@ -54,14 +50,14 @@ class SearchService(
    *         because we may not have TODO
    */
   def refresh(): Future[(Int, Int)] = {
-    def scan(f: FileObject) = f.findFiles(ClassfileSelector) match {
+    def scan(f: FileObject) = f.findFiles(EnsimeVFS.ClassfileSelector) match {
       case null => Nil
       case res => res.toList
     }
 
     // TODO visibility test/main and which module is viewed (a Lucene concern, not H2)
 
-    val jarUris = config.allJars.map(vfile).map(_.getName.getURI)
+    val jarUris = config.allJars.map(vfs.vfile).map(_.getName.getURI)
 
     // remove stale entries: must be before index or INSERT/DELETE races
     val stale = for {
@@ -81,7 +77,7 @@ class SearchService(
       Future {
         index.remove(files)
         db.removeFiles(files)
-      }(worker.context)
+      }(workerEC)
     }
 
     val removed = Future.sequence(removing).map(_ => stale.size)
@@ -89,10 +85,10 @@ class SearchService(
     val bases = {
       config.modules.flatMap {
         case (name, m) =>
-          m.targetDirs.flatMap { d => scan(d) } ::: m.testTargetDirs.flatMap { d => scan(d) } :::
-            m.compileJars.map(vfile) ::: m.testJars.map(vfile)
+          m.targetDirs.flatMap { d => scan(vfs.vfile(d)) } ::: m.testTargetDirs.flatMap { d => scan(vfs.vfile(d)) } :::
+            m.compileJars.map(vfs.vfile) ::: m.testJars.map(vfs.vfile)
       }
-    }.toSet ++ config.javaLibs.map(vfile)
+    }.toSet ++ config.javaLibs.map(vfs.vfile)
 
     // start indexing after all deletes have completed (not pretty)
     val indexing = removed.map { _ =>
@@ -102,14 +98,14 @@ class SearchService(
           val check = FileCheck(classfile)
           val symbols = extractSymbols(classfile, classfile)
           persist(check, symbols)
-        }(worker.context)
+        }(workerEC)
 
         case jar => Future[Unit] {
           log.debug(s"indexing $jar")
           val check = FileCheck(jar)
-          val symbols = scan(vjar(jar)) flatMap (extractSymbols(jar, _))
+          val symbols = scan(vfs.vjar(jar)) flatMap (extractSymbols(jar, _))
           persist(check, symbols)
-        }(worker.context)
+        }(workerEC)
       }
     }
 
@@ -130,7 +126,7 @@ class SearchService(
 
   def refreshResolver(): Unit = resolver.update()
 
-  private def persist(check: FileCheck, symbols: List[FqnSymbol]): Unit = try {
+  def persist(check: FileCheck, symbols: List[FqnSymbol]): Unit = try {
     index.persist(check, symbols)
     db.persist(check, symbols)
   } catch {
@@ -195,50 +191,67 @@ class SearchService(
    * We always do a DELETE, even if the entries are new, but only INSERT if
    * the list of symbols is non-empty.
    */
-  private val backlog = new LinkedBlockingQueue[(FileObject, List[FqnSymbol])]()
-  new Thread("Classfile Indexer") {
-    import scala.collection.JavaConverters._
 
-    override def run(): Unit = {
-      while (true) {
-        val head = backlog.take() // blocks until something appears
-        val buffer = new util.ArrayList[(FileObject, List[FqnSymbol])]()
-        backlog.drainTo(buffer, 999) // 1000 at a time to avoid blow-ups
-        val tail = buffer.asScala.toList
+  val backlogActor = actorSystem.actorOf(Props(new IndexingQueueActor(this)), "ClassfileIndexer")
 
-        // removes earlier dupes
+  def delete(files: List[FileObject]): Unit = {
+    index.remove(files)
+    db.removeFiles(files)
+  }
+
+  def classfileAdded(f: FileObject): Unit = classfileChanged(f)
+
+  def classfileRemoved(f: FileObject): Unit = {
+    backlogActor ! FileUpdate(f, Nil)
+  }
+
+  def classfileChanged(f: FileObject): Unit = Future {
+    val symbols = extractSymbols(f, f)
+    backlogActor ! FileUpdate(f, symbols)
+  }(workerEC)
+
+  def shutdown(): Unit = {
+    db.shutdown()
+  }
+}
+
+case class FileUpdate(fileObject: FileObject, symbolList: List[FqnSymbol])
+case object UpdateComplete
+
+class IndexingQueueActor(searchService: SearchService) extends Actor with ActorLogging {
+  var busy = false
+  var queue = Vector[(FileObject, List[FqnSymbol])]()
+  override def receive: Receive = {
+    case update: FileUpdate =>
+      queue = queue :+ (update.fileObject, update.symbolList)
+      processQueue()
+    case UpdateComplete =>
+      busy = false
+      processQueue()
+  }
+
+  def processQueue(): Unit = {
+    if (!busy && queue.nonEmpty) {
+      val batch = queue.take(500)
+      queue = queue.drop(500)
+      val selfRef = self
+      Future {
         val work = {
-          (head :: tail).groupBy(_._1).map {
+          batch.groupBy(_._1).map {
             case (k, values) => values.last
           }
         }.toList
 
         log.info(s"Indexing ${work.size} classfiles")
 
-        delete(work.map(_._1))
+        searchService.delete(work.map(_._1))
 
         work.collect {
           case (file, syms) if syms.nonEmpty =>
-            persist(FileCheck(file), syms)
+            searchService.persist(FileCheck(file), syms)
         }
+        selfRef ! UpdateComplete
       }
     }
-
-    def delete(files: List[FileObject]): Unit = {
-      index.remove(files)
-      db.removeFiles(files)
-    }
-  }.start()
-
-  def classfileAdded(f: FileObject): Unit = classfileChanged(f)
-
-  def classfileRemoved(f: FileObject): Unit = Future {
-    backlog.put((f, Nil))
-  }(worker.context)
-
-  def classfileChanged(f: FileObject): Unit = Future {
-    val symbols = extractSymbols(f, f)
-    backlog.put((f, symbols))
-  }(worker.context)
-
+  }
 }

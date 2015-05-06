@@ -5,6 +5,7 @@ import java.io.File
 import akka.event.slf4j.SLF4JLogging
 import org.ensime.config._
 import org.ensime.fixture._
+import org.ensime.indexer.EnsimeVFS
 import org.ensime.model._
 import org.scalatest._
 import pimpathon.file._
@@ -354,7 +355,8 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
 
         // Create a fresh pres. compiler unaffected by previous tests
 
-        val cc1 = new RichPresentationCompiler(cc.config, cc.settings, cc.reporter, cc.parent, cc.indexer, cc.search)
+        val ensimeVFS = EnsimeVFS()
+        val cc1 = new RichPresentationCompiler(cc.config, cc.settings, cc.reporter, cc.parent, cc.indexer, cc.search, ensimeVFS)
 
         try {
           cc1.askReloadFile(usesFile)
@@ -371,6 +373,7 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
           }
         } finally {
           cc1.askShutdown()
+          ensimeVFS.close()
         }
       }
 

@@ -40,22 +40,32 @@ object RichPresentationCompilerFixture {
     val parent = TestProbe()
 
     new RichPresentationCompiler(
-      config, settings, reporter, parent.ref, indexer.ref, search
+      config, settings, reporter, parent.ref, indexer.ref, search, search.vfs
     )
   }
 }
 
 trait IsolatedRichPresentationCompilerFixture
     extends RichPresentationCompilerFixture
+    with IsolatedActorSystemFixture
     with IsolatedTestKitFixture
     with IsolatedSearchServiceFixture {
 
   override def withRichPresentationCompiler(
     testCode: (TestKitFix, EnsimeConfig, RichPresentationCompiler) => Any
-  ): Any = withSearchService { (config, search) =>
-    withTestKit { testkit =>
-      import org.ensime.fixture.RichPresentationCompilerFixture._
-      testCode(testkit, config, create(config, search)(testkit.system))
+  ): Any = {
+    withActorSystem { implicit actorSystem =>
+      withTestKit { testkit =>
+        withSearchService { (config, search) =>
+          import org.ensime.fixture.RichPresentationCompilerFixture._
+          val pc = create(config, search)(testkit.system)
+          try {
+            testCode(testkit, config, pc)
+          } finally {
+            pc.askShutdown()
+          }
+        }
+      }
     }
   }
 
@@ -63,6 +73,7 @@ trait IsolatedRichPresentationCompilerFixture
 
 trait SharedRichPresentationCompilerFixture
     extends RichPresentationCompilerFixture
+    with SharedActorSystemFixture
     with SharedTestKitFixture
     with SharedSearchServiceFixture {
 

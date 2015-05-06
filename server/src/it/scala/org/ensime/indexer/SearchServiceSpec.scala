@@ -1,16 +1,15 @@
 package org.ensime.indexer
 
-import org.scalatest._
 import org.ensime.fixture._
+import org.scalatest._
+import pimpathon.any._
+import pimpathon.file._
 
-import org.ensime.config._
 import scala.concurrent._
 import scala.concurrent.duration._
-import pimpathon.file._
-import pimpathon.any._
 
 class SearchServiceSpec extends WordSpec with Matchers
-    with SharedSearchServiceFixture with SearchServiceTestUtils {
+    with SharedActorSystemFixture with SharedSearchServiceFixture with SearchServiceTestUtils {
 
   def original = EnsimeConfigFixture.SimpleTestProject
 
@@ -25,31 +24,35 @@ class SearchServiceSpec extends WordSpec with Matchers
       refresh() shouldBe (0, 0)
     }
 
-    "refresh files that have 'changed'" in withSearchService { (config, service) =>
-      implicit val s = service
-      val now = System.currentTimeMillis()
-      for {
-        m <- config.modules.values
-        r <- m.targetDirs ++ m.testTargetDirs
-        f <- r.tree
-      } {
-        // simulate a full recompile
-        f.setLastModified(now)
-      }
+    "refresh files that have 'changed'" in {
+      withSearchService { (config, service) =>
+        implicit val s = service
+        val now = System.currentTimeMillis()
+        for {
+          m <- config.modules.values
+          r <- m.targetDirs ++ m.testTargetDirs
+          f <- r.tree
+        } {
+          // simulate a full recompile
+          f.setLastModified(now)
+        }
 
-      val (deleted, indexed) = refresh()
-      deleted should be > 0
-      indexed should be > 0
+        val (deleted, indexed) = refresh()
+        deleted should be > 0
+        indexed should be > 0
+      }
     }
 
-    "remove classfiles that have been deleted" in withSearchService { (config, service) =>
-      implicit val s = service
-      val classfile = config.subprojects.head.targetDirs.head / "org/example/Foo.class"
+    "remove classfiles that have been deleted" in {
+      withSearchService { (config, service) =>
+        implicit val s = service
+        val classfile = config.subprojects.head.targetDirs.head / "org/example/Foo.class"
 
-      classfile shouldBe 'exists
+        classfile shouldBe 'exists
 
-      classfile.delete()
-      refresh() shouldBe (1, 0)
+        classfile.delete()
+        refresh() shouldBe (1, 0)
+      }
     }
   }
 

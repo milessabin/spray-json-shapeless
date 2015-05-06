@@ -1,13 +1,10 @@
 package org.ensime.fixture
 
 import java.io.File
-import org.scalatest._
 
-import org.apache.commons.io.{ FileUtils => IOFileUtils }
-import IOFileUtils.copyDirectory
-
+import org.apache.commons.io.FileUtils.copyDirectory
 import org.ensime.config._
-
+import org.scalatest._
 import pimpathon.any._
 import pimpathon.file._
 
@@ -25,7 +22,7 @@ trait EnsimeConfigFixture {
   def scalaMain(implicit config: EnsimeConfig): File =
     config.subprojects.head.sourceRoots.filter { dir =>
       val sep = File.separator
-      dir.getPath().endsWith(s"${sep}main${sep}scala")
+      dir.getPath.endsWith(s"${sep}main${sep}scala")
     }.head
 }
 
@@ -139,7 +136,7 @@ trait SharedEnsimeConfigFixture extends Suite
     with EnsimeConfigFixture with BeforeAndAfterAll {
   import EnsimeConfigFixture._
 
-  private var tmpDir = tempDir(".project", s"ensime-it-${getClass.getSimpleName}-")
+  private val tmpDir = tempDir(".project", s"ensime-it-${getClass.getSimpleName}-")
 
   private[fixture] var _config: EnsimeConfig = _
 

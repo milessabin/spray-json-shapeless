@@ -11,7 +11,8 @@ import org.ensime.indexer.DatabaseService._
 import scala.slick.driver.H2Driver.simple._
 
 class DatabaseService(dir: File) extends SLF4JLogging {
-  lazy val db = {
+
+  lazy val (datasource, db) = {
     // MVCC plus connection pooling speeds up the tests ~10%
     val url = "jdbc:h2:file:" + dir.getAbsolutePath + "/db;MVCC=TRUE"
     val driver = "org.h2.Driver"
@@ -22,7 +23,14 @@ class DatabaseService(dir: File) extends SLF4JLogging {
     ds.setDriverClass(driver)
     ds.setJdbcUrl(url)
     ds.setStatementsCacheSize(50)
-    Database.forDataSource(ds)
+    (ds, Database.forDataSource(ds))
+  }
+
+  def shutdown(): Unit = {
+    // call directly - using slick withSession barfs as it runs a how many rows were updated
+    // after shutdown is executed.
+    db.createSession().createStatement() execute "shutdown;"
+    datasource.close()
   }
 
   if (!dir.exists) {
@@ -116,9 +124,9 @@ object DatabaseService {
   //}
 
   case class FileCheck(id: Option[Int], filename: String, timestamp: Timestamp) {
-    def file = vfile(filename)
+    def file(implicit vfs: EnsimeVFS) = vfs.vfile(filename)
     def lastModified = timestamp.getTime
-    def changed = file.getContent.getLastModifiedTime != lastModified
+    def changed(implicit vfs: EnsimeVFS) = file.getContent.getLastModifiedTime != lastModified
   }
   object FileCheck extends ((Option[Int], String, Timestamp) => FileCheck) {
     def apply(f: FileObject): FileCheck = {
@@ -150,7 +158,7 @@ object DatabaseService {
   ) {
     // this is just as a helper until we can use more sensible
     // domain objects with slick
-    def sourceFileObject = source.map(vfile)
+    def sourceFileObject(implicit vfs: EnsimeVFS) = source.map(vfs.vfile)
 
     // legacy: note that we can't distinguish class/trait
     def declAs: Symbol =
