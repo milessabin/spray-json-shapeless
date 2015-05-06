@@ -10,10 +10,6 @@ import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-trait ServerFixture {
-  def withServer(testCode: (Server, AsyncMsgHelper) => Any): Any
-}
-
 object ServerFixture {
   private[fixture] def startup(config: EnsimeConfig)(implicit sys: ActorSystem): (Server, AsyncMsgHelper) = {
 
@@ -37,39 +33,40 @@ object ServerFixture {
   }
 }
 
-trait IsolatedServerFixture extends ServerFixture
-    with IsolatedEnsimeConfigFixture with IsolatedTestKitFixture {
-  override def withServer(testCode: (Server, AsyncMsgHelper) => Any): Any = withTestKit { testkit =>
-    withEnsimeConfig { config =>
-      val (server, helper) = ServerFixture.startup(config)(testkit.system)
-      try testCode(server, helper)
-      finally {
-        server.shutdown()
+trait IsolatedServerFixture extends IsolatedEnsimeConfigFixture with IsolatedTestKitFixture {
+  def withServer(testCode: (Server, AsyncMsgHelper) => Any)(implicit sys: ActorSystem): Any = {
+    withTestKit { testkit =>
+      withEnsimeConfig { config =>
+        val (server, helper) = ServerFixture.startup(config)(sys)
+        try testCode(server, helper)
+        finally {
+          server.shutdown()
+        }
       }
     }
   }
 }
 
-trait SharedServerFixture extends ServerFixture
-    with SharedEnsimeConfigFixture
+trait SharedServerFixture extends SharedEnsimeConfigFixture
     with SharedTestKitFixture {
 
+  this: SharedActorSystemFixture with SharedActorSystemFixture =>
   private var _server: Server = _
   private var _helper: AsyncMsgHelper = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    val (server, helper) = ServerFixture.startup(_config)(_testkit.system)
+    val (server, helper) = ServerFixture.startup(_config)(_actorSystem)
     _server = server
     _helper = helper
   }
 
   override def afterAll(): Unit = {
-    super.afterAll()
     _server.shutdown()
+    super.afterAll()
   }
 
-  override def withServer(testCode: (Server, AsyncMsgHelper) => Any): Any =
+  def withServer[T](testCode: (Server, AsyncMsgHelper) => T): T =
     testCode(_server, _helper)
 }
 
