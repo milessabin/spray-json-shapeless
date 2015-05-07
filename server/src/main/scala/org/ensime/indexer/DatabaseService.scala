@@ -156,15 +156,17 @@ object DatabaseService {
       offset: Option[Int] = None // future features:
   //    type: ??? --- better than descriptor/internal
   ) {
+    import org.ensime.util.DeclaredAs
+
     // this is just as a helper until we can use more sensible
     // domain objects with slick
     def sourceFileObject(implicit vfs: EnsimeVFS) = source.map(vfs.vfile)
 
     // legacy: note that we can't distinguish class/trait
-    def declAs: Symbol =
-      if (descriptor.isDefined) 'method
-      else if (internal.isDefined) 'field
-      else 'class
+    def declAs: DeclaredAs =
+      if (descriptor.isDefined) DeclaredAs.Method
+      else if (internal.isDefined) DeclaredAs.Field
+      else DeclaredAs.Class
   }
   private class FqnSymbols(tag: Tag) extends Table[FqnSymbol](tag, "FQN_SYMBOLS") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)

@@ -7,6 +7,7 @@ import org.ensime.config._
 import org.ensime.fixture._
 import org.ensime.indexer.EnsimeVFS
 import org.ensime.model._
+import org.ensime.util.DeclaredAs
 import org.scalatest._
 import pimpathon.file._
 
@@ -80,7 +81,7 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
     "get symbol info by name" in withPresCompiler { (config, cc) =>
       def verify(
         fqn: String, member: Option[String], sig: Option[String], expectedLocalName: String,
-        expectedName: String, expectedDeclAs: scala.Symbol
+        expectedName: String, expectedDeclAs: DeclaredAs
       ) = {
         val symOpt = cc.askSymbolByName(fqn, member, sig)
         assert(symOpt.isDefined)
@@ -89,21 +90,21 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
         assert(sym.name === expectedName)
         assert(sym.tpe.declaredAs === expectedDeclAs)
       }
-      verify("java.lang.String", Some("startsWith"), None, "startsWith", "startsWith", 'nil)
-      verify("java.lang.String", None, None, "String", "java.lang.String", 'class)
+      verify("java.lang.String", Some("startsWith"), None, "startsWith", "startsWith", DeclaredAs.Nil)
+      verify("java.lang.String", None, None, "String", "java.lang.String", DeclaredAs.Class)
       // TODO: should not be getting 'nil for declaredAs.
       verify("scala.Option", Some("wait"), Some("(x$1: Long,x$2: Int): Unit"),
-        "wait", "wait", 'nil)
+        "wait", "wait", DeclaredAs.Nil)
       verify("scala.Option", Some("wait"), Some("(x$1: Long): Unit"),
-        "wait", "wait", 'nil)
-      verify("scala.Option", Some("wait"), Some("(): Unit"), "wait", "wait", 'nil)
-      verify("java$", Some("lang"), None, "lang", "java.lang$", 'object)
-      verify("scala$", Some("Option$"), None, "Option", "scala.Option$", 'object)
-      verify("scala$", Some("Option"), None, "Option", "scala.Option", 'class)
-      verify("scala.Option", Some("WithFilter"), None, "WithFilter", "scala.Option$WithFilter", 'class)
-      verify("scala.Option$WithFilter", Some("flatMap"), None, "flatMap", "flatMap", 'nil)
-      verify("scala.Boolean", None, None, "Boolean", "scala.Boolean", 'class)
-      verify("scala.Predef$", Some("DummyImplicit$"), None, "DummyImplicit", "scala.Predef$$DummyImplicit$", 'object)
+        "wait", "wait", DeclaredAs.Nil)
+      verify("scala.Option", Some("wait"), Some("(): Unit"), "wait", "wait", DeclaredAs.Nil)
+      verify("java$", Some("lang"), None, "lang", "java.lang$", DeclaredAs.Object)
+      verify("scala$", Some("Option$"), None, "Option", "scala.Option$", DeclaredAs.Object)
+      verify("scala$", Some("Option"), None, "Option", "scala.Option", DeclaredAs.Class)
+      verify("scala.Option", Some("WithFilter"), None, "WithFilter", "scala.Option$WithFilter", DeclaredAs.Class)
+      verify("scala.Option$WithFilter", Some("flatMap"), None, "flatMap", "flatMap", DeclaredAs.Nil)
+      verify("scala.Boolean", None, None, "Boolean", "scala.Boolean", DeclaredAs.Class)
+      verify("scala.Predef$", Some("DummyImplicit$"), None, "DummyImplicit", "scala.Predef$$DummyImplicit$", DeclaredAs.Object)
     }
 
     "handle askSymbolByName" in withPresCompiler { (config, cc) =>
@@ -123,7 +124,7 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
       cc.askLoadedTyped(file)
 
       def test(typeName: String, memberName: String, localName: String,
-        symFullName: String, isType: Boolean, expectedTypeName: String, expectedDeclAs: Symbol) = {
+        symFullName: String, isType: Boolean, expectedTypeName: String, expectedDeclAs: DeclaredAs) = {
         val sym = cc.askSymbolByName(typeName, Some(memberName), None).get
         assert(sym.localName === localName)
         assert(sym.name === symFullName)
@@ -132,14 +133,14 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
         sym.tpe.declaredAs
       }
 
-      test("com.example$", "A$", "A", "com.example.A$", isType = false, "com.example.A$", 'object)
-      test("com.example.A$", "x", "x", "x", isType = false, "scala.Int", 'class)
-      test("com.example.A$", "X$", "X", "com.example.A$$X$", isType = false, "com.example.A$$X$", 'object)
-      test("com.example.A$", "X", "X", "com.example.A$$X", isType = true, "com.example.A$$X", 'class)
+      test("com.example$", "A$", "A", "com.example.A$", isType = false, "com.example.A$", DeclaredAs.Object)
+      test("com.example.A$", "x", "x", "x", isType = false, "scala.Int", DeclaredAs.Class)
+      test("com.example.A$", "X$", "X", "com.example.A$$X$", isType = false, "com.example.A$$X$", DeclaredAs.Object)
+      test("com.example.A$", "X", "X", "com.example.A$$X", isType = true, "com.example.A$$X", DeclaredAs.Class)
 
-      test("com.example$", "A", "A", "com.example.A", isType = true, "com.example.A", 'class)
-      test("com.example.A", "X$", "X", "com.example.A$X$", isType = false, "com.example.A$X$", 'object)
-      test("com.example.A", "X", "X", "com.example.A$X", isType = true, "com.example.A$X", 'class)
+      test("com.example$", "A", "A", "com.example.A", isType = true, "com.example.A", DeclaredAs.Class)
+      test("com.example.A", "X$", "X", "com.example.A$X$", isType = false, "com.example.A$X$", DeclaredAs.Object)
+      test("com.example.A", "X", "X", "com.example.A$X", isType = true, "com.example.A$X", DeclaredAs.Class)
     }
 
     "get completions on member with no prefix" in withPosInCompiledSource(

@@ -99,6 +99,26 @@ object SwankProtocolCommon {
     }
   }
 
+  implicit object RefactorTypeFormat extends SexpFormat[RefactorType] {
+    def write(tpe: RefactorType): Sexp = SexpSymbol(tpe.symbol.name)
+    def read(sexp: Sexp): RefactorType = sexp match {
+      case SexpSymbol(name) =>
+        RefactorType.allTypes.find(_.symbol.name == name).getOrElse(deserializationError(sexp))
+      case _ =>
+        deserializationError(sexp)
+    }
+  }
+
+  implicit object DeclaredAsFormat extends SexpFormat[DeclaredAs] {
+    def write(decl: DeclaredAs): Sexp = SexpSymbol(decl.symbol.name)
+    def read(sexp: Sexp): DeclaredAs = sexp match {
+      case SexpSymbol(name) =>
+        DeclaredAs.allDeclarations.find(_.symbol.name == name).getOrElse(deserializationError(sexp))
+      case _ =>
+        deserializationError(sexp)
+    }
+  }
+
   implicit val DebugThreadIdFormat: SexpFormat[DebugThreadId] = viaString(new ViaString[DebugThreadId] {
     def toSexpString(id: DebugThreadId) = id.id.toString
     def fromSexpString(s: String) = DebugThreadId(s)
@@ -577,7 +597,7 @@ object SwankProtocolRequest {
   // exclusive it might not agree with the `tpe` given on
   // PrepareRefactorReq
   implicit object RefactorDescFormat extends SexpFormat[RefactorDesc] {
-    import org.ensime.util.{ Symbols => S }
+    import org.ensime.util.{ RefactorLocation => Loc }
     import pimpathon.file._
     import RichFile._
 
@@ -585,50 +605,56 @@ object SwankProtocolRequest {
     def read(sexp: Sexp): RefactorDesc = sexp match {
       case SexpList(params) =>
         params.grouped(2).collect {
-          case List(SexpSymbol(name), value) => (Symbol(name), value)
-        }.toList.sortBy(_._1.name) match {
+          case List(SexpSymbol("qualifiedName"), value) => (Loc.QualifiedName, value)
+          case List(SexpSymbol("file"), value) => (Loc.File, value)
+          case List(SexpSymbol("newName"), value) => (Loc.NewName, value)
+          case List(SexpSymbol("name"), value) => (Loc.Name, value)
+          case List(SexpSymbol("start"), value) => (Loc.Start, value)
+          case List(SexpSymbol("end"), value) => (Loc.End, value)
+          case List(SexpSymbol("methodName"), value) => (Loc.MethodName, value)
+        }.toList.sortBy(_._1.symbol.name) match {
           case List(
-            (S.End, SexpNumber(end)),
-            (S.File, SexpString(f)),
-            (S.NewName, SexpString(newName)),
-            (S.Start, SexpNumber(start))
+            (Loc.End, SexpNumber(end)),
+            (Loc.File, SexpString(f)),
+            (Loc.NewName, SexpString(newName)),
+            (Loc.Start, SexpNumber(start))
             ) => RenameRefactorDesc(newName, file(f).canon, start.intValue, end.intValue)
 
           case List(
-            (S.End, SexpNumber(end)),
-            (S.File, SexpString(f)),
-            (S.MethodName, SexpString(methodName)),
-            (S.Start, SexpNumber(start))
+            (Loc.End, SexpNumber(end)),
+            (Loc.File, SexpString(f)),
+            (Loc.MethodName, SexpString(methodName)),
+            (Loc.Start, SexpNumber(start))
             ) => ExtractMethodRefactorDesc(methodName, file(f).canon, start.intValue, end.intValue)
 
           case List(
-            (S.End, SexpNumber(end)),
-            (S.File, SexpString(f)),
-            (S.Name, SexpString(name)),
-            (S.Start, SexpNumber(start))
+            (Loc.End, SexpNumber(end)),
+            (Loc.File, SexpString(f)),
+            (Loc.Name, SexpString(name)),
+            (Loc.Start, SexpNumber(start))
             ) => ExtractLocalRefactorDesc(name, file(f).canon, start.intValue, end.intValue)
 
           case List(
-            (S.End, SexpNumber(end)),
-            (S.File, SexpString(f)),
-            (S.Start, SexpNumber(start))
+            (Loc.End, SexpNumber(end)),
+            (Loc.File, SexpString(f)),
+            (Loc.Start, SexpNumber(start))
             ) => InlineLocalRefactorDesc(file(f).canon, start.intValue, end.intValue)
 
           case List(
-            (S.File, SexpString(f))
+            (Loc.File, SexpString(f))
             ) =>
             OrganiseImportsRefactorDesc(file(f).canon)
 
           case List(
-            (S.End, SexpNumber(_)),
-            (S.File, SexpString(f)),
-            (S.QualifiedName, SexpString(qualifiedName)),
-            (S.Start, SexpNumber(_))
+            (Loc.End, SexpNumber(_)),
+            (Loc.File, SexpString(f)),
+            (Loc.QualifiedName, SexpString(qualifiedName)),
+            (Loc.Start, SexpNumber(_))
             ) => AddImportRefactorDesc(qualifiedName, file(f).canon)
 
           case List(
-            (S.File, SexpString(f)),
-            (S.QualifiedName, SexpString(qualifiedName))
+            (Loc.File, SexpString(f)),
+            (Loc.QualifiedName, SexpString(qualifiedName))
             ) => AddImportRefactorDesc(qualifiedName, file(f).canon)
 
           case _ => deserializationError(sexp)

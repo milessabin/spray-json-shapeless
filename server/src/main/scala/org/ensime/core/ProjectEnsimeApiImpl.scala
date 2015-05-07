@@ -253,9 +253,8 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[Either[RefactorFailure, RefactorEffect]](getAnalyzer, PrepareRefactorReq(procId, null, refactorDesc, interactive = false))
   }
 
-  override def rpcExecRefactor(procId: Int, refactorType: Symbol): Either[RefactorFailure, RefactorResult] = {
+  override def rpcExecRefactor(procId: Int, refactorType: RefactorType): Either[RefactorFailure, RefactorResult] =
     callRPC[Either[RefactorFailure, RefactorResult]](getAnalyzer, ExecRefactorReq(procId, refactorType))
-  }
 
   override def rpcCancelRefactor(procId: Int): Unit = {
     callVoidRPC(getAnalyzer, CancelRefactorReq(procId))

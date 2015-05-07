@@ -48,7 +48,7 @@ class BasicWorkflow extends WordSpec with Matchers
           val symbolAtPointOpt: Option[SymbolInfo] = project.rpcSymbolAtPoint(fooFile, 128)
 
           val intTypeId = symbolAtPointOpt match {
-            case Some(SymbolInfo("scala.Int", "Int", Some(_), BasicTypeInfo("Int", typeId, 'class, "scala.Int", List(), List(), _, None), false, Some(ownerTypeId))) =>
+            case Some(SymbolInfo("scala.Int", "Int", Some(_), BasicTypeInfo("Int", typeId, DeclaredAs.Class, "scala.Int", List(), List(), _, None), false, Some(ownerTypeId))) =>
               typeId
             case _ =>
               fail("Symbol at point does not match expectations, expected Int symbol got: " + symbolAtPointOpt)
@@ -56,7 +56,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           val fooClassByNameOpt = project.rpcTypeByName("org.example.Foo")
           val fooClassId = fooClassByNameOpt match {
-            case Some(BasicTypeInfo("Foo", fooTypeIdVal, 'class, "org.example.Foo", List(), List(), _, None)) =>
+            case Some(BasicTypeInfo("Foo", fooTypeIdVal, DeclaredAs.Class, "org.example.Foo", List(), List(), _, None)) =>
               fooTypeIdVal
             case _ =>
               fail("type by name for Foo class does not match expectations, got: " + fooClassByNameOpt)
@@ -64,7 +64,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           val fooObjectByNameOpt = project.rpcTypeByName("org.example.Foo$")
           val fooObjectId = fooObjectByNameOpt match {
-            case Some(BasicTypeInfo("Foo$", fooObjectIdVal, 'object, "org.example.Foo$", List(), List(), Some(OffsetSourcePosition(`fooFile`, 28)), None)) =>
+            case Some(BasicTypeInfo("Foo$", fooObjectIdVal, DeclaredAs.Object, "org.example.Foo$", List(), List(), Some(OffsetSourcePosition(`fooFile`, 28)), None)) =>
               fooObjectIdVal
             case _ =>
               fail("type by name for Foo object does not match expectations, got: " + fooObjectByNameOpt)
@@ -75,7 +75,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 30)
           assert(javaSearchSymbol.syms.exists {
-            case TypeSearchResult("java.io.File", "File", 'class, Some(_)) => true
+            case TypeSearchResult("java.io.File", "File", DeclaredAs.Class, Some(_)) => true
             case _ => false
           })
 
@@ -84,8 +84,8 @@ class BasicWorkflow extends WordSpec with Matchers
           val scalaSearchSymbol = project.rpcPublicSymbolSearch(List("scala", "util", "Random"), 2)
           scalaSearchSymbol match {
             case SymbolSearchResults(List(
-              TypeSearchResult("scala.util.Random", "Random", 'class, Some(_)),
-              TypeSearchResult("scala.util.Random$", "Random$", 'class, Some(_)))) =>
+              TypeSearchResult("scala.util.Random", "Random", DeclaredAs.Class, Some(_)),
+              TypeSearchResult("scala.util.Random$", "Random$", DeclaredAs.Class, Some(_)))) =>
             case _ =>
               fail("Public symbol search does not match expectations, got: " + scalaSearchSymbol)
           }
@@ -95,7 +95,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           val typeByIdOpt: Option[TypeInfo] = project.rpcTypeById(intTypeId)
           val intTypeInspectInfo = typeByIdOpt match {
-            case Some(ti @ BasicTypeInfo("Int", `intTypeId`, 'class, "scala.Int", List(), List(), Some(_), None)) =>
+            case Some(ti @ BasicTypeInfo("Int", `intTypeId`, DeclaredAs.Class, "scala.Int", List(), List(), Some(_), None)) =>
               ti
             case _ =>
               fail("type by id does not match expectations, got " + typeByIdOpt)
@@ -135,7 +135,7 @@ class BasicWorkflow extends WordSpec with Matchers
           // loaded by the pres compiler
           val testMethodSymbolInfo = project.rpcSymbolAtPoint(fooFile, 276)
           testMethodSymbolInfo match {
-            case Some(SymbolInfo("testMethod", "testMethod", Some(OffsetSourcePosition(`fooFile`, 114)), ArrowTypeInfo("(i: Int, s: String)Int", 126, BasicTypeInfo("Int", 1, 'class, "scala.Int", List(), List(), None, None), List(ParamSectionInfo(List((i, BasicTypeInfo("Int", 1, 'class, "scala.Int", List(), List(), None, None)), (s, BasicTypeInfo("String", 39, 'class, "java.lang.String", List(), List(), None, None))), false))), true, Some(_))) =>
+            case Some(SymbolInfo("testMethod", "testMethod", Some(OffsetSourcePosition(`fooFile`, 114)), ArrowTypeInfo("(i: Int, s: String)Int", 126, BasicTypeInfo("Int", 1, DeclaredAs.Class, "scala.Int", List(), List(), None, None), List(ParamSectionInfo(List((i, BasicTypeInfo("Int", 1, DeclaredAs.Class, "scala.Int", List(), List(), None, None)), (s, BasicTypeInfo("String", 39, DeclaredAs.Class, "java.lang.String", List(), List(), None, None))), false))), true, Some(_))) =>
             case _ =>
               fail("symbol at point (local test method), got: " + testMethodSymbolInfo)
           }
@@ -146,16 +146,16 @@ class BasicWorkflow extends WordSpec with Matchers
 
             case Some(SymbolInfo("apply", "apply", Some(_),
               ArrowTypeInfo("[A, B](elems: (A, B)*)CC[A,B]", _,
-                BasicTypeInfo("CC", _, 'nil, "scala.collection.generic.CC",
+                BasicTypeInfo("CC", _, DeclaredAs.Nil, "scala.collection.generic.CC",
                   List(
-                    BasicTypeInfo("A", _, 'nil, "scala.collection.generic.A", List(), List(), None, None),
-                    BasicTypeInfo("B", _, 'nil, "scala.collection.generic.B", List(), List(), None, None)
+                    BasicTypeInfo("A", _, DeclaredAs.Nil, "scala.collection.generic.A", List(), List(), None, None),
+                    BasicTypeInfo("B", _, DeclaredAs.Nil, "scala.collection.generic.B", List(), List(), None, None)
                     ), List(), None, None),
                 List(ParamSectionInfo(List(
-                  ("elems", BasicTypeInfo("<repeated>", _, 'class, "scala.<repeated>", List(
-                    BasicTypeInfo("Tuple2", _, 'class, "scala.Tuple2", List(
-                      BasicTypeInfo("A", _, 'nil, "scala.collection.generic.A", List(), List(), None, None),
-                      BasicTypeInfo("B", _, 'nil, "scala.collection.generic.B", List(), List(), None, None)
+                  ("elems", BasicTypeInfo("<repeated>", _, DeclaredAs.Class, "scala.<repeated>", List(
+                    BasicTypeInfo("Tuple2", _, DeclaredAs.Class, "scala.Tuple2", List(
+                      BasicTypeInfo("A", _, DeclaredAs.Nil, "scala.collection.generic.A", List(), List(), None, None),
+                      BasicTypeInfo("B", _, DeclaredAs.Nil, "scala.collection.generic.B", List(), List(), None, None)
                       ), List(), None, None)), List(), None, None))), false))), true, Some(_))) =>
             case _ =>
               fail("symbol at point (local test method), got: " + genericMethodSymbolAtPointRes)
@@ -165,14 +165,14 @@ class BasicWorkflow extends WordSpec with Matchers
           val insPacByPathResOpt = project.rpcInspectPackageByPath("org.example")
           insPacByPathResOpt match {
             case Some(PackageInfo("example", "org.example", List(
-              BasicTypeInfo("Bloo", _: Int, 'class, "org.example.Bloo", List(), List(), Some(_), None),
-              BasicTypeInfo("Bloo$", _: Int, 'object, "org.example.Bloo$", List(), List(), Some(_), None),
-              BasicTypeInfo("CaseClassWithCamelCaseName", _: Int, 'class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(_), None),
-              BasicTypeInfo("CaseClassWithCamelCaseName$", _: Int, 'object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(_), None),
-              BasicTypeInfo("Foo", _: Int, 'class, "org.example.Foo", List(), List(), None, None),
-              BasicTypeInfo("Foo$", _: Int, 'object, "org.example.Foo$", List(), List(), Some(_), None),
-              BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), None, None),
-              BasicTypeInfo("package$", _: Int, 'object, "org.example.package$", List(), List(), None, None)))) =>
+              BasicTypeInfo("Bloo", _: Int, DeclaredAs.Class, "org.example.Bloo", List(), List(), Some(_), None),
+              BasicTypeInfo("Bloo$", _: Int, DeclaredAs.Object, "org.example.Bloo$", List(), List(), Some(_), None),
+              BasicTypeInfo("CaseClassWithCamelCaseName", _: Int, DeclaredAs.Class, "org.example.CaseClassWithCamelCaseName", List(), List(), Some(_), None),
+              BasicTypeInfo("CaseClassWithCamelCaseName$", _: Int, DeclaredAs.Object, "org.example.CaseClassWithCamelCaseName$", List(), List(), Some(_), None),
+              BasicTypeInfo("Foo", _: Int, DeclaredAs.Class, "org.example.Foo", List(), List(), None, None),
+              BasicTypeInfo("Foo$", _: Int, DeclaredAs.Object, "org.example.Foo$", List(), List(), Some(_), None),
+              BasicTypeInfo("package$", _: Int, DeclaredAs.Object, "org.example.package$", List(), List(), None, None),
+              BasicTypeInfo("package$", _: Int, DeclaredAs.Object, "org.example.package$", List(), List(), None, None)))) =>
             case _ =>
               fail("inspect package by path failed, got: " + insPacByPathResOpt)
           }
@@ -190,7 +190,7 @@ class BasicWorkflow extends WordSpec with Matchers
           val prepareRefactorRes = project.rpcPrepareRefactor(1234, RenameRefactorDesc("bar", fooFile, 215, 215))
           log.info("PREPARE REFACTOR = " + prepareRefactorRes)
           prepareRefactorRes match {
-            case Right(RefactorEffect(1234, 'rename, List(
+            case Right(RefactorEffect(1234, RefactorType.Rename, List(
               TextEdit(`fooFile`, 214, 217, "bar"),
               TextEdit(`fooFile`, 252, 255, "bar"),
               TextEdit(`fooFile`, 269, 272, "bar")), _)) =>
@@ -198,9 +198,9 @@ class BasicWorkflow extends WordSpec with Matchers
               fail("Prepare refactor result does not match, got: " + prepareRefactorRes)
           }
 
-          val execRefactorRes = project.rpcExecRefactor(1234, Symbols.Rename)
+          val execRefactorRes = project.rpcExecRefactor(1234, RefactorType.Rename)
           execRefactorRes match {
-            case Right(RefactorResult(1234, 'rename, List(`fooFile`), _)) =>
+            case Right(RefactorResult(1234, RefactorType.Rename, List(`fooFile`), _)) =>
             case _ =>
               fail("exec refactor does not match expectation: " + execRefactorRes)
           }

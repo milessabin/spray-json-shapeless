@@ -364,7 +364,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
       testWithResponse("""(swank:prepare-refactor 7 inlineLocal (file "SwankProtocol.scala" start 100 end 200) nil)""") { (t, m, id) =>
 
         (t.rpcPrepareRefactor _).expects(7, InlineLocalRefactorDesc(file("SwankProtocol.scala").canon, 100, 200)).returns(Right(refactorRenameEffect))
-        (t.rpcExecRefactor _).expects(7, Symbols.InlineLocal).returns(Left(refactorFailure))
+        (t.rpcExecRefactor _).expects(7, RefactorType.InlineLocal).returns(Left(refactorFailure))
 
         (m.send _).expects(s"""(:return (:ok $refactorFailureStr) $id)""")
       }
@@ -374,7 +374,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
       val refactorEffect = new RefactorEffect(7, desc.refactorType, List(TextEdit(file3, 5, 7, "aaa")))
       val refactorResult = new RefactorResult(7, desc.refactorType, List(file3, file1))
-      val refactorResultStr = s"""(:procedure-id 7 :refactor-type ${desc.refactorType.name} :touched-files ($file3_str $file1_str) :status success)"""
+      val refactorResultStr = s"""(:procedure-id 7 :refactor-type ${desc.refactorType.symbol.name} :touched-files ($file3_str $file1_str) :status success)"""
 
       testWithResponse("""(swank:prepare-refactor 7""" + msg + " nil)") { (t, m, id) =>
         (t.rpcPrepareRefactor _).expects(7, desc).returns(Right(refactorEffect))
@@ -440,14 +440,14 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should understand swank:exec-refactor - refactor failure") {
       testWithResponse("""(swank:exec-refactor 7 rename)""") { (t, m, id) =>
-        (t.rpcExecRefactor _).expects(7, Symbol("rename")).returns(Left(refactorFailure))
+        (t.rpcExecRefactor _).expects(7, RefactorType.Rename).returns(Left(refactorFailure))
         (m.send _).expects(s"""(:return (:ok $refactorFailureStr) $id)""")
       }
     }
 
     it("should understand swank:exec-refactor - refactor result") {
       testWithResponse("""(swank:exec-refactor 7 rename)""") { (t, m, id) =>
-        (t.rpcExecRefactor _).expects(7, Symbol("rename")).returns(Right(refactorResult))
+        (t.rpcExecRefactor _).expects(7, RefactorType.Rename).returns(Right(refactorResult))
         (m.send _).expects(s"""(:return (:ok $refactorResultStr) $id)""")
       }
     }
