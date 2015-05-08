@@ -1,10 +1,11 @@
 import java.io._
-import scala.util.Try
-import sbt._
-import sbt.{ IntegrationTest => It }
-import Keys._
+
 import com.typesafe.sbt.SbtScalariform._
+import sbt.Keys._
+import sbt.{IntegrationTest => It, _}
 import scoverage.ScoverageSbtPlugin.ScoverageKeys
+
+import scala.util.{Properties, Try}
 
 object EnsimeBuild extends Build with JdkResolver {
   /*
@@ -30,6 +31,13 @@ object EnsimeBuild extends Build with JdkResolver {
       compileInputs in (It, compile) <<= (compileInputs in (It, compile)) dependsOn (ScalariformKeys.format in It)
     )
 
+  // e.g. YOURKIT_AGENT=/opt/yourkit/bin/linux-x86-64/libyjpagent.so
+  val yourkitAgent = Properties.envOrNone("YOURKIT_AGENT").map { name =>
+    val agent = file(name)
+    require(agent.exists(), s"Yourkit agent specified ($agent) does not exist")
+    Seq(s"-agentpath:${agent.getCanonicalPath}")
+  }.getOrElse(Nil)
+
   lazy val commonSettings = scalariformSettings ++ basicSettings ++ Seq(
     scalacOptions in Compile ++= Seq(
       // uncomment this to debug implicit resolution compilation problems
@@ -48,6 +56,7 @@ object EnsimeBuild extends Build with JdkResolver {
     parallelExecution in Test := true,
     testForkedParallel in Test := true,
     javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC"),
+    javaOptions ++= yourkitAgent,
     javaOptions in Test += "-Dlogback.configurationFile=../logback-test.xml",
     testOptions in Test ++= noColorIfEmacs,
     updateOptions := updateOptions.value.withCachedResolution(true),
