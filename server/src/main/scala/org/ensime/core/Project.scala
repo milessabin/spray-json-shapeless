@@ -1,6 +1,7 @@
 package org.ensime.core
 
 import akka.actor._
+import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import akka.event.LoggingReceive
 import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
@@ -150,11 +151,11 @@ class Project(
     undos(undoCounter) = Undo(undoCounter, sum, changes.toList)
   }
 
-  protected def peekUndo(): Option[Undo] = {
+  override def peekUndo(): Option[Undo] = {
     undos.lastOption.map(_._2)
   }
 
-  protected def execUndo(undoId: Int): Either[String, UndoResult] = {
+  override def execUndo(undoId: Int): Either[String, UndoResult] = {
     undos.get(undoId) match {
       case Some(u) =>
         undos.remove(u.id)
@@ -207,7 +208,7 @@ class Project(
   }
 
   // TODO Move to server - this does not belong here
-  protected def shutdownServer(): Unit = {
+  override def shutdownServer(): Unit = {
     val t = new Thread() {
       override def run(): Unit = {
         log.info("Server is exiting...")

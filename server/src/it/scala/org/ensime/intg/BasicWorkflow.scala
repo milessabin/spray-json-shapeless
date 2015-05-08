@@ -30,14 +30,14 @@ class BasicWorkflow extends WordSpec with Matchers
           val fooFilePath = fooFile.getAbsolutePath
 
           // trigger typeCheck
-          project.rpcTypecheckFiles(List(fooFile))
+          project.typecheckFiles(List(fooFile))
 
           asyncHelper.expectAsync(30 seconds, ClearAllScalaNotesEvent)
           asyncHelper.expectAsync(30 seconds, FullTypeCheckCompleteEvent)
 
           //-----------------------------------------------------------------------------------------------
           // semantic highlighting
-          val designations = project.rpcSymbolDesignations(fooFile, -1, 299, SourceSymbol.allSymbols)
+          val designations = project.symbolDesignations(fooFile, -1, 299, SourceSymbol.allSymbols)
           designations.file shouldBe fooFile
           assert(designations.syms.contains(SymbolDesignation(12, 19, PackageSymbol)))
           // expected Symbols
@@ -45,7 +45,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           //-----------------------------------------------------------------------------------------------
           // symbolAtPoint
-          val symbolAtPointOpt: Option[SymbolInfo] = project.rpcSymbolAtPoint(fooFile, 128)
+          val symbolAtPointOpt: Option[SymbolInfo] = project.symbolAtPoint(fooFile, 128)
 
           val intTypeId = symbolAtPointOpt match {
             case Some(SymbolInfo("scala.Int", "Int", Some(_), BasicTypeInfo("Int", typeId, DeclaredAs.Class, "scala.Int", List(), List(), _, None), false, Some(ownerTypeId))) =>
@@ -54,7 +54,7 @@ class BasicWorkflow extends WordSpec with Matchers
               fail("Symbol at point does not match expectations, expected Int symbol got: " + symbolAtPointOpt)
           }
 
-          val fooClassByNameOpt = project.rpcTypeByName("org.example.Foo")
+          val fooClassByNameOpt = project.typeByName("org.example.Foo")
           val fooClassId = fooClassByNameOpt match {
             case Some(BasicTypeInfo("Foo", fooTypeIdVal, DeclaredAs.Class, "org.example.Foo", List(), List(), _, None)) =>
               fooTypeIdVal
@@ -62,7 +62,7 @@ class BasicWorkflow extends WordSpec with Matchers
               fail("type by name for Foo class does not match expectations, got: " + fooClassByNameOpt)
           }
 
-          val fooObjectByNameOpt = project.rpcTypeByName("org.example.Foo$")
+          val fooObjectByNameOpt = project.typeByName("org.example.Foo$")
           val fooObjectId = fooObjectByNameOpt match {
             case Some(BasicTypeInfo("Foo$", fooObjectIdVal, DeclaredAs.Object, "org.example.Foo$", List(), List(), Some(OffsetSourcePosition(`fooFile`, 28)), None)) =>
               fooObjectIdVal
@@ -73,7 +73,7 @@ class BasicWorkflow extends WordSpec with Matchers
           //-----------------------------------------------------------------------------------------------
           // public symbol search - java.io.File
 
-          val javaSearchSymbol = project.rpcPublicSymbolSearch(List("java", "io", "File"), 30)
+          val javaSearchSymbol = project.publicSymbolSearch(List("java", "io", "File"), 30)
           assert(javaSearchSymbol.syms.exists {
             case TypeSearchResult("java.io.File", "File", DeclaredAs.Class, Some(_)) => true
             case _ => false
@@ -81,7 +81,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           //-----------------------------------------------------------------------------------------------
           // public symbol search - scala.util.Random
-          val scalaSearchSymbol = project.rpcPublicSymbolSearch(List("scala", "util", "Random"), 2)
+          val scalaSearchSymbol = project.publicSymbolSearch(List("scala", "util", "Random"), 2)
           scalaSearchSymbol match {
             case SymbolSearchResults(List(
               TypeSearchResult("scala.util.Random", "Random", DeclaredAs.Class, Some(_)),
@@ -93,7 +93,7 @@ class BasicWorkflow extends WordSpec with Matchers
           //-----------------------------------------------------------------------------------------------
           // type by id
 
-          val typeByIdOpt: Option[TypeInfo] = project.rpcTypeById(intTypeId)
+          val typeByIdOpt: Option[TypeInfo] = project.typeById(intTypeId)
           val intTypeInspectInfo = typeByIdOpt match {
             case Some(ti @ BasicTypeInfo("Int", `intTypeId`, DeclaredAs.Class, "scala.Int", List(), List(), Some(_), None)) =>
               ti
@@ -103,7 +103,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           //-----------------------------------------------------------------------------------------------
           // inspect type by id
-          val inspectByIdOpt: Option[TypeInspectInfo] = project.rpcInspectTypeById(intTypeId)
+          val inspectByIdOpt: Option[TypeInspectInfo] = project.inspectTypeById(intTypeId)
 
           inspectByIdOpt match {
             case Some(TypeInspectInfo(`intTypeInspectInfo`, Some(intCompanionId), supers, _)) =>
@@ -117,11 +117,11 @@ class BasicWorkflow extends WordSpec with Matchers
           log.info("------------------------------------222-")
 
           // FIXME: doing a fresh typecheck is needed to pass the next few tests. Why?
-          project.rpcTypecheckFiles(List(fooFile))
+          project.typecheckFiles(List(fooFile))
           asyncHelper.expectAsync(30 seconds, ClearAllScalaNotesEvent)
           asyncHelper.expectAsync(30 seconds, FullTypeCheckCompleteEvent)
 
-          val useOfSymbolAtPoint: List[ERangePosition] = project.rpcUsesOfSymAtPoint(fooFile, 119) // point on testMethod
+          val useOfSymbolAtPoint: List[ERangePosition] = project.usesOfSymAtPoint(fooFile, 119) // point on testMethod
           useOfSymbolAtPoint match {
             case List(ERangePosition(`fooFilePath`, 114, 110, 172), ERangePosition(`fooFilePath`, 273, 269, 283)) =>
             case _ =>
@@ -133,7 +133,7 @@ class BasicWorkflow extends WordSpec with Matchers
           // note that the line numbers appear to have been stripped from the
           // scala library classfiles, so offset/line comes out as zero unless
           // loaded by the pres compiler
-          val testMethodSymbolInfo = project.rpcSymbolAtPoint(fooFile, 276)
+          val testMethodSymbolInfo = project.symbolAtPoint(fooFile, 276)
           testMethodSymbolInfo match {
             case Some(SymbolInfo("testMethod", "testMethod", Some(OffsetSourcePosition(`fooFile`, 114)), ArrowTypeInfo("(i: Int, s: String)Int", 126, BasicTypeInfo("Int", 1, DeclaredAs.Class, "scala.Int", List(), List(), None, None), List(ParamSectionInfo(List((i, BasicTypeInfo("Int", 1, DeclaredAs.Class, "scala.Int", List(), List(), None, None)), (s, BasicTypeInfo("String", 39, DeclaredAs.Class, "java.lang.String", List(), List(), None, None))), false))), true, Some(_))) =>
             case _ =>
@@ -141,7 +141,7 @@ class BasicWorkflow extends WordSpec with Matchers
           }
 
           // M-.  external symbol
-          val genericMethodSymbolAtPointRes = project.rpcSymbolAtPoint(fooFile, 190)
+          val genericMethodSymbolAtPointRes = project.symbolAtPoint(fooFile, 190)
           genericMethodSymbolAtPointRes match {
 
             case Some(SymbolInfo("apply", "apply", Some(_),
@@ -162,7 +162,7 @@ class BasicWorkflow extends WordSpec with Matchers
           }
 
           // C-c C-v p Inspect source of current package
-          val insPacByPathResOpt = project.rpcInspectPackageByPath("org.example")
+          val insPacByPathResOpt = project.inspectPackageByPath("org.example")
           insPacByPathResOpt match {
             case Some(PackageInfo("example", "org.example", List(
               BasicTypeInfo("Bloo", _: Int, DeclaredAs.Class, "org.example.Bloo", List(), List(), Some(_), None),
@@ -178,16 +178,16 @@ class BasicWorkflow extends WordSpec with Matchers
           }
 
           // expand selection around 'val foo'
-          val expandRange1: FileRange = project.rpcExpandSelection(fooFile, 215, 215)
+          val expandRange1: FileRange = project.expandSelection(fooFile, 215, 215)
           assert(expandRange1 == FileRange(fooFilePath, 214, 217))
 
-          val expandRange2: FileRange = project.rpcExpandSelection(fooFile, 214, 217)
+          val expandRange2: FileRange = project.expandSelection(fooFile, 214, 217)
           assert(expandRange2 == FileRange(fooFilePath, 210, 229))
 
           // TODO get the before content of the file
 
           // rename var
-          val prepareRefactorRes = project.rpcPrepareRefactor(1234, RenameRefactorDesc("bar", fooFile, 215, 215))
+          val prepareRefactorRes = project.prepareRefactor(1234, RenameRefactorDesc("bar", fooFile, 215, 215))
           log.info("PREPARE REFACTOR = " + prepareRefactorRes)
           prepareRefactorRes match {
             case Right(RefactorEffect(1234, RefactorType.Rename, List(
@@ -198,7 +198,7 @@ class BasicWorkflow extends WordSpec with Matchers
               fail("Prepare refactor result does not match, got: " + prepareRefactorRes)
           }
 
-          val execRefactorRes = project.rpcExecRefactor(1234, RefactorType.Rename)
+          val execRefactorRes = project.execRefactor(1234, RefactorType.Rename)
           execRefactorRes match {
             case Right(RefactorResult(1234, RefactorType.Rename, List(`fooFile`), _)) =>
             case _ =>
@@ -207,7 +207,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           // TODO Check the after refactoring file is different
 
-          val peekUndoRes = project.rpcPeekUndo()
+          val peekUndoRes = project.peekUndo()
           val undoId = peekUndoRes match {
             case Some(Undo(undoIdVal, "Refactoring of type: 'rename", List(TextEdit(`fooFile`, 214, 217, "foo"), TextEdit(`fooFile`, 252, 255, "foo"), TextEdit(`fooFile`, 269, 272, "foo")))) =>
               undoIdVal
@@ -216,7 +216,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           }
 
-          val execUndoRes = project.rpcExecUndo(undoId)
+          val execUndoRes = project.execUndo(undoId)
           execUndoRes match {
             case Right(UndoResult(1, List(`fooFile`))) =>
             case _ =>
@@ -225,7 +225,7 @@ class BasicWorkflow extends WordSpec with Matchers
 
           // TODO Check the file has reverted to original
 
-          val packageMemberCompRes = project.rpcPackageMemberCompletion("scala.collection.mutable", "Ma")
+          val packageMemberCompRes = project.packageMemberCompletion("scala.collection.mutable", "Ma")
           packageMemberCompRes match {
             case List(
               CompletionInfo("Map", CompletionSignature(List(), ""), -1, false, 50, None),
@@ -243,4 +243,5 @@ class BasicWorkflow extends WordSpec with Matchers
       }
     }
   }
+
 }

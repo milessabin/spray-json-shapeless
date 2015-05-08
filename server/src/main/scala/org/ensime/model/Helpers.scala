@@ -250,7 +250,10 @@ trait Helpers { self: Global =>
           // This check is necessary to prevent infinite looping..
           ((isRoot(s.owner) && isRoot(parent)) || (s.owner.fullName == parent.fullName))
       }
-      validSyms.toList.sortWith { (a, b) => a.nameString <= b.nameString }
+
+      // the nameString operation is depressingly expensive - mapping to tuples first reduces the overhead.
+      val vsPairsAsList: List[(String, Symbol)] = validSyms.map(vs => (vs.nameString, vs))(scala.collection.breakOut)
+      vsPairsAsList.sortBy(_._1).map(_._2)
     }
 
     if (isRoot(parent)) {
