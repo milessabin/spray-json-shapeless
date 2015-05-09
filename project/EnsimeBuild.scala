@@ -128,7 +128,7 @@ object EnsimeBuild extends Build with JdkResolver {
     licenses := Seq("LGPL 3.0" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt"))
   ) settings (
     libraryDependencies ++= Seq(
-      "io.spray" %% "spray-json" % "1.3.1",
+      "io.spray" %% "spray-json" % "1.3.2",
       shapeless
     ) ++ logback ++ testLibs(scalaVersion.value)
   )

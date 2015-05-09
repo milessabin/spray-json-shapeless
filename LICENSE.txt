@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 
 ========================================================================
-Files under the 'sexpress' module:
+Files under the 'sexpress' and 'spray-json-shapeless' modules:
 
 Copyright (c) 2014 - 2015, Sam Halliday
 Copyright (c) 2014 - 2015, ENSIME Contributors
