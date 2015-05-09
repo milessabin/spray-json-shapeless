@@ -23,7 +23,7 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[VoidResponse.type](target, request, maxWait)
   }
 
-  def callRPC[R](target: ActorRef, request: RpcRequest, maxWait: FiniteDuration = defaultMaxWait)(implicit typ: Typeable[R]): R = {
+  def callRPC[R](target: ActorRef, request: Any, maxWait: FiniteDuration = defaultMaxWait)(implicit typ: Typeable[R]): R = {
     val future = target.ask(request)(maxWait)
     val result = Await.result(future, maxWait)
     result match {

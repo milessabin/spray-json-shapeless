@@ -234,7 +234,6 @@ object SwankProtocolResponse {
   implicit val BreakpointFormat = SexpFormat[Breakpoint]
   implicit val BreakpointListFormat = SexpFormat[BreakpointList]
   implicit val ReplConfigFormat = SexpFormat[ReplConfig]
-  implicit val PackageMemberInfoLightFormat = SexpFormat[PackageMemberInfoLight]
   implicit val FileRangeFormat = SexpFormat[FileRange]
   implicit val ERangePositionFormat = SexpFormat[ERangePosition]
   implicit val RefactorFailureFormat = SexpFormat[RefactorFailure]
@@ -599,7 +598,6 @@ object SwankProtocolRequest {
   implicit object RefactorDescFormat extends SexpFormat[RefactorDesc] {
     import org.ensime.util.{ RefactorLocation => Loc }
     import pimpathon.file._
-    import RichFile._
 
     def write(v: RefactorDesc): Sexp = ???
     def read(sexp: Sexp): RefactorDesc = sexp match {

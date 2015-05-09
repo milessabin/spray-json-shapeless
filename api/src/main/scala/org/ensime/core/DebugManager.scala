@@ -2,7 +2,7 @@ package org.ensime.core
 
 case object DebuggerShutdownEvent
 
-abstract class DebugVmStatus
+sealed abstract class DebugVmStatus
 
 // must have redundant status: String to match legacy API
 case class DebugVmSuccess(

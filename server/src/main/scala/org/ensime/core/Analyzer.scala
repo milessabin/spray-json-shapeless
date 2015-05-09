@@ -12,14 +12,14 @@ import org.ensime.server.protocol._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
 
-import RichFile._
-
 import scala.concurrent.Future
 import scala.reflect.internal.util.{ OffsetPosition, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 
 import ProtocolConst._
+
+import pimpathon.file._
 
 case class CompilerFatalError(e: Throwable)
 
@@ -233,22 +233,20 @@ class Analyzer(
                 sender ! scalaCompiler.askTypeInfoByNameAt(name, p)
               case CallCompletionReq(id: Int) =>
                 sender ! scalaCompiler.askCallCompletionInfoById(id)
-              case SymbolDesignationsReq(file, start, end, tpes) =>
-                if (!FileUtils.isScalaSourceFile(file)) {
-                  sender ! SymbolDesignations(file, List.empty)
+              case SymbolDesignationsReq(f, start, end, tpes) =>
+                if (!FileUtils.isScalaSourceFile(f)) {
+                  sender ! SymbolDesignations(f, List.empty)
                 } else {
-                  val f = createSourceFile(file)
+                  val sf = createSourceFile(f)
                   val clampedEnd = math.max(end, start)
-                  val pos = new RangePosition(f, start, start, clampedEnd)
+                  val pos = new RangePosition(sf, start, start, clampedEnd)
                   if (tpes.nonEmpty) {
                     val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
                     sender ! syms
                   } else {
-                    sender ! SymbolDesignations(new File(f.path).canon, List.empty)
+                    sender ! SymbolDesignations(file(sf.path), List.empty)
                   }
                 }
-              case DoExecUndo(undo) =>
-                sender ! handleExecUndo(undo)
               case ExpandSelectionReq(file, start: Int, stop: Int) =>
                 sender ! handleExpandselection(file, start, stop)
               case FormatSourceReq(files: List[File]) =>
@@ -262,6 +260,15 @@ class Analyzer(
                 require(requirement = false, unexpected.toString)
             }
           }
+        } catch {
+          case e: Throwable =>
+            log.error(e, "Error handling RPC: " + e)
+            sender ! RPCError(ErrExceptionInAnalyzer, "Error occurred in Analyzer. Check the server log.")
+        }
+
+      case DoExecUndo(undo) =>
+        try {
+          sender ! handleExecUndo(undo)
         } catch {
           case e: Throwable =>
             log.error(e, "Error handling RPC: " + e)
@@ -292,18 +299,18 @@ class Analyzer(
   }
 
   def pos(file: File, range: OffsetRange): OffsetPosition = {
-    val f = scalaCompiler.createSourceFile(file.getCanonicalPath)
+    val f = scalaCompiler.createSourceFile(file.canon.getPath)
     if (range.from == range.to) new OffsetPosition(f, range.from)
     else new RangePosition(f, range.from, range.from, range.to)
   }
 
   def pos(file: File, offset: Int): OffsetPosition = {
-    val f = scalaCompiler.createSourceFile(file.getCanonicalPath)
+    val f = scalaCompiler.createSourceFile(file.canon.getPath)
     new OffsetPosition(f, offset)
   }
 
   def createSourceFile(file: File): SourceFile = {
-    scalaCompiler.createSourceFile(file.getCanonicalPath)
+    scalaCompiler.createSourceFile(file.canon.getPath)
   }
 
   def createSourceFile(file: SourceFileInfo): SourceFile = {

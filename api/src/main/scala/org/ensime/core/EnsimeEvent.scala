@@ -59,17 +59,17 @@ case object DebugVMDisconnectEvent extends DebugEvent
 /** The debugged VM has thrown an exception and is now paused waiting for control. */
 case class DebugExceptionEvent(
   exception: Long,
-  threadId: String,
+  threadId: DebugThreadId,
   threadName: String,
   file: Option[File],
   line: Option[Int]
 ) extends DebugEvent
 
 /** A new thread has started. */
-case class DebugThreadStartEvent(threadId: String) extends DebugEvent
+case class DebugThreadStartEvent(threadId: DebugThreadId) extends DebugEvent
 
 /** A thread has died. */
-case class DebugThreadDeathEvent(threadId: String) extends DebugEvent
+case class DebugThreadDeathEvent(threadId: DebugThreadId) extends DebugEvent
 
 /** Communicates stdout/stderr of debugged VM to client. */
 case class DebugOutputEvent(body: String) extends DebugEvent

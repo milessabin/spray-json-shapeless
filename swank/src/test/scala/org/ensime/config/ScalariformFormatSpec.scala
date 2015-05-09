@@ -2,6 +2,7 @@ package org.ensime.config
 
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
+import org.ensime.server.protocol.swank.FormatSpec
 
 import scalariform.formatter.preferences._
 

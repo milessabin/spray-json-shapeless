@@ -224,15 +224,15 @@ class DebugManager(
             val pos = if (e.catchLocation() != null) locToPos(e.catchLocation()) else None
             project ! AsyncEvent(DebugExceptionEvent(
               e.exception.uniqueID(),
-              e.thread().uniqueID().toString,
+              DebugThreadId(e.thread().uniqueID()),
               e.thread().name,
               pos.map(_.file),
               pos.map(_.line)
             ))
           case e: ThreadDeathEvent =>
-            project ! AsyncEvent(DebugThreadDeathEvent(e.thread().uniqueID().toString))
+            project ! AsyncEvent(DebugThreadDeathEvent(DebugThreadId(e.thread().uniqueID())))
           case e: ThreadStartEvent =>
-            project ! AsyncEvent(DebugThreadStartEvent(e.thread().uniqueID().toString))
+            project ! AsyncEvent(DebugThreadStartEvent(DebugThreadId(e.thread().uniqueID())))
           case e: AccessWatchpointEvent =>
           case e: ClassPrepareEvent =>
             withVM { vm =>
@@ -899,7 +899,7 @@ class DebugManager(
         frames += makeStackFrame(i, stackFrame)
         i += 1
       }
-      DebugBacktrace(frames.toList, thread.uniqueID().toString, thread.name())
+      DebugBacktrace(frames.toList, DebugThreadId(thread.uniqueID()), thread.name())
     }
 
     private def mirrorFromString(tpe: Type, toMirror: String): Option[Value] = {

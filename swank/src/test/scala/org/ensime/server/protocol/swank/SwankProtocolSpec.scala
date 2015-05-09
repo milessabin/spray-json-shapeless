@@ -15,7 +15,6 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
 
 import pimpathon.file._
-import org.ensime.util.RichFile._
 
 class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterAll with MockFactory {
 

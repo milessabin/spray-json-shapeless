@@ -81,7 +81,7 @@ case class PackageInfo(
   require(members == members.sortBy(_.name), "members should be sorted by name")
 }
 
-trait SymbolSearchResult {
+sealed trait SymbolSearchResult {
   def name: String
   def localName: String
   def declAs: DeclaredAs
@@ -274,7 +274,7 @@ case class DebugStackFrame(
 
 case class DebugBacktrace(
   frames: List[DebugStackFrame],
-  threadId: String,
+  threadId: DebugThreadId,
   threadName: String
 )
 
@@ -288,8 +288,6 @@ case class NamedTypeMemberInfo(
   override def members = List.empty
   def tpe = `type`
 }
-
-case class PackageMemberInfoLight(name: String)
 
 sealed trait TypeInfo extends EntityInfo {
   def name: String

@@ -56,7 +56,7 @@ object EnsimeBuild extends Build with JdkResolver {
     parallelExecution in Test := true,
     testForkedParallel in Test := true,
     javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC"),
-    javaOptions ++= yourkitAgent,
+    javaOptions in run ++= yourkitAgent,
     javaOptions in Test += "-Dlogback.configurationFile=../logback-test.xml",
     testOptions in Test ++= noColorIfEmacs,
     updateOptions := updateOptions.value.withCachedResolution(true),
@@ -75,16 +75,28 @@ object EnsimeBuild extends Build with JdkResolver {
   )
 
   ////////////////////////////////////////////////
+  // common dependencies
+  lazy val pimpathon = "com.github.stacycurl" %% "pimpathon-core" % "1.5.0"
+  lazy val shapeless = "com.chuusai" %% "shapeless" % "2.2.0-RC6"
+  lazy val logback = Seq(
+    "ch.qos.logback" % "logback-classic" % "1.1.3",
+    "org.slf4j" % "jul-to-slf4j" % "1.7.12",
+    "org.slf4j" % "jcl-over-slf4j" % "1.7.12"
+  )
+  val akkaVersion = "2.3.9"
+
+  ////////////////////////////////////////////////
   // utils
   def testLibs(scalaV: String, config: String = "test") = Seq(
     "org.scalatest" %% "scalatest" % "2.2.4" % config,
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % config,
     "org.scalacheck" %% "scalacheck" % "1.12.1" % config,
-    "com.typesafe.akka" %% "akka-testkit" % "2.3.9" % config,
+    "com.typesafe.akka" %% "akka-testkit" % akkaVersion % config,
+    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion % config,
     // workaround old deps coming from scalatest
     "org.scala-lang" % "scala-reflect" % scalaV % config,
     "org.scala-lang.modules" %% "scala-xml" % "1.0.3" % config
-  )
+  ) ++ logback.map(_ % config)
 
   def jars(cp: Classpath): String = {
     for {
@@ -103,31 +115,49 @@ object EnsimeBuild extends Build with JdkResolver {
   lazy val sexpress = Project("sexpress", file("sexpress"), settings = commonSettings) settings (
     licenses := Seq("LGPL 3.0" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt")),
     libraryDependencies ++= Seq(
+      // losing scala-reflect dep would be good
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.chuusai" %% "shapeless" % "2.2.0-RC4",
+      shapeless,
       "org.parboiled" %% "parboiled-scala" % "1.1.7",
-      // perhaps drop the pimpathon dependency here in the interest of
-      // minimising deps and move to server only
-      "com.github.stacycurl" %% "pimpathon-core" % "1.4.0",
+      pimpathon,
       "com.google.guava" % "guava" % "18.0" % "test"
     ) ++ testLibs(scalaVersion.value)
   )
 
+  lazy val sprayJsonShapeless = Project("spray-json-shapeless", file("spray-json-shapeless"), settings = commonSettings) settings(
+    licenses := Seq("LGPL 3.0" -> url("http://www.gnu.org/licenses/lgpl-3.0.txt"))
+  ) settings (
+    libraryDependencies ++= Seq(
+      "io.spray" %% "spray-json" % "1.3.1",
+      shapeless
+    ) ++ logback ++ testLibs(scalaVersion.value)
+  )
+
   lazy val api = Project("api", file("api"), settings = commonSettings) settings (
     libraryDependencies ++= Seq(
-      "com.github.stacycurl" %% "pimpathon-core" % "1.4.0",
-      "org.scalariform" %% "scalariform" % "0.1.6"
+      "org.scalariform" %% "scalariform" % "0.1.6",
+      pimpathon
     ) ++ testLibs(scalaVersion.value)
   )
 
+  // the JSON protocol
+  lazy val jerk = Project("jerk", file("jerk"), settings = commonSettings) dependsOn (
+    api,
+    sprayJsonShapeless,
+    sprayJsonShapeless % "test->test",
+    api % "test->test" // for the test data
+  ) settings (
+    libraryDependencies ++= testLibs(scalaVersion.value)
+  )
+
+  // the S-Exp protocol
   lazy val swank = Project("swank", file("swank"), settings = commonSettings) dependsOn (
-    api, sexpress, sexpress % "test->test"
+    api,
+    api % "test->test", // for the test data
+    sexpress
   ) settings (
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-slf4j" % "2.3.9",
-      "ch.qos.logback" % "logback-classic" % "1.1.3",
-      "org.slf4j" % "jul-to-slf4j" % "1.7.12",
-      "org.slf4j" % "jcl-over-slf4j" % "1.7.12"
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     ) ++ testLibs(scalaVersion.value)
   )
 
@@ -155,7 +185,7 @@ object EnsimeBuild extends Build with JdkResolver {
   )
 
   lazy val server = Project("server", file("server")).dependsOn(
-    api, swank,
+    api, swank, jerk,
     sexpress % "test->test",
     swank % "test->test",
     // depend on "it" dependencies in "test" or sbt adds them to the release deps!
@@ -201,7 +231,7 @@ object EnsimeBuild extends Build with JdkResolver {
       "org.ow2.asm" % "asm-util" % "5.0.3",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scalap" % scalaVersion.value,
-      "com.typesafe.akka" %% "akka-actor" % "2.3.9",
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
       "commons-lang" % "commons-lang" % "2.6",
       "io.spray" %% "spray-can" % "1.3.3"
@@ -209,7 +239,7 @@ object EnsimeBuild extends Build with JdkResolver {
   )
 
   lazy val root = Project(id = "ensime", base = file("."), settings = commonSettings) aggregate (
-    api, sexpress, swank, server
+    api, sexpress, jerk, swank, server
   ) dependsOn (server)
 }
 

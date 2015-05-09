@@ -2,7 +2,7 @@ package org.ensime.util
 
 import java.io.File
 
-trait FileEdit extends Ordered[FileEdit] {
+sealed trait FileEdit extends Ordered[FileEdit] {
   def file: File
   def text: String
   def from: Int

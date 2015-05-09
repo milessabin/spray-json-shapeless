@@ -42,9 +42,6 @@ class Indexer(
     case req: RpcRequest =>
       try {
         req match {
-          case TypeCompletionsReq(query: String, maxResults: Int) =>
-            sender ! SymbolSearchResults(oldSearchTypes(query, maxResults))
-
           case ImportSuggestionsReq(file, point, names, maxResults) =>
             val suggestions = names.map(oldSearchTypes(_, maxResults))
             sender ! ImportSuggestions(suggestions)
@@ -62,6 +59,15 @@ class Indexer(
           log.error(e, "Error handling RPC: " + req)
           sender ! RPCError(ErrExceptionInIndexer, "Error occurred in indexer. Check the server log.")
       }
+    case TypeCompletionsReq(query: String, maxResults: Int) =>
+      try {
+        sender ! SymbolSearchResults(oldSearchTypes(query, maxResults))
+      } catch {
+        case e: Exception =>
+          log.error(e, "Error handling internal call: " + query)
+          sender ! RPCError(ErrExceptionInIndexer, "Error occurred in indexer. Check the server log.")
+      }
+
     case other =>
       log.warning("Indexer: WTF, what's " + other)
   }

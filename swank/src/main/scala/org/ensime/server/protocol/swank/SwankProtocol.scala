@@ -362,11 +362,6 @@ class SwankProtocol(
       syncApi.shutdownServer()
       sendRPCReturn(true, callId)
 
-    case ignored: DocUriReq =>
-    case ignored: TypeCompletionsReq =>
-    case ignored: DoExecUndo =>
-    case ignored: SubscribeAsync =>
-
   }
 
 }
