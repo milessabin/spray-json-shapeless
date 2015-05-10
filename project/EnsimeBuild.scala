@@ -3,7 +3,7 @@ import java.io._
 import com.typesafe.sbt.SbtScalariform._
 import sbt.Keys._
 import sbt.{IntegrationTest => It, _}
-import scoverage.ScoverageSbtPlugin.ScoverageKeys
+//import scoverage.ScoverageSbtPlugin.ScoverageKeys
 
 import scala.util.{Properties, Try}
 
@@ -162,26 +162,26 @@ object EnsimeBuild extends Build with JdkResolver {
   )
 
   lazy val testingEmpty = Project("testingEmpty", file("testing/empty"), settings = basicSettings).settings(
-    ScoverageKeys.coverageExcludedPackages := ".*"
+    //ScoverageKeys.coverageExcludedPackages := ".*"
   )
 
   lazy val testingSimple = Project("testingSimple", file("testing/simple"), settings = basicSettings) settings (
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive(),
-    ScoverageKeys.coverageExcludedPackages := ".*"
+    //ScoverageKeys.coverageExcludedPackages := ".*",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive()
   )
 
   lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings).settings(
-    ScoverageKeys.coverageExcludedPackages := ".*"
+    //ScoverageKeys.coverageExcludedPackages := ".*"
   )
 
   lazy val testingDocs = Project("testingDocs", file("testing/docs"), settings = basicSettings).settings(
+    //ScoverageKeys.coverageExcludedPackages := ".*",
     libraryDependencies ++= Seq(
       // specifically using ForecastIOLib version 1.5.1 for javadoc 1.8 output
       "com.github.dvdme" %  "ForecastIOLib" % "1.5.1",
       "com.google.guava" % "guava" % "18.0",
       "commons-io" % "commons-io" % "2.4"
-    ),
-    ScoverageKeys.coverageExcludedPackages := ".*"
+    )
   )
 
   lazy val server = Project("server", file("server")).dependsOn(
