@@ -8,6 +8,8 @@ import org.ensime.sexp.formats._
 import org.ensime.util._
 import org.ensime.server.protocol._
 
+import scala.util.{ Failure, Success, Try }
+
 /*
  * WARNING: THERE BE DRAGONS
  *
@@ -25,6 +27,9 @@ import org.ensime.server.protocol._
  *
  * https://github.com/ensime/ensime-server/issues/834
  */
+
+case class SwankRPCFormatException(msg: String, callId: Int, cause: Throwable = null) extends Exception(msg, cause)
+
 object SwankProtocolConversions extends DefaultSexpProtocol
   with SymbolAltFormat
   with OptionAltFormat
@@ -780,8 +785,16 @@ object SwankProtocolRequest {
   implicit object RpcRequestEnvelopeFormat extends SexpFormat[RpcRequestEnvelope] {
     def write(env: RpcRequestEnvelope): Sexp = ???
     def read(sexp: Sexp): RpcRequestEnvelope = sexp match {
-      case SexpList(SexpSymbol(":swank-rpc") :: form :: SexpNumber(callId) :: Nil) =>
-        RpcRequestEnvelope(form.convertTo[RpcRequest], callId.intValue)
+      case SexpList(SexpSymbol(":swank-rpc") :: form :: SexpNumber(callIdBI) :: Nil) =>
+        val callId = callIdBI.intValue()
+        Try(form.convertTo[RpcRequest]) match {
+          case Success(v) =>
+            RpcRequestEnvelope(v, callId)
+          case Failure(ex) =>
+            // we failed to parse to a valid s, but we have a call id - so we
+            // should return an rpc abort rather than :reader-error as emacs tends to bork.
+            throw new SwankRPCFormatException(s"Invalid rpc request ${form.compactPrint}", callId, ex)
+        }
       case _ => deserializationError(sexp)
     }
   }

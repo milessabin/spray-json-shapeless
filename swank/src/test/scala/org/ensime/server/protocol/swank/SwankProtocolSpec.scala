@@ -435,7 +435,6 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
         """addImport (qualifiedName "com.bar.Foo" file "SwankProtocol.scala")""",
         AddImportRefactorDesc("com.bar.Foo", file("SwankProtocol.scala").canon)
       )
-
     }
 
     it("should understand swank:exec-refactor - refactor failure") {
@@ -659,25 +658,25 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should rejected an invalid range expression") {
       testWithResponse("""(swank:type-by-name-at-point "String" "SwankProtocol.scala" (broken range expression))""") { (t, m, id) =>
-        (m.send _).expects(s"""(:reader-error 203 "(:swank-rpc (swank:type-by-name-at-point \\"String\\" \\"SwankProtocol.scala\\" (broken range expression)) $id)")""")
+        (m.send _).expects(s"""(:return (:abort 202 "Invalid rpc request (swank:type-by-name-at-point \\"String\\" \\"SwankProtocol.scala\\" (broken range expression))") $id)""")
       }
     }
 
     it("should rejected an invalid patch expression") {
       testWithResponse("""(swank:patch-source "Analyzer.scala" (("+" 6461 "Inc") ("???" 7127 7128)))""") { (t, m, id) =>
-        (m.send _).expects(s"""(:reader-error 203 "(:swank-rpc (swank:patch-source \\"Analyzer.scala\\" ((\\"+\\" 6461 \\"Inc\\") (\\"???\\" 7127 7128))) $id)")""")
+        (m.send _).expects(s"""(:return (:abort 202 "Invalid rpc request (swank:patch-source \\"Analyzer.scala\\" ((\\"+\\" 6461 \\"Inc\\") (\\"???\\" 7127 7128)))") $id)""")
       }
     }
 
     it("should rejected an invalid symbol list expression") {
       testWithResponse("""(swank:symbol-designations "SwankProtocol.scala" 0 46857 (var "fred"))""") { (t, m, id) =>
-        (m.send _).expects(s"""(:reader-error 203 "(:swank-rpc (swank:symbol-designations \\"SwankProtocol.scala\\" 0 46857 (var \\"fred\\")) $id)")""")
+        (m.send _).expects(s"""(:return (:abort 202 "Invalid rpc request (swank:symbol-designations \\"SwankProtocol.scala\\" 0 46857 (var \\"fred\\"))") $id)""")
       }
     }
 
     it("should rejected an invalid debug location expression") {
       testWithResponse("""(swank:debug-value (:type unknown :object-id "23" :index 2))""") { (t, m, id) =>
-        (m.send _).expects(s"""(:reader-error 203 "(:swank-rpc (swank:debug-value (:type unknown :object-id \\"23\\" :index 2)) $id)")""")
+        (m.send _).expects(s"""(:return (:abort 202 "Invalid rpc request (swank:debug-value (:type unknown :object-id \\"23\\" :index 2))") $id)""")
       }
     }
 
@@ -690,8 +689,15 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
 
     it("should return error for unknown refactor") {
       testWithResponse("""(swank:prepare-refactor 9 unknownRefactor (foo bar) t)""") { (t, m, id) =>
-        (m.send _).expects(s"""(:reader-error 203 "(:swank-rpc (swank:prepare-refactor 9 unknownRefactor (foo bar) t) $id)")""")
+        (m.send _).expects(s"""(:return (:abort 202 "Invalid rpc request (swank:prepare-refactor 9 unknownRefactor (foo bar) t)") $id)""")
       }
     }
+
+    it("should handle parse fails gracefully") {
+      testWithResponse("(swank:debug-value nil)") { (t, m, id) =>
+        (m.send _).expects(s"""(:return (:abort 202 "Invalid rpc request (swank:debug-value nil)") $id)""")
+      }
+    }
+
   }
 }

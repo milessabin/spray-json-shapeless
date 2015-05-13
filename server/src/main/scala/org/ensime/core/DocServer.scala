@@ -220,6 +220,7 @@ class DocServer(
           sender ! resolveLocalUri(sig).orElse(resolveWellKnownUri(sig))
         } catch {
           case e: Exception =>
+            // TODO The caller is expecting Option[String] this will generate a secondary error
             log.error(e, "Error handling RPC: " + sig)
             sender ! RPCError(
               ErrExceptionInRPC,
