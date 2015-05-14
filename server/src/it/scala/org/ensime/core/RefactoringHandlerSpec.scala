@@ -1,8 +1,9 @@
 package org.ensime.core
 
 import java.io.File
-import org.ensime.model._
 import org.scalatest._
+
+import org.ensime.api._
 import org.ensime.fixture._
 
 class RefactoringHandlerSpec extends WordSpec with Matchers

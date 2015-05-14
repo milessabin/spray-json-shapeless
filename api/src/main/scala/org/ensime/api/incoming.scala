@@ -1,9 +1,6 @@
-package org.ensime.server.protocol
+package org.ensime.api
 
-import java.io._
-import org.ensime.core._
-import org.ensime.model._
-import org.ensime.util.RefactorType
+import java.io.File
 
 // TODO: resp should be a sealed family
 //case class RpcResponseEnvelope(resp: Sexp, callId: Int)

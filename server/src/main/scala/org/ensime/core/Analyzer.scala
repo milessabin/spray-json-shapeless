@@ -5,6 +5,8 @@ import java.io.File
 import java.nio.charset.Charset
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
+
+import org.ensime.api._
 import org.ensime.config._
 import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._

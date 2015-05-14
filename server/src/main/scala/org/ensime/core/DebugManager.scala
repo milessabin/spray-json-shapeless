@@ -7,6 +7,9 @@ import akka.actor.{ Actor, ActorLogging, ActorRef }
 import com.sun.jdi._
 import com.sun.jdi.event._
 import com.sun.jdi.request.{ EventRequest, EventRequestManager, StepRequest }
+
+import org.ensime.api._
+
 import org.ensime.config._
 import org.ensime.model._
 import org.ensime.server.protocol._

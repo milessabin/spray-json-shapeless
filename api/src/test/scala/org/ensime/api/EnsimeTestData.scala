@@ -1,11 +1,5 @@
 package org.ensime.api
 
-import java.io.File
-
-import org.ensime.model._
-import org.ensime.core._
-import org.ensime.util._
-
 import pimpathon.file._
 
 trait EnsimeTestData {

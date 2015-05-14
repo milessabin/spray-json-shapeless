@@ -2,13 +2,14 @@ package org.ensime.core
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.LoggingReceive
-import org.ensime.config.EnsimeConfig
+
+import org.ensime.api._
+
 import org.ensime.indexer.DatabaseService.FqnSymbol
 import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
-import org.ensime.util.DeclaredAs
 
 //@deprecated("there is no good reason for this to be an actor, plus it enforces single-threaded badness", "fommil")
 class Indexer(

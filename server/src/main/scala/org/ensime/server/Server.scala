@@ -9,6 +9,7 @@ import akka.event.LoggingReceive
 import com.google.common.base.Charsets
 import com.google.common.io.Files
 import org.ensime.EnsimeApi
+import org.ensime.api._
 import org.ensime.config._
 import org.ensime.core.Project
 import org.ensime.server.protocol._

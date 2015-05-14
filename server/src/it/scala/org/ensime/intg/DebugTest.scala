@@ -2,7 +2,7 @@ package org.ensime.intg
 
 import java.io.File
 
-import org.ensime.core.{ DebugBreakEvent, DebugVmSuccess }
+import org.ensime.api._
 import org.ensime.fixture._
 import org.ensime.model._
 import org.ensime.server.Server

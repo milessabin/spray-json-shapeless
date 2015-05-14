@@ -1,9 +1,8 @@
 package org.ensime.server.protocol
 
 import java.io._
-import org.ensime.core._
-import org.ensime.model._
-import org.ensime.util.RefactorType
+
+import org.ensime.api._
 
 object ProtocolConst {
 

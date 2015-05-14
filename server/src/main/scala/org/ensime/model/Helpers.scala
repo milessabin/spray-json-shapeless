@@ -2,6 +2,8 @@ package org.ensime.model
 
 import scala.tools.nsc.interactive.Global
 
+import org.ensime.api._
+
 trait Helpers { self: Global =>
 
   import rootMirror.{ EmptyPackage, RootPackage }
@@ -264,7 +266,6 @@ trait Helpers { self: Global =>
   }
 
   import scala.tools.nsc.symtab.Flags._
-  import org.ensime.util.DeclaredAs
 
   def declaredAs(sym: Symbol): DeclaredAs = {
     if (sym.isMethod)

@@ -1,8 +1,7 @@
 package org.ensime.core
 
-import org.ensime.config.EnsimeConfig
 import org.ensime.fixture._
-import org.ensime.model._
+import org.ensime.api._
 import org.scalatest._
 
 import scala.reflect.internal.util.RangePosition

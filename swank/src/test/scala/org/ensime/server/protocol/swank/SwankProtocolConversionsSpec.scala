@@ -2,8 +2,7 @@ package org.ensime.server.protocol.swank
 
 import org.ensime.sexp._
 
-import org.ensime.model._
-import org.ensime.core._
+import org.ensime.api._
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.util._

@@ -2,8 +2,7 @@ package org.ensime.intg
 
 import akka.event.slf4j.SLF4JLogging
 import org.ensime.model._
-import org.ensime.core.{ FullTypeCheckCompleteEvent, ClearAllScalaNotesEvent }
-import org.ensime.core.{ RefactorResult, RefactorEffect, RenameRefactorDesc }
+import org.ensime.api._
 import org.ensime.util._
 import org.scalatest.WordSpec
 import org.scalatest.Matchers

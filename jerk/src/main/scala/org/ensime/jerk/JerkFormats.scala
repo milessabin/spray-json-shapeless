@@ -7,10 +7,7 @@ import spray.json._
 import org.ensime.json._
 import shapeless._
 
-import org.ensime.server.protocol._
-import org.ensime.model._
-import org.ensime.core._
-import org.ensime.util._
+import org.ensime.api._
 
 import pimpathon.file._
 

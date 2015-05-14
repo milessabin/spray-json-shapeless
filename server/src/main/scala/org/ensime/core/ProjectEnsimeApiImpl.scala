@@ -4,9 +4,11 @@ import java.io.File
 
 import akka.actor.ActorRef
 import akka.pattern.ask
+
+import org.ensime.api._
+
 import org.ensime.EnsimeApi
 import org.ensime.model._
-import org.ensime.server.ConnectionInfo
 import org.ensime.server.protocol._
 import org.ensime.util._
 import shapeless.Typeable

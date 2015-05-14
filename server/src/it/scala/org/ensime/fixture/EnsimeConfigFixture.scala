@@ -3,6 +3,7 @@ package org.ensime.fixture
 import java.io.File
 
 import org.apache.commons.io.FileUtils.copyDirectory
+import org.ensime.api._
 import org.ensime.config._
 import org.scalatest._
 import pimpathon.any._

@@ -2,6 +2,8 @@ package org.ensime.core
 
 import java.io.File
 
+import org.ensime.api._
+
 import org.ensime.model._
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._

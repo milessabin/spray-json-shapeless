@@ -6,6 +6,8 @@ import org.ensime.model._
 import org.ensime.util.Arrays
 import org.ensime.server.protocol._
 
+import org.ensime.api._
+
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }

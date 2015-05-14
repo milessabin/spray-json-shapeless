@@ -2,10 +2,7 @@ package org.ensime
 
 import java.io.File
 
-import org.ensime.core._
-import org.ensime.model._
-import org.ensime.server.ConnectionInfo
-import org.ensime.util.{ FileRange, RefactorType }
+import org.ensime.api._
 
 trait EnsimeApi {
 

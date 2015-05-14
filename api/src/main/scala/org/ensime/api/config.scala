@@ -1,4 +1,4 @@
-package org.ensime.config
+package org.ensime.api
 
 import java.io.File
 import scalariform.formatter.preferences.FormattingPreferences

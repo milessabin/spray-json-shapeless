@@ -4,6 +4,9 @@ import akka.actor._
 import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import akka.event.LoggingReceive
 import org.apache.commons.vfs2.FileObject
+
+import org.ensime.api._
+
 import org.ensime.config._
 import org.ensime.indexer._
 import org.ensime.model._

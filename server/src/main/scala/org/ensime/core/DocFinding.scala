@@ -1,4 +1,7 @@
 package org.ensime.core
+
+import org.ensime.api._
+
 import org.ensime.model._
 
 // Transform symbols to scaladoc URI paths, with anchors to select specific

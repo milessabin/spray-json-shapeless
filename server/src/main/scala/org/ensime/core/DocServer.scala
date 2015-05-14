@@ -4,11 +4,13 @@ import java.io.{ File, IOException }
 import java.net.URLEncoder
 import java.util.jar.JarFile
 
+import org.ensime.api._
+
 import akka.actor.{ Actor, ActorLogging }
 import akka.io.IO
 import com.google.common.io.{ ByteStreams, Files }
+
 import org.ensime.config._
-import org.ensime.model.{ DocFqn, DocSigPair }
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
 import spray.can.Http

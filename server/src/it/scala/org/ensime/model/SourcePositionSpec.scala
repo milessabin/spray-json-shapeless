@@ -1,6 +1,7 @@
 package org.ensime.model
 
 import org.ensime.config._
+import org.ensime.api._
 import org.ensime.fixture._
 import org.ensime.indexer.DatabaseService.FqnSymbol
 import org.ensime.indexer.EnsimeVFS

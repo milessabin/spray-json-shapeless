@@ -6,6 +6,8 @@ import org.ensime.util.UnitTestUtils._
 import org.scalatest.{ FunSpec, Matchers }
 import pimpathon.file._
 
+import org.ensime.api._
+
 import scala.util.Properties
 
 class EnsimeConfigSpec extends FunSpec with Matchers {

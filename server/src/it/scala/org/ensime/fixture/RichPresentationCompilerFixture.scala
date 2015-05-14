@@ -4,7 +4,7 @@ import java.io.File
 
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
-import org.ensime.config._
+import org.ensime.api._
 import org.ensime.core._
 import org.ensime.indexer.SearchService
 import org.slf4j.LoggerFactory

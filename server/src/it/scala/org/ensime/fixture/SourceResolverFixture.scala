@@ -1,6 +1,6 @@
 package org.ensime.fixture
 
-import org.ensime.config._
+import org.ensime.api._
 import org.ensime.indexer.{ EnsimeVFS, SourceResolver }
 
 trait SourceResolverFixture {

@@ -4,13 +4,11 @@ import java.io._
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ CountDownLatch, TimeUnit }
 
+import org.ensime.api._
+
 import org.ensime.sexp._
 import org.ensime.EnsimeApi
-import org.ensime.core._
-import org.ensime.model._
-import org.ensime.server._
 import org.ensime.util.UnitTestUtils._
-import org.ensime.util._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{ BeforeAndAfterAll, FunSpec, ShouldMatchers }
 
@@ -67,7 +65,7 @@ class SwankProtocolSpec extends FunSpec with ShouldMatchers with BeforeAndAfterA
     }
 
     it("should understand swank:peek-undo - success") {
-      val file3 = CanonFile("/foo/abc").file
+      val file3 = file("/foo/abc").canon
       val file3_str = fileToWireString(file3)
 
       testWithResponse("""(swank:peek-undo)""") { (t, m, id) =>

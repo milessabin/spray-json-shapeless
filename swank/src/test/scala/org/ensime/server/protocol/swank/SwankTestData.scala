@@ -3,8 +3,6 @@ package org.ensime.server.protocol.swank
 import java.io.File
 
 import org.ensime.api._
-import org.ensime.model._
-import org.ensime.core._
 import org.ensime.util._
 
 import pimpathon.file._

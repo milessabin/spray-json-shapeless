@@ -5,9 +5,10 @@ import java.sql.SQLException
 import akka.actor.{ Props, ActorLogging, Actor, ActorSystem }
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
-import org.ensime.config.EnsimeConfig
 import org.ensime.indexer.DatabaseService._
 import pimpathon.file._
+
+import org.ensime.api._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

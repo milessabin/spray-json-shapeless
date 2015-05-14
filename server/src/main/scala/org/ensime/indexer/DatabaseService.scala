@@ -8,6 +8,8 @@ import com.jolbox.bonecp.BoneCPDataSource
 import org.apache.commons.vfs2.FileObject
 import org.ensime.indexer.DatabaseService._
 
+import org.ensime.api._
+
 import scala.slick.driver.H2Driver.simple._
 
 class DatabaseService(dir: File) extends SLF4JLogging {
@@ -156,8 +158,6 @@ object DatabaseService {
       offset: Option[Int] = None // future features:
   //    type: ??? --- better than descriptor/internal
   ) {
-    import org.ensime.util.DeclaredAs
-
     // this is just as a helper until we can use more sensible
     // domain objects with slick
     def sourceFileObject(implicit vfs: EnsimeVFS) = source.map(vfs.vfile)
