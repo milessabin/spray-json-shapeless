@@ -59,6 +59,8 @@ class SwankProtocol(
             log.error(s"handling ${sexp.compactPrint}", e)
             sendRPCError(ErrExceptionInRPC, e.getMessage, message.callId)
         }
+      case Failure(SwankRPCFormatException(msg, callId, _)) =>
+        sendRPCError(ErrMalformedRPC, msg, callId)
       case Failure(e) =>
         log.error(s"unrecognised input ${sexp.compactPrint}", e)
         sendProtocolError(ErrUnrecognizedForm, sexp.compactPrint)
