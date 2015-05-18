@@ -239,7 +239,7 @@ object EnsimeBuild extends Build with JdkResolver {
   )
 
   lazy val root = Project(id = "ensime", base = file("."), settings = commonSettings) aggregate (
-    api, sexpress, jerk, swank, server
+    api, sexpress, sprayJsonShapeless, jerk, swank, server
   ) dependsOn (server)
 }
 
