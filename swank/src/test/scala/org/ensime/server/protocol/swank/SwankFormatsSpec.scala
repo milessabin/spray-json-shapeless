@@ -196,6 +196,11 @@ class SwankFormatsSpec extends FlatSpec with Matchers with EnsimeTestData {
       ExpandSelectionReq(file1, 100, 200): RpcRequest
     )
 
+    unmarshal(
+      s"""(swank:implicit-info $file1_str (0 123))""",
+      ImplicitInfoReq(file1, OffsetRange(0, 123))
+    )
+
   }
 
   it should "unmarshal RpcDebugRequests" in {
@@ -579,6 +584,16 @@ class SwankFormatsSpec extends FlatSpec with Matchers with EnsimeTestData {
       ): SymbolDesignations,
       s"""(:file ${fileToWireString(symFile)} :syms ((varField 7 9) (class 11 22)))"""
     )
+
+    marshal(
+      List(ImplicitConversionInfo(5, 6, symbolInfo)): List[ImplicitInfo],
+      s"""((:type conversion :start 5 :end 6 :fun $symbolInfoStr))"""
+    )
+
+    marshal(
+      List(ImplicitParamInfo(5, 6, symbolInfo, List(symbolInfo, symbolInfo), true)): List[ImplicitInfo],
+      s"""((:type param :start 5 :end 6 :fun $symbolInfoStr :params ($symbolInfoStr $symbolInfoStr) :fun-is-implicit t))"""
+    )
   }
 
   it should "marshal refactoring messages" in {
@@ -596,7 +611,6 @@ class SwankFormatsSpec extends FlatSpec with Matchers with EnsimeTestData {
       refactorResult: RefactorResult,
       s"""(:procedure-id 7 :refactor-type addImport :touched-files ($file3_str $file1_str) :status success)"""
     )
-
   }
 
 }

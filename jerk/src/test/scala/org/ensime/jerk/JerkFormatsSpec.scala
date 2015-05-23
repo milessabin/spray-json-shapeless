@@ -40,12 +40,26 @@ class JerkFormatsSpec extends FlatSpec with Matchers
   val abd_str = fileToWireString(abd)
   val symFile_str = fileToWireString(symFile)
 
-  "Jerk Formats" should "roundtrip inbound messages" in {
+  "Jerk Formats" should "roundtrip startup messages" in {
     roundtrip(
       ConnectionInfoReq: RpcRequest,
       """{"typehint":"ConnectionInfoReq"}"""
     )
+  }
 
+  it should "unmarshal RpcSearchRequests" in {
+    roundtrip(
+      PublicSymbolSearchReq(List("foo", "bar"), 10): RpcRequest,
+      """{"typehint":"PublicSymbolSearchReq","keywords":["foo","bar"],"maxResults":10}"""
+    )
+
+    roundtrip(
+      ImportSuggestionsReq(file1, 1, List("foo", "bar"), 10): RpcRequest,
+      s"""{"point":1,"maxResults":10,"names":["foo","bar"],"typehint":"ImportSuggestionsReq","file":$file1_str}"""
+    )
+  }
+
+  it should "unmarshal RpcAnalyserRequests" in {
     roundtrip(
       RemoveFileReq(file1): RpcRequest,
       s"""{"typehint":"RemoveFileReq","file":$file1_str}"""
@@ -79,16 +93,6 @@ class JerkFormatsSpec extends FlatSpec with Matchers
     roundtrip(
       FormatOneSourceReq(sourceFileInfo): RpcRequest,
       s"""{"typehint":"FormatOneSourceReq","file":{"file":$file1_str,"contents":"{/* code here */}","contentsIn":$file2_str}}"""
-    )
-
-    roundtrip(
-      PublicSymbolSearchReq(List("foo", "bar"), 10): RpcRequest,
-      """{"typehint":"PublicSymbolSearchReq","keywords":["foo","bar"],"maxResults":10}"""
-    )
-
-    roundtrip(
-      ImportSuggestionsReq(file1, 1, List("foo", "bar"), 10): RpcRequest,
-      s"""{"point":1,"maxResults":10,"names":["foo","bar"],"typehint":"ImportSuggestionsReq","file":$file1_str}"""
     )
 
     roundtrip(
@@ -199,6 +203,13 @@ class JerkFormatsSpec extends FlatSpec with Matchers
       s"""{"typehint":"ExpandSelectionReq","file":$file1_str,"start":100,"end":200}"""
     )
 
+    roundtrip(
+      ImplicitInfoReq(file1, OffsetRange(0, 123)): RpcRequest,
+      s"""{"typehint":"ImplicitInfoReq","file":$file1_str,"range":{"from":0,"to":123}}"""
+    )
+  }
+
+  it should "roundtrip RpcDebugRequests" in {
     roundtrip(
       DebugActiveVmReq: RpcRequest,
       """{"typehint":"DebugActiveVmReq"}"""
@@ -580,6 +591,17 @@ class JerkFormatsSpec extends FlatSpec with Matchers
       ): SymbolDesignations,
       s"""{"file":$symFile_str,"syms":[{"start":7,"end":9,"symType":{"typehint":"VarFieldSymbol"}},{"start":11,"end":22,"symType":{"typehint":"ClassSymbol"}}]}"""
     )
+
+    roundtrip(
+      List(ImplicitConversionInfo(5, 6, symbolInfo)): List[ImplicitInfo],
+      """[{"typehint":"ImplicitConversionInfo","start":5,"end":6,"fun":{"name":"name","localName":"localName","type":{"name":"type1","fullName":"FOO.type1","typehint":"BasicTypeInfo","typeId":7,"outerTypeId":8,"typeArgs":[],"members":[],"declAs":{"typehint":"Method"}},"isCallable":false,"ownerTypeId":2}}]"""
+    )
+
+    roundtrip(
+      List(ImplicitParamInfo(5, 6, symbolInfo, List(symbolInfo, symbolInfo), true)): List[ImplicitInfo],
+      """[{"params":[{"name":"name","localName":"localName","type":{"name":"type1","fullName":"FOO.type1","typehint":"BasicTypeInfo","typeId":7,"outerTypeId":8,"typeArgs":[],"members":[],"declAs":{"typehint":"Method"}},"isCallable":false,"ownerTypeId":2},{"name":"name","localName":"localName","type":{"name":"type1","fullName":"FOO.type1","typehint":"BasicTypeInfo","typeId":7,"outerTypeId":8,"typeArgs":[],"members":[],"declAs":{"typehint":"Method"}},"isCallable":false,"ownerTypeId":2}],"typehint":"ImplicitParamInfo","fun":{"name":"name","localName":"localName","type":{"name":"type1","fullName":"FOO.type1","typehint":"BasicTypeInfo","typeId":7,"outerTypeId":8,"typeArgs":[],"members":[],"declAs":{"typehint":"Method"}},"isCallable":false,"ownerTypeId":2},"funIsImplicit":true,"end":6,"start":5}]"""
+    )
+
   }
 
   it should "refactoring messages" in {

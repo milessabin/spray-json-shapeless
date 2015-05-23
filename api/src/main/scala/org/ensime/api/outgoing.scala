@@ -203,7 +203,8 @@ sealed trait EntityInfo {
 object SourceSymbol {
   val allSymbols: List[SourceSymbol] = List(
     ObjectSymbol, ClassSymbol, TraitSymbol, PackageSymbol, ConstructorSymbol, ImportedNameSymbol, TypeParamSymbol,
-    ParamSymbol, VarFieldSymbol, ValFieldSymbol, OperatorFieldSymbol, VarSymbol, ValSymbol, FunctionCallSymbol
+    ParamSymbol, VarFieldSymbol, ValFieldSymbol, OperatorFieldSymbol, VarSymbol, ValSymbol, FunctionCallSymbol,
+    ImplicitConversionSymbol, ImplicitParamsSymbol
   )
 }
 
@@ -223,6 +224,8 @@ case object OperatorFieldSymbol extends SourceSymbol
 case object VarSymbol extends SourceSymbol
 case object ValSymbol extends SourceSymbol
 case object FunctionCallSymbol extends SourceSymbol
+case object ImplicitConversionSymbol extends SourceSymbol
+case object ImplicitParamsSymbol extends SourceSymbol
 
 sealed trait PosNeeded
 case object PosNeededNo extends PosNeeded
@@ -525,5 +528,24 @@ case class EnsimeImplementation(
 case class ConnectionInfo(
   pid: Option[Int] = None,
   implementation: EnsimeImplementation = EnsimeImplementation("ENSIME"),
-  version: String = "0.8.15"
+  version: String = "0.8.16"
 )
+
+sealed trait ImplicitInfo {
+  def start: Int
+  def end: Int
+}
+
+case class ImplicitConversionInfo(
+  start: Int,
+  end: Int,
+  fun: SymbolInfo
+) extends ImplicitInfo
+
+case class ImplicitParamInfo(
+  start: Int,
+  end: Int,
+  fun: SymbolInfo,
+  params: List[SymbolInfo],
+  funIsImplicit: Boolean
+) extends ImplicitInfo

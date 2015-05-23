@@ -24,6 +24,11 @@ trait EnsimeTestData {
 
   val symbolInfo = new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))
 
+  val implicitInfos = List(
+    ImplicitConversionInfo(5, 6, symbolInfo),
+    ImplicitParamInfo(7, 8, symbolInfo, List(symbolInfo, symbolInfo), true)
+  )
+
   val batchSourceFile = "/abc"
 
   val rangePos1 = new ERangePosition(batchSourceFile, 75, 70, 90)

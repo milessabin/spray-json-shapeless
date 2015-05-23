@@ -25,6 +25,20 @@ case object ConnectionInfoReq extends RpcStartupRequest
 sealed trait RpcAnalyserRequest extends RpcRequest
 
 /**
+ * Request details about implicit conversions applied inside the given
+ * range.
+ *
+ * Responds with `List[ImplicitInfo]`.
+ *
+ * @param file source.
+ * @param range in the file to inspect.
+ */
+case class ImplicitInfoReq(
+  file: File,
+  range: OffsetRange
+) extends RpcAnalyserRequest
+
+/**
  * Responds with a `VoidResponse`.
  */
 case class RemoveFileReq(file: File) extends RpcAnalyserRequest

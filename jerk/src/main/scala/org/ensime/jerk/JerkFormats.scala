@@ -75,6 +75,7 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
   val RefactorEffectFormat = RootJsonFormat[RefactorEffect]
   val RefactorResultFormat = RootJsonFormat[RefactorResult]
   val ListERangePositionFormat = RootJsonFormat[List[ERangePosition]]
+  val ListImplicitInfoFormat = RootJsonFormat[List[ImplicitInfo]]
 
 }
 
@@ -116,6 +117,7 @@ object JerkEndpoints {
   implicit val RefactorEffectFormat = JerkFormats.RefactorEffectFormat
   implicit val RefactorResultFormat = JerkFormats.RefactorResultFormat
   implicit val ListERangePositionFormat = JerkFormats.ListERangePositionFormat
+  implicit val ListImplicitInfoFormat = JerkFormats.ListImplicitInfoFormat
 
   import JerkFormats.BooleanJsonFormat
   import JerkFormats.StringJsonFormat
@@ -127,6 +129,8 @@ object JerkEndpoints {
     case s: String => s.toJson
     case list: List[_] if list.forall(_.isInstanceOf[ERangePosition]) =>
       list.asInstanceOf[List[ERangePosition]].toJson
+    case list: List[_] if list.forall(_.isInstanceOf[ImplicitInfo]) =>
+      list.asInstanceOf[List[ImplicitInfo]].toJson
 
     case VoidResponse => false.toJson
     case value: ConnectionInfo => value.toJson

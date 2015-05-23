@@ -82,7 +82,9 @@ object SwankProtocolCommon {
     "operator" -> OperatorFieldSymbol,
     "var" -> VarSymbol,
     "val" -> ValSymbol,
-    "functionCall" -> FunctionCallSymbol
+    "functionCall" -> FunctionCallSymbol,
+    "implicitConversion" -> ImplicitConversionSymbol,
+    "implicitParams" -> ImplicitParamsSymbol
   )
   private val reverseSourceSymbolMap: Map[SourceSymbol, String] =
     sourceSymbolMap.map { case (name, symbol) => symbol -> name }
@@ -469,6 +471,16 @@ object SwankProtocolResponse {
   }
   implicit val SymbolDesignationsFormat = SexpFormat[SymbolDesignations]
 
+  implicit val ImplicitConversionInfoHint = TypeHint[ImplicitConversionInfo](SexpSymbol("conversion"))
+  implicit val ImplicitParamInfoHint = TypeHint[ImplicitParamInfo](SexpSymbol("param"))
+  implicit object ImplicitInfoFormat extends TraitFormatAlt[ImplicitInfo] {
+    def write(i: ImplicitInfo): Sexp = i match {
+      case c: ImplicitConversionInfo => wrap(c)
+      case p: ImplicitParamInfo => wrap(p)
+    }
+    def read(hint: SexpSymbol, sexp: Sexp): ImplicitInfo = ???
+  }
+
   implicit object DebugVmStatusFormat extends TraitFormatAlt[DebugVmStatus] {
     def write(ti: DebugVmStatus): Sexp = ti match {
       case s: DebugVmSuccess => wrap(s)
@@ -488,6 +500,8 @@ object SwankProtocolResponse {
     case s: String => s.toSexp
     case list: List[_] if list.forall(_.isInstanceOf[ERangePosition]) =>
       list.asInstanceOf[List[ERangePosition]].toSexp
+    case list: List[_] if list.forall(_.isInstanceOf[ImplicitInfo]) =>
+      list.asInstanceOf[List[ImplicitInfo]].toSexp
 
     case VoidResponse => false.toSexp
 
@@ -577,6 +591,7 @@ object SwankProtocolRequest {
   implicit val ExecRefactorReqHint = TypeHint[ExecRefactorReq](SexpSymbol("swank:exec-refactor"))
   implicit val CancelRefactorReqHint = TypeHint[CancelRefactorReq](SexpSymbol("swank:cancel-refactor"))
   implicit val SymbolDesignationsReqHint = TypeHint[SymbolDesignationsReq](SexpSymbol("swank:symbol-designations"))
+  implicit val ImplicitInfoReqHint = TypeHint[ImplicitInfoReq](SexpSymbol("swank:implicit-info"))
   implicit val ExpandSelectionReqHint = TypeHint[ExpandSelectionReq](SexpSymbol("swank:expand-selection"))
   implicit val DebugActiveVmReqHint = TypeHint[DebugActiveVmReq.type](SexpSymbol("swank:debug-active-vm"))
   implicit val DebugStartReqHint = TypeHint[DebugStartReq](SexpSymbol("swank:debug-start"))
@@ -726,6 +741,7 @@ object SwankProtocolRequest {
   implicit def ExecRefactorReqFormat = SexpFormat[ExecRefactorReq]
   implicit def CancelRefactorReqFormat = SexpFormat[CancelRefactorReq]
   implicit def SymbolDesignationsReqFormat = SexpFormat[SymbolDesignationsReq]
+  implicit def ImplicitInfoReqFormat = SexpFormat[ImplicitInfoReq]
   implicit def ExpandSelectionReqFormat = SexpFormat[ExpandSelectionReq]
   implicit def DebugStartReqFormat = SexpFormat[DebugStartReq]
   implicit def DebugAttachReqFormat = SexpFormat[DebugAttachReq]
@@ -777,6 +793,7 @@ object SwankProtocolRequest {
           case s if s == ExecRefactorReqHint.hint => value.convertTo[ExecRefactorReq]
           case s if s == CancelRefactorReqHint.hint => value.convertTo[CancelRefactorReq]
           case s if s == SymbolDesignationsReqHint.hint => value.convertTo[SymbolDesignationsReq]
+          case s if s == ImplicitInfoReqHint.hint => value.convertTo[ImplicitInfoReq]
           case s if s == ExpandSelectionReqHint.hint => value.convertTo[ExpandSelectionReq]
           case s if s == DebugActiveVmReqHint.hint => DebugActiveVmReq
           case s if s == DebugStartReqHint.hint => value.convertTo[DebugStartReq]

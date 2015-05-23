@@ -25,6 +25,8 @@ object SwankTestData extends EnsimeTestData {
 
   val symbolInfoStr = """(:name "name" :local-name "localName" :decl-pos nil :type """ + typeInfoStr + """ :is-callable nil :owner-type-id 2)"""
 
+  val implicitInfosStr = s"""((:type conversion :start 5 :end 6 :fun $symbolInfoStr) (:type param :start 7 :end 8 :fun $symbolInfoStr :params ($symbolInfoStr $symbolInfoStr) :fun-is-implicit t))"""
+
   val batchSourceFile_str = stringToWireString(batchSourceFile)
 
   val rangePos1Str = """(:file """ + batchSourceFile_str + """ :offset 75 :start 70 :end 90)"""

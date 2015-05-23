@@ -1,6 +1,9 @@
 Protocol Version: 0.8.15 (Must match version at ConnectionInfo.protocolVersion)
 
 Protocol Change Log:
+  0.8.16
+    Added swank:implicit-info
+    Added new symbol designation types: "implicitConversion" and "implicitParams"
   0.8.15
     Removed all *undo* requests: they were too unreliable
     Removed all *patch* requests: they were too unreliable

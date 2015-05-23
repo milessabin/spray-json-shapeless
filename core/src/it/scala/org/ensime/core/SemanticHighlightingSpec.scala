@@ -392,6 +392,44 @@ class SemanticHighlightingSpec extends WordSpec with Matchers
       ))
     }
 
+    "highlight implicit conversions" in withPresCompiler { (config, cc) =>
+      val sds = getSymbolDesignations(
+        config, cc, """
+            package com.example
+            class Test {}
+            object I {
+              implicit def StringToTest(v: String): Test = new Test
+              val t: Test  = "sample";
+              val u: Test  = StringToTest("y");
+            }
+          """,
+        List(ImplicitConversionSymbol)
+      )
+      assert(sds === List(
+        (ImplicitConversionSymbol, "\"sample\"")
+      ))
+    }
+
+    "highlight implicit parameters" in withPresCompiler { (config, cc) =>
+      val sds = getSymbolDesignations(
+        config, cc, """
+            package com.example
+            class Thing {}
+            class Thong {}
+            object I {
+              implicit def myThing = new Thing
+              implicit val myThong = new Thong
+              def zz(u: Int)(implicit s: Thing, t: Thong) = u
+              val t = zz(1)
+            }
+          """,
+        List(ImplicitParamsSymbol)
+      )
+      assert(sds === List(
+        (ImplicitParamsSymbol, "zz(1)")
+      ))
+    }
+
     "highlight method calls after operators" in withPresCompiler { (config, cc) =>
       val sds = getSymbolDesignations(
         config, cc, """
