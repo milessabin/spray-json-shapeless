@@ -2,13 +2,13 @@ package org.ensime.model
 
 import java.io.File
 
+import org.ensime.api._
+
 import org.apache.commons.vfs2.FileObject
 import org.ensime.config._
 import org.ensime.core.RichPresentationCompiler
 import org.ensime.indexer.DatabaseService._
 import org.ensime.indexer.EnsimeVFS
-import org.ensime.util.DeclaredAs
-import org.ensime.util.RichFile._
 
 import scala.collection.mutable
 import scala.reflect.internal.util.{ NoPosition, Position, RangePosition }

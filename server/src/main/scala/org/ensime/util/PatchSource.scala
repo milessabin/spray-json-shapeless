@@ -1,6 +1,6 @@
 package org.ensime.util
 
-import org.ensime.model.{ PatchDelete, PatchInsert, PatchOp, PatchReplace }
+import org.ensime.api._
 
 import scala.reflect.internal.util.{ BatchSourceFile, SourceFile }
 

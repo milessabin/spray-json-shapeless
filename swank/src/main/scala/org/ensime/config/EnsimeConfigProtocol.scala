@@ -1,12 +1,15 @@
 package org.ensime.config
 
 import java.io.File
-
 import akka.event.slf4j.Logger
+import scala.util.Properties
+
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
+
 import pimpathon.file._
-import scala.util.Properties
+
+import org.ensime.api._
 
 object EnsimeConfigProtocol {
   object Protocol extends DefaultSexpProtocol

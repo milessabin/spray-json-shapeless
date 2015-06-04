@@ -4,9 +4,11 @@ import java.io.File
 
 import akka.actor.ActorRef
 import akka.pattern.ask
+
+import org.ensime.api._
+
 import org.ensime.EnsimeApi
 import org.ensime.model._
-import org.ensime.server.ConnectionInfo
 import org.ensime.server.protocol._
 import org.ensime.util._
 import shapeless.Typeable
@@ -23,7 +25,7 @@ trait ProjectEnsimeApiImpl extends EnsimeApi { self: Project =>
     callRPC[VoidResponse.type](target, request, maxWait)
   }
 
-  def callRPC[R](target: ActorRef, request: RpcRequest, maxWait: FiniteDuration = defaultMaxWait)(implicit typ: Typeable[R]): R = {
+  def callRPC[R](target: ActorRef, request: Any, maxWait: FiniteDuration = defaultMaxWait)(implicit typ: Typeable[R]): R = {
     val future = target.ask(request)(maxWait)
     val result = Await.result(future, maxWait)
     result match {

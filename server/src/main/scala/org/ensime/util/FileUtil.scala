@@ -8,6 +8,8 @@ import org.apache.commons.vfs2.FileObject
 
 import scala.collection.mutable
 
+import org.ensime.api._
+
 class RichFileObject(fo: FileObject) {
   // None if the fo is not an entry in an archive
   def pathWithinArchive: Option[String] = {

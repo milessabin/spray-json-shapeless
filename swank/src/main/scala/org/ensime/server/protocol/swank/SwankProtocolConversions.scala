@@ -1,12 +1,9 @@
 package org.ensime.server.protocol.swank
 
-import org.ensime.core._
-import org.ensime.model._
-import org.ensime.server._
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
-import org.ensime.util._
-import org.ensime.server.protocol._
+
+import org.ensime.api._
 
 import scala.util.{ Failure, Success, Try }
 
@@ -239,7 +236,6 @@ object SwankProtocolResponse {
   implicit val BreakpointFormat = SexpFormat[Breakpoint]
   implicit val BreakpointListFormat = SexpFormat[BreakpointList]
   implicit val ReplConfigFormat = SexpFormat[ReplConfig]
-  implicit val PackageMemberInfoLightFormat = SexpFormat[PackageMemberInfoLight]
   implicit val FileRangeFormat = SexpFormat[FileRange]
   implicit val ERangePositionFormat = SexpFormat[ERangePosition]
   implicit val RefactorFailureFormat = SexpFormat[RefactorFailure]
@@ -602,9 +598,8 @@ object SwankProtocolRequest {
   // exclusive it might not agree with the `tpe` given on
   // PrepareRefactorReq
   implicit object RefactorDescFormat extends SexpFormat[RefactorDesc] {
-    import org.ensime.util.{ RefactorLocation => Loc }
+    import org.ensime.api.{ RefactorLocation => Loc }
     import pimpathon.file._
-    import RichFile._
 
     def write(v: RefactorDesc): Sexp = ???
     def read(sexp: Sexp): RefactorDesc = sexp match {

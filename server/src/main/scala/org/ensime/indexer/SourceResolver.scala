@@ -2,7 +2,10 @@ package org.ensime.indexer
 
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
+
+import org.ensime.api._
 import org.ensime.config._
+
 import pimpathon.list._
 import pimpathon.multiMap._
 

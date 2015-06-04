@@ -6,8 +6,9 @@ import akka.event.slf4j.SLF4JLogging
 import org.ensime.config._
 import org.ensime.fixture._
 import org.ensime.indexer.EnsimeVFS
-import org.ensime.model._
-import org.ensime.util.DeclaredAs
+
+import org.ensime.api._
+
 import org.scalatest._
 import pimpathon.file._
 

@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory
 import scala.reflect.internal.util.Position
 import scala.tools.nsc.reporters.Reporter
 
+import org.ensime.api._
+
 trait ReportHandler {
   def messageUser(str: String): Unit
   def clearAllScalaNotes(): Unit

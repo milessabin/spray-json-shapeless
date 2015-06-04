@@ -2,8 +2,7 @@ package org.ensime.server.protocol.swank
 
 import org.ensime.sexp._
 
-import org.ensime.model._
-import org.ensime.core._
+import org.ensime.api._
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
 import org.ensime.util._
@@ -59,14 +58,14 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(DebugVMStartEvent).toWireString === """(:debug-event (:type start))""")
         assert(toWF(DebugVMDisconnectEvent).toWireString === """(:debug-event (:type disconnect))""")
 
-        assert(toWF(DebugExceptionEvent(33L, "209", "threadNameStr", Some(sourcePos1.file), Some(sourcePos1.line))).toWireString ===
+        assert(toWF(DebugExceptionEvent(33L, DebugThreadId(209), "threadNameStr", Some(sourcePos1.file), Some(sourcePos1.line))).toWireString ===
           """(:debug-event (:type exception :exception 33 :thread-id "209" :thread-name "threadNameStr" :file """ + file1_str + """ :line 57))""")
 
-        assert(toWF(DebugExceptionEvent(33L, "209", "threadNameStr", None, None)).toWireString ===
+        assert(toWF(DebugExceptionEvent(33L, DebugThreadId(209), "threadNameStr", None, None)).toWireString ===
           """(:debug-event (:type exception :exception 33 :thread-id "209" :thread-name "threadNameStr" :file nil :line nil))""")
 
-        assert(toWF(DebugThreadStartEvent("907")).toWireString === """(:debug-event (:type threadStart :thread-id "907"))""")
-        assert(toWF(DebugThreadDeathEvent("907")).toWireString === """(:debug-event (:type threadDeath :thread-id "907"))""")
+        assert(toWF(DebugThreadStartEvent(DebugThreadId(907))).toWireString === """(:debug-event (:type threadStart :thread-id "907"))""")
+        assert(toWF(DebugThreadDeathEvent(DebugThreadId(907))).toWireString === """(:debug-event (:type threadDeath :thread-id "907"))""")
 
         // toWF(obj: DebugLocation)
         assert(toWF(DebugObjectReference(57L).asInstanceOf[DebugLocation]).toWireString ===
@@ -110,7 +109,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
         assert(toWF(debugStackFrame).toWireString === s"""(:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id "7")""")
 
         // toWF(evt: DebugBacktrace)
-        assert(toWF(DebugBacktrace(List(debugStackFrame), "17", "thread1")).toWireString === s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
+        assert(toWF(DebugBacktrace(List(debugStackFrame), DebugThreadId(17), "thread1")).toWireString === s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")""")
 
         // toWF(pos: LineSourcePosition)
         assert(toWF(sourcePos1).toWireString === s"""(:file $file1_str :line 57)""")
@@ -153,8 +152,7 @@ class SwankProtocolConversionsSpec extends FunSpec with Matchers {
 
         // toWF(value: CompletionInfoList)
         assert(toWF(CompletionInfoList("fooBar", List(completionInfo))).toWireString === """(:prefix "fooBar" :completions ((:name "name" :type-sig (((("abc" "def") ("hij" "lmn"))) "ABC") :type-id 88 :is-callable nil :relevance 90 :to-insert "BAZ")))""")
-        // toWF(value: PackageMemberInfoLight)
-        assert(toWF(new PackageMemberInfoLight("packageName")).toWireString === """(:name "packageName")""")
+
         // toWF(value: SymbolInfo)
         assert(toWF(new SymbolInfo("name", "localName", None, typeInfo, false, Some(2))).toWireString === """(:name "name" :local-name "localName" :decl-pos nil :type (:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8) :is-callable nil :owner-type-id 2)""")
 

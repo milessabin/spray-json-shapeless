@@ -1,9 +1,143 @@
-package org.ensime.model
+package org.ensime.api
 
 import java.io.File
-import org.ensime.util.{ DeclaredAs, FileEdit }
 
-// requests
+// NOTE: keeping the package structure for now to avoid too many
+//       refactorings throughout the codebase, but will eventually be
+//       flattened.
+
+case object DebuggerShutdownEvent
+
+sealed abstract class DebugVmStatus
+
+// must have redundant status: String to match legacy API
+case class DebugVmSuccess(
+  status: String = "success"
+) extends DebugVmStatus
+case class DebugVmError(
+  errorCode: Int,
+  details: String,
+  status: String = "error"
+) extends DebugVmStatus
+
+/** Asynchronous swank protocol event */
+sealed trait EnsimeEvent
+sealed trait GeneralSwankEvent extends EnsimeEvent
+sealed trait DebugEvent extends EnsimeEvent
+
+/** Generic background notification. */
+case class SendBackgroundMessageEvent(code: Int, detail: Option[String]) extends GeneralSwankEvent
+
+/** The presentation compiler is ready to accept requests. */
+case object AnalyzerReadyEvent extends GeneralSwankEvent
+
+/** The presentation compiler has finished analysing the entire project. */
+case object FullTypeCheckCompleteEvent extends GeneralSwankEvent
+
+/** The search engine has finished indexing the classpath. */
+case object IndexerReadyEvent extends GeneralSwankEvent
+
+/** The presentation compiler was restarted. Existing `:type-id`s are invalid. */
+case object CompilerRestartedEvent extends GeneralSwankEvent
+
+/** The presentation compiler has invalidated all existing notes.  */
+case object ClearAllScalaNotesEvent extends GeneralSwankEvent
+
+/** The presentation compiler is providing notes: e.g. errors, warnings. */
+case class NewScalaNotesEvent(
+  isFull: Boolean,
+  notes: List[Note]
+) extends GeneralSwankEvent
+
+/** The debugged VM has stepped to a new location and is now paused awaiting control. */
+case class DebugStepEvent(
+  threadId: DebugThreadId,
+  threadName: String,
+  file: File,
+  line: Int
+) extends DebugEvent
+
+/** The debugged VM has stopped at a breakpoint. */
+case class DebugBreakEvent(
+  threadId: DebugThreadId,
+  threadName: String,
+  file: File,
+  line: Int
+) extends DebugEvent
+
+/** The debugged VM has started. */
+case object DebugVMStartEvent extends DebugEvent
+
+/** The debugger has disconnected from the debugged VM. */
+case object DebugVMDisconnectEvent extends DebugEvent
+
+/** The debugged VM has thrown an exception and is now paused waiting for control. */
+case class DebugExceptionEvent(
+  exception: Long,
+  threadId: DebugThreadId,
+  threadName: String,
+  file: Option[File],
+  line: Option[Int]
+) extends DebugEvent
+
+/** A new thread has started. */
+case class DebugThreadStartEvent(threadId: DebugThreadId) extends DebugEvent
+
+/** A thread has died. */
+case class DebugThreadDeathEvent(threadId: DebugThreadId) extends DebugEvent
+
+/** Communicates stdout/stderr of debugged VM to client. */
+case class DebugOutputEvent(body: String) extends DebugEvent
+
+case class RPCError(code: Int, detail: String) extends RuntimeException("" + code + ": " + detail)
+case class AsyncEvent(evt: EnsimeEvent)
+
+case object ReloadExistingFilesEvent
+case object AskReTypecheck
+
+case object VoidResponse
+
+case class RefactorFailure(
+  procedureId: Int,
+  reason: String,
+  status: scala.Symbol = 'failure // redundant field
+)
+
+trait RefactorProcedure {
+  def procedureId: Int
+  def refactorType: RefactorType
+}
+
+case class RefactorEffect(
+  procedureId: Int,
+  refactorType: RefactorType,
+  changes: Seq[FileEdit],
+  status: scala.Symbol = 'success // redundant field
+) extends RefactorProcedure
+
+case class RefactorResult(
+  procedureId: Int,
+  refactorType: RefactorType,
+  touchedFiles: Seq[File],
+  status: scala.Symbol = 'success // redundant field
+) extends RefactorProcedure
+
+sealed abstract class RefactorDesc(val refactorType: RefactorType)
+
+case class InlineLocalRefactorDesc(file: File, start: Int, end: Int) extends RefactorDesc(RefactorType.InlineLocal)
+
+case class RenameRefactorDesc(newName: String, file: File, start: Int, end: Int) extends RefactorDesc(RefactorType.Rename)
+
+case class ExtractMethodRefactorDesc(methodName: String, file: File, start: Int, end: Int)
+  extends RefactorDesc(RefactorType.ExtractMethod)
+
+case class ExtractLocalRefactorDesc(name: String, file: File, start: Int, end: Int)
+  extends RefactorDesc(RefactorType.ExtractLocal)
+
+case class OrganiseImportsRefactorDesc(file: File) extends RefactorDesc(RefactorType.OrganizeImports)
+
+case class AddImportRefactorDesc(qualifiedName: String, file: File)
+  extends RefactorDesc(RefactorType.AddImport)
 
 case class SourceFileInfo(
   file: File,
@@ -30,8 +164,6 @@ case class PatchReplace(
   end: Int,
   text: String
 ) extends PatchOp
-
-// responses
 
 sealed trait EntityInfo {
   def name: String
@@ -81,7 +213,7 @@ case class PackageInfo(
   require(members == members.sortBy(_.name), "members should be sorted by name")
 }
 
-trait SymbolSearchResult {
+sealed trait SymbolSearchResult {
   def name: String
   def localName: String
   def declAs: DeclaredAs
@@ -274,7 +406,7 @@ case class DebugStackFrame(
 
 case class DebugBacktrace(
   frames: List[DebugStackFrame],
-  threadId: String,
+  threadId: DebugThreadId,
   threadName: String
 )
 
@@ -288,8 +420,6 @@ case class NamedTypeMemberInfo(
   override def members = List.empty
   def tpe = `type`
 }
-
-case class PackageMemberInfoLight(name: String)
 
 sealed trait TypeInfo extends EntityInfo {
   def name: String
@@ -381,3 +511,16 @@ case class DocSig(fqn: DocFqn, member: Option[String])
  * format.
  */
 case class DocSigPair(scala: DocSig, java: DocSig)
+
+// bit of a rubbish class
+case class ReplConfig(classpath: Set[File])
+
+case class EnsimeImplementation(
+  name: String
+)
+case class ConnectionInfo(
+  pid: Option[Int] = None,
+  implementation: EnsimeImplementation = EnsimeImplementation("ENSIME"),
+  // Please also update changelog in SwankProtocol.scala
+  version: String = "0.8.14"
+)

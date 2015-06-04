@@ -3,6 +3,8 @@ package org.ensime.core
 import java.io.File
 import java.nio.charset.Charset
 
+import org.ensime.api._
+
 import akka.actor.ActorRef
 import org.ensime.config._
 import org.ensime.indexer.{ EnsimeVFS, SearchService }

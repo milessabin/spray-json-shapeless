@@ -23,6 +23,7 @@
 
   <logger name="org.ensime.indexer.SearchService" level="TRACE"/>
   <logger name="org.ensime" level="DEBUG"/>
+  <logger name="org.ensime.jerk" level="TRACE"/>
   <logger name="akka" level="DEBUG"/>
   <!-- <logger name="org.ensime.server.RichPresentationCompiler" level="WARN"/> -->
 

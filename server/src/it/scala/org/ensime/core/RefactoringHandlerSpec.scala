@@ -1,10 +1,10 @@
 package org.ensime.core
 
 import java.io.File
-import org.ensime.model._
 import org.scalatest._
+
+import org.ensime.api._
 import org.ensime.fixture._
-import org.ensime.util.RichFile._
 
 class RefactoringHandlerSpec extends WordSpec with Matchers
     with IsolatedAnalyzerFixture with RichPresentationCompilerTestUtils {

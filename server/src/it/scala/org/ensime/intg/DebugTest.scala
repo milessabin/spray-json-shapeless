@@ -2,7 +2,7 @@ package org.ensime.intg
 
 import java.io.File
 
-import org.ensime.core.{ DebugBreakEvent, DebugVmSuccess }
+import org.ensime.api._
 import org.ensime.fixture._
 import org.ensime.model._
 import org.ensime.server.Server
@@ -56,7 +56,7 @@ class DebugTest extends WordSpec with Matchers with Inside with IsolatedActorSys
               LineSourcePosition(`breakpointsFile`, 41), _),
             DebugStackFrame(2, List(), 1, "breakpoints.Breakpoints", "main",
               LineSourcePosition(`breakpointsFile`, _), _)
-            ), "1", "main") =>
+            ), DebugThreadId(1), "main") =>
         }
 
         //            val bp11 = session.addLineBreakpoint(BP_TYPENAME, 11)
@@ -290,7 +290,7 @@ trait DebugTestUtils {
     server.project.debugBacktrace(DebugThreadId(1), 0, 1) should matchPattern {
       case DebugBacktrace(List(DebugStackFrame(0, _, 1, `className`, `method`,
         LineSourcePosition(_, `line`), _)),
-        "1", "main") =>
+        DebugThreadId(1), "main") =>
     }
   }
 }

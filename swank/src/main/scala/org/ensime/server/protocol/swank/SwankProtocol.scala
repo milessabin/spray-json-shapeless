@@ -8,8 +8,7 @@ import akka.actor.ActorRef
 import org.ensime.EnsimeApi
 import org.ensime.sexp._
 
-import org.ensime.core._
-import org.ensime.model._
+import org.ensime.api._
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.ProtocolConst._
 import org.slf4j.LoggerFactory
@@ -363,11 +362,6 @@ class SwankProtocol(
     case ShutdownServerReq =>
       syncApi.shutdownServer()
       sendRPCReturn(true, callId)
-
-    case ignored: DocUriReq =>
-    case ignored: TypeCompletionsReq =>
-    case ignored: DoExecUndo =>
-    case ignored: SubscribeAsync =>
 
   }
 

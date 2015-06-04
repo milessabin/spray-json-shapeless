@@ -5,7 +5,8 @@ import java.util.jar.JarFile
 import java.util.regex.Pattern
 
 import org.apache.commons.lang.StringEscapeUtils
-import org.ensime.model.DocSig
+
+import org.ensime.api._
 
 import scala.io.Source
 

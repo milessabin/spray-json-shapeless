@@ -3,7 +3,6 @@ package org.ensime.util
 import java.io.File
 
 import akka.actor.ActorSystem
-import org.ensime.util.RichFile._
 import pimpathon.file._
 
 import scala.concurrent.duration._

@@ -3,7 +3,7 @@ package org.ensime.fixture
 import akka.actor._
 import akka.pattern.{ AskTimeoutException, Patterns }
 import org.ensime.config._
-import org.ensime.core._
+import org.ensime.api._
 import org.ensime.server._
 
 import scala.collection.immutable.ListMap
