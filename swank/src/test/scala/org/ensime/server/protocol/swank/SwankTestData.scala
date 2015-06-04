@@ -20,7 +20,8 @@ object SwankTestData extends EnsimeTestData {
 
   val callCompletionInfoStr = """(:result-type """ + typeInfoStr + """ :param-sections ((:params (("ABC" """ + typeInfoStr + """)) :is-implicit nil)))"""
 
-  val symbolDesignationsStr = s"""(:file ${fileToWireString(symFile)} :syms ((object 7 9) (trait 11 22)))"""
+  val symFile_str = fileToWireString(symFile)
+  val symbolDesignationsStr = s"""(:file $symFile_str :syms ((object 7 9) (trait 11 22)))"""
 
   val symbolInfoStr = """(:name "name" :local-name "localName" :decl-pos nil :type """ + typeInfoStr + """ :is-callable nil :owner-type-id 2)"""
 
