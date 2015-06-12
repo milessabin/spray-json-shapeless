@@ -38,7 +38,7 @@ trait SharedActorSystemFixture extends ActorSystemFixture with BeforeAndAfterAll
 
   this: Suite =>
 
-  private[fixture] var _actorSystem: ActorSystem = _
+  private[fixture] implicit var _actorSystem: ActorSystem = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()

@@ -11,8 +11,10 @@ import pimpathon.multiMap._
 
 // mutable: lookup of user's source files are atomically updated
 class SourceResolver(
-    config: EnsimeConfig,
-    val vfs: EnsimeVFS
+    config: EnsimeConfig
+)(
+    implicit
+    vfs: EnsimeVFS
 ) extends SourceListener with SLF4JLogging {
 
   // it's not worth doing incremental updates - this is cheap

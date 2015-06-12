@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestProbe
 import org.ensime.api._
 import org.ensime.core._
-import org.ensime.indexer.SearchService
+import org.ensime.indexer._
 import org.slf4j.LoggerFactory
 
 import scala.tools.nsc.Settings
@@ -23,7 +23,11 @@ object RichPresentationCompilerFixture {
   private[fixture] def create(
     config: EnsimeConfig,
     search: SearchService
-  )(implicit system: ActorSystem): RichPresentationCompiler = {
+  )(
+    implicit
+    system: ActorSystem,
+    vfs: EnsimeVFS
+  ): RichPresentationCompiler = {
     val scalaLib = config.allJars.find(_.getName.contains("scala-library")).get
 
     val presCompLog = LoggerFactory.getLogger(classOf[Global])
@@ -40,13 +44,14 @@ object RichPresentationCompilerFixture {
     val parent = TestProbe()
 
     new RichPresentationCompiler(
-      config, settings, reporter, parent.ref, indexer.ref, search, search.vfs
+      config, settings, reporter, parent.ref, indexer.ref, search
     )
   }
 }
 
 trait IsolatedRichPresentationCompilerFixture
     extends RichPresentationCompilerFixture
+    with IsolatedEnsimeVFSFixture
     with IsolatedActorSystemFixture
     with IsolatedTestKitFixture
     with IsolatedSearchServiceFixture {
@@ -54,15 +59,17 @@ trait IsolatedRichPresentationCompilerFixture
   override def withRichPresentationCompiler(
     testCode: (TestKitFix, EnsimeConfig, RichPresentationCompiler) => Any
   ): Any = {
-    withActorSystem { implicit actorSystem =>
-      withTestKit { testkit =>
-        withSearchService { (config, search) =>
-          import org.ensime.fixture.RichPresentationCompilerFixture._
-          val pc = create(config, search)(testkit.system)
-          try {
-            testCode(testkit, config, pc)
-          } finally {
-            pc.askShutdown()
+    withVFS { implicit vfs =>
+      withActorSystem { implicit actorSystem =>
+        withTestKit { testkit =>
+          withSearchService { (config, search) =>
+            import org.ensime.fixture.RichPresentationCompilerFixture._
+            val pc = create(config, search)
+            try {
+              testCode(testkit, config, pc)
+            } finally {
+              pc.askShutdown()
+            }
           }
         }
       }
@@ -82,7 +89,7 @@ trait SharedRichPresentationCompilerFixture
   override def beforeAll(): Unit = {
     super.beforeAll()
     import org.ensime.fixture.RichPresentationCompilerFixture._
-    pc = create(_config, _search)(_testkit.system)
+    pc = create(_config, _search)
   }
 
   override def withRichPresentationCompiler(

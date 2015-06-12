@@ -73,7 +73,7 @@ class Server(
   // the config file parsing will attempt to create directories that are expected
   require(config.cacheDir.isDirectory, "" + config.cacheDir + " is not a valid cache directory")
 
-  val actorSystem = ActorSystem.create("EnsimeServer")
+  implicit val actorSystem = ActorSystem("ENSIME")
   // TODO move this to only be started when we want to receive
   val listener = new ServerSocket(requestedPort, 0, InetAddress.getByName(host))
   val actualPort = listener.getLocalPort
@@ -83,7 +83,7 @@ class Server(
 
   writePort(config.cacheDir, actualPort)
 
-  val project = new Project(config, actorSystem)
+  val project = new Project(config)
 
   /**
    * Start the server
