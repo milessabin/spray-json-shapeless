@@ -35,77 +35,7 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
   // some of the case classes use the keyword `type`, so we need a better default
   override implicit def coproductHint[T: Typeable]: CoproductHint[T] = new FlatCoproductHint[T]("typehint")
 
-  /*
-   * This (commented out) implicit takes about 5 minutes to compile,
-   * so RpcRequest is broken into several sub-traits to help logically
-   * group queries and to help the marshalling layers, see
-   * https://github.com/milessabin/shapeless/issues/381.
-   */
-  //implicit val RpcRequestFormat = JsonFormat[RpcRequest]
-  // this is the crap we replace it with, and it only takes a minute (wowee!)
-  val RpcStartupRequestFormat = RootJsonFormat[RpcStartupRequest]
-  val RpcAnalyserRequestFormat = RootJsonFormat[RpcAnalyserRequest]
-  val RpcFormatRequestFormat = RootJsonFormat[RpcFormatRequest]
-  val RpcSearchRequestFormat = RootJsonFormat[RpcSearchRequest]
-  val RpcDocRequestFormat = RootJsonFormat[RpcDocRequest]
-  val RpcCompletionRequestFormat = RootJsonFormat[RpcCompletionRequest]
-  val RpcTypeRequestFormat = RootJsonFormat[RpcTypeRequest]
-  val RpcRefactorRequestFormat = RootJsonFormat[RpcRefactorRequest]
-  val RpcContextRequestFormat = RootJsonFormat[RpcContextRequest]
-  val RpcDebugLifecycleRequestFormat = RootJsonFormat[RpcDebugLifecycleRequest]
-  val RpcDebugControlRequestFormat = RootJsonFormat[RpcDebugControlRequest]
-  val RpcDebugInspectRequestFormat = RootJsonFormat[RpcDebugInspectRequest]
-  val RpcDeprecatedRequestFormat = RootJsonFormat[RpcDeprecatedRequest]
-
-  val all = List(
-    RpcStartupRequestFormat,
-    RpcAnalyserRequestFormat,
-    RpcFormatRequestFormat,
-    RpcSearchRequestFormat,
-    RpcDocRequestFormat,
-    RpcCompletionRequestFormat,
-    RpcTypeRequestFormat,
-    RpcRefactorRequestFormat,
-    RpcContextRequestFormat,
-    RpcDebugLifecycleRequestFormat,
-    RpcDebugControlRequestFormat,
-    RpcDebugInspectRequestFormat,
-    RpcDeprecatedRequestFormat
-  )
-
-  object RpcRequestFormat extends RootJsonFormat[RpcRequest] {
-    def read(j: JsValue): RpcRequest = {
-      /* This is horrendously inefficient (uses exceptions for the
-       * majority of the control flow).
-       *
-       * Without a fix for the upstream shapeless ticket, it is more
-       * or less the nail in the coffin for automatically-derived
-       * formatters for large families. It's also ugly as sin and only
-       * marginally less lines of code than doing it explicitly.
-       */
-      all.toStream.map {
-        formatter => Try(formatter.read(j))
-      }.collect {
-        case Success(r) => r
-      }.head
-    }
-
-    def write(req: RpcRequest): JsValue = req match {
-      case r: RpcStartupRequest => RpcStartupRequestFormat.write(r)
-      case r: RpcAnalyserRequest => RpcAnalyserRequestFormat.write(r)
-      case r: RpcFormatRequest => RpcFormatRequestFormat.write(r)
-      case r: RpcSearchRequest => RpcSearchRequestFormat.write(r)
-      case r: RpcDocRequest => RpcDocRequestFormat.write(r)
-      case r: RpcCompletionRequest => RpcCompletionRequestFormat.write(r)
-      case r: RpcTypeRequest => RpcTypeRequestFormat.write(r)
-      case r: RpcRefactorRequest => RpcRefactorRequestFormat.write(r)
-      case r: RpcContextRequest => RpcContextRequestFormat.write(r)
-      case r: RpcDebugLifecycleRequest => RpcDebugLifecycleRequestFormat.write(r)
-      case r: RpcDebugControlRequest => RpcDebugControlRequestFormat.write(r)
-      case r: RpcDebugInspectRequest => RpcDebugInspectRequestFormat.write(r)
-      case r: RpcDeprecatedRequest => RpcDeprecatedRequestFormat.write(r)
-    }
-  }
+  val RpcRequestFormat = JsonFormat[RpcRequest]
 
   // FIXME: introduce a family tree that means we don't have to have
   // so many specific converters. e.g. a single sealed family in and
