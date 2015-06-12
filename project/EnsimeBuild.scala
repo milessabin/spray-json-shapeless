@@ -83,19 +83,19 @@ object EnsimeBuild extends Build with JdkResolver {
     "org.slf4j" % "jul-to-slf4j" % "1.7.12",
     "org.slf4j" % "jcl-over-slf4j" % "1.7.12"
   )
-  val akkaVersion = "2.3.9"
+  val akkaVersion = "2.3.11"
 
   ////////////////////////////////////////////////
   // utils
   def testLibs(scalaV: String, config: String = "test") = Seq(
-    "org.scalatest" %% "scalatest" % "2.2.4" % config,
-    "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % config,
+    "org.scalatest" %% "scalatest" % "2.2.5" % config,
+    "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % config,
     "org.scalacheck" %% "scalacheck" % "1.12.1" % config,
     "com.typesafe.akka" %% "akka-testkit" % akkaVersion % config,
     "com.typesafe.akka" %% "akka-slf4j" % akkaVersion % config,
     // workaround old deps coming from scalatest
     "org.scala-lang" % "scala-reflect" % scalaV % config,
-    "org.scala-lang.modules" %% "scala-xml" % "1.0.3" % config
+    "org.scala-lang.modules" %% "scala-xml" % "1.0.4" % config
   ) ++ logback.map(_ % config)
 
   def jars(cp: Classpath): String = {
@@ -135,7 +135,7 @@ object EnsimeBuild extends Build with JdkResolver {
 
   lazy val api = Project("api", file("api"), settings = commonSettings) settings (
     libraryDependencies ++= Seq(
-      "org.scalariform" %% "scalariform" % "0.1.6",
+      "org.scalariform" %% "scalariform" % "0.1.6" intransitive(),
       pimpathon
     ) ++ testLibs(scalaVersion.value)
   )
@@ -167,7 +167,7 @@ object EnsimeBuild extends Build with JdkResolver {
 
   lazy val testingSimple = Project("testingSimple", file("testing/simple"), settings = basicSettings) settings (
     //ScoverageKeys.coverageExcludedPackages := ".*",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test" intransitive()
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.5" % "test" intransitive()
   )
 
   lazy val testingDebug = Project("testingDebug", file("testing/debug"), settings = basicSettings).settings(
@@ -227,8 +227,8 @@ object EnsimeBuild extends Build with JdkResolver {
       // lucene 4.8+ needs Java 7: http://www.gossamer-threads.com/lists/lucene/general/225300
       "org.apache.lucene" % "lucene-core" % "4.7.2",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.7.2",
-      "org.ow2.asm" % "asm-commons" % "5.0.3",
-      "org.ow2.asm" % "asm-util" % "5.0.3",
+      "org.ow2.asm" % "asm-commons" % "5.0.4",
+      "org.ow2.asm" % "asm-util" % "5.0.4",
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scalap" % scalaVersion.value,
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
