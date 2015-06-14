@@ -26,7 +26,7 @@ trait IsolatedEnsimeVFSFixture extends Suite with EnsimeVFSFixture {
  */
 trait SharedEnsimeVFSFixture extends Suite
     with EnsimeVFSFixture with BeforeAndAfterAll {
-  private[fixture] var _vfs: EnsimeVFS = _
+  private[fixture] implicit var _vfs: EnsimeVFS = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()

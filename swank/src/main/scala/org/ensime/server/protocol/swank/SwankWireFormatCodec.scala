@@ -6,8 +6,6 @@ import org.ensime.sexp.Sexp
 import org.ensime.sexp.SexpParser
 import org.slf4j.Logger
 
-import scala.util.parsing.input
-
 /**
  * Factors out some of the S-Express marshalling.
  *

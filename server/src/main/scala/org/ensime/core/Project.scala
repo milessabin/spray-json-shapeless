@@ -19,7 +19,9 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 
 class Project(
-    val config: EnsimeConfig,
+    val config: EnsimeConfig
+)(
+    implicit
     actorSystem: ActorSystem
 ) extends ProjectEnsimeApiImpl {
   val log = LoggerFactory.getLogger(this.getClass)
@@ -30,20 +32,20 @@ class Project(
 
   protected var analyzer: Option[ActorRef] = None
 
-  private val ensimeVFS = EnsimeVFS()
+  private implicit val ensimeVFS = EnsimeVFS()
 
-  private val resolver = new SourceResolver(config, ensimeVFS)
+  private val resolver = new SourceResolver(config)
 
   // TODO: add PresCompiler to the source watcher
-  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil, ensimeVFS)
-  private val searchService = new SearchService(config, resolver, actorSystem, ensimeVFS)
+  private val sourceWatcher = new SourceWatcher(config, resolver :: Nil)
+  private val searchService = new SearchService(config, resolver)
   private val reTypecheck = new ClassfileListener {
     def reTypeCheck(): Unit = actor ! AskReTypecheck
     def classfileAdded(f: FileObject): Unit = reTypeCheck()
     def classfileChanged(f: FileObject): Unit = reTypeCheck()
     def classfileRemoved(f: FileObject): Unit = reTypeCheck()
   }
-  private val classfileWatcher = new ClassfileWatcher(config, searchService :: reTypecheck :: Nil, ensimeVFS)
+  private val classfileWatcher = new ClassfileWatcher(config, searchService :: reTypecheck :: Nil)
 
   import scala.concurrent.ExecutionContext.Implicits.global
   searchService.refresh().onSuccess {
@@ -53,7 +55,7 @@ class Project(
   }
 
   protected val indexer: ActorRef = actorSystem.actorOf(Props(
-    new Indexer(config, searchService, ensimeVFS)
+    new Indexer(config, searchService)
   ), "indexer")
 
   protected val docServer: ActorRef = actorSystem.actorOf(Props(
@@ -177,7 +179,7 @@ class Project(
 
   protected def startCompiler(): Unit = {
     val newAnalyzer = actorSystem.actorOf(Props(
-      new Analyzer(actor, indexer, searchService, config, ensimeVFS)
+      new Analyzer(actor, indexer, searchService, config)
     ), "analyzer")
     analyzer = Some(newAnalyzer)
   }

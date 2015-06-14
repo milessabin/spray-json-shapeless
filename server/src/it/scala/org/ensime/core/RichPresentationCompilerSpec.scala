@@ -357,8 +357,8 @@ class RichPresentationCompilerSpec extends WordSpec with Matchers
 
         // Create a fresh pres. compiler unaffected by previous tests
 
-        val ensimeVFS = EnsimeVFS()
-        val cc1 = new RichPresentationCompiler(cc.config, cc.settings, cc.reporter, cc.parent, cc.indexer, cc.search, ensimeVFS)
+        implicit val ensimeVFS = EnsimeVFS()
+        val cc1 = new RichPresentationCompiler(cc.config, cc.settings, cc.reporter, cc.parent, cc.indexer, cc.search)
 
         try {
           cc1.askReloadFile(usesFile)

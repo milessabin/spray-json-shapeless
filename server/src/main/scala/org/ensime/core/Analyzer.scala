@@ -26,13 +26,14 @@ import pimpathon.file._
 case class CompilerFatalError(e: Throwable)
 
 class Analyzer(
-  val project: ActorRef,
-  val indexer: ActorRef,
-  search: SearchService,
-  val config: EnsimeConfig,
-  val vfs: EnsimeVFS
-)
-    extends Actor with ActorLogging with RefactoringHandler {
+    val project: ActorRef,
+    val indexer: ActorRef,
+    search: SearchService,
+    val config: EnsimeConfig
+)(
+    implicit
+    vfs: EnsimeVFS
+) extends Actor with ActorLogging with RefactoringHandler {
 
   private val presCompLog = LoggerFactory.getLogger(classOf[Global])
   private val settings = new Settings(presCompLog.error)
@@ -98,7 +99,7 @@ class Analyzer(
   }
 
   protected def makeScalaCompiler() = new RichPresentationCompiler(
-    config, settings, reporter, self, indexer, search, vfs
+    config, settings, reporter, self, indexer, search
   )
 
   protected def restartCompiler(keepLoaded: Boolean): Unit = {

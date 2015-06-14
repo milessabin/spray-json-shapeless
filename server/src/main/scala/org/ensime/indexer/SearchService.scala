@@ -23,9 +23,11 @@ import scala.concurrent.Future
  */
 class SearchService(
   config: EnsimeConfig,
-  resolver: SourceResolver,
+  resolver: SourceResolver
+)(
+  implicit
   actorSystem: ActorSystem,
-  implicit val vfs: EnsimeVFS
+  vfs: EnsimeVFS
 ) extends ClassfileIndexer
     with ClassfileListener
     with SLF4JLogging {

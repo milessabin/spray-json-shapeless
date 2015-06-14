@@ -192,8 +192,10 @@ class RichPresentationCompiler(
   val richReporter: Reporter,
   var parent: ActorRef,
   var indexer: ActorRef,
-  val search: SearchService,
-  implicit val vfs: EnsimeVFS
+  val search: SearchService
+)(
+  implicit
+  val vfs: EnsimeVFS
 ) extends Global(settings, richReporter)
     with ModelBuilders with RichCompilerControl
     with RefactoringImpl with Completion with Helpers {

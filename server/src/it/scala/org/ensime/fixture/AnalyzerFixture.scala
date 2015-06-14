@@ -12,26 +12,29 @@ trait AnalyzerFixture {
 }
 
 object AnalyzerFixture {
-  private[fixture] def create(config: EnsimeConfig, vfs: EnsimeVFS, search: SearchService)(implicit system: ActorSystem): TestActorRef[Analyzer] = {
+  private[fixture] def create(config: EnsimeConfig, search: SearchService)(implicit system: ActorSystem, vfs: EnsimeVFS): TestActorRef[Analyzer] = {
     val indexer = TestProbe()
     val projectActor = TestProbe()
     TestActorRef(Props(
-      new Analyzer(projectActor.ref, indexer.ref, search, config, vfs)
+      new Analyzer(projectActor.ref, indexer.ref, search, config)
     ))
   }
 }
 
 trait IsolatedAnalyzerFixture
     extends AnalyzerFixture
+    with IsolatedEnsimeVFSFixture
     with IsolatedActorSystemFixture
     with IsolatedSearchServiceFixture
     with IsolatedTestKitFixture {
 
   override def withAnalyzer(testCode: (EnsimeConfig, TestActorRef[Analyzer]) => Any): Any = {
-    withActorSystem { implicit actorSystem =>
-      withTestKit { testkit =>
-        withSearchService { (config, search) =>
-          testCode(config, AnalyzerFixture.create(config, search.vfs, search)(testkit.system))
+    withVFS { implicit vfs =>
+      withActorSystem { implicit actorSystem =>
+        withTestKit { testkit =>
+          withSearchService { (config, search) =>
+            testCode(config, AnalyzerFixture.create(config, search))
+          }
         }
       }
     }
@@ -50,7 +53,7 @@ trait SharedAnalyzerFixture
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    analyzer = AnalyzerFixture.create(_config, _search.vfs, _search)(_testkit.system)
+    analyzer = AnalyzerFixture.create(_config, _search)
   }
 
   override def withAnalyzer(testCode: (EnsimeConfig, TestActorRef[Analyzer]) => Any): Any = testCode(_config, analyzer)

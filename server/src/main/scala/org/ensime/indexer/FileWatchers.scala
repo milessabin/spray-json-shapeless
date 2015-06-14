@@ -34,8 +34,10 @@ trait SourceListener {
  */
 class ClassfileWatcher(
     config: EnsimeConfig,
-    listeners: Seq[ClassfileListener],
-    implicit val vfs: EnsimeVFS
+    listeners: Seq[ClassfileListener]
+)(
+    implicit
+    vfs: EnsimeVFS
 ) extends SLF4JLogging {
 
   private val fm = new DefaultFileMonitor(new FileListener {
@@ -114,8 +116,10 @@ class ClassfileWatcher(
 
 class SourceWatcher(
     config: EnsimeConfig,
-    listeners: Seq[SourceListener],
-    implicit val vfs: EnsimeVFS
+    listeners: Seq[SourceListener]
+)(
+    implicit
+    vfs: EnsimeVFS
 ) extends SLF4JLogging {
   private val fm = new DefaultFileMonitor(new FileListener {
     def watched(event: FileChangeEvent) =
