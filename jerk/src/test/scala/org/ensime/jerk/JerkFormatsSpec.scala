@@ -35,15 +35,6 @@ class JerkFormatsSpec extends FlatSpec with Matchers
     )
 
     roundtrip(
-      PatchSourceReq(file1, List(
-        PatchInsert(1, "foo"),
-        PatchDelete(1, 10),
-        PatchReplace(10, 20, "bar")
-      )): RpcRequest,
-      """{"typehint":"PatchSourceReq","file":"/abc/def","edits":[{"typehint":"PatchInsert","start":1,"text":"foo"},{"typehint":"PatchDelete","start":1,"end":10},{"typehint":"PatchReplace","start":10,"end":20,"text":"bar"}]}"""
-    )
-
-    roundtrip(
       UnloadAllReq: RpcRequest,
       """{"typehint":"UnloadAllReq"}"""
     )

@@ -548,7 +548,6 @@ object SwankProtocolRequest {
   implicit val RemoveFileReqHint = TypeHint[RemoveFileReq](SexpSymbol("swank:remove-file"))
   implicit val TypecheckFileReqHint = TypeHint[TypecheckFileReq](SexpSymbol("swank:typecheck-file"))
   implicit val TypecheckFilesReqHint = TypeHint[TypecheckFilesReq](SexpSymbol("swank:typecheck-files"))
-  implicit val PatchSourceReqHint = TypeHint[PatchSourceReq](SexpSymbol("swank:patch-source"))
   implicit val UnloadAllReqHint = TypeHint[UnloadAllReq.type](SexpSymbol("swank:unload-all"))
   implicit val TypecheckAllReqHint = TypeHint[TypecheckAllReq.type](SexpSymbol("swank:typecheck-all"))
   implicit val FormatSourceReqHint = TypeHint[FormatSourceReq](SexpSymbol("swank:format-source"))
@@ -700,7 +699,6 @@ object SwankProtocolRequest {
   implicit def RemoveFileReqFormat = SexpFormat[RemoveFileReq]
   implicit def TypecheckFileReqFormat = SexpFormat[TypecheckFileReq]
   implicit def TypecheckFilesReqFormat = SexpFormat[TypecheckFilesReq]
-  implicit def PatchSourceReqFormat = SexpFormat[PatchSourceReq]
   implicit def FormatSourceReqFormat = SexpFormat[FormatSourceReq]
   implicit def FormatOneSourceReqFormat = SexpFormat[FormatOneSourceReq]
   implicit def PublicSymbolSearchHint = SexpFormat[PublicSymbolSearchReq]
@@ -750,7 +748,6 @@ object SwankProtocolRequest {
           case s if s == RemoveFileReqHint.hint => value.convertTo[RemoveFileReq]
           case s if s == TypecheckFileReqHint.hint => value.convertTo[TypecheckFileReq]
           case s if s == TypecheckFilesReqHint.hint => value.convertTo[TypecheckFilesReq]
-          case s if s == PatchSourceReqHint.hint => value.convertTo[PatchSourceReq]
           case s if s == UnloadAllReqHint.hint => UnloadAllReq
           case s if s == TypecheckAllReqHint.hint => TypecheckAllReq
           case s if s == FormatSourceReqHint.hint => value.convertTo[FormatSourceReq]

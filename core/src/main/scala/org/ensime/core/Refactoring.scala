@@ -78,8 +78,7 @@ trait RefactoringHandler { self: Analyzer =>
           case Left(failure) => sender() ! failure
         }
       case None =>
-        val f = RefactorFailure(procedureId, "No effect found for procId " + procedureId)
-        sender ! f
+        sender() ! RefactorFailure(procedureId, "No effect found for procId " + procedureId)
     }
   }
 

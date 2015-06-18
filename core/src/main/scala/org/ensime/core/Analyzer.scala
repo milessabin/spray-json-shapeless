@@ -184,16 +184,6 @@ class Analyzer(
     case TypecheckFilesReq(files) =>
       handleReloadFiles(files.map(SourceFileInfo(_)), async = false)
       sender ! VoidResponse
-    case PatchSourceReq(file, edits) =>
-      if (!file.exists()) {
-        sender ! EnsimeServerError(s"File doesn't exist: ${file.getPath}")
-      } else {
-        val f = createSourceFile(file)
-        val revised = PatchSource.applyOperations(f, edits)
-        reporter.disable()
-        scalaCompiler.askReloadFile(revised)
-        sender ! VoidResponse
-      }
 
     case req: PrepareRefactorReq =>
       handleRefactorPrepareRequest(req)

@@ -45,17 +45,6 @@ case object UnloadAllReq extends RpcAnalyserRequest
 case object TypecheckAllReq extends RpcAnalyserRequest
 
 /**
- * Request to patch the source file in the presentation compiler with
- * the given changes.
- *
- * Responds with a `VoidResponse`.
- *
- * @param file to patch
- * @param edits patches to apply to the file.
- */
-case class PatchSourceReq(file: File, edits: List[PatchOp]) extends RpcAnalyserRequest
-
-/**
  * Responds with a `VoidResponse`.
  */
 case class TypecheckFilesReq(files: List[File]) extends RpcAnalyserRequest
