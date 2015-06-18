@@ -1,16 +1,17 @@
 package org.ensime.indexer
 
+import akka.actor._
 import java.sql.SQLException
 
-import akka.actor.{ Props, ActorLogging, Actor, ActorSystem }
 import akka.event.slf4j.SLF4JLogging
 import org.apache.commons.vfs2._
 import org.ensime.indexer.DatabaseService._
 import pimpathon.file._
 
 import org.ensime.api._
+import scala.collection.immutable.Queue
 
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 /**
@@ -37,6 +38,10 @@ class SearchService(
   private val db = new DatabaseService(config.cacheDir / ("sql-" + version))
 
   implicit val workerEC = actorSystem.dispatchers.lookup("akka.search-service-dispatcher")
+
+  // FIXME: apologies, this is pretty messy. We should move to an
+  // actor based system for all of the persisting instead of this
+  // hybrid approach.
 
   /**
    * Indexes everything, making best endeavours to avoid scanning what
@@ -134,7 +139,7 @@ class SearchService(
   } catch {
     case e: SQLException =>
       // likely a timing issue or corner-case dupe FQNs
-      log.warn(s"failed to insert ${symbols.size} symbols ${e.getClass}: ${e.getMessage}")
+      log.warn(s"failed to insert ${symbols.size} symbols for ${check.file} ${e.getClass}: ${e.getMessage}")
   }
 
   private val blacklist = Set("sun/", "sunw/", "com/sun/")
@@ -217,43 +222,56 @@ class SearchService(
   }
 }
 
-case class FileUpdate(fileObject: FileObject, symbolList: List[FqnSymbol])
-case object UpdateComplete
+case class FileUpdate(
+  fileObject: FileObject,
+  symbolList: List[FqnSymbol]
+)
 
 class IndexingQueueActor(searchService: SearchService) extends Actor with ActorLogging {
-  var busy = false
-  var queue = Vector[(FileObject, List[FqnSymbol])]()
+  import context.system
+  import scala.concurrent.duration._
+
+  case object Process
+
+  // De-dupes files that have been updated since we were last told to
+  // index them. No need to aggregate values: the latest wins.
+  var todo = Map.empty[FileObject, List[FqnSymbol]]
+
+  // debounce and give us a chance to batch (which is *much* faster)
+  var worker: Cancellable = _
+
+  private def debounce(): Unit = {
+    Option(worker).foreach(_.cancel())
+    import context.dispatcher
+    worker = system.scheduler.scheduleOnce(5 seconds, self, Process)
+  }
+
   override def receive: Receive = {
-    case update: FileUpdate =>
-      queue = queue :+ (update.fileObject, update.symbolList)
-      processQueue()
-    case UpdateComplete =>
-      busy = false
-      processQueue()
-  }
+    case FileUpdate(fo, syms) =>
+      todo += fo -> syms
+      debounce()
 
-  def processQueue(): Unit = {
-    if (!busy && queue.nonEmpty) {
-      val batch = queue.take(500)
-      queue = queue.drop(500)
-      val selfRef = self
-      Future {
-        val work = {
-          batch.groupBy(_._1).map {
-            case (k, values) => values.last
-          }
-        }.toList
+    case Process if todo.isEmpty => // nothing to do
 
-        log.info(s"Indexing ${work.size} classfiles")
+    case Process =>
+      val (batch, remaining) = todo.splitAt(500)
+      todo = remaining
 
-        searchService.delete(work.map(_._1))
+      log.debug(s"Indexing ${batch.size} classfiles")
 
-        work.collect {
-          case (file, syms) if syms.nonEmpty =>
-            searchService.persist(FileCheck(file), syms)
-        }
-        selfRef ! UpdateComplete
+      // blocks the actor thread intentionally -- this is real work
+      // and the underlying I/O implementation is blocking. Give me an
+      // async SQL database and we can talk...
+
+      // batch the deletion (big bottleneck)
+      searchService.delete(batch.keys.toList)
+
+      // opportunity to do more batching here
+      batch.collect {
+        case (file, syms) if syms.nonEmpty =>
+          searchService.persist(FileCheck(file), syms)
       }
-    }
+
   }
+
 }

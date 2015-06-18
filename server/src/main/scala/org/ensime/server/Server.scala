@@ -15,7 +15,7 @@ import org.ensime.api._
 import org.ensime.config._
 import org.ensime.core._
 import org.ensime.server.protocol._
-import org.ensime.server.protocol.swank.SwankProtocol
+import org.ensime.server.protocol.swank._
 import org.ensime.sexp.Sexp
 import org.slf4j._
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -169,6 +169,10 @@ class SocketHandler(
         val envelope = protocol.read(in)
         context.actorOf(RequestHandler(envelope, project, self, docs), s"${envelope.callId}")
       } catch {
+        case SwankRPCFormatException(msg, callId, cause) =>
+          // specialist SWANK support
+          self ! RpcError(callId, msg)
+
         case NonFatal(e) =>
           log.error(e, "Error in socket reader: ")
         // otherwise ignore the message
@@ -185,7 +189,7 @@ class SocketHandler(
     Try(loop.interrupt())
   }
 
-  def receive = LoggingReceive {
+  def receive = {
     case outgoing: EnsimeEvent => protocol.write(outgoing, out)
     case outgoing: RpcError => protocol.write(outgoing, out)
     case outgoing: RpcResponse =>
@@ -213,13 +217,16 @@ class RequestHandler(
     docs: ActorRef
 ) extends Actor with ActorLogging {
 
-  override def preStart(): Unit = envelope.req match {
-    // multi-phase queries
-    case DocUriAtPointReq(_, _) | DocUriForSymbolReq(_, _, _) =>
-      project ! envelope.req
-      context.become(resolveDocSig, discardOld = false)
+  override def preStart(): Unit = {
+    log.debug(envelope.req.toString.take(100))
+    envelope.req match {
+      // multi-phase queries
+      case DocUriAtPointReq(_, _) | DocUriForSymbolReq(_, _, _) =>
+        project ! envelope.req
+        context.become(resolveDocSig, discardOld = false)
 
-    case req => project ! req
+      case req => project ! req
+    }
   }
 
   def resolveDocSig: Receive = LoggingReceive.withLabel("resolveDocSig") {

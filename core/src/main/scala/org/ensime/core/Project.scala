@@ -2,6 +2,7 @@ package org.ensime.core
 
 import akka.actor._
 import akka.event.LoggingReceive
+import akka.event.LoggingReceive
 import org.apache.commons.vfs2.FileObject
 
 import org.ensime.api._
@@ -66,7 +67,7 @@ class Project(
   override def preStart(): Unit = {
     indexer = context.actorOf(Props(new Indexer(config, searchService)), "indexer")
     analyzer = context.actorOf(Props(new Analyzer(target, indexer, searchService, config)), "analyzer")
-    debugger = context.actorOf(Props(new DebugManager(target, config)), "debugger")
+    debugger = context.actorOf(Props(new DebugManager(target, config)), "debugging")
   }
 
   override def postStop(): Unit = {
@@ -80,19 +81,23 @@ class Project(
   // debounces ReloadExistingFilesEvent
   private var rechecking: Cancellable = _
 
-  def receive: Receive = LoggingReceive {
+  def receive: Receive =
+    filesChanging orElse LoggingReceive { respondingToQueries }
+
+  def filesChanging: Receive = {
     case AskReTypecheck =>
       Option(rechecking).foreach(_.cancel())
       rechecking = system.scheduler.scheduleOnce(
         5 seconds, analyzer, ReloadExistingFilesEvent
       )
+  }
 
+  def respondingToQueries: Receive = {
     case ConnectionInfoReq => sender() ! ConnectionInfo()
 
     case m: RpcAnalyserRequest => analyzer forward m
     case m: RpcDebuggerRequest => debugger forward m
     case m: RpcSearchRequest => indexer forward m
-
   }
 
   /*
