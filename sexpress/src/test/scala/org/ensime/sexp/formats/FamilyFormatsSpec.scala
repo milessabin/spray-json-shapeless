@@ -10,7 +10,7 @@ class FamilyFormatsSpec extends FormatSpec with FamilyFormats {
       assertFormat(Bloo, SexpNil)
     }
 
-    it("should support an example AST") {
+    it("should support an example ADT") {
       import DefaultSexpProtocol._
       import ExampleAst._
 

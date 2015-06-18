@@ -2,7 +2,7 @@ package org.ensime.sexp
 
 import org.parboiled.scala._
 
-import org.ensime.util.ParboiledParser
+import org.ensime.sexp.util.ParboiledParser
 
 /**
  * Parse Emacs Lisp into an `Sexp`. Other lisp variants may

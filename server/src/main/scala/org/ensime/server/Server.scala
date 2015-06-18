@@ -27,8 +27,6 @@ import scala.util.control.NonFatal
 
 import pimpathon.java.io._
 
-case class EnsimeServerError(description: String)
-
 object Server {
   SLF4JBridgeHandler.removeHandlersForRootLogger()
   SLF4JBridgeHandler.install()

@@ -267,7 +267,7 @@ class FamilyFormatsSpec extends FlatSpec with Matchers
 
   ///////////////////////////////////////////////
   // non-trivial AST (in separate file)
-  it should "support an example AST" in {
+  it should "support an example ADT" in {
     import ExampleAst._
 
     roundtrip(SpecialToken: TokenTree, """{"type":"SpecialToken"}""")

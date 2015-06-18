@@ -11,7 +11,7 @@ import java.util.UUID
 import scala.util.Try
 
 import org.ensime.sexp._
-import org.ensime.util.ThreadLocalSupport
+import org.ensime.sexp.util.ThreadLocalSupport
 
 /**
  * Formats for data types that are so popular that you'd expect them

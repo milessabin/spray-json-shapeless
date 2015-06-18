@@ -2,13 +2,11 @@ package org.ensime.server.protocol.swank
 
 import java.io._
 
-import akka.event.slf4j.SLF4JLogging
-
 import org.ensime.sexp._
 import org.ensime.Protocol
 import org.ensime.api._
 
-class SwankProtocol extends Protocol with SLF4JLogging {
+class SwankProtocol extends Protocol {
   import SwankProtocolRequest.RpcRequestEnvelopeFormat
   import SwankProtocolResponse.unhappyFamily
   import SwankProtocolResponse.EnsimeEventFormat
