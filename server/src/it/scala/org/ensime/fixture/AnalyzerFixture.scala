@@ -24,17 +24,15 @@ object AnalyzerFixture {
 trait IsolatedAnalyzerFixture
     extends AnalyzerFixture
     with IsolatedEnsimeVFSFixture
-    with IsolatedActorSystemFixture
     with IsolatedSearchServiceFixture
     with IsolatedTestKitFixture {
 
   override def withAnalyzer(testCode: (EnsimeConfig, TestActorRef[Analyzer]) => Any): Any = {
     withVFS { implicit vfs =>
-      withActorSystem { implicit actorSystem =>
-        withTestKit { testkit =>
-          withSearchService { (config, search) =>
-            testCode(config, AnalyzerFixture.create(config, search))
-          }
+      withTestKit { testkit =>
+        import testkit._
+        withSearchService { (config, search) =>
+          testCode(config, AnalyzerFixture.create(config, search))
         }
       }
     }
@@ -44,7 +42,6 @@ trait IsolatedAnalyzerFixture
 
 trait SharedAnalyzerFixture
     extends AnalyzerFixture
-    with SharedActorSystemFixture
     with SharedTestKitFixture
     with SharedSearchServiceFixture
     with BeforeAndAfterAll {
@@ -53,6 +50,7 @@ trait SharedAnalyzerFixture
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    implicit val sys = _testkit.system
     analyzer = AnalyzerFixture.create(_config, _search)
   }
 

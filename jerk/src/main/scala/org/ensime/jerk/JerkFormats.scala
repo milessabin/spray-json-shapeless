@@ -70,8 +70,6 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
   val RefactorFailureFormat = RootJsonFormat[RefactorFailure]
   val RefactorEffectFormat = RootJsonFormat[RefactorEffect]
   val RefactorResultFormat = RootJsonFormat[RefactorResult]
-  val UndoFormat = RootJsonFormat[Undo]
-  val UndoResultFormat = RootJsonFormat[UndoResult]
 
 }
 
@@ -108,6 +106,4 @@ object JerkEndpoints {
   implicit val RefactorFailureFormat = JerkFormats.RefactorFailureFormat
   implicit val RefactorEffectFormat = JerkFormats.RefactorEffectFormat
   implicit val RefactorResultFormat = JerkFormats.RefactorResultFormat
-  implicit val UndoFormat = JerkFormats.UndoFormat
-  implicit val UndoResultFormat = JerkFormats.UndoResultFormat
 }

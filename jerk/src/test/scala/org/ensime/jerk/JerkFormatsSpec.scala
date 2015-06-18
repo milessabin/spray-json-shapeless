@@ -20,26 +20,6 @@ class JerkFormatsSpec extends FlatSpec with Matchers
     )
 
     roundtrip(
-      InitProjectReq: RpcRequest,
-      """{"typehint":"InitProjectReq"}"""
-    )
-
-    roundtrip(
-      PeekUndoReq: RpcRequest,
-      """{"typehint":"PeekUndoReq"}"""
-    )
-
-    roundtrip(
-      ExecUndoReq(13): RpcRequest,
-      """{"typehint":"ExecUndoReq","id":13}"""
-    )
-
-    roundtrip(
-      ReplConfigReq: RpcRequest,
-      """{"typehint":"ReplConfigReq"}"""
-    )
-
-    roundtrip(
       RemoveFileReq(file1): RpcRequest,
       """{"typehint":"RemoveFileReq","file":"/abc/def"}"""
     )
@@ -291,22 +271,12 @@ class JerkFormatsSpec extends FlatSpec with Matchers
       """{"typehint":"DebugBacktraceReq","threadId":13,"index":100,"count":200}"""
     )
 
-    roundtrip(
-      ShutdownServerReq: RpcRequest,
-      """{"typehint":"ShutdownServerReq"}"""
-    )
-
   }
 
   it should "roundtrip EnsimeGeneralEvent as EnsimeEvent" in {
     roundtrip(
-      SendBackgroundMessageEvent(1, Some("ABCDEF")): EnsimeEvent,
-      """{"typehint":"SendBackgroundMessageEvent","code":1,"detail":"ABCDEF"}"""
-    )
-
-    roundtrip(
-      SendBackgroundMessageEvent(1, None): EnsimeEvent,
-      """{"typehint":"SendBackgroundMessageEvent","code":1}"""
+      SendBackgroundMessageEvent("ABCDEF", 1): EnsimeEvent,
+      """{"typehint":"SendBackgroundMessageEvent","detail":"ABCDEF","code":1}"""
     )
 
     roundtrip(
@@ -610,18 +580,5 @@ class JerkFormatsSpec extends FlatSpec with Matchers
       """{"procedureId":7,"refactorType":{"typehint":"AddImport"},"touchedFiles":["/foo/abc","/abc/def"],"status":"success"}"""
     )
 
-    roundtrip(
-      Undo(3, "Undoing stuff", List(
-        TextEdit(file3, 5, 7, "aaa"),
-        NewFile(file4, "xxxxx"),
-        DeleteFile(file5, "zzzz")
-      )): Undo,
-      """{"id":3,"summary":"Undoing stuff","changes":[{"text":"aaa","typehint":"TextEdit","to":7,"from":5,"file":"/foo/abc"},{"text":"xxxxx","typehint":"NewFile","to":4,"from":0,"file":"/foo/def"},{"text":"zzzz","typehint":"DeleteFile","to":3,"from":0,"file":"/foo/hij"}]}"""
-    )
-
-    roundtrip(
-      UndoResult(7, List(file3, file4)): UndoResult,
-      """{"id":7,"touchedFiles":["/foo/abc","/foo/def"]}"""
-    )
   }
 }

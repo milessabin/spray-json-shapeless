@@ -31,7 +31,6 @@ class SearchService(
 ) extends ClassfileIndexer
     with ClassfileListener
     with SLF4JLogging {
-
   private val version = "1.0"
 
   private val index = new IndexService(config.cacheDir / ("index-" + version))
@@ -135,7 +134,7 @@ class SearchService(
   } catch {
     case e: SQLException =>
       // likely a timing issue or corner-case dupe FQNs
-      log.warn(s"failed to insert $symbols ${e.getClass}: ${e.getMessage}")
+      log.warn(s"failed to insert ${symbols.size} symbols ${e.getClass}: ${e.getMessage}")
   }
 
   private val blacklist = Set("sun/", "sunw/", "com/sun/")

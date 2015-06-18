@@ -62,12 +62,12 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
           ).exists(f.getName.startsWith)
         }
 
-        def getUri(serv: ActorRef, sig: DocSig): Option[String] = {
+        def getUri(serv: ActorRef, sig: DocSig): Uri = Uri(
           Await.result(
-            Patterns.ask(serv, DocUriReq(DocSigPair(sig, sig)), Timeout(5.second)),
-            Duration.Inf
-          ).asInstanceOf[Option[String]]
-        }
+          Patterns.ask(serv, DocUriReq(DocSigPair(sig, sig)), Timeout(5.second)),
+          Duration.Inf
+        ).asInstanceOf[String]
+        )
 
         def getReponse(serv: ActorRef, path: Uri): HttpResponse = {
           Await.result(
@@ -94,23 +94,21 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
         }
 
         def findsContentFor(serv: ActorRef, sig: DocSig, java: Boolean): Boolean = {
-          getUri(serv, sig).exists { url =>
-            val uri = Uri(url)
-            if (uri.authority.host.address != "localhost")
-              throw new IllegalArgumentException("Refusing to download remote html: " + uri)
-            val path = contentPath(uri)
-            val response = getReponse(serv, path)
-            if (response.status != StatusCode.int2StatusCode(200)) {
-              throw new IllegalStateException(s"GET $path failed with status: ${response.status}")
+          val uri = getUri(serv, sig)
+          if (uri.authority.host.address != "localhost")
+            throw new IllegalArgumentException("Refusing to download remote html: " + uri)
+          val path = contentPath(uri)
+          val response = getReponse(serv, path)
+          if (response.status != StatusCode.int2StatusCode(200)) {
+            throw new IllegalStateException(s"GET $path failed with status: ${response.status}")
+          } else {
+            val html = response.entity.data.asString
+            if (sig.member.isDefined) {
+              val attr = if (java) "name" else "id"
+              val link = StringEscapeUtils.escapeHtml(anchor(uri, java))
+              html.contains(s"""$attr="$link"""")
             } else {
-              val html = response.entity.data.asString
-              if (sig.member.isDefined) {
-                val attr = if (java) "name" else "id"
-                val link = StringEscapeUtils.escapeHtml(anchor(uri, java))
-                html.contains(s"""$attr="$link"""")
-              } else {
-                html.contains("<html")
-              }
+              html.contains("<html")
             }
           }
         }
@@ -224,29 +222,26 @@ class DocServerSpec extends WordSpec with Matchers with SLF4JLogging
 
         val libdoc = docs.find { f => f.getName.startsWith("scala-library") }.get
         val java8doc = docs.find { f => f.getName.startsWith("ForecastIOLib") }.get
-        assert(getUri(serv, DocSig(DocFqn("scala", "Some"), None)) ==
-          Some("http://localhost:0/" + libdoc.getName + "/index.html#scala.Some"))
-        assert(getUri(serv, DocSig(DocFqn("scala", "Some"), Some("mkString(sep:String):String"))) ==
-          Some("http://localhost:0/" + libdoc.getName + "/index.html#scala.Some@mkString%28sep%3AString%29%3AString"))
-        assert(getUri(serv, DocSig(DocFqn("java.io", "File"), None)) ==
-          Some("http://docs.oracle.com/javase/6/docs/api/java/io/File.html"))
-        assert(getUri(serv, DocSig(DocFqn("java.util", "Map.Entry"), None)) ==
-          Some("http://docs.oracle.com/javase/6/docs/api/java/util/Map.Entry.html"))
-        assert(getUri(serv, DocSig(DocFqn("java.util", "package"), None)) ==
-          Some("http://docs.oracle.com/javase/6/docs/api/java/util/package-summary.html"))
-        assert(getUri(serv, DocSig(DocFqn("scala.collection.immutable", "package"), None)).getOrElse("")
-          .endsWith("/index.html#scala.collection.immutable.package"))
 
-        assert(getUri(serv, DocSig(DocFqn("com.github.dvdme.ForecastIOLib", "ForecastIO"), Some("getForecast(com.eclipsesource.json.JsonObject)"))) ==
-          Some("http://localhost:0/" + java8doc.getName +
-            "/com/github/dvdme/ForecastIOLib/ForecastIO.html#getForecast-com.eclipsesource.json.JsonObject-"))
+        getUri(serv, DocSig(DocFqn("scala", "Some"), None)) shouldBe Uri("http://localhost:0/" + libdoc.getName + "/index.html#scala.Some")
 
-        assert(getUri(serv8, DocSig(DocFqn("java.io", "File"), Some("delete()"))) ==
-          Some("http://docs.oracle.com/javase/8/docs/api/java/io/File.html#delete--"))
-        assert(getUri(serv8, DocSig(DocFqn("java.lang", "Math"), Some("max(int, int)"))) ==
-          Some("http://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#max-int-int-"))
-        assert(getUri(serv8, DocSig(DocFqn("java.util", "Arrays"), Some("binarySearch(int[], int)"))) ==
-          Some("http://docs.oracle.com/javase/8/docs/api/java/util/Arrays.html#binarySearch-int%3AA-int-"))
+        getUri(serv, DocSig(DocFqn("scala", "Some"), Some("mkString(sep:String):String"))) shouldBe Uri("http://localhost:0/" + libdoc.getName + "/index.html#scala.Some@mkString%28sep%3AString%29%3AString")
+
+        getUri(serv, DocSig(DocFqn("java.io", "File"), None)) shouldBe Uri("http://docs.oracle.com/javase/6/docs/api/java/io/File.html")
+
+        getUri(serv, DocSig(DocFqn("java.util", "Map.Entry"), None)) shouldBe Uri("http://docs.oracle.com/javase/6/docs/api/java/util/Map.Entry.html")
+
+        getUri(serv, DocSig(DocFqn("java.util", "package"), None)) shouldBe Uri("http://docs.oracle.com/javase/6/docs/api/java/util/package-summary.html")
+
+        getUri(serv, DocSig(DocFqn("scala.collection.immutable", "package"), None)).toString should endWith("/index.html#scala.collection.immutable.package")
+
+        getUri(serv, DocSig(DocFqn("com.github.dvdme.ForecastIOLib", "ForecastIO"), Some("getForecast(com.eclipsesource.json.JsonObject)"))) shouldBe Uri("http://localhost:0/" + java8doc.getName + "/com/github/dvdme/ForecastIOLib/ForecastIO.html#getForecast-com.eclipsesource.json.JsonObject-")
+
+        getUri(serv8, DocSig(DocFqn("java.io", "File"), Some("delete()"))) shouldBe Uri("http://docs.oracle.com/javase/8/docs/api/java/io/File.html#delete--")
+
+        getUri(serv8, DocSig(DocFqn("java.lang", "Math"), Some("max(int, int)"))) shouldBe Uri("http://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#max-int-int-")
+
+        getUri(serv8, DocSig(DocFqn("java.util", "Arrays"), Some("binarySearch(int[], int)"))) shouldBe Uri("http://docs.oracle.com/javase/8/docs/api/java/util/Arrays.html#binarySearch-int%3AA-int-")
 
       }
   }

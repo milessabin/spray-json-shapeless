@@ -2,9 +2,34 @@ package org.ensime.api
 
 import java.io.File
 
-// NOTE: keeping the package structure for now to avoid too many
-//       refactorings throughout the codebase, but will eventually be
-//       flattened.
+// TODO: outgoing messages should be a sealed family
+
+/**
+ * There should be exactly one RpcResponse (or RpcError) in response
+ * to an RpcRequest.
+ *
+ * Unfortunately there is no common family for the msg at this time.
+ * See JerkFormats or SwankProtocol for a list of what is supported.
+ */
+case class RpcResponse(callId: Int, msg: Any)
+
+/**
+ * An error occurred when processing an RpcRequest. (In reality most
+ * unexpected errors will be timeouts and the real cause will be in
+ * the server log).
+ */
+case class RpcError(
+  callId: Int,
+  detail: String
+)
+
+/**
+ * A message that the server can send to the client at any time.
+ */
+sealed trait EnsimeEvent
+
+//////////////////////////////////////////////////////////////////////
+// Contents of the payload
 
 case object DebuggerShutdownEvent
 
@@ -20,13 +45,18 @@ case class DebugVmError(
   status: String = "error"
 ) extends DebugVmStatus
 
-/** Asynchronous swank protocol event */
-sealed trait EnsimeEvent
 sealed trait GeneralSwankEvent extends EnsimeEvent
 sealed trait DebugEvent extends EnsimeEvent
 
-/** Generic background notification. */
-case class SendBackgroundMessageEvent(code: Int, detail: Option[String]) extends GeneralSwankEvent
+/**
+ * Generic background notification.
+ *
+ * NOTE: codes will be deprecated, preferring sealed families.
+ */
+case class SendBackgroundMessageEvent(
+  detail: String,
+  code: Int = 105
+) extends GeneralSwankEvent
 
 /** The presentation compiler is ready to accept requests. */
 case object AnalyzerReadyEvent extends GeneralSwankEvent
@@ -89,9 +119,6 @@ case class DebugThreadDeathEvent(threadId: DebugThreadId) extends DebugEvent
 /** Communicates stdout/stderr of debugged VM to client. */
 case class DebugOutputEvent(body: String) extends DebugEvent
 
-case class RPCError(code: Int, detail: String) extends RuntimeException("" + code + ": " + detail)
-case class AsyncEvent(evt: EnsimeEvent)
-
 case object ReloadExistingFilesEvent
 case object AskReTypecheck
 
@@ -140,10 +167,13 @@ case class AddImportRefactorDesc(qualifiedName: String, file: File)
   extends RefactorDesc(RefactorType.AddImport)
 
 case class SourceFileInfo(
-  file: File,
-  contents: Option[String] = None,
-  contentsIn: Option[File] = None
-)
+    file: File,
+    contents: Option[String] = None,
+    contentsIn: Option[File] = None
+) {
+  // keep the log file sane for unsaved files
+  override def toString = s"SourceFileInfo($file,${contents.map(_ => "...")},$contentsIn)"
+}
 
 sealed trait PatchOp {
   def start: Int
@@ -486,34 +516,8 @@ case class TypeInspectInfo(
   def supers = interfaces
 }
 
-case class AddUndo(summary: String, changes: List[FileEdit])
-case class Undo(id: Int, summary: String, changes: List[FileEdit])
-case class UndoResult(id: Int, touchedFiles: List[File])
-
 /** ERangePosition is a mirror of scala compiler internal RangePosition as a case class to */
 case class ERangePosition(file: String, offset: Int, start: Int, end: Int)
-
-/**
- * Information necessary to create a javadoc or scaladoc URI for a
- * particular type or type member.
- */
-case class DocFqn(pack: String, typeName: String) {
-  def mkString: String = if (pack.isEmpty) typeName else pack + "." + typeName
-  def inPackage(prefix: String): Boolean = pack == prefix || pack.startsWith(prefix + ".")
-  def javaStdLib: Boolean = inPackage("java") || inPackage("javax")
-  def scalaStdLib: Boolean = inPackage("scala")
-}
-case class DocSig(fqn: DocFqn, member: Option[String])
-
-/**
- * We generate DocSigs for java and scala at the same time, since we
- * don't know a priori whether the docs will be in scaladoc or javadoc
- * format.
- */
-case class DocSigPair(scala: DocSig, java: DocSig)
-
-// bit of a rubbish class
-case class ReplConfig(classpath: Set[File])
 
 case class EnsimeImplementation(
   name: String
@@ -521,6 +525,5 @@ case class EnsimeImplementation(
 case class ConnectionInfo(
   pid: Option[Int] = None,
   implementation: EnsimeImplementation = EnsimeImplementation("ENSIME"),
-  // Please also update changelog in SwankProtocol.scala
-  version: String = "0.8.14"
+  version: String = "0.8.15"
 )

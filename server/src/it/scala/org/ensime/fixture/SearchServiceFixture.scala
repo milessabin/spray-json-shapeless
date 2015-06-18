@@ -19,14 +19,16 @@ trait IsolatedSearchServiceFixture extends IsolatedSourceResolverFixture {
   }
 }
 
-trait SharedSearchServiceFixture extends SharedEnsimeVFSFixture
+trait SharedSearchServiceFixture
+    extends SharedEnsimeVFSFixture
     with SharedSourceResolverFixture {
+  this: SharedTestKitFixture =>
 
-  this: SharedActorSystemFixture =>
   private[fixture] var _search: SearchService = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    implicit val system = _testkit.system
     _search = new SearchService(_config, _resolver)
   }
 

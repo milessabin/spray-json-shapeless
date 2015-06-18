@@ -190,8 +190,8 @@ class RichPresentationCompiler(
   val config: EnsimeConfig,
   settings: Settings,
   val richReporter: Reporter,
-  var parent: ActorRef,
-  var indexer: ActorRef,
+  val parent: ActorRef,
+  val indexer: ActorRef,
   val search: SearchService
 )(
   implicit
@@ -480,8 +480,6 @@ class RichPresentationCompiler(
 
   override def askShutdown(): Unit = {
     super.askShutdown()
-    parent = null
-    indexer = null
   }
 
   /*
@@ -489,10 +487,8 @@ class RichPresentationCompiler(
     * the presentation compiler. The wrapping just helps with the
     * create response / compute / get result pattern.
     *
-    * These units of work should probably be wrapped up into a
-    * Work monad that will make it easier to compose the operations.
+    * These units of work should return `Future[T]`.
     */
-
   def wrap[A](compute: Response[A] => Unit, handle: Throwable => A): A = {
     val result = new Response[A]
     compute(result)

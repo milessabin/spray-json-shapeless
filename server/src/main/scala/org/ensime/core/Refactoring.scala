@@ -6,7 +6,6 @@ import org.ensime.api._
 
 import org.ensime.model._
 import org.ensime.server.protocol._
-import org.ensime.server.protocol.ProtocolConst._
 import org.ensime.util._
 
 import scala.collection.mutable
@@ -54,7 +53,7 @@ abstract class RefactoringEnvironment(file: String, start: Int, end: Int) {
 
 trait RefactoringHandler { self: Analyzer =>
 
-  val effects: mutable.HashMap[Int, RefactorEffect] = new mutable.HashMap
+  private var effects = Map.empty[Int, RefactorEffect]
 
   def handleRefactorPrepareRequest(req: PrepareRefactorReq): Unit = {
     val procedureId = req.procId
@@ -63,84 +62,57 @@ trait RefactoringHandler { self: Analyzer =>
 
     result match {
       case Right(effect: RefactorEffect) =>
-        effects(procedureId) = effect
-      case Left(failure) =>
-    }
+        effects += procedureId -> effect
+        sender() ! effect
 
-    sender ! result
+      case Left(failure) =>
+        sender() ! failure
+    }
   }
 
   def handleRefactorExec(req: ExecRefactorReq): Unit = {
     val procedureId = req.procId
     effects.get(procedureId) match {
       case Some(effect: RefactorEffect) =>
-        project ! AddUndo(
-          "Refactoring of type: " + req.tpe.symbol.toString,
-          FileUtils.inverseEdits(effect.changes, charset)
-        )
-        val result = scalaCompiler.askExecRefactor(procedureId, req.tpe, effect)
-        sender ! result
+        scalaCompiler.askExecRefactor(procedureId, req.tpe, effect) match {
+          case Right(success) => sender() ! success
+          case Left(failure) => sender() ! failure
+        }
       case None =>
         val f = RefactorFailure(procedureId, "No effect found for procId " + procedureId)
-        sender ! Left(f)
+        sender ! f
     }
   }
 
   def handleRefactorCancel(req: CancelRefactorReq): Unit = {
-    effects.remove(req.procId)
+    effects -= req.procId
     sender ! VoidResponse
   }
 
-  def handleExecUndo(undo: Undo): Either[String, UndoResult] = {
-    FileUtils.writeChanges(undo.changes, charset) match {
-      case Right(touched) =>
-        handleReloadFiles(touched.toList.map(SourceFileInfo(_)), async = true)
-        val sortedTouched = touched.toList.sortBy(_.getCanonicalPath)
-        Right(UndoResult(undo.id, sortedTouched))
-      case Left(e) => Left(e.getMessage)
-    }
-  }
-
   def handleExpandselection(file: File, start: Int, stop: Int): FileRange = {
-    try {
-      FileUtils.readFile(file, charset) match {
-        case Right(contents) =>
-          val selectionRange = Range(start, stop - start)
-          AstSelector.expandSelection(contents, selectionRange) match {
-            case Some(range) => FileRange(file.getPath, range.offset, range.offset + range.length)
-            case _ =>
-              FileRange(file.getPath, start, stop)
-          }
-        case Left(e) => throw e
-      }
-    } catch {
-      case e: ScalaParserException =>
-        throw RPCError(ErrFormatFailed, "Could not parse broken syntax: " + e)
+    FileUtils.readFile(file, charset) match {
+      case Right(contents) =>
+        val selectionRange = Range(start, stop - start)
+        AstSelector.expandSelection(contents, selectionRange) match {
+          case Some(range) => FileRange(file.getPath, range.offset, range.offset + range.length)
+          case _ =>
+            FileRange(file.getPath, start, stop)
+        }
+      case Left(e) => throw e
     }
   }
 
   def handleFormatFiles(files: List[File]): Unit = {
-    try {
-      val cs = charset
-      val changeList = files.map { f =>
-        FileUtils.readFile(f, cs) match {
-          case Right(contents) =>
-            val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
-            TextEdit(f, 0, contents.length, formatted)
-          case Left(e) => throw e
-        }
+    val cs = charset
+    val changeList = files.map { f =>
+      FileUtils.readFile(f, cs) match {
+        case Right(contents) =>
+          val formatted = ScalaFormatter.format(contents, config.formattingPrefs)
+          TextEdit(f, 0, contents.length, formatted)
+        case Left(e) => throw e
       }
-      project ! AddUndo("Formatted source of " + files.mkString(", ") + ".", FileUtils.inverseEdits(changeList, charset))
-      FileUtils.writeChanges(changeList, cs) match {
-        case Right(_) =>
-        // do nothing - returning signals success
-        case Left(e) =>
-          throw RPCError(ErrFormatFailed, "Could not write any formatting changes: " + e)
-      }
-    } catch {
-      case e: ScalaParserException =>
-        throw RPCError(ErrFormatFailed, "Cannot format broken syntax: " + e)
     }
+    FileUtils.writeChanges(changeList, cs)
   }
 
   def handleFormatFile(fileInfo: SourceFileInfo): String = {

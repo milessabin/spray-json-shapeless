@@ -1,5 +1,7 @@
 package org.ensime.server.protocol.swank
 
+import shapeless.cachedImplicit
+
 import org.ensime.sexp._
 import org.ensime.sexp.formats._
 
@@ -14,13 +16,9 @@ import scala.util.{ Failure, Success, Try }
  * objects into the legacy ENSIME SWANK protocol (v0.9/1.0).
  *
  * We could reduce the boilerplate of this file by using shapeless,
- * but we need to backport it to scala-2.9 anyway, so there is no
- * point in doing so.
- *
- * However, in ENSIME 2.0 we plan to revisit the protocol and that may
- * mean using shapeless to produce the "natural" marshalling form for
- * all domain objects. At that time, this file will simply disappear
- * and there will be no need to maintain a scala-2.9 backport.
+ * making it look more like the minimal JerkFormats, but it seems
+ * somewhat futile to go to such efforts before simplifying the
+ * protocol in 2.0.
  *
  * https://github.com/ensime/ensime-server/issues/834
  */
@@ -235,7 +233,6 @@ object SwankProtocolResponse {
   implicit val SendBackgroundMessageEventFormat = SexpFormat[SendBackgroundMessageEvent]
   implicit val BreakpointFormat = SexpFormat[Breakpoint]
   implicit val BreakpointListFormat = SexpFormat[BreakpointList]
-  implicit val ReplConfigFormat = SexpFormat[ReplConfig]
   implicit val FileRangeFormat = SexpFormat[FileRange]
   implicit val ERangePositionFormat = SexpFormat[ERangePosition]
   implicit val RefactorFailureFormat = SexpFormat[RefactorFailure]
@@ -460,10 +457,6 @@ object SwankProtocolResponse {
     )
   }
 
-  // must be after FileEdit
-  implicit val UndoFormat = SexpFormat[Undo]
-  implicit val UndoResultFormat = SexpFormat[UndoResult]
-
   // must be after SourceSymbol
   implicit object SymbolDesignationFormat extends SexpFormat[SymbolDesignation] {
     def write(o: SymbolDesignation): Sexp =
@@ -487,6 +480,50 @@ object SwankProtocolResponse {
       case _ => deserializationError(hint)
     }
   }
+
+  // WORKAROUND not having a sealed family for RPC responses
+  def unhappyFamily(msg: Any): Sexp = msg match {
+    case b: Boolean => b.toSexp
+    case s: String => s.toSexp
+
+    case VoidResponse => false.toSexp
+
+    case value: ConnectionInfo => value.toSexp
+
+    case value: NamedTypeMemberInfo => value.toSexp
+    case value: TypeInfo => value.toSexp
+    case value: EntityInfo => value.toSexp
+    case value: SymbolSearchResult => value.toSexp
+    case value: DebugVmStatus => value.toSexp
+
+    case value: SourcePosition => value.toSexp
+    case value: DebugLocation => value.toSexp
+    case value: DebugValue => value.toSexp
+    case value: DebugClassField => value.toSexp
+    case value: DebugStackLocal => value.toSexp
+    case value: DebugStackFrame => value.toSexp
+    case value: DebugBacktrace => value.toSexp
+    case value: Breakpoint => value.toSexp
+    case value: BreakpointList => value.toSexp
+    case value: Note => value.toSexp
+    case value: CompletionInfo => value.toSexp
+    case value: CompletionInfoList => value.toSexp
+    case value: SymbolInfo => value.toSexp
+    case value: CallCompletionInfo => value.toSexp
+    case value: InterfaceInfo => value.toSexp
+    case value: TypeInspectInfo => value.toSexp
+    case value: SymbolSearchResults => value.toSexp
+    case value: ImportSuggestions => value.toSexp
+    case value: ERangePosition => value.toSexp
+    case value: FileRange => value.toSexp
+    case value: SymbolDesignations => value.toSexp
+    case value: RefactorFailure => value.toSexp
+    case value: RefactorEffect => value.toSexp
+    case value: RefactorResult => value.toSexp
+
+    case _ => throw new IllegalArgumentException(s"$msg is not a valid SWANK response")
+  }
+
 }
 
 // we get diverging implicits if everything is in the one object
@@ -507,10 +544,7 @@ object SwankProtocolRequest {
   }
 
   implicit val ConnectionInfoReqHint = TypeHint[ConnectionInfoReq.type](SexpSymbol("swank:connection-info"))
-  implicit val InitProjectReqHint = TypeHint[InitProjectReq.type](SexpSymbol("swank:init-project"))
-  implicit val PeekUndoReqHint = TypeHint[PeekUndoReq.type](SexpSymbol("swank:peek-undo"))
-  implicit val ExecUndoReqHint = TypeHint[ExecUndoReq](SexpSymbol("swank:exec-undo"))
-  implicit val ReplConfigReqHint = TypeHint[ReplConfigReq.type](SexpSymbol("swank:repl-config"))
+
   implicit val RemoveFileReqHint = TypeHint[RemoveFileReq](SexpSymbol("swank:remove-file"))
   implicit val TypecheckFileReqHint = TypeHint[TypecheckFileReq](SexpSymbol("swank:typecheck-file"))
   implicit val TypecheckFilesReqHint = TypeHint[TypecheckFilesReq](SexpSymbol("swank:typecheck-files"))
@@ -560,7 +594,6 @@ object SwankProtocolRequest {
   implicit val DebugToStringReqHint = TypeHint[DebugToStringReq](SexpSymbol("swank:debug-to-string"))
   implicit val DebugSetValueReqHint = TypeHint[DebugSetValueReq](SexpSymbol("swank:debug-set-value"))
   implicit val DebugBacktraceReqHint = TypeHint[DebugBacktraceReq](SexpSymbol("swank:debug-backtrace"))
-  implicit val ShutdownServerReqHint = TypeHint[ShutdownServerReq.type](SexpSymbol("swank:shutdown-server"))
 
   // higher priority than labelledProductFormat, so SexpFormat[T]
   // should pick up on this instead, also private so we don't
@@ -664,7 +697,6 @@ object SwankProtocolRequest {
   }
 
   // incoming messages
-  implicit def ExecUndoReqFormat = SexpFormat[ExecUndoReq]
   implicit def RemoveFileReqFormat = SexpFormat[RemoveFileReq]
   implicit def TypecheckFileReqFormat = SexpFormat[TypecheckFileReq]
   implicit def TypecheckFilesReqFormat = SexpFormat[TypecheckFilesReq]
@@ -715,10 +747,6 @@ object SwankProtocolRequest {
         val value = SexpList(rest)
         kind match {
           case s if s == ConnectionInfoReqHint.hint => ConnectionInfoReq
-          case s if s == InitProjectReqHint.hint => InitProjectReq
-          case s if s == PeekUndoReqHint.hint => PeekUndoReq
-          case s if s == ExecUndoReqHint.hint => value.convertTo[ExecUndoReq]
-          case s if s == ReplConfigReqHint.hint => ReplConfigReq
           case s if s == RemoveFileReqHint.hint => value.convertTo[RemoveFileReq]
           case s if s == TypecheckFileReqHint.hint => value.convertTo[TypecheckFileReq]
           case s if s == TypecheckFilesReqHint.hint => value.convertTo[TypecheckFilesReq]
@@ -768,7 +796,6 @@ object SwankProtocolRequest {
           case s if s == DebugToStringReqHint.hint => value.convertTo[DebugToStringReq]
           case s if s == DebugSetValueReqHint.hint => value.convertTo[DebugSetValueReq]
           case s if s == DebugBacktraceReqHint.hint => value.convertTo[DebugBacktraceReq]
-          case s if s == ShutdownServerReqHint.hint => ShutdownServerReq
 
           case _ => deserializationError(sexp)
         }

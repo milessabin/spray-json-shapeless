@@ -1,32 +1,17 @@
 <configuration>
-
   <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
     <resetJUL>true</resetJUL>
   </contextListener>
-
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!-- encoders are assigned the type
-             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-
-
-    <appender name="file" class="ch.qos.logback.core.FileAppender">
-    <file>it-output.log</file>
+  <appender name="file" class="ch.qos.logback.core.FileAppender">
+    <file>it.log</file>
     <append>false</append>
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} %-5level %X{akkaSource} %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
-
-  <logger name="org.ensime.indexer.SearchService" level="TRACE"/>
-  <logger name="org.ensime" level="DEBUG"/>
-  <logger name="akka" level="DEBUG"/>
-  <!-- <logger name="org.ensime.server.RichPresentationCompiler" level="WARN"/> -->
-
   <root level="INFO">
-    <appender-ref ref="file"/>
+    <appender-ref ref="file" />
   </root>
+  <logger name="org.ensime" level="DEBUG" />
+  <logger name="akka" level="DEBUG" />
 </configuration>

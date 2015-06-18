@@ -9,7 +9,9 @@ import scala.concurrent._
 import scala.concurrent.duration._
 
 class SearchServiceSpec extends WordSpec with Matchers
-    with SharedActorSystemFixture with SharedSearchServiceFixture with SearchServiceTestUtils {
+    with SharedTestKitFixture
+    with SharedSearchServiceFixture
+    with SearchServiceTestUtils {
 
   def original = EnsimeConfigFixture.SimpleTestProject
 

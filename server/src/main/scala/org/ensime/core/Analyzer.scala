@@ -1,5 +1,6 @@
 package org.ensime.core
 
+import akka.actor.Stash
 import akka.event.LoggingReceive
 import java.io.File
 import java.nio.charset.Charset
@@ -10,6 +11,7 @@ import org.ensime.api._
 import org.ensime.config._
 import org.ensime.indexer.{ EnsimeVFS, SearchService }
 import org.ensime.model._
+import org.ensime.server.EnsimeServerError
 import org.ensime.server.protocol._
 import org.ensime.util._
 import org.slf4j.LoggerFactory
@@ -19,9 +21,8 @@ import scala.reflect.internal.util.{ OffsetPosition, RangePosition, SourceFile }
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 
-import ProtocolConst._
-
 import pimpathon.file._
+import scala.util.Try
 
 case class CompilerFatalError(e: Throwable)
 
@@ -33,7 +34,7 @@ class Analyzer(
 )(
     implicit
     vfs: EnsimeVFS
-) extends Actor with ActorLogging with RefactoringHandler {
+) extends Actor with Stash with ActorLogging with RefactoringHandler {
 
   private val presCompLog = LoggerFactory.getLogger(classOf[Global])
   private val settings = new Settings(presCompLog.error)
@@ -50,36 +51,33 @@ class Analyzer(
 
   settings.processArguments(config.compilerArgs, processAll = false)
 
-  log.info("Presentation Compiler settings:\n" + settings)
+  //log.debug("Presentation Compiler settings:\n" + settings)
 
   private val reportHandler = new ReportHandler {
     override def messageUser(str: String): Unit = {
-      project ! AsyncEvent(SendBackgroundMessageEvent(MsgCompilerUnexpectedError, Some(str)))
+      project ! SendBackgroundMessageEvent(str, 101)
     }
     override def clearAllScalaNotes(): Unit = {
-      project ! AsyncEvent(ClearAllScalaNotesEvent)
+      project ! ClearAllScalaNotesEvent
     }
     override def reportScalaNotes(notes: List[Note]): Unit = {
-      project ! AsyncEvent(NewScalaNotesEvent(isFull = false, notes))
+      project ! NewScalaNotesEvent(isFull = false, notes)
     }
   }
 
   private val reporter = new PresentationReporter(reportHandler)
 
   protected var scalaCompiler: RichCompilerControl = makeScalaCompiler()
-  protected var initTime: Long = 0
+
+  private var initTime: Long = 0
   private var awaitingInitialCompile = true
   private var allFilesLoaded = false
 
-  protected def bgMessage(msg: String): Unit = {
-    project ! AsyncEvent(SendBackgroundMessageEvent(ProtocolConst.MsgMisc, Some(msg)))
-  }
-
   override def preStart(): Unit = {
-    bgMessage("Initializing Analyzer. Please wait...")
+    project ! SendBackgroundMessageEvent("Initializing Analyzer. Please wait...")
     initTime = System.currentTimeMillis()
 
-    implicit val ec = context.dispatcher
+    import context.dispatcher
 
     Future {
       reporter.disable()
@@ -88,199 +86,169 @@ class Analyzer(
     }
   }
 
-  override def receive = LoggingReceive {
-    case x: Any =>
-      try {
-        process(x)
-      } catch {
-        case e: Exception =>
-          log.error("Error during Analyzer message processing")
-      }
-  }
-
   protected def makeScalaCompiler() = new RichPresentationCompiler(
     config, settings, reporter, self, indexer, search
   )
 
   protected def restartCompiler(keepLoaded: Boolean): Unit = {
+    log.warning("Restarting the Presentation Compiler")
     val files = scalaCompiler.loadedFiles
-    presCompLog.warn("Shut down old PC")
     scalaCompiler.askShutdown()
-    presCompLog.warn("Starting new PC")
     scalaCompiler = makeScalaCompiler()
     if (keepLoaded) {
-      presCompLog.warn("Reloading files")
       scalaCompiler.askReloadFiles(files)
     }
     scalaCompiler.askNotifyWhenReady()
-    project ! AsyncEvent(CompilerRestartedEvent)
-    presCompLog.warn("Started")
+    project ! CompilerRestartedEvent
+
+    context.become(loading)
   }
 
   override def postStop(): Unit = {
-    log.info("Shutting down presentation compiler")
-    scalaCompiler.askClearTypeCache()
-    scalaCompiler.askShutdown()
+    Try(scalaCompiler.askClearTypeCache())
+    Try(scalaCompiler.askShutdown())
   }
 
   def charset: Charset = scalaCompiler.charset
 
-  def process(msg: Any): Unit = {
-    msg match {
-      case ReloadExistingFilesEvent => if (allFilesLoaded) {
-        presCompLog.warn("Skipping reload, in all-files mode")
-      } else {
+  def receive: Receive = loading
+
+  def loading: Receive = LoggingReceive.withLabel("loading") {
+    case FullTypeCheckCompleteEvent =>
+      if (awaitingInitialCompile) {
+        awaitingInitialCompile = false
+        val elapsed = System.currentTimeMillis() - initTime
+        log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
+        reporter.enable()
+        project ! AnalyzerReadyEvent
+      }
+      project ! FullTypeCheckCompleteEvent
+      context.become(ready)
+      unstashAll()
+
+    case other =>
+      stash()
+
+    // sender() ! EnsimeServerError("The Presentation Compiler is busy, please try again later.")
+  }
+
+  def ready: Receive = LoggingReceive.withLabel("ready") {
+    case ReloadExistingFilesEvent if allFilesLoaded =>
+      presCompLog.warn("Skipping reload, in all-files mode")
+    case ReloadExistingFilesEvent =>
+      restartCompiler(keepLoaded = true)
+
+    case RemoveFileReq(file: File) =>
+      scalaCompiler.askRemoveDeleted(file)
+      sender ! VoidResponse
+    case TypecheckAllReq =>
+      allFilesLoaded = true
+      scalaCompiler.askRemoveAllDeleted()
+      scalaCompiler.askReloadAllFiles()
+      scalaCompiler.askNotifyWhenReady()
+      sender ! VoidResponse
+      context.become(loading)
+
+    case UnloadAllReq =>
+      if (config.sourceMode) {
+        log.info("in source mode, will reload all files")
+        scalaCompiler.askRemoveAllDeleted()
         restartCompiler(keepLoaded = true)
+      } else {
+        allFilesLoaded = false
+        restartCompiler(keepLoaded = false)
+      }
+      sender ! VoidResponse
+    case TypecheckFileReq(fileInfo) =>
+      handleReloadFiles(List(fileInfo), async = true)
+      sender ! VoidResponse
+    case TypecheckFilesReq(files) =>
+      handleReloadFiles(files.map(SourceFileInfo(_)), async = false)
+      sender ! VoidResponse
+    case PatchSourceReq(file, edits) =>
+      if (!file.exists()) {
+        sender ! EnsimeServerError(s"File doesn't exist: ${file.getPath}")
+      } else {
+        val f = createSourceFile(file)
+        val revised = PatchSource.applyOperations(f, edits)
+        reporter.disable()
+        scalaCompiler.askReloadFile(revised)
+        sender ! VoidResponse
       }
 
-      case FullTypeCheckCompleteEvent =>
-        if (awaitingInitialCompile) {
-          awaitingInitialCompile = false
-          val elapsed = System.currentTimeMillis() - initTime
-          log.debug("Analyzer ready in " + elapsed / 1000.0 + " seconds.")
-          reporter.enable()
-          project ! AsyncEvent(AnalyzerReadyEvent)
+    case req: PrepareRefactorReq =>
+      handleRefactorPrepareRequest(req)
+    case req: ExecRefactorReq =>
+      handleRefactorExec(req)
+    case req: CancelRefactorReq =>
+      handleRefactorCancel(req)
+    case CompletionsReq(fileInfo, point, maxResults, caseSens, reload) =>
+      val sourcefile = createSourceFile(fileInfo)
+      reporter.disable()
+      val p = new OffsetPosition(sourcefile, point)
+      val info = scalaCompiler.askCompletionsAt(p, maxResults, caseSens)
+      sender ! info
+    case UsesOfSymbolAtPointReq(file, point) =>
+      val p = pos(file, point)
+      sender ! scalaCompiler.askUsesOfSymAtPoint(p).map(ERangePositionHelper.fromRangePosition)
+    case PackageMemberCompletionReq(path: String, prefix: String) =>
+      val members = scalaCompiler.askCompletePackageMember(path, prefix)
+      sender ! members
+    case InspectTypeAtPointReq(file: File, range: OffsetRange) =>
+      val p = pos(file, range)
+      sender ! scalaCompiler.askInspectTypeAt(p)
+    case InspectTypeByIdReq(id: Int) =>
+      sender ! scalaCompiler.askInspectTypeById(id)
+    case InspectTypeByNameReq(name: String) =>
+      sender ! scalaCompiler.askInspectTypeByName(name)
+    case SymbolAtPointReq(file: File, point: Int) =>
+      val p = pos(file, point)
+      sender ! scalaCompiler.askSymbolInfoAt(p)
+    case SymbolByNameReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
+      sender ! scalaCompiler.askSymbolByName(typeFullName, memberName, signatureString)
+
+    case DocUriAtPointReq(file: File, range: OffsetRange) =>
+      val p = pos(file, range)
+      sender() ! scalaCompiler.askDocSignatureAtPoint(p)
+    case DocUriForSymbolReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
+      sender() ! scalaCompiler.askDocSignatureForSymbol(typeFullName, memberName, signatureString)
+
+    case InspectPackageByPathReq(path: String) =>
+      sender ! scalaCompiler.askPackageByPath(path)
+    case TypeAtPointReq(file: File, range: OffsetRange) =>
+      val p = pos(file, range)
+      sender ! scalaCompiler.askTypeInfoAt(p)
+    case TypeByIdReq(id: Int) =>
+      sender ! scalaCompiler.askTypeInfoById(id)
+    case TypeByNameReq(name: String) =>
+      sender ! scalaCompiler.askTypeInfoByName(name)
+    case TypeByNameAtPointReq(name: String, file: File, range: OffsetRange) =>
+      val p = pos(file, range)
+      sender ! scalaCompiler.askTypeInfoByNameAt(name, p)
+    case CallCompletionReq(id: Int) =>
+      sender ! scalaCompiler.askCallCompletionInfoById(id)
+    case SymbolDesignationsReq(f, start, end, tpes) =>
+      if (!FileUtils.isScalaSourceFile(f)) {
+        sender ! SymbolDesignations(f, List.empty)
+      } else {
+        val sf = createSourceFile(f)
+        val clampedEnd = math.max(end, start)
+        val pos = new RangePosition(sf, start, start, clampedEnd)
+        if (tpes.nonEmpty) {
+          val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
+          sender ! syms
+        } else {
+          sender ! SymbolDesignations(file(sf.path), List.empty)
         }
-        project ! AsyncEvent(FullTypeCheckCompleteEvent)
+      }
+    case ExpandSelectionReq(file, start: Int, stop: Int) =>
+      sender ! handleExpandselection(file, start, stop)
+    case FormatSourceReq(files: List[File]) =>
+      handleFormatFiles(files)
+      sender ! VoidResponse
+    case FormatOneSourceReq(fileInfo: SourceFileInfo) =>
+      sender ! handleFormatFile(fileInfo)
 
-      case rpcReq: RpcRequest =>
-        try {
-          if (awaitingInitialCompile) {
-            sender ! RPCError(ErrAnalyzerNotReady, "Analyzer is not ready! Please wait.")
-          } else {
-            reporter.enable()
-
-            rpcReq match {
-              case RemoveFileReq(file: File) =>
-                scalaCompiler.askRemoveDeleted(file)
-                sender ! VoidResponse
-              case TypecheckAllReq =>
-                allFilesLoaded = true
-                scalaCompiler.askRemoveAllDeleted()
-                scalaCompiler.askReloadAllFiles()
-                scalaCompiler.askNotifyWhenReady()
-                sender ! VoidResponse
-              case UnloadAllReq =>
-                if (config.sourceMode) {
-                  log.info("in source mode, will reload all files")
-                  scalaCompiler.askRemoveAllDeleted()
-                  restartCompiler(keepLoaded = true)
-                } else {
-                  allFilesLoaded = false
-                  restartCompiler(keepLoaded = false)
-                }
-                sender ! VoidResponse
-              case TypecheckFileReq(fileInfo) =>
-                handleReloadFiles(List(fileInfo), async = true)
-                sender ! VoidResponse
-              case TypecheckFilesReq(files) =>
-                handleReloadFiles(files.map(SourceFileInfo(_)), async = false)
-                sender ! VoidResponse
-              case PatchSourceReq(file, edits) =>
-                if (!file.exists()) {
-                  sender ! RPCError(ErrFileDoesNotExist, file.getPath)
-                } else {
-                  val f = createSourceFile(file)
-                  val revised = PatchSource.applyOperations(f, edits)
-                  reporter.disable()
-                  scalaCompiler.askReloadFile(revised)
-                  sender ! VoidResponse
-                }
-
-              case req: PrepareRefactorReq =>
-                handleRefactorPrepareRequest(req)
-              case req: ExecRefactorReq =>
-                handleRefactorExec(req)
-              case req: CancelRefactorReq =>
-                handleRefactorCancel(req)
-              case CompletionsReq(fileInfo, point, maxResults, caseSens, reload) =>
-                val sourcefile = createSourceFile(fileInfo)
-                reporter.disable()
-                val p = new OffsetPosition(sourcefile, point)
-                val info = scalaCompiler.askCompletionsAt(p, maxResults, caseSens)
-                sender ! info
-              case UsesOfSymbolAtPointReq(file, point) =>
-                val p = pos(file, point)
-                sender ! scalaCompiler.askUsesOfSymAtPoint(p).map(ERangePositionHelper.fromRangePosition)
-              case PackageMemberCompletionReq(path: String, prefix: String) =>
-                val members = scalaCompiler.askCompletePackageMember(path, prefix)
-                sender ! members
-              case InspectTypeAtPointReq(file: File, range: OffsetRange) =>
-                val p = pos(file, range)
-                sender ! scalaCompiler.askInspectTypeAt(p)
-              case InspectTypeByIdReq(id: Int) =>
-                sender ! scalaCompiler.askInspectTypeById(id)
-              case InspectTypeByNameReq(name: String) =>
-                sender ! scalaCompiler.askInspectTypeByName(name)
-              case SymbolAtPointReq(file: File, point: Int) =>
-                val p = pos(file, point)
-                sender ! scalaCompiler.askSymbolInfoAt(p)
-              case SymbolByNameReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
-                sender ! scalaCompiler.askSymbolByName(typeFullName, memberName, signatureString)
-              case DocUriAtPointReq(file: File, range: OffsetRange) =>
-                val p = pos(file, range)
-                sender ! scalaCompiler.askDocSignatureAtPoint(p)
-              case DocUriForSymbolReq(typeFullName: String, memberName: Option[String], signatureString: Option[String]) =>
-                sender ! scalaCompiler.askDocSignatureForSymbol(typeFullName, memberName, signatureString)
-              case InspectPackageByPathReq(path: String) =>
-                sender ! scalaCompiler.askPackageByPath(path)
-              case TypeAtPointReq(file: File, range: OffsetRange) =>
-                val p = pos(file, range)
-                sender ! scalaCompiler.askTypeInfoAt(p)
-              case TypeByIdReq(id: Int) =>
-                sender ! scalaCompiler.askTypeInfoById(id)
-              case TypeByNameReq(name: String) =>
-                sender ! scalaCompiler.askTypeInfoByName(name)
-              case TypeByNameAtPointReq(name: String, file: File, range: OffsetRange) =>
-                val p = pos(file, range)
-                sender ! scalaCompiler.askTypeInfoByNameAt(name, p)
-              case CallCompletionReq(id: Int) =>
-                sender ! scalaCompiler.askCallCompletionInfoById(id)
-              case SymbolDesignationsReq(f, start, end, tpes) =>
-                if (!FileUtils.isScalaSourceFile(f)) {
-                  sender ! SymbolDesignations(f, List.empty)
-                } else {
-                  val sf = createSourceFile(f)
-                  val clampedEnd = math.max(end, start)
-                  val pos = new RangePosition(sf, start, start, clampedEnd)
-                  if (tpes.nonEmpty) {
-                    val syms = scalaCompiler.askSymbolDesignationsInRegion(pos, tpes)
-                    sender ! syms
-                  } else {
-                    sender ! SymbolDesignations(file(sf.path), List.empty)
-                  }
-                }
-              case ExpandSelectionReq(file, start: Int, stop: Int) =>
-                sender ! handleExpandselection(file, start, stop)
-              case FormatSourceReq(files: List[File]) =>
-                handleFormatFiles(files)
-                sender ! VoidResponse
-              case FormatOneSourceReq(fileInfo: SourceFileInfo) =>
-                sender ! handleFormatFile(fileInfo)
-
-              case unexpected =>
-                // TODO compiler blew up... too many missing cases
-                require(requirement = false, unexpected.toString)
-            }
-          }
-        } catch {
-          case e: Throwable =>
-            log.error(e, "Error handling RPC: " + e)
-            sender ! RPCError(ErrExceptionInAnalyzer, "Error occurred in Analyzer. Check the server log.")
-        }
-
-      case DoExecUndo(undo) =>
-        try {
-          sender ! handleExecUndo(undo)
-        } catch {
-          case e: Throwable =>
-            log.error(e, "Error handling RPC: " + e)
-            sender ! RPCError(ErrExceptionInAnalyzer, "Error occurred in Analyzer. Check the server log.")
-        }
-
-      case other =>
-        log.error("Unknown message type: " + other)
-    }
   }
 
   def handleReloadFiles(files: List[SourceFileInfo], async: Boolean): Unit = {
@@ -298,6 +266,8 @@ class Analyzer(
       scalaCompiler.askNotifyWhenReady()
       if (!async)
         sourceFiles.foreach(scalaCompiler.askLoadedTyped)
+
+      context.become(loading)
     }
   }
 

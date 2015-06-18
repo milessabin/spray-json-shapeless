@@ -1,8 +1,9 @@
 package org.ensime.fixture
 
-import akka.actor.ActorSystem
-import akka.testkit.{ ImplicitSender, TestKit }
 import org.scalatest._
+
+import akka.actor.ActorSystem
+import akka.testkit._
 
 /**
  * Normally a TestKit will reuse the same actor system for all tests
@@ -20,42 +21,41 @@ trait TestKitFixture {
     "IsolatedActorSystems are incompatible with TestKit. Instead, 'import sys._'"
   )
 
-  def withTestKit(testCode: TestKitFix => Any)(implicit actorSystem: ActorSystem): Any
+  def withTestKit(testCode: TestKitFix => Any): Any
 }
 
-class TestKitFix(actorSystem: ActorSystem) extends TestKit(actorSystem) with ImplicitSender
-object TestKitFix {
-
-  def apply(actorSystem: ActorSystem) = {
-    new TestKitFix(actorSystem)
-  }
-}
+class TestKitFix extends TestKit(ActorSystem()) with ImplicitSender
 
 trait IsolatedTestKitFixture extends TestKitFixture {
-
-  override def withTestKit(testCode: TestKitFix => Any)(implicit actorSystem: ActorSystem): Any = {
-    testCode(TestKitFix(actorSystem))
+  override def withTestKit(testCode: TestKitFix => Any): Any = {
+    val sys = new TestKitFix
+    try {
+      testCode(sys)
+    } finally {
+      sys.system.shutdown()
+      sys.system.awaitTermination()
+    }
   }
 }
 
 // this seems redundant, because it mimics "extends TestKit" behaviour,
 // but it allows for easy swapping with the refreshing implementation
 trait SharedTestKitFixture extends TestKitFixture with BeforeAndAfterAll {
+  this: Suite =>
 
-  this: Suite with SharedActorSystemFixture =>
-
-  private[fixture] var _testkit: TestKitFix = _
+  var _testkit: TestKitFix = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    _testkit = TestKitFix(_actorSystem)
+    _testkit = new TestKitFix
   }
 
   override def afterAll(): Unit = {
     super.afterAll()
+    _testkit.system.shutdown()
+    _testkit.system.awaitTermination()
   }
 
-  def withTestKit(testCode: TestKitFix => Any)(implicit actorSystem: ActorSystem): Any = {
-    testCode(_testkit)
-  }
+  override def withTestKit(testCode: TestKitFix => Any): Any = testCode(_testkit)
+
 }

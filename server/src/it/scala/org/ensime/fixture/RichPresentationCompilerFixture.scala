@@ -52,7 +52,6 @@ object RichPresentationCompilerFixture {
 trait IsolatedRichPresentationCompilerFixture
     extends RichPresentationCompilerFixture
     with IsolatedEnsimeVFSFixture
-    with IsolatedActorSystemFixture
     with IsolatedTestKitFixture
     with IsolatedSearchServiceFixture {
 
@@ -60,16 +59,15 @@ trait IsolatedRichPresentationCompilerFixture
     testCode: (TestKitFix, EnsimeConfig, RichPresentationCompiler) => Any
   ): Any = {
     withVFS { implicit vfs =>
-      withActorSystem { implicit actorSystem =>
-        withTestKit { testkit =>
-          withSearchService { (config, search) =>
-            import org.ensime.fixture.RichPresentationCompilerFixture._
-            val pc = create(config, search)
-            try {
-              testCode(testkit, config, pc)
-            } finally {
-              pc.askShutdown()
-            }
+      withTestKit { testkit =>
+        import testkit._
+        withSearchService { (config, search) =>
+          import org.ensime.fixture.RichPresentationCompilerFixture._
+          val pc = create(config, search)
+          try {
+            testCode(testkit, config, pc)
+          } finally {
+            pc.askShutdown()
           }
         }
       }
@@ -80,7 +78,6 @@ trait IsolatedRichPresentationCompilerFixture
 
 trait SharedRichPresentationCompilerFixture
     extends RichPresentationCompilerFixture
-    with SharedActorSystemFixture
     with SharedTestKitFixture
     with SharedSearchServiceFixture {
 
@@ -89,6 +86,7 @@ trait SharedRichPresentationCompilerFixture
   override def beforeAll(): Unit = {
     super.beforeAll()
     import org.ensime.fixture.RichPresentationCompilerFixture._
+    implicit val system = _testkit.system
     pc = create(_config, _search)
   }
 

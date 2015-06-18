@@ -16,6 +16,8 @@ class EnsimeConfigSpec extends FunSpec with Matchers {
     testFn(EnsimeConfigProtocol.parse(contents))
   }
 
+  def withCanonTempDir[A](a: File => A) = withTempDirectory { dir => a(dir.canon) }
+
   describe("ProjectConfigSpec") {
 
     it("should parse a simple config") {

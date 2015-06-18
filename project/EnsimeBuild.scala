@@ -223,6 +223,8 @@ object EnsimeBuild extends Build with JdkResolver {
       "com.h2database" % "h2" % "1.4.187",
       "com.typesafe.slick" %% "slick" % "2.1.0",
       "com.jolbox" % "bonecp" % "0.8.0.RELEASE",
+      // bonecp has an old version of guava
+      "com.google.guava" % "guava" % "18.0",
       "org.apache.commons" % "commons-vfs2" % "2.0" intransitive(),
       // lucene 4.8+ needs Java 7: http://www.gossamer-threads.com/lists/lucene/general/225300
       "org.apache.lucene" % "lucene-core" % "4.7.2",
@@ -233,6 +235,8 @@ object EnsimeBuild extends Build with JdkResolver {
       "org.scala-lang" % "scalap" % scalaVersion.value,
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
+      // refactoring has an old version of scala-xml
+      "org.scala-lang.modules" %% "scala-xml" % "1.0.4",
       "commons-lang" % "commons-lang" % "2.6",
       "io.spray" %% "spray-can" % "1.3.3"
     ) ++ testLibs(scalaVersion.value, "it,test")
