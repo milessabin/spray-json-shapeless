@@ -14,6 +14,7 @@ import org.ensime.Protocol
 import org.ensime.api._
 import org.ensime.config._
 import org.ensime.core._
+import org.ensime.jerk.JerkProtocol
 import org.ensime.server.protocol._
 import org.ensime.server.protocol.swank._
 import org.ensime.sexp.Sexp
@@ -50,7 +51,13 @@ object Server {
         throw e
     }
 
-    new Server("127.0.0.1", 0).start()
+    val protocol: Protocol = propOrElse("ensime.protocol", "swank") match {
+      case "swank" => new SwankProtocol
+      case "jerk" => new JerkProtocol
+      case other => throw new IllegalArgumentException(s"$other is not a valid ENSIME protocol")
+    }
+
+    new Server(protocol, "127.0.0.1", 0).start()
   }
 
 }
@@ -63,6 +70,7 @@ object Server {
  * It's crying out to be rewritten with akka.io.
  */
 class Server(
+    protocol: Protocol,
     host: String,
     requestedPort: Int
 )(
@@ -91,7 +99,7 @@ class Server(
         try while (!hasShutdownFlag.get()) {
           try {
             val socket = listener.accept()
-            system.actorOf(SocketHandler(socket))
+            system.actorOf(SocketHandler(protocol, socket))
           } catch {
             case e: Exception =>
               if (!hasShutdownFlag.get())
@@ -143,12 +151,11 @@ class Server(
  * This actor is spawned when a client connects to a Socket.
  */
 class SocketHandler(
+    protocol: Protocol,
     socket: Socket,
     implicit val config: EnsimeConfig
 ) extends Actor with ActorLogging {
   import context.system
-
-  private val protocol: Protocol = new SwankProtocol
 
   private var project: ActorRef = _
   private var docs: ActorRef = _
@@ -203,8 +210,11 @@ class SocketHandler(
   }
 }
 object SocketHandler {
-  def apply(socket: Socket)(implicit config: EnsimeConfig): Props =
-    Props(classOf[SocketHandler], socket, config)
+  def apply(
+    protocol: Protocol,
+    socket: Socket
+  )(implicit config: EnsimeConfig): Props =
+    Props(classOf[SocketHandler], protocol, socket, config)
 }
 
 /**

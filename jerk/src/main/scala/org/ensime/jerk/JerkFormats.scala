@@ -35,14 +35,18 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
   // some of the case classes use the keyword `type`, so we need a better default
   override implicit def coproductHint[T: Typeable]: CoproductHint[T] = new FlatCoproductHint[T]("typehint")
 
-  val RpcRequestFormat = JsonFormat[RpcRequest]
+  val RpcRequestEnvelopeFormat = JsonFormat[RpcRequestEnvelope]
 
   // FIXME: introduce a family tree that means we don't have to have
   // so many specific converters. e.g. a single sealed family in and
   // and single sealed family out
+  val RpcErrorFormat = JsonFormat[RpcError]
   val EnsimeEventFormat = RootJsonFormat[EnsimeEvent]
 
   // everything below this line is crap, slowing down the compile
+  val ConnectionInfoFormat = RootJsonFormat[ConnectionInfo]
+  val NamedTypeMemberInfoFormat = RootJsonFormat[NamedTypeMemberInfo]
+  val TypeInfoFormat = RootJsonFormat[TypeInfo]
   val SourcePositionFormat = RootJsonFormat[SourcePosition]
   val DebugLocationFormat = RootJsonFormat[DebugLocation]
   val DebugValueFormat = RootJsonFormat[DebugValue]
@@ -75,10 +79,14 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
 
 // Isolated just to help me see exactly what is needed
 object JerkEndpoints {
-  implicit val RpcRequestFormat = JerkFormats.RpcRequestFormat
+  implicit val RpcRequestEnvelopeFormat = JerkFormats.RpcRequestEnvelopeFormat
 
+  implicit val RpcErrorFormat = JerkFormats.RpcErrorFormat
   implicit val EnsimeEventFormat = JerkFormats.EnsimeEventFormat
   // *sigh*
+  implicit val ConnectionInfoFormat = JerkFormats.ConnectionInfoFormat
+  implicit val NamedTypeMemberInfoFormat = JerkFormats.NamedTypeMemberInfoFormat
+  implicit val TypeInfoFormat = JerkFormats.TypeInfoFormat
   implicit val SourcePositionFormat = JerkFormats.SourcePositionFormat
   implicit val DebugLocationFormat = JerkFormats.DebugLocationFormat
   implicit val DebugValueFormat = JerkFormats.DebugValueFormat
@@ -106,4 +114,50 @@ object JerkEndpoints {
   implicit val RefactorFailureFormat = JerkFormats.RefactorFailureFormat
   implicit val RefactorEffectFormat = JerkFormats.RefactorEffectFormat
   implicit val RefactorResultFormat = JerkFormats.RefactorResultFormat
+
+  import JerkFormats.BooleanJsonFormat
+  import JerkFormats.StringJsonFormat
+
+  // WORKAROUND not having a sealed family for RPC responses
+  def unhappyFamily(msg: Any): JsValue = msg match {
+    case b: Boolean => b.toJson
+    case s: String => s.toJson
+
+    case VoidResponse => false.toJson
+
+    case value: ConnectionInfo => value.toJson
+    case value: NamedTypeMemberInfo => value.toJson
+    case value: TypeInfo => value.toJson
+    case value: EntityInfo => value.toJson
+    case value: SymbolSearchResult => value.toJson
+    case value: DebugVmStatus => value.toJson
+
+    case value: SourcePosition => value.toJson
+    case value: DebugLocation => value.toJson
+    case value: DebugValue => value.toJson
+    case value: DebugClassField => value.toJson
+    case value: DebugStackLocal => value.toJson
+    case value: DebugStackFrame => value.toJson
+    case value: DebugBacktrace => value.toJson
+    case value: Breakpoint => value.toJson
+    case value: BreakpointList => value.toJson
+    case value: Note => value.toJson
+    case value: CompletionInfo => value.toJson
+    case value: CompletionInfoList => value.toJson
+    case value: SymbolInfo => value.toJson
+    case value: CallCompletionInfo => value.toJson
+    case value: InterfaceInfo => value.toJson
+    case value: TypeInspectInfo => value.toJson
+    case value: SymbolSearchResults => value.toJson
+    case value: ImportSuggestions => value.toJson
+    case value: ERangePosition => value.toJson
+    case value: FileRange => value.toJson
+    case value: SymbolDesignations => value.toJson
+    case value: RefactorFailure => value.toJson
+    case value: RefactorEffect => value.toJson
+    case value: RefactorResult => value.toJson
+
+    case _ => throw new IllegalArgumentException(s"$msg is not a valid JERK response")
+  }
+
 }

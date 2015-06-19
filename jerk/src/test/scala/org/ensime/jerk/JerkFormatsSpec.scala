@@ -13,6 +13,18 @@ class JerkFormatsSpec extends FlatSpec with Matchers
     with SprayJsonTestSupport with EnsimeTestData {
   import JerkEndpoints._
 
+  // workaround the fact that we have tests on the contents of the
+  // envelope, but marshallers at the higher level (really the tests
+  // should be updated).
+  def roundtrip(
+    value: RpcRequest,
+    via: String
+  ): Unit = {
+    val json = RpcRequestEnvelope(value, 999).toJson.asJsObject
+    json.fields("req").compactPrint shouldBe via
+    json.convertTo[RpcRequestEnvelope].req shouldBe value
+  }
+
   "Jerk Formats" should "roundtrip inbound messages" in {
     roundtrip(
       ConnectionInfoReq: RpcRequest,
