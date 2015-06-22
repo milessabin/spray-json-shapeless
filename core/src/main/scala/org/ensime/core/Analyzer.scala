@@ -152,10 +152,19 @@ class Analyzer(
   }
 
   def ready: Receive = LoggingReceive.withLabel("ready") {
+    // TODO: we should use a custom queue to de-dupe requests that
+    //       restart the compiler
     case ReloadExistingFilesEvent if allFilesLoaded =>
       presCompLog.warn("Skipping reload, in all-files mode")
     case ReloadExistingFilesEvent =>
       restartCompiler(keepLoaded = true)
+
+    // TODO: we should expand the "become loading" logic to cover all
+    //       cases where the pres compiler is busy, to avoid blocking
+    //       (requires a lot of thought). i.e. we should *never*
+    //       receive this message when in this state.
+    case FullTypeCheckCompleteEvent =>
+      project ! FullTypeCheckCompleteEvent
 
     case RemoveFileReq(file: File) =>
       scalaCompiler.askRemoveDeleted(file)
@@ -275,8 +284,6 @@ class Analyzer(
       scalaCompiler.askNotifyWhenReady()
       if (!async)
         sourceFiles.foreach(scalaCompiler.askLoadedTyped)
-
-      context.become(loading)
     }
   }
 
