@@ -99,7 +99,7 @@ object EnsimeBuild extends Build with JdkResolver {
   ////////////////////////////////////////////////
   // common dependencies
   lazy val pimpathon = "com.github.stacycurl" %% "pimpathon-core" % "1.5.0"
-  lazy val shapeless = "com.chuusai" %% "shapeless" % "2.2.2"
+  lazy val shapeless = "com.chuusai" %% "shapeless" % "2.2.3"
   lazy val logback = Seq(
     "ch.qos.logback" % "logback-classic" % "1.1.3",
     "org.slf4j" % "jul-to-slf4j" % "1.7.12",
