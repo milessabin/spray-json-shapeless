@@ -483,8 +483,11 @@ object SwankProtocolResponse {
 
   // WORKAROUND not having a sealed family for RPC responses
   def unhappyFamily(msg: Any): Sexp = msg match {
+    // we need an Ensime wrapper for these primitive response types
     case b: Boolean => b.toSexp
     case s: String => s.toSexp
+    case list: List[_] if list.forall(_.isInstanceOf[ERangePosition]) =>
+      list.asInstanceOf[List[ERangePosition]].toSexp
 
     case VoidResponse => false.toSexp
 

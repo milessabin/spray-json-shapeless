@@ -74,6 +74,7 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
   val RefactorFailureFormat = RootJsonFormat[RefactorFailure]
   val RefactorEffectFormat = RootJsonFormat[RefactorEffect]
   val RefactorResultFormat = RootJsonFormat[RefactorResult]
+  val ListERangePositionFormat = RootJsonFormat[List[ERangePosition]]
 
 }
 
@@ -114,17 +115,20 @@ object JerkEndpoints {
   implicit val RefactorFailureFormat = JerkFormats.RefactorFailureFormat
   implicit val RefactorEffectFormat = JerkFormats.RefactorEffectFormat
   implicit val RefactorResultFormat = JerkFormats.RefactorResultFormat
+  implicit val ListERangePositionFormat = JerkFormats.ListERangePositionFormat
 
   import JerkFormats.BooleanJsonFormat
   import JerkFormats.StringJsonFormat
 
   // WORKAROUND not having a sealed family for RPC responses
   def unhappyFamily(msg: Any): JsValue = msg match {
+    // we need an Ensime wrapper for these primitive response types
     case b: Boolean => b.toJson
     case s: String => s.toJson
+    case list: List[_] if list.forall(_.isInstanceOf[ERangePosition]) =>
+      list.asInstanceOf[List[ERangePosition]].toJson
 
     case VoidResponse => false.toJson
-
     case value: ConnectionInfo => value.toJson
     case value: NamedTypeMemberInfo => value.toJson
     case value: TypeInfo => value.toJson
