@@ -13,30 +13,22 @@ class JerkFormatsSpec extends FlatSpec with Matchers
     with SprayJsonTestSupport with EnsimeTestData {
   import JerkEndpoints._
 
+  // workaround the fact that we have tests on the contents of the
+  // envelope, but marshallers at the higher level (really the tests
+  // should be updated).
+  def roundtrip(
+    value: RpcRequest,
+    via: String
+  ): Unit = {
+    val json = RpcRequestEnvelope(value, 999).toJson.asJsObject
+    json.fields("req").compactPrint shouldBe via
+    json.convertTo[RpcRequestEnvelope].req shouldBe value
+  }
+
   "Jerk Formats" should "roundtrip inbound messages" in {
     roundtrip(
       ConnectionInfoReq: RpcRequest,
       """{"typehint":"ConnectionInfoReq"}"""
-    )
-
-    roundtrip(
-      InitProjectReq: RpcRequest,
-      """{"typehint":"InitProjectReq"}"""
-    )
-
-    roundtrip(
-      PeekUndoReq: RpcRequest,
-      """{"typehint":"PeekUndoReq"}"""
-    )
-
-    roundtrip(
-      ExecUndoReq(13): RpcRequest,
-      """{"typehint":"ExecUndoReq","id":13}"""
-    )
-
-    roundtrip(
-      ReplConfigReq: RpcRequest,
-      """{"typehint":"ReplConfigReq"}"""
     )
 
     roundtrip(
@@ -52,15 +44,6 @@ class JerkFormatsSpec extends FlatSpec with Matchers
     roundtrip(
       TypecheckFilesReq(List(file1, file2)): RpcRequest,
       """{"typehint":"TypecheckFilesReq","files":["/abc/def","/test/test"]}"""
-    )
-
-    roundtrip(
-      PatchSourceReq(file1, List(
-        PatchInsert(1, "foo"),
-        PatchDelete(1, 10),
-        PatchReplace(10, 20, "bar")
-      )): RpcRequest,
-      """{"typehint":"PatchSourceReq","file":"/abc/def","edits":[{"typehint":"PatchInsert","start":1,"text":"foo"},{"typehint":"PatchDelete","start":1,"end":10},{"typehint":"PatchReplace","start":10,"end":20,"text":"bar"}]}"""
     )
 
     roundtrip(
@@ -291,22 +274,12 @@ class JerkFormatsSpec extends FlatSpec with Matchers
       """{"typehint":"DebugBacktraceReq","threadId":13,"index":100,"count":200}"""
     )
 
-    roundtrip(
-      ShutdownServerReq: RpcRequest,
-      """{"typehint":"ShutdownServerReq"}"""
-    )
-
   }
 
   it should "roundtrip EnsimeGeneralEvent as EnsimeEvent" in {
     roundtrip(
-      SendBackgroundMessageEvent(1, Some("ABCDEF")): EnsimeEvent,
-      """{"typehint":"SendBackgroundMessageEvent","code":1,"detail":"ABCDEF"}"""
-    )
-
-    roundtrip(
-      SendBackgroundMessageEvent(1, None): EnsimeEvent,
-      """{"typehint":"SendBackgroundMessageEvent","code":1}"""
+      SendBackgroundMessageEvent("ABCDEF", 1): EnsimeEvent,
+      """{"typehint":"SendBackgroundMessageEvent","detail":"ABCDEF","code":1}"""
     )
 
     roundtrip(
@@ -610,18 +583,5 @@ class JerkFormatsSpec extends FlatSpec with Matchers
       """{"procedureId":7,"refactorType":{"typehint":"AddImport"},"touchedFiles":["/foo/abc","/abc/def"],"status":"success"}"""
     )
 
-    roundtrip(
-      Undo(3, "Undoing stuff", List(
-        TextEdit(file3, 5, 7, "aaa"),
-        NewFile(file4, "xxxxx"),
-        DeleteFile(file5, "zzzz")
-      )): Undo,
-      """{"id":3,"summary":"Undoing stuff","changes":[{"text":"aaa","typehint":"TextEdit","to":7,"from":5,"file":"/foo/abc"},{"text":"xxxxx","typehint":"NewFile","to":4,"from":0,"file":"/foo/def"},{"text":"zzzz","typehint":"DeleteFile","to":3,"from":0,"file":"/foo/hij"}]}"""
-    )
-
-    roundtrip(
-      UndoResult(7, List(file3, file4)): UndoResult,
-      """{"id":7,"touchedFiles":["/foo/abc","/foo/def"]}"""
-    )
   }
 }

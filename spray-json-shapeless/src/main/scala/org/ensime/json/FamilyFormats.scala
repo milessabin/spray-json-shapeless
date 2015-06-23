@@ -260,8 +260,6 @@ private[json] trait LowPriorityFamilyFormats
     gen: LabelledGeneric.Aux[T, Repr],
     sg: Lazy[WrappedRootJsonFormat[T, Repr]],
     tpe: Typeable[T],
-    th: CoproductHint[T],
-    ph: ProductHint[T],
     not: NoExistingJsonFormat[T]
   ): RootJsonFormat[T] = new RootJsonFormat[T] {
     if (log.isTraceEnabled)

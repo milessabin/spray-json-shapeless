@@ -66,10 +66,6 @@ trait EnsimeTestData {
 
   val debugBacktrace = DebugBacktrace(List(debugStackFrame), DebugThreadId(17), "thread1")
 
-  val undoResult = UndoResult(7, List(file3, file4))
-
-  val replConfig = new ReplConfig(Set(file1))
-
   val analyzerFile = file("Analyzer.scala").canon
   val fooFile = file("Foo.scala").canon
 

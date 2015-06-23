@@ -7,9 +7,12 @@ import org.ensime.util._
 
 import pimpathon.file._
 
-import UnitTestUtils._
-
 object SwankTestData extends EnsimeTestData {
+
+  def stringToWireString(s: String): String =
+    "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+  def fileToWireString(file: File): String = stringToWireString(file.canon.getAbsolutePath)
 
   val typeInfoStr = """(:arrow-type nil :name "type1" :type-id 7 :decl-as method :full-name "FOO.type1" :type-args nil :members nil :pos nil :outer-type-id 8)"""
 
@@ -43,17 +46,13 @@ object SwankTestData extends EnsimeTestData {
   val file4_str = fileToWireString(file4)
   val file5_str = fileToWireString(file5)
 
-  val refactorEffectStr = """(:procedure-id 9 :refactor-type addImport :changes ((:type edit :file """ + file3_str + """ :from 5 :to 7 :text "aaa")) :status success)"""
-
-  val refactorResultStr = s"""(:procedure-id 7 :refactor-type addImport :touched-files ($file3_str $file1_str) :status success)"""
-
-  val breakpointListStr = """(:active ((:file """ + file1_str + """ :line 57)) :pending ((:file """ + file1_str + """ :line 59)))"""
+  val breakpointListStr = s"""(:active ((:file $file1_str :line 57)) :pending ((:file $file1_str :line 59)))"""
 
   val debugBacktraceStr = s"""(:frames ((:index 7 :locals ((:index 3 :name "name1" :summary "summary1" :type-name "type1") (:index 4 :name "name2" :summary "summary2" :type-name "type2")) :num-args 4 :class-name "class1" :method-name "method1" :pc-location (:file $file1_str :line 57) :this-object-id "7")) :thread-id "17" :thread-name "thread1")"""
 
-  val undoResultStr = """(:id 7 :touched-files (""" + file3_str + """ """ + file4_str + """))"""
+  val undoResultStr = """(:id 7 :touched-files ($file3_str $file4_str))"""
 
-  val replConfigStr = """(:classpath (""" + file1_str + """))"""
+  val replConfigStr = """(:classpath ($file1_str))"""
 
   val abd_str = fileToWireString(abd)
 

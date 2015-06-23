@@ -12,7 +12,7 @@ trait SprayJsonTestSupport {
 
     via match {
       case None =>
-        println(s"check and add the following assertion: $value = ${json.compactPrint}")
+        println(s"check and add the following assertion: $value = $string")
       case Some(expected) => string shouldBe expected
     }
 

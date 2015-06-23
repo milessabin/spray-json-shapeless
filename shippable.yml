@@ -37,6 +37,7 @@ script:
 env:
   global:
     - SCALA_VERSION=2.11.6
+    - AKKA_TEST_TIMEFACTOR=10
     - EMACS=/opt/emacs-24.1/bin/emacs
     - COVERALLS_REPO_TOKEN=ZvySxEAk6j3KcqFbOqYnpgFL5payQgVUM
     - secure: D0PkMs0QVG1pcjwL+g5gMBUHnWr7Eg3FCUH9t5b3FNZKyXwjH8B1diJYcOQoL7eIDHp3MSrh+kGhsHS1Y1g0mO95Bus/VGTotjfCs8UZbh2mUR0zNytD13breWRTZoWpLwb+/EcZA1u1CazqPVg5Djuo3+M+7LAdbaWYd1axp2nJVYyQX9VVOVoE4qBH6QN8vdcxoTMCkIixhD2Sa7htTeWkeav6faGXNJN0aIEXJmdDUMr3Jel3kL2a6v9aHuofQ+ZutmCMopR/8JcexwEYqizFDmj3iRDcUpPNda/Chnc7CntEQ2/pwD+x0FTTr3NFfp3imf8rsfmRnMC/hb8xcA==
