@@ -18,8 +18,8 @@ class JerkProtocol extends Protocol {
     readJson(input).convertTo[RpcRequestEnvelope]
 
   override def write(resp: RpcResponse, output: OutputStream): Unit = {
-    val json = unhappyFamily(resp)
-    writeJson(json, output)
+    val json = unhappyFamily(resp.msg)
+    writeJson(JsObject("msg" -> json, "callId" -> JsNumber(resp.callId)), output)
   }
 
   override def write(event: EnsimeEvent, output: OutputStream): Unit =
