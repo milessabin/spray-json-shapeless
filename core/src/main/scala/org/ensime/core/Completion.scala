@@ -231,7 +231,61 @@ trait CompletionControl {
     }
 
     val typeSearchResults = typeSearch.flatMap(Await.result(_, Duration.Inf))
-    buff.toList ++ typeSearchResults.getOrElse(Nil)
+
+    val keywords = Seq(
+      "abstract",
+      "case",
+      "catch",
+      "class",
+      "def",
+      "do",
+      "else",
+      "extends",
+      "false",
+      "final",
+      "finally",
+      "for",
+      "forSome",
+      "if",
+      "implicit",
+      "import",
+      "lazy",
+      "match",
+      "new",
+      "null",
+      "object",
+      "override",
+      "package",
+      "private",
+      "protected",
+      "return",
+      "sealed",
+      "super",
+      "this",
+      "throw",
+      "trait",
+      "try",
+      "true",
+      "type",
+      "val",
+      "var",
+      "while",
+      "with",
+      "yield",
+      "implicit",
+      "case",
+      "match",
+      "requires"
+    )
+
+    val keywordCompletions = if (context.prefix.size > 0) {
+      keywords.filter(_.startsWith(context.prefix)) map { keyword =>
+        CompletionInfo(keyword, CompletionSignature(List(), ""), -1, false, 100, None)
+      }
+    } else Seq()
+
+    buff.toList ++ typeSearchResults.getOrElse(Nil) ++ keywordCompletions
+
   }
 
 }
