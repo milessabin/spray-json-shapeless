@@ -166,6 +166,18 @@ class Analyzer(
     case FullTypeCheckCompleteEvent =>
       project ! FullTypeCheckCompleteEvent
 
+    case req: RpcAnalyserRequest =>
+      // fommil: I'm not entirely sure about the logic of
+      // enabling/disabling the reporter so I am reluctant to refactor
+      // this, but it would perhaps be simpler if we enable the
+      // reporter when the presentation compiler is loaded, and only
+      // disable it when we explicitly want it to be quiet, instead of
+      // enabling on every incoming message.
+      reporter.enable()
+      allTheThings(req)
+  }
+
+  def allTheThings: PartialFunction[RpcAnalyserRequest, Unit] = {
     case RemoveFileReq(file: File) =>
       scalaCompiler.askRemoveDeleted(file)
       sender ! VoidResponse
