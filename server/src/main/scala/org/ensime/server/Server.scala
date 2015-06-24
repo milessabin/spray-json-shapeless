@@ -172,7 +172,7 @@ class SocketHandler(
     out = socket.getOutputStream.buffered
 
     loop = new Thread {
-      override def run(): Unit = while (true) try {
+      override def run(): Unit = while (!socket.isClosed()) try {
         val envelope = protocol.read(in)
         context.actorOf(RequestHandler(envelope, project, self, docs), s"${envelope.callId}")
       } catch {
@@ -196,8 +196,11 @@ class SocketHandler(
     Try(loop.interrupt())
   }
 
-  def receive = {
+  def receive: Receive = rpcResponses orElse LoggingReceive {
     case outgoing: EnsimeEvent => protocol.write(outgoing, out)
+  }
+
+  def rpcResponses: Receive = {
     case outgoing: RpcError => protocol.write(outgoing, out)
     case outgoing: RpcResponse =>
       try {
@@ -208,6 +211,7 @@ class SocketHandler(
           protocol.write(RpcError(outgoing.callId, "Server error"), out)
       }
   }
+
 }
 object SocketHandler {
   def apply(
