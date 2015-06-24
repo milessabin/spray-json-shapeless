@@ -96,11 +96,7 @@ class DebugTest extends WordSpec with Matchers with Inside
               project ! DebugContinueReq(DebugThreadId(1))
               expectMsg(true)
 
-              asyncHelper.receiveN(3) should contain only (
-                DebugOutputEvent("in mainTest"),
-                DebugOutputEvent("\n"),
-                DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11)
-              )
+              asyncHelper.expectMsg(DebugBreakEvent(DebugThreadId(1), "main", breakpointsFile, 11))
 
               //              session.resumetoSuspension()
               //              session.checkStackFrame(BP_TYPENAME, "simple1()V", 13)

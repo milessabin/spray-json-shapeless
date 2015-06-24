@@ -13,7 +13,6 @@ import scala.collection.immutable.ListMap
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-// MISNOMER: should really be ProjectFixture
 object ProjectFixture extends Matchers {
   private[fixture] def startup(
     implicit
@@ -31,6 +30,7 @@ object ProjectFixture extends Matchers {
     probe.ignoreMsg {
       // these are too noisy for tests
       case e: SendBackgroundMessageEvent => true
+      case e: DebugOutputEvent => true
     }
 
     probe.receiveN(3) should contain only (
