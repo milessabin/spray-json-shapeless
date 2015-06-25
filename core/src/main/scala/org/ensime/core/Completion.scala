@@ -232,61 +232,61 @@ trait CompletionControl {
 
     val typeSearchResults = typeSearch.flatMap(Await.result(_, Duration.Inf))
 
-    val keywords = Seq(
-      "abstract",
-      "case",
-      "catch",
-      "class",
-      "def",
-      "do",
-      "else",
-      "extends",
-      "false",
-      "final",
-      "finally",
-      "for",
-      "forSome",
-      "if",
-      "implicit",
-      "import",
-      "lazy",
-      "match",
-      "new",
-      "null",
-      "object",
-      "override",
-      "package",
-      "private",
-      "protected",
-      "return",
-      "sealed",
-      "super",
-      "this",
-      "throw",
-      "trait",
-      "try",
-      "true",
-      "type",
-      "val",
-      "var",
-      "while",
-      "with",
-      "yield",
-      "implicit",
-      "case",
-      "match",
-      "requires"
-    )
-
-    val keywordCompletions = if (context.prefix.size > 0) {
-      keywords.filter(_.startsWith(context.prefix)) map { keyword =>
-        CompletionInfo(keyword, CompletionSignature(List(), ""), -1, false, 100, None)
-      }
+    def keywordCompletions(prefix: String): Seq[CompletionInfo] = if (prefix.size > 0) {
+      Keywords.keywordCompletions.filter(_.name.startsWith(prefix))
     } else Seq()
 
-    buff.toList ++ typeSearchResults.getOrElse(Nil) ++ keywordCompletions
+    buff.toList ++ typeSearchResults.getOrElse(Nil) ++ keywordCompletions(context.prefix)
 
   }
+
+}
+
+object Keywords {
+  val keywords = Seq(
+    "abstract",
+    "case",
+    "catch",
+    "class",
+    "def",
+    //"do",
+    "else",
+    "extends",
+    "false",
+    "final",
+    "finally",
+    "for",
+    "forSome",
+    //"if",
+    "implicit",
+    "import",
+    "lazy",
+    "match",
+    "new",
+    "null",
+    "object",
+    "override",
+    "package",
+    "private",
+    "protected",
+    "return",
+    "requires",
+    "sealed",
+    "super",
+    "this",
+    "throw",
+    "trait",
+    "try",
+    "true",
+    "type",
+    "val",
+    "var",
+    "while",
+    "with",
+    "yield"
+  )
+
+  val keywordCompletions = keywords map { CompletionInfo(_, CompletionSignature(List(), ""), -1, false, 100, None) }
 
 }
 
