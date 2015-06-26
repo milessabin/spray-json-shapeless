@@ -271,6 +271,11 @@ class Analyzer(
           sender ! SymbolDesignations(file(sf.path), List.empty)
         }
       }
+
+    case ImplicitInfoReq(file: File, range: OffsetRange) =>
+      val p = pos(file, range)
+      sender() ! scalaCompiler.askImplicitInfoInRegion(p)
+
     case ExpandSelectionReq(file, start: Int, stop: Int) =>
       sender ! handleExpandselection(file, start, stop)
     case FormatSourceReq(files: List[File]) =>

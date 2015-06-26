@@ -122,6 +122,9 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
                 }
               }
 
+            case t: ApplyImplicitView => add(ImplicitConversionSymbol)
+            case t: ApplyToImplicitArgs => add(ImplicitParamsSymbol)
+
             case TypeTree() =>
               if (!qualifySymbol(sym)) {
                 if (t.tpe != null) {
@@ -153,8 +156,8 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
     p: RangePosition,
     requestedTypes: List[SourceSymbol]
   ): SymbolDesignations = {
-    val typed = new Response[global.Tree]
-    global.askLoadedTyped(p.source, keepLoaded = true, typed)
+    val typed = new Response[Tree]
+    askLoadedTyped(p.source, keepLoaded = true, typed)
     typed.get.left.toOption match {
       case Some(tree) =>
         val traverser = new SymDesigsTraverser(p, requestedTypes.toSet)
@@ -165,6 +168,6 @@ class SemanticHighlighting(val global: RichPresentationCompiler) extends Compile
     }
   }
 
-  def compilationUnitOfFile(f: AbstractFile): Option[CompilationUnit] = global.unitOfFile.get(f)
+  def compilationUnitOfFile(f: AbstractFile): Option[CompilationUnit] = unitOfFile.get(f)
 
 }
