@@ -28,7 +28,7 @@ sealed trait RpcAnalyserRequest extends RpcRequest
  * Request details about implicit conversions applied inside the given
  * range.
  *
- * Responds with `List[ImplicitInfo]`.
+ * Responds with `ImplicitInfos`.
  *
  * @param file source.
  * @param range in the file to inspect.

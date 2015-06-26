@@ -549,3 +549,5 @@ case class ImplicitParamInfo(
   params: List[SymbolInfo],
   funIsImplicit: Boolean
 ) extends ImplicitInfo
+
+case class ImplicitInfos(infos: List[ImplicitInfo])

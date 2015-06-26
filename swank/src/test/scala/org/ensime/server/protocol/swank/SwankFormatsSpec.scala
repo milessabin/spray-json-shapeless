@@ -586,12 +586,12 @@ class SwankFormatsSpec extends FlatSpec with Matchers with EnsimeTestData {
     )
 
     marshal(
-      List(ImplicitConversionInfo(5, 6, symbolInfo)): List[ImplicitInfo],
+      ImplicitInfos(List(ImplicitConversionInfo(5, 6, symbolInfo))): ImplicitInfos,
       s"""((:type conversion :start 5 :end 6 :fun $symbolInfoStr))"""
     )
 
     marshal(
-      List(ImplicitParamInfo(5, 6, symbolInfo, List(symbolInfo, symbolInfo), true)): List[ImplicitInfo],
+      ImplicitInfos(List(ImplicitParamInfo(5, 6, symbolInfo, List(symbolInfo, symbolInfo), true))): ImplicitInfos,
       s"""((:type param :start 5 :end 6 :fun $symbolInfoStr :params ($symbolInfoStr $symbolInfoStr) :fun-is-implicit t))"""
     )
   }

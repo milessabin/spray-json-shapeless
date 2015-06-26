@@ -75,7 +75,7 @@ object JerkFormats extends DefaultJsonProtocol with FamilyFormats {
   val RefactorEffectFormat = RootJsonFormat[RefactorEffect]
   val RefactorResultFormat = RootJsonFormat[RefactorResult]
   val ListERangePositionFormat = RootJsonFormat[List[ERangePosition]]
-  val ListImplicitInfoFormat = RootJsonFormat[List[ImplicitInfo]]
+  val ImplicitInfosFormat = RootJsonFormat[ImplicitInfos]
 
 }
 
@@ -117,7 +117,7 @@ object JerkEndpoints {
   implicit val RefactorEffectFormat = JerkFormats.RefactorEffectFormat
   implicit val RefactorResultFormat = JerkFormats.RefactorResultFormat
   implicit val ListERangePositionFormat = JerkFormats.ListERangePositionFormat
-  implicit val ListImplicitInfoFormat = JerkFormats.ListImplicitInfoFormat
+  implicit val ImplicitInfosFormat = JerkFormats.ImplicitInfosFormat
 
   import JerkFormats.BooleanJsonFormat
   import JerkFormats.StringJsonFormat
@@ -129,8 +129,6 @@ object JerkEndpoints {
     case s: String => s.toJson
     case list: List[_] if list.forall(_.isInstanceOf[ERangePosition]) =>
       list.asInstanceOf[List[ERangePosition]].toJson
-    case list: List[_] if list.forall(_.isInstanceOf[ImplicitInfo]) =>
-      list.asInstanceOf[List[ImplicitInfo]].toJson
 
     case VoidResponse => false.toJson
     case value: ConnectionInfo => value.toJson
@@ -164,6 +162,7 @@ object JerkEndpoints {
     case value: RefactorFailure => value.toJson
     case value: RefactorEffect => value.toJson
     case value: RefactorResult => value.toJson
+    case value: ImplicitInfos => value.toJson
 
     case _ => throw new IllegalArgumentException(s"$msg is not a valid JERK response")
   }

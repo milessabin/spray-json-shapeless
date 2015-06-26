@@ -480,6 +480,10 @@ object SwankProtocolResponse {
     }
     def read(hint: SexpSymbol, sexp: Sexp): ImplicitInfo = ???
   }
+  implicit object ImplcitInfosFormat extends SexpFormat[ImplicitInfos] {
+    def write(o: ImplicitInfos): Sexp = o.infos.toSexp
+    def read(sexp: Sexp) = ???
+  }
 
   implicit object DebugVmStatusFormat extends TraitFormatAlt[DebugVmStatus] {
     def write(ti: DebugVmStatus): Sexp = ti match {
@@ -500,8 +504,6 @@ object SwankProtocolResponse {
     case s: String => s.toSexp
     case list: List[_] if list.forall(_.isInstanceOf[ERangePosition]) =>
       list.asInstanceOf[List[ERangePosition]].toSexp
-    case list: List[_] if list.forall(_.isInstanceOf[ImplicitInfo]) =>
-      list.asInstanceOf[List[ImplicitInfo]].toSexp
 
     case VoidResponse => false.toSexp
 
@@ -537,6 +539,7 @@ object SwankProtocolResponse {
     case value: RefactorFailure => value.toSexp
     case value: RefactorEffect => value.toSexp
     case value: RefactorResult => value.toSexp
+    case value: ImplicitInfos => value.toSexp
 
     case _ => throw new IllegalArgumentException(s"$msg is not a valid SWANK response")
   }

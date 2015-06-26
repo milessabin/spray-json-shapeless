@@ -161,10 +161,12 @@ trait RichCompilerControl extends CompilerControl with RefactoringControl with C
       new SemanticHighlighting(this).symbolDesignationsInRegion(p, tpes)
     ).getOrElse(SymbolDesignations(new File("."), List.empty))
 
-  def askImplicitInfoInRegion(p: Position): List[ImplicitInfo] =
-    askOption(
-      new ImplicitAnalyzer(this).implicitDetails(p)
-    ).getOrElse(List.empty)
+  def askImplicitInfoInRegion(p: Position): ImplicitInfos =
+    ImplicitInfos(
+      askOption(
+        new ImplicitAnalyzer(this).implicitDetails(p)
+      ).getOrElse(List.empty)
+    )
 
   def askClearTypeCache(): Unit = clearTypeCache()
 
