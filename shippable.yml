@@ -9,7 +9,7 @@ script:
     fi &&
     sbt ++$SCALA_VERSION test &&
     if [ "$PULL_REQUEST" = "false" ] ; then
-      sbt ++$SCALA_VERSION publish
+      sbt ++$SCALA_VERSION publish ;
     fi
 
 # BLOCKED https://github.com/scoverage/sbt-coveralls/pull/41
