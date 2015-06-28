@@ -1,6 +1,4 @@
-# BLOCKED https://github.com/Shippable/support/issues/1170
-build_image:
-  - ensime/ensime:latest
+build_image: ensime/ensime:latest
 
 script:
   - sbt ++$SCALA_VERSION clean test:compile doc &&
