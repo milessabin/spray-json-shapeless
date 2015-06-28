@@ -4,9 +4,11 @@ Automatically derive [spray-json](https://github.com/spray/spray-json) `JsonForm
 
 For documentation, [read the scaladocs](src/main/scala/fommil/sjs/FamilyFormats.scala) and for examples [read the test cases](src/test/scala/fommil/sjs/FamilyFormatsSpec.scala).
 
+**Please read the documentation and examples thoroughly before raising a ticket.**
+
 ## TL;DR
 
-```
+```scala
 libraryDependencies += "com.github.fommil" %% "spray-json-shapeless" % "1.0.0-SNAPSHOT"
 ```
 
@@ -37,20 +39,25 @@ Baz: SimpleTrait.toJson        // """{"type":"Baz"}"""
 Fuzz: SimpleTrait.toJson       // """{"type":"Fuzz"}"""
 ```
 
-**Please read the documentation and examples thoroughly before raising a ticket.**
-
 ## License
 
-Also note that this library is LGPL. All contributions are on this basis.
+Note that this library is LGPL. All contributions are on this basis.
 
 I chose to license under the LPGL because
 [TypeSafe have set the precedent of closing sources](https://github.com/smootoo/freeslick#history)
 and it is extremely concerning that this is happening within our
-community. The best way to fight back is by writing better software,
-and using a license that guarantees the software's freedom.
+community. The best way to fight back is by writing software with a
+license that guarantees your software's freedom.
+
+I do not have a problem with anyone charging for software (I don't
+mind if something is not free as in gratis) but I abhor software which
+does not provide source code or allow me to change (i.e. fix it when
+it breaks, which it does almost always): free as in libre.
 
 If you *really* need an alternative license to get past your legal
-department, I will consider one-off licensing deals if you donate
-money to the ongoing maintenance costs of
-[ENSIME](https://github.com/ensime) and agree to submit any changes
-that you make back to this project under the LGPL.
+department, I will consider one-off licensing deals if you can prove
+to me that your legal department will not accept LGPL, that you have
+tried to get them to accept it, you donate money to the ongoing
+maintenance costs of [ENSIME](https://github.com/ensime) and agree to
+submit any changes that you (or your colleagues) make back to this
+project under the LGPL.
