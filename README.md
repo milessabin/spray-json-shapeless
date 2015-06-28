@@ -1,56 +1,56 @@
-# ENSIME
+# spray-json-shapeless
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ensime/ensime-server?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Bountysource](https://www.bountysource.com/badge/tracker?tracker_id=239449)](https://www.bountysource.com/trackers/239449-ensime?utm_source=239449&utm_medium=shield&utm_campaign=TRACKER_BADGE)
-[![Build Status](https://api.shippable.com/projects/5504572d5ab6cc13529ad106/badge?branchName=master)](https://app.shippable.com/projects/5504572d5ab6cc13529ad106)
-[![Stories in Ready](https://badge.waffle.io/ensime/ensime-server.png?label=Low+Hanging+Fruit)](https://waffle.io/ensime/ensime-server)
-[![Coverage Status](https://coveralls.io/repos/ensime/ensime-server/badge.png)](https://coveralls.io/r/ensime/ensime-server)
-[![Melpa Status](http://melpa.milkbox.net/packages/ensime-badge.svg)](http://melpa.milkbox.net/#/ensime)
+Automatically derive [spray-json](https://github.com/spray/spray-json) `JsonFormat`s, powered by [shapeless](https://github.com/milessabin/shapeless) (no macros were written during the creation of this library).
 
-ENhanced Scala Interaction Mode for text Editors, especially [GNU Emacs](http://www.gnu.org/software/emacs/).
+For documentation, [read the scaladocs](src/main/scala/fommil/sjs/FamilyFormats.scala) and for examples [read the test cases](src/test/scala/fommil/sjs/FamilyFormatsSpec.scala).
 
-ENSIME brings IDE-like features to your favourite text editor, such as:
+## TL;DR
 
-- Show the `type` of the symbol under the cursor.
-- Contextual completion for `var`s, `val`s and `def`s.
-- Add an import for the symbol under the cursor.
-- Fast classpath search (types and members).
-- Jump to source code or documentation.
-- Browse packages and type hierarchies.
-- Find all references to a symbol.
-- Refactorings (rename, organize imports, extract method).
-- REPL with stack trace highlighting.
-- Errors and warnings in your code: *red squigglies*.
-- Debugging
+```
+libraryDependencies += "com.github.fommil" %% "spray-json-shapeless" % "1.0.0-SNAPSHOT"
+```
 
-and many more.
+```scala
+import spray.json._
+import fommil.sjs._
 
+// your ADT here
+package adt {
+  sealed trait SimpleTrait
+  case class Foo(s: String) extends SimpleTrait
+  case class Bar() extends SimpleTrait
+  case object Baz extends SimpleTrait
+  case class Faz(o: Option[String]) extends SimpleTrait
+}
+object MyFormats extends DefaultJsonProtocol with FamilyFormats {
+  // gives a slight performance boost, but isn't necessary
+  implicit val MyAdtFormats = shapeless.cachedImplicit[JsonFormat[SimpleTrait]]
+}
+import MyFormats._
 
-# Contributions
+Foo("foo").toJson              // """{"s":"foo"}"""
+Faz(Some("meh")).toJson        // """{"o":"meh"}"""
+Faz(None).toJson               // "{}"
+Foo("foo"): SimpleTrait.toJson // """{"type":"Foo","s":"foo"}"""
+Bar(): SimpleTrait.toJson      // """{"type":"Bar"}"""
+Baz: SimpleTrait.toJson        // """{"type":"Baz"}"""
+Fuzz: SimpleTrait.toJson       // """{"type":"Fuzz"}"""
+```
 
-Ensime builds on the shoulders of giants, this includes contributors, users, bug reporters, many free and open source projects 
-and commercial entities.
+**Please read the documentation and examples thoroughly before raising a ticket.**
 
-This project is actively community maintained, and we are very pleased
-to see contributions from new members. Please see the
-[Contributing](CONTRIBUTING.md) file for information on how to help
-out.
+## License
 
-# Quick Start
+Also note that this library is LGPL. All contributions are on this basis.
 
-See our [Quick Start Guide](http://github.com/ensime/ensime-server/wiki/Quick-Start-Guide) to learn how to install and start ENSIME.
+I chose to license under the LPGL because
+[TypeSafe have set the precedent of closing sources](https://github.com/smootoo/freeslick#history)
+and it is extremely concerning that this is happening within our
+community. The best way to fight back is by writing better software,
+and using a license that guarantees the software's freedom.
 
-ENSIME is released on a continuous "rolling release" basis every time a pull request is merged. This dramatically speeds up the development cycle and you are advised to always update your ENSIME before reporting any issues.
-
-If you are still experiencing a problem with the latest version of ENSIME, before reporting an issue please:
-
-* check the [tickets flagged as FAQ](https://github.com/ensime/ensime-server/issues?labels=FAQ).
-* check the [most recently updated tickets](http://github.com/ensime/ensime-server/issues?direction=desc&sort=updated) (others are probably talking about it already with workarounds).
-* do a few keyword searches using the github search (top of the page) to see if anybody has reported this already.
-
-
-------
-
-![YourKit Logo](https://www.yourkit.com/images/yklogo.png)
-supports Ensime by providing access to its awesome [YourKit Java Profiler](https://www.yourkit.com/java/profiler/index.jsp)
-
+If you *really* need an alternative license to get past your legal
+department, I will consider one-off licensing deals if you donate
+money to the ongoing maintenance costs of
+[ENSIME](https://github.com/ensime) and agree to submit any changes
+that you make back to this project under the LGPL.
