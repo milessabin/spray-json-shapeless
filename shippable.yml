@@ -2,41 +2,32 @@
 build_image:
   - ensime/ensime:latest
 
-before_script:
-  - sbt ++$SCALA_VERSION gen-ensime &&
-    mkdir .ensime_cache
-  - git clone --depth 1 https://github.com/ensime/ensime-emacs.git ensime-emacs
-
 script:
-  - sbt ++$SCALA_VERSION clean test:compile it:compile doc &&
+  - sbt ++$SCALA_VERSION clean test:compile doc &&
     if [ $(git diff | wc -l) -ge 1 ] ; then
       echo "Code formatting does not meet the project's standards:" ;
       git --no-pager diff ;
       exit 1 ;
     fi &&
-    sbt ++$SCALA_VERSION test it:test &&
-    sbt ++$SCALA_VERSION publishLocal &&
-    ensime-emacs/test/run_emacs_tests.sh &&
+    sbt ++$SCALA_VERSION test &&
     if [ "$PULL_REQUEST" = "false" ] ; then
-      sbt ++$SCALA_VERSION publish &&
-      curl --data "build=true" -X POST https://registry.hub.docker.com/u/ensime/ensime/trigger/${DOCKER_TRIGGER_TOKEN}/ ;
+      sbt ++$SCALA_VERSION publish
     fi
 
 # BLOCKED https://github.com/scoverage/sbt-coveralls/pull/41
-#- sbt ++$SCALA_VERSION clean coverage test it:test &&
-#  sbt coverageAggregate coveralls
+#- sbt ++$SCALA_VERSION clean coverage test &&
+#  sbt coveralls
 
 # Reminder: set the following encrypted variables on one line:
 #
 #   SONATYPE_USERNAME
 #   SONATYPE_PASSWORD
-#   DOCKER_TRIGGER_TOKEN
 #   COVERALLS_REPO_TOKEN
 #
 # WORKAROUND https://github.com/Shippable/support/issues/1198
 env:
   global:
-    - SCALA_VERSION=2.11.6
+    - SCALA_VERSION=2.11.7
     - AKKA_TEST_TIMEFACTOR=10
     - EMACS=/opt/emacs-24.1/bin/emacs
     - COVERALLS_REPO_TOKEN=ZvySxEAk6j3KcqFbOqYnpgFL5payQgVUM
