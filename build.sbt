@@ -13,11 +13,20 @@ libraryDependencies ++= Seq(
   "io.spray" %% "spray-json" % "1.3.2",
   "org.slf4j" % "slf4j-api" % "1.7.5",
   "org.scalatest" %% "scalatest" % "2.2.5" % "test",
-  "com.typesafe.akka" %% "akka-slf4j" % "2.3.11" % "test",
-  // workaround old deps coming from scalatest
-  "org.scala-lang" % "scala-reflect" % scalaVersion.value % "test",
-  "org.scala-lang.modules" %% "scala-xml" % "1.0.4" % "test"
-)
+  "com.typesafe.akka" %% "akka-slf4j" % "2.3.11" % "test"
+) ++ {
+  if (scalaVersion.value.startsWith("2.10.")) Seq(
+    compilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
+  ) else Nil
+}
+
+dependencyOverrides ++= Set(
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value
+) ++ {
+  if (scalaVersion.value.startsWith("2.11")) Set(
+    "org.scala-lang.modules" %% "scala-xml" % "1.0.4"
+  ) else Nil
+}
 
 scalacOptions in Compile ++= Seq(
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", "-deprecation",

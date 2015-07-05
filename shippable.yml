@@ -12,22 +12,9 @@ script:
       sbt ++$SCALA_VERSION publish ;
     fi
 
-# BLOCKED https://github.com/scoverage/sbt-coveralls/pull/41
-#- sbt ++$SCALA_VERSION clean coverage test &&
-#  sbt coveralls
-
-# Reminder: set the following encrypted variables on one line:
-#
-#   SONATYPE_USERNAME
-#   SONATYPE_PASSWORD
-#   COVERALLS_REPO_TOKEN
-#
-# WORKAROUND https://github.com/Shippable/support/issues/1198
 env:
   global:
-    - SCALA_VERSION=2.11.7
-    - AKKA_TEST_TIMEFACTOR=10
-    - EMACS=/opt/emacs-24.1/bin/emacs
-    - COVERALLS_REPO_TOKEN=ZvySxEAk6j3KcqFbOqYnpgFL5payQgVUM
     - secure: YuFgEdRwR9XkMKR/EYWz4ZpjHueOpI/0yNydkEukLYltVfGVdZf2+BC7bz5cWjOWixaHuehK1yCQjXTrigMlZ8Gtcf9/55msj+Abu2+H1e0JKyBZNdn6V8Q3bmV0RjYhtezihCd+I/mSxAGKNybUC9bHyJvCCz7QlMgGL5/fFOiemOz4Eo74amh3fRnQw0Usfiu/TidT5/F/Da9UXI7GFsrqoy+dL54Z+WLZD4Bmm6tD/CZ3L6F8xMRDwxDVC1IvF1WSS2895dS5dRFjV0jH72tpHYruhvBdkgpTKw9/pjLI2S4SBDzniGfIXjq6oASHg8Dvkaret/po7roGscOOMw==
-
+  matrix:
+    - SCALA_VERSION=2.10.5
+    - SCALA_VERSION=2.11.7
