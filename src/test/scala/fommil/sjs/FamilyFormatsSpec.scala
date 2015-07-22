@@ -56,7 +56,28 @@ package examples {
   case class Hominidae(id: UUID) extends Hominoidea
 
 }
-object ExamplesFormats extends DefaultJsonProtocol with FamilyFormats {
+
+trait LowPriorityUserFormats {
+  import examples._
+  ///////////////////////////////////////////////
+  // non-trivial user-defined JsonFormat (not RootJsonFormat)
+  implicit val SmashFormat: JsonFormat[Smash] = new JsonFormat[Smash] {
+    def read(json: JsValue): Smash = json match {
+      case obj: JsObject => obj.fields.head match {
+        case ("flooma", JsString(label)) => Flooma(label)
+        case ("blam", JsString(label)) => Blam(label)
+        case _ => deserializationError("expected (kind,JsString), got " + json)
+      }
+      case _ => deserializationError("expected JsString, got " + json)
+    }
+    def write(obj: Smash): JsValue = obj match {
+      case Flooma(label) => JsObject("flooma" -> JsString(label))
+      case Blam(label) => JsObject("blam" -> JsString(label))
+    }
+  }
+}
+
+object ExamplesFormats extends DefaultJsonProtocol with FamilyFormats with LowPriorityUserFormats {
   import examples._
 
   // wtf?? why is this needed, why does it even work? Miles??
@@ -122,23 +143,6 @@ object ExamplesFormats extends DefaultJsonProtocol with FamilyFormats {
       case other => deserializationError(s"unexpected $other")
     }
     def write(s: Smim): JsValue = JsObject("smim" -> JsString(s.v))
-  }
-
-  ///////////////////////////////////////////////
-  // non-trivial user-defined JsonFormat (not RootJsonFormat)
-  implicit val SmashFormat: JsonFormat[Smash] = new JsonFormat[Smash] {
-    def read(json: JsValue): Smash = json match {
-      case obj: JsObject => obj.fields.head match {
-        case ("flooma", JsString(label)) => Flooma(label)
-        case ("blam", JsString(label)) => Blam(label)
-        case _ => deserializationError("expected (kind,JsString), got " + json)
-      }
-      case _ => deserializationError("expected JsString, got " + json)
-    }
-    def write(obj: Smash): JsValue = obj match {
-      case Flooma(label) => JsObject("flooma" -> JsString(label))
-      case Blam(label) => JsObject("blam" -> JsString(label))
-    }
   }
 }
 
@@ -238,9 +242,6 @@ class FamilyFormatsSpec extends FlatSpec with Matchers
 
   it should "prefer non-trivial user customisable JsonFormats" in {
     roundtrip(Flooma("aha"): Smash, """{"flooma":"aha"}""") // via our JsonFormat[Smash]
-
-    // this shouldn't compile thanks to the Xor trick, but does... in scala 2.11
-    val smashRootFormat = implicitly[Lazy[RootJsonFormat[Smash]]].value
   }
 
   it should "fail to compile when a member of the family cannot be serialised" in {
