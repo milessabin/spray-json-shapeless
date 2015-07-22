@@ -53,7 +53,7 @@ def noColorIfEmacs = if (sys.env.get("TERM") == Some("dumb"))
 
 testOptions in Test ++= noColorIfEmacs
 
-licenses := Seq("LGPL" -> url("https://www.gnu.org/licenses/lgpl.html"))
+licenses := Seq("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 
 homepage := Some(url("http://github.com/fommil/spray-json-shapeless"))
 
