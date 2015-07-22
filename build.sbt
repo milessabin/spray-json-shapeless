@@ -6,7 +6,7 @@ name := "spray-json-shapeless"
 
 scalaVersion := "2.11.7"
 
-version := "1.0.1-SNAPSHOT"
+version := "1.1.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "com.chuusai" %% "shapeless" % "2.2.4",

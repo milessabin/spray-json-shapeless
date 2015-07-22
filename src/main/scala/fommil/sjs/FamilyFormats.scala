@@ -107,7 +107,7 @@ object FamilyFormats extends DefaultJsonProtocol with FamilyFormats
 
 /* low priority implicit scope so user-defined implicits take precedence */
 private[sjs] trait LowPriorityFamilyFormats
-    extends JsonFormatXor with JsonFormatHints {
+    extends JsonFormatHints {
   this: StandardFormats with FamilyFormats =>
 
   private[sjs] def log = LoggerFactory.getLogger(getClass)
@@ -259,8 +259,7 @@ private[sjs] trait LowPriorityFamilyFormats
     implicit
     gen: LabelledGeneric.Aux[T, Repr],
     sg: Lazy[WrappedRootJsonFormat[T, Repr]],
-    tpe: Typeable[T],
-    not: NoExistingJsonFormat[T]
+    tpe: Typeable[T]
   ): RootJsonFormat[T] = new RootJsonFormat[T] {
     if (log.isTraceEnabled)
       log.trace(s"creating ${tpe.describe}")
@@ -268,29 +267,6 @@ private[sjs] trait LowPriorityFamilyFormats
     def read(j: JsValue): T = gen.from(sg.value.read(j))
     def write(t: T): JsObject = sg.value.write(gen.to(t))
   }
-}
-
-/**
- * a.k.a. the "ambiguous implicits" trick:
- * http://stackoverflow.com/questions/15962743
- *
- * If a `JsonFormat[A]` is already defined elsewhere, both of the
- * implicit defs here will trigger and result in an ambiguous
- * implicit compilation error.
- *
- * Requiring an implicit `NoExistingJsonFormat` on a method will
- * guarantee that it can only be called if there is no existing
- * `JsonFormat` (note that it will not match on existing
- * `RootJsonFormat`, but that's not needed).
- *
- * Typically called `Not`, I have renamed it `Xor` because it feels
- * more like an exclusive OR constraint to me.
- */
-trait JsonFormatXor {
-  trait Xor[T]
-  implicit def alwaysDefined[T]: Xor[JsonFormat[T]] = new Xor[JsonFormat[T]] {}
-  implicit def onlyIfJsonFormatDefined[T: JsonFormat]: Xor[JsonFormat[T]] = new Xor[JsonFormat[T]] {}
-  type NoExistingJsonFormat[T] = Xor[JsonFormat[T]]
 }
 
 trait JsonFormatHints {
