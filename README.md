@@ -41,9 +41,9 @@ Fuzz: SimpleTrait.toJson       // """{"type":"Fuzz"}"""
 
 ## License
 
-spray-json-shapeless is an Open Source project under the Apache License v2.
+spray-json-shapeless is Free Software under the Apache License v2.
 
-I would prefer to license under the LPGL because
+I would prefer a [copyleft][copyleft] license because
 [TypeSafe have set the precedent of closing sources](https://github.com/smootoo/freeslick#history)
 and it is extremely concerning that this is happening within our
 community. The best way to fight back is by writing software with a
@@ -57,3 +57,5 @@ it breaks, which it does almost always): free as in libre.
 However, both of the primary upstream projects, spray-json and shapeless, are
 published under Apache v2, so it is more appropriate to publish this project
 on the same terms.
+
+[copyleft]: http://www.gnu.org/copyleft/copyleft.en.html
