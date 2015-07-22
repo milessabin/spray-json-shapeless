@@ -23,11 +23,9 @@ package examples {
   case class Schpugel(v: String) // I asked my wife to make up a word
   case class Smim(v: String) // I should stop asking my wife to make up words
 
-  sealed trait StringEnum {
-    def label: String
-  }
-  case class Flooma(label: String) extends StringEnum // to be fair, that was mine
-  case class Blam(label: String) extends StringEnum
+  sealed trait Smash
+  case class Flooma(label: String) extends Smash
+  case class Blam(label: String) extends Smash
 
   sealed trait Cloda
   case class Plooba(thing: String) extends Cloda // *sigh*
@@ -127,17 +125,20 @@ object ExamplesFormats extends DefaultJsonProtocol with FamilyFormats {
   }
 
   ///////////////////////////////////////////////
-  // non-trivial user-defined JsonFormat
-  implicit def stringEnumFormat[T <: StringEnum](
-    implicit
-    g: Generic.Aux[T, String :: HNil],
-    tpe: Typeable[T]
-  ): JsonFormat[T] = new JsonFormat[T] {
-    def read(json: JsValue): T = json match {
-      case JsString(value) => g.from(value :: HNil)
+  // non-trivial user-defined JsonFormat (not RootJsonFormat)
+  implicit val SmashFormat: JsonFormat[Smash] = new JsonFormat[Smash] {
+    def read(json: JsValue): Smash = json match {
+      case obj: JsObject => obj.fields.head match {
+        case ("flooma", JsString(label)) => Flooma(label)
+        case ("blam", JsString(label)) => Blam(label)
+        case _ => deserializationError("expected (kind,JsString), got " + json)
+      }
       case _ => deserializationError("expected JsString, got " + json)
     }
-    def write(obj: T): JsValue = JsString(obj.label)
+    def write(obj: Smash): JsValue = obj match {
+      case Flooma(label) => JsObject("flooma" -> JsString(label))
+      case Blam(label) => JsObject("blam" -> JsString(label))
+    }
   }
 }
 
@@ -236,16 +237,10 @@ class FamilyFormatsSpec extends FlatSpec with Matchers
   }
 
   it should "prefer non-trivial user customisable JsonFormats" in {
-    roundtrip(Flooma("aha"), """"aha"""")
+    roundtrip(Flooma("aha"): Smash, """{"flooma":"aha"}""") // via our JsonFormat[Smash]
 
-    // This might surprise you: the user's custom formatter for the
-    // classes in this family is a `JsonFormat` (not a
-    // `RootJsonFormat`), so when we serialise the trait, it is forced
-    // to fall back to the derived product rule, not the custom one,
-    // because it expects a `RootJsonFormat`. Funky.
-
-    // WORKAROUND: https://github.com/fommil/spray-json-shapeless/issues/5
-    //roundtrip(Flooma("aha"): StringEnum, """{"type":"Flooma","label":"aha"}""")
+    // this shouldn't compile thanks to the Xor trick, but does... in scala 2.11
+    val smashRootFormat = implicitly[Lazy[RootJsonFormat[Smash]]].value
   }
 
   it should "fail to compile when a member of the family cannot be serialised" in {

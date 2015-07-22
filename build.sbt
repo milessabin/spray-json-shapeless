@@ -9,11 +9,11 @@ scalaVersion := "2.11.7"
 version := "1.0.1-SNAPSHOT"
 
 libraryDependencies ++= Seq(
-  "com.chuusai" %% "shapeless" % "2.2.3",
+  "com.chuusai" %% "shapeless" % "2.2.4",
   "io.spray" %% "spray-json" % "1.3.2",
-  "org.slf4j" % "slf4j-api" % "1.7.5",
+  "org.slf4j" % "slf4j-api" % "1.7.12",
   "org.scalatest" %% "scalatest" % "2.2.5" % "test",
-  "com.typesafe.akka" %% "akka-slf4j" % "2.3.11" % "test"
+  "com.typesafe.akka" %% "akka-slf4j" % "2.3.12" % "test"
 ) ++ {
   if (scalaVersion.value.startsWith("2.10.")) Seq(
     compilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
