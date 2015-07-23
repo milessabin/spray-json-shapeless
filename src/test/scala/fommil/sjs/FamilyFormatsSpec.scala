@@ -241,6 +241,7 @@ class FamilyFormatsSpec extends FlatSpec with Matchers
   }
 
   it should "prefer non-trivial user customisable JsonFormats" in {
+    def familyFormat = ???
     roundtrip(Flooma("aha"): Smash, """{"flooma":"aha"}""") // via our JsonFormat[Smash]
   }
 
